@@ -1,1 +1,18 @@
-<!doctype html><html lang='it'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{% block title %}Pay4You Cards{% endblock %}</title><link rel='stylesheet' href='{{ url_for("static", filename="style.css") }}'></head><body><header class='topbar'><div class='wrap'><div class='brand'><img src='{{ url_for("static", filename="logo.png") }}' class='logo'><strong>Pay4You</strong> Cards</div><nav>{% if session.get('admin') %}<a href='{{ url_for("admin_home") }}'>Dashboard</a> <a href='{{ url_for("logout") }}'>Logout</a>{% else %}<a href='{{ url_for("login") }}'>Login</a>{% endif %}</nav></div></header><main class='wrap'>{% block content %}{% endblock %}</main><footer class='footer wrap'>© 2025 Pay4You • Card digitale</footer></body></html>
+<!doctype html><html lang='it'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{% block title %}Pay4You Cards{% endblock %}</title><link rel='stylesheet' href='{{ url_for("static", filename="style.css") }}'></head<script>
+(function () {
+  // testi possibili con apostrofo dritto o tipografico
+  const needles = [
+    "programma l'nfc",
+    "programma l’nfc",
+    "programma nfc"
+  ];
+  // scansiona tutti i nodi e nasconde quelli che contengono la frase
+  document.querySelectorAll('body *').forEach(el => {
+    const t = (el.textContent || "").toLowerCase().trim();
+    if (t && needles.some(n => t.includes(n))) {
+      el.style.display = "none";
+    }
+  });
+})();
+</script>
+><body><header class='topbar'><div class='wrap'><div class='brand'><img src='{{ url_for("static", filename="logo.png") }}' class='logo'><strong>Pay4You</strong> Cards</div><nav>{% if session.get('admin') %}<a href='{{ url_for("admin_home") }}'>Dashboard</a> <a href='{{ url_for("logout") }}'>Logout</a>{% else %}<a href='{{ url_for("login") }}'>Login</a>{% endif %}</nav></div></header><main class='wrap'>{% block content %}{% endblock %}</main><footer class='footer wrap'>© 2025 Pay4You • Card digitale</footer></body></html>
