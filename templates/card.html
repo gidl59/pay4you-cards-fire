@@ -1,1 +1,137 @@
-{% extends "base.html" %}{% block title %}{{ ag.name }} - Pay4You{% endblock %}{% block content %}<div class='cardh'><div class='left'>{% if ag.photo_url %}<img src='{{ ag.photo_url }}' class='avatar' alt='foto profilo'>{% else %}<img src='{{ url_for("static", filename="logo.png") }}' class='cardlogo'>{% endif %}</div><div class='right'><h1>{{ ag.name }}</h1>{% if ag.company %}<p class='muted'>{{ ag.company }}</p>{% endif %}{% if ag.role %}<p class='role'>{{ ag.role }}</p>{% endif %}{% if ag.bio %}<p>{{ ag.bio }}</p>{% endif %}<div class='cols'><div>{% if ag.phone_mobile %}<p>📱 <a href='tel:{{ ag.phone_mobile | replace(" ", "") }}'>{{ ag.phone_mobile }}</a></p>{% endif %}{% if ag.phone_office %}<p>☎️ <a href='tel:{{ ag.phone_office | replace(" ", "") }}'>{{ ag.phone_office }}</a></p>{% endif %}{% for e in emails %}<p>✉️ <a href='mailto:{{ e }}'>{{ e }}</a></p>{% endfor %}{% for w in websites %}<p>🌐 <a href='{{ w }}' target='_blank' rel='noopener'>{{ w }}</a></p>{% endfor %}</div><div>{% if ag.facebook %}<p>f Facebook: <a href='{{ ag.facebook }}' target='_blank'>Apri</a></p>{% endif %}{% if ag.instagram %}<p>Instagram: <a href='{{ ag.instagram }}' target='_blank'>Apri</a></p>{% endif %}{% if ag.linkedin %}<p>LinkedIn: <a href='{{ ag.linkedin }}' target='_blank'>Apri</a></p>{% endif %}{% if ag.tiktok %}<p>TikTok: <a href='{{ ag.tiktok }}' target='_blank'>Apri</a></p>{% endif %}{% if ag.telegram %}<p>Telegram: <a href='{{ ag.telegram }}' target='_blank'>Apri</a></p>{% endif %}{% set wa = (ag.whatsapp or ag.phone_mobile or '') | replace(' ', '') %}{% if wa %}{% if 'http' in wa %}<p>WhatsApp: <a href='{{ wa }}' target='_blank' rel='noopener'>Chat</a></p>{% else %}<p>WhatsApp: <a href='https://wa.me/{{ wa|replace("+","") }}' target='_blank' rel='noopener'>Chat</a></p>{% endif %}{% endif %}</div></div><div class='actions'><a class='btn primary' href='{{ url_for("vcard", slug=ag.slug) }}'> Aggiungi a Contatti (iPhone)</a><a class='btn' href='{{ url_for("vcard", slug=ag.slug) }}?download=1'>🤖 Salva in Rubrica (Android)</a><a class='btn' href='{{ url_for("qr", slug=ag.slug) }}' target='_blank'>🧾 QR personale</a></div></div></div>{% if addresses or ag.piva or ag.sdi %}<h3>Indirizzi</h3><ul>{% for a in addresses %}<li>{{ a }}</li>{% endfor %}{% if ag.piva %}<li>🧾 Partita IVA: {{ ag.piva }}</li>{% endif %}{% if ag.sdi %}<li>📮 SDI: {{ ag.sdi }}</li>{% endif %}</ul>{% endif %}{% if ag.pdf1_url or ag.pdf2_url %}<h3>Documenti</h3><ul>{% if ag.pdf1_url %}<li><a href='{{ ag.pdf1_url }}' target='_blank'>Documento 1 (PDF)</a></li>{% endif %}{% if ag.pdf2_url %}<li><a href='{{ ag.pdf2_url }}' target='_blank'>Documento 2 (PDF)</a></li>{% endif %}</ul>{% endif %}{% if gallery %}<h3>Galleria</h3><div class='gallery'>{% for g in gallery %}<img src='{{ g }}' class='thumb'>{% endfor %}</div>{% endif %}{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-page">
+
+  <!-- Logo grande in alto a sinistra -->
+  <div class="card-logo-row">
+    <img src="{{ url_for('static', filename='logo.png') }}"
+         alt="Pay4You"
+         class="card-logo-big">
+  </div>
+
+  <section class="business-card">
+    {% if ag.photo_url %}
+    <div class="card-profile-photo-wrapper">
+      <img src="{{ ag.photo_url }}" alt="Foto {{ ag.name }}" class="card-profile-photo">
+    </div>
+    {% endif %}
+
+    <h1 class="card-name">{{ ag.name }}</h1>
+
+    {% if ag.company %}
+      <div class="card-company">{{ ag.company }}</div>
+    {% endif %}
+
+    {% if ag.role %}
+      <div class="card-role">{{ ag.role }}</div>
+    {% endif %}
+  </section>
+
+  <!-- CONTATTI -->
+  <section class="card-section">
+    <h2>Contatti</h2>
+
+    {% if ag.phone_mobile %}
+    <a class="contact-row"
+       href="tel:{{ ag.phone_mobile | replace(' ', '') }}">
+      <span class="icon">📱</span>
+      <span class="label">Chiama mobile</span>
+      <span class="value">{{ ag.phone_mobile }}</span>
+    </a>
+    {% endif %}
+
+    {% if ag.phone_office %}
+    <a class="contact-row"
+       href="tel:{{ ag.phone_office | replace(' ', '') }}">
+      <span class="icon">☎️</span>
+      <span class="label">Chiama ufficio</span>
+      <span class="value">{{ ag.phone_office }}</span>
+    </a>
+    {% endif %}
+
+    {% if ag.whatsapp %}
+    <a class="contact-row whatsapp-row"
+       href="https://wa.me/{{ ag.whatsapp | replace('+','') | replace(' ','') }}"
+       target="_blank">
+      <span class="icon">🟢</span>
+      <span class="label">WhatsApp</span>
+      <span class="value">{{ ag.whatsapp }}</span>
+    </a>
+    {% endif %}
+
+    {% for e in emails %}
+    <a class="contact-row" href="mailto:{{ e }}">
+      <span class="icon">📧</span>
+      <span class="label">Email</span>
+      <span class="value">{{ e }}</span>
+    </a>
+    {% endfor %}
+
+    {% for w in websites %}
+    <a class="contact-row" href="{{ w }}" target="_blank">
+      <span class="icon">🌐</span>
+      <span class="label">Sito internet</span>
+      <span class="value">{{ w }}</span>
+    </a>
+    {% endfor %}
+
+    <a class="contact-row"
+       href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
+      <span class="icon">💾</span>
+      <span class="label">Salva contatto</span>
+      <span class="value">Scarica vCard</span>
+    </a>
+
+    <a class="contact-row"
+       href="{{ url_for('qr', slug=ag.slug) }}"
+       target="_blank">
+      <span class="icon">🔳</span>
+      <span class="label">QR code</span>
+      <span class="value">Apri QR</span>
+    </a>
+  </section>
+
+  <!-- INDIRIZZI -->
+  {% if addresses %}
+  <section class="card-section">
+    <h2>Indirizzi</h2>
+    {% for adr in addresses %}
+      <div class="address-row">
+        <div class="address-value">{{ adr }}</div>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <!-- DOCUMENTI -->
+  {% if ag.pdf1_url or ag.pdf2_url %}
+  <section class="card-section">
+    <h2>Documenti</h2>
+    <div class="pdf-list">
+      {% if ag.pdf1_url %}
+      <a class="pdf-item" href="{{ ag.pdf1_url }}" target="_blank">📄 Documento 1</a>
+      {% endif %}
+      {% if ag.pdf2_url %}
+      <a class="pdf-item" href="{{ ag.pdf2_url }}" target="_blank">📄 Documento 2</a>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- GALLERIA -->
+  {% if gallery %}
+  <section class="card-section">
+    <h2>Galleria foto</h2>
+    <div class="gallery-grid">
+      {% for foto in gallery %}
+      <a href="{{ foto }}" target="_blank">
+        <img src="{{ foto }}" alt="Foto {{ loop.index }} di {{ ag.name }}">
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
