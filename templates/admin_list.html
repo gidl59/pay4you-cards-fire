@@ -33,7 +33,9 @@
             <a href="{{ url_for('vcard', slug=a.slug) }}" target="_blank">VCF</a>
             <a href="{{ url_for('qr', slug=a.slug) }}" target="_blank">QR</a>
             <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}">
-              <button type="submit" onclick="return confirm('Eliminare questo agente?');">Elimina</button>
+              <button type="submit" onclick="return confirm('Eliminare questo agente?');">
+                Elimina
+              </button>
             </form>
           </td>
         </tr>
