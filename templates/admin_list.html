@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 
+{% block title %}Agenti{% endblock %}
+
 {% block content %}
 <div class="admin-wrapper">
   <div class="admin-card">
-    <div class="admin-header-row">
-      <h1>Agenti</h1>
-      <a href="{{ url_for('new_agent') }}" class="btn btn-primary">+ Nuovo agente</a>
-    </div>
+    <h1 class="admin-title">Agenti</h1>
+
+    <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
 
     {% if agents %}
-    <table class="agents-table">
+    <table class="admin-table">
       <thead>
         <tr>
           <th>Slug</th>
@@ -26,27 +27,13 @@
           <td>{{ a.name }}</td>
           <td>{{ a.company or '' }}</td>
           <td>{{ a.phone_mobile or '' }}</td>
-          <td class="agents-actions">
-            <a class="btn btn-small"
-               href="{{ url_for('public_card', slug=a.slug) }}"
-               target="_blank">Card</a>
-
-            <a class="btn btn-small btn-secondary"
-               href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-
-            <a class="btn btn-small"
-               href="{{ url_for('vcard', slug=a.slug) }}?download=1"
-               target="_blank">VCF</a>
-
-            <a class="btn btn-small"
-               href="{{ url_for('qr', slug=a.slug) }}"
-               target="_blank">QR</a>
-
-            <form method="post"
-                  action="{{ url_for('delete_agent', slug=a.slug) }}"
-                  class="inline-form"
-                  onsubmit="return confirm('Eliminare definitivamente questo agente?');">
-              <button type="submit" class="btn btn-small btn-danger">Elimina</button>
+          <td class="admin-actions">
+            <a href="{{ url_for('public_card', slug=a.slug) }}" target="_blank">Card</a>
+            <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+            <a href="{{ url_for('vcard', slug=a.slug) }}" target="_blank">VCF</a>
+            <a href="{{ url_for('qr', slug=a.slug) }}" target="_blank">QR</a>
+            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}">
+              <button type="submit" onclick="return confirm('Eliminare questo agente?');">Elimina</button>
             </form>
           </td>
         </tr>
@@ -54,7 +41,7 @@
       </tbody>
     </table>
     {% else %}
-      <p>Nessun agente ancora inserito.</p>
+    <p>Nessun agente ancora inserito.</p>
     {% endif %}
   </div>
 </div>
