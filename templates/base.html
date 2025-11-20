@@ -1,37 +1,30 @@
-<!doctype html>
+<<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <title>Pay4You Cards</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pay4You Cards – {% block title %}{% endblock %}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="app-body">
+<body>
 
-<header class="topbar">
-  <div class="topbar-left">
-    <a href="{{ url_for('admin_home') if request.path.startswith('/admin') else url_for('home') }}"
-       class="topbar-logo-link">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You" class="topbar-logo">
-    </a>
+<header class="site-header">
+  <div class="site-header-left">
+    <img src="{{ url_for('static', filename='logo.png') }}"
+         alt="Pay4You"
+         class="site-header-logo">
+    <div class="site-header-title">Pay4You Digital Card</div>
   </div>
 
-  <div class="topbar-center">
-    {% if request.path.startswith('/admin') %}
-      Pannello Agenti Pay4You
+  <nav class="site-header-links">
+    {% if session.get('admin') %}
+      <a href="{{ url_for('admin_home') }}">Pannello agenti</a>
+      <a href="{{ url_for('public_card', slug='giuseppe') }}">Vai alle card</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
     {% else %}
-      Pay4You Digital Card
+      <a href="{{ url_for('login') }}">Admin</a>
     {% endif %}
-  </div>
-
-  <div class="topbar-right">
-    {% if request.path.startswith('/admin') %}
-      <a href="{{ url_for('public_card', slug='giuseppe') }}" class="topbar-link">Vai alle card</a>
-      <a href="{{ url_for('logout') }}" class="topbar-link">Logout</a>
-    {% else %}
-      <a href="{{ url_for('login') }}" class="topbar-link">Admin</a>
-    {% endif %}
-  </div>
+  </nav>
 </header>
 
 <main class="page-main">
