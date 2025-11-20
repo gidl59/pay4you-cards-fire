@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Agenti{% endblock %}
+{% block title %}Pannello Agenti Pay4You{% endblock %}
 
 {% block content %}
 <div class="admin-wrapper">
@@ -25,17 +25,33 @@
         <tr>
           <td>{{ a.slug }}</td>
           <td>{{ a.name }}</td>
-          <td>{{ a.company or '' }}</td>
-          <td>{{ a.phone_mobile or '' }}</td>
+          <td>{{ a.company or "" }}</td>
+          <td>{{ a.phone_mobile or "" }}</td>
           <td class="admin-actions">
+            <!-- Link card pubblica -->
             <a href="{{ url_for('public_card', slug=a.slug) }}" target="_blank">Card</a>
+
+            <!-- Modifica agente -->
             <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-            <a href="{{ url_for('vcard', slug=a.slug) }}" target="_blank">VCF</a>
+
+            <!-- vCard -->
+            <a href="{{ url_for('vcard', slug=a.slug) }}">VCF</a>
+
+            <!-- QR -->
             <a href="{{ url_for('qr', slug=a.slug) }}" target="_blank">QR</a>
-            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}">
-              <button type="submit" onclick="return confirm('Eliminare questo agente?');">
-                Elimina
-              </button>
+
+            <!-- NFC: copia il link completo negli appunti -->
+            <button type="button"
+                    class="btn-nfc"
+                    onclick="copyNfc('{{ url_for('public_card', slug=a.slug, _external=True) }}')">
+              NFC
+            </button>
+
+            <!-- Elimina -->
+            <form method="post"
+                  action="{{ url_for('delete_agent', slug=a.slug) }}"
+                  onsubmit="return confirm('Sicuro di voler eliminare questo agente?');">
+              <button type="submit">Elimina</button>
             </form>
           </td>
         </tr>
@@ -43,8 +59,23 @@
       </tbody>
     </table>
     {% else %}
-    <p>Nessun agente ancora inserito.</p>
+      <p>Nessun agente ancora inserito.</p>
     {% endif %}
   </div>
 </div>
+
+<script>
+  function copyNfc(url) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        alert("Link NFC copiato negli appunti:\n" + url);
+      }).catch(function () {
+        alert("Impossibile copiare automaticamente.\nCopia manualmente questo link:\n" + url);
+      });
+    } else {
+      // Fallback per browser vecchi: finestra con il link da copiare
+      window.prompt("Copia questo link NFC:", url);
+    }
+  }
+</script>
 {% endblock %}
