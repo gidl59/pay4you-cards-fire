@@ -102,7 +102,7 @@ a {
 }
 
 .card-logo-big {
-  height: 92px;
+  height: 100px; /* puoi aumentare/diminuire se vuoi */
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
 }
 
@@ -228,7 +228,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI – ICONA PDF + NOME (max 4) */
+/* DOCUMENTI – ICONA PDF + NOME (max 6) */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -255,7 +255,7 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – SLIDER ORIZZONTALE (B) */
+/* GALLERIA FOTO – SLIDER ORIZZONTALE */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
@@ -499,8 +499,15 @@ a {
     padding: 16px 12px 20px;
   }
 
+  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
   .business-card {
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-name-block {
+    align-items: center;
   }
 
   .card-name {
@@ -508,7 +515,7 @@ a {
   }
 
   .card-logo-big {
-    height: 78px;
+    height: 90px; /* logo un po' più grande anche su mobile */
   }
 
   .admin-card {
