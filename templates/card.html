@@ -170,12 +170,13 @@
     {% endif %}
 
     <!-- DOCUMENTI PDF -->
-    {% if pdfs %}
+            {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
         {% for url in pdfs %}
-        <a class="pdf-item" href="{{ url }}" target="_blank">
+        <a class="pdf-item"
+           href="{{ url_for('pdf_viewer', slug=ag.slug, index=loop.index) }}">
           <span class="pdf-icon">📄</span>
           <span>Documento {{ loop.index }}</span>
         </a>
