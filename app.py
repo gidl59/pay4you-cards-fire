@@ -55,17 +55,17 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
-    # pdf1_url verrà usato come "lista" di URL PDF separati da |
+    # Useremo pdf1_url come "lista" di URL PDF separati da |
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # non usato al momento, ma lasciato
+    pdf2_url = Column(String, nullable=True)  # non usato ora, tenuto per compatibilità
 
 
 Base.metadata.create_all(engine)
 
 
-# -------------------------------------------------------------------
-# Helper
-# -------------------------------------------------------------------
+# --------------------------------------------------
+# Helper per autenticazione admin
+# --------------------------------------------------
 def admin_required(f):
     from functools import wraps
 
@@ -78,6 +78,9 @@ def admin_required(f):
     return wrapper
 
 
+# --------------------------------------------------
+# Firebase (se disponibile) + Upload locale
+# --------------------------------------------------
 def get_storage_client():
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
@@ -94,23 +97,46 @@ def get_storage_client():
         return None
 
 
-def upload_to_firebase(file_storage, folder="uploads"):
+def upload_file(file_storage, folder="uploads"):
+    """
+    Se Firebase è configurato, carica su bucket.
+    Altrimenti salva in static/<folder> e restituisce URL statico.
+    """
+    if not file_storage or not file_storage.filename:
+        return None
+
+    client = get_storage_client()
+
+    ext = os.path.splitext(file_storage.filename or "")[1].lower()
+
+    if client and FIREBASE_BUCKET:
+        try:
+            from google.cloud import storage  # noqa
+
+            bucket = client.bucket(FIREBASE_BUCKET)
+            key = f"{folder}/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}{ext}"
+            blob = bucket.blob(key)
+            blob.upload_from_file(file_storage.stream, content_type=file_storage.mimetype)
+            url = blob.generate_signed_url(
+                expiration=datetime.utcnow() + timedelta(days=3650),
+                method="GET",
+            )
+            return url
+        except Exception as e:
+            app.logger.exception("Firebase upload failed: %s", e)
+            # fallback a salvataggio locale qui sotto
+
+    # Fallback locale in static/<folder>
     try:
-        client = get_storage_client()
-        if not client:
-            return None
-        bucket = client.bucket(FIREBASE_BUCKET)
-        ext = os.path.splitext(file_storage.filename or "")[1].lower()
-        key = f"{folder}/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}{ext}"
-        blob = bucket.blob(key)
-        blob.upload_from_file(file_storage.stream, content_type=file_storage.mimetype)
-        url = blob.generate_signed_url(
-            expiration=datetime.utcnow() + timedelta(days=3650),
-            method="GET",
-        )
-        return url
+        uploads_folder = os.path.join(app.static_folder, folder)
+        os.makedirs(uploads_folder, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        fullpath = os.path.join(uploads_folder, filename)
+        file_storage.save(fullpath)
+        # URL relativo allo static
+        return url_for("static", filename=f"{folder}/{filename}", _external=False)
     except Exception as e:
-        app.logger.exception("Firebase upload failed: %s", e)
+        app.logger.exception("Local upload failed: %s", e)
         return None
 
 
@@ -123,9 +149,9 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # ROUTES BASE
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/")
 def home():
     if session.get("admin"):
@@ -138,9 +164,9 @@ def health():
     return "ok", 200
 
 
-# -------------------------------------------------------------------
-# AUTH
-# -------------------------------------------------------------------
+# --------------------------------------------------
+# LOGIN / LOGOUT
+# --------------------------------------------------
 @app.get("/login")
 def login():
     return render_template("login.html", error=None, next=request.args.get("next", "/admin"))
@@ -162,9 +188,9 @@ def logout():
     return redirect(url_for("login"))
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # ADMIN – LISTA AGENTI
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/admin")
 @admin_required
 def admin_home():
@@ -173,9 +199,9 @@ def admin_home():
     return render_template("admin_list.html", agents=agents)
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # ADMIN – NUOVO AGENTE
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -219,14 +245,14 @@ def create_agent():
     gallery_files = request.files.getlist("gallery")
 
     # FOTO PROFILO
-    photo_url = upload_to_firebase(photo, "photos") if photo and photo.filename else None
+    photo_url = upload_file(photo, "photos") if photo and photo.filename else None
 
     # PDF 1–6
     pdf_urls = []
     for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            u = upload_to_firebase(f, "pdf")
+            u = upload_file(f, "pdf")
             if u:
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
@@ -235,7 +261,7 @@ def create_agent():
     gallery_urls = []
     for f in gallery_files[:12]:
         if f and f.filename:
-            u = upload_to_firebase(f, "gallery")
+            u = upload_file(f, "gallery")
             if u:
                 gallery_urls.append(u)
 
@@ -251,9 +277,9 @@ def create_agent():
     return redirect(url_for("admin_home"))
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # ADMIN – MODIFICA / ELIMINA
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
@@ -300,27 +326,27 @@ def update_agent(slug):
 
     # FOTO PROFILO
     if photo and photo.filename:
-        u = upload_to_firebase(photo, "photos")
+        u = upload_file(photo, "photos")
         if u:
             ag.photo_url = u
 
-    # PDF 1–6 – se carichi almeno un PDF nuovo, sovrascrive lista
+    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
     for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            u = upload_to_firebase(f, "pdf")
+            u = upload_file(f, "pdf")
             if u:
                 new_pdf_urls.append(u)
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisce la galleria
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
         for f in gallery_files[:12]:
             if f and f.filename:
-                u = upload_to_firebase(f, "gallery")
+                u = upload_file(f, "gallery")
                 if u:
                     urls.append(u)
         if urls:
@@ -341,9 +367,9 @@ def delete_agent(slug):
     return redirect(url_for("admin_home"))
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # CARD PUBBLICA
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
@@ -370,9 +396,27 @@ def public_card(slug):
     )
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
+# VIEWER PDF – con freccia indietro
+# --------------------------------------------------
+@app.get("/<slug>/pdf/<int:index>")
+def pdf_viewer(slug, index):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
+    if index < 1 or index > len(pdfs):
+        abort(404)
+
+    pdf_url = pdfs[index - 1]
+    return render_template("pdf_viewer.html", ag=ag, pdf_url=pdf_url, index=index)
+
+
+# --------------------------------------------------
 # VCARD & QR
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     db = SessionLocal()
@@ -380,11 +424,21 @@ def vcard(slug):
     if not ag:
         abort(404)
 
+    # Proviamo a dividere Nome/Cognome per compatibilità iPhone
+    full_name = ag.name or ""
+    parts = full_name.strip().split(" ", 1)
+    if len(parts) == 2:
+        first_name = parts[0]
+        last_name = parts[1]
+    else:
+        first_name = full_name
+        last_name = ""
+
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{ag.name}",
-        f"N:{ag.name};;;;",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
     ]
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
@@ -416,12 +470,9 @@ def vcard(slug):
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
 
-    if request.args.get("download") == "1":
-        resp = Response(content, mimetype="text/vcard; charset=utf-8")
-        resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
-        return resp
-
-    return Response(content, mimetype="text/vcard; charset=utf-8")
+    resp = Response(content, mimetype="text/vcard; charset=utf-8")
+    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    return resp
 
 
 @app.get("/<slug>/qr.png")
@@ -435,9 +486,9 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------
 # ERRORI
-# -------------------------------------------------------------------
+# --------------------------------------------------
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
