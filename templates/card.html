@@ -1,23 +1,22 @@
 {% extends "base.html" %}
 
+{% block title %}{{ ag.name }}{% endblock %}
+
 {% block content %}
 <div class="card-fullscreen">
-
-  <!-- Sfondo blur stile iPhone -->
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
 
-    <!-- Logo grande in alto a sinistra -->
+    <!-- Logo in alto -->
     <div class="card-header-row">
       <img src="{{ url_for('static', filename='logo.png') }}"
            alt="Pay4You"
            class="card-logo-big">
     </div>
 
-    <!-- BLOCCO PRINCIPALE CARD -->
+    <!-- BLOCCO BUSINESS -->
     <section class="business-card">
-
       {% if ag.photo_url %}
       <div class="card-profile-photo-wrapper">
         <img src="{{ ag.photo_url }}"
@@ -35,6 +34,10 @@
 
         {% if ag.company %}
         <div class="card-role-sub">{{ ag.company }}</div>
+        {% endif %}
+
+        {% if ag.bio %}
+        <div class="card-bio">{{ ag.bio }}</div>
         {% endif %}
       </div>
     </section>
@@ -79,6 +82,14 @@
       </a>
       {% endfor %}
 
+      {% if ag.pec %}
+      <a class="contact-row" href="mailto:{{ ag.pec }}">
+        <span class="icon">📮</span>
+        <span class="label">PEC</span>
+        <span class="value">{{ ag.pec }}</span>
+      </a>
+      {% endif %}
+
       {% for w in websites %}
       <a class="contact-row" href="{{ w }}" target="_blank">
         <span class="icon">🌐</span>
@@ -86,6 +97,30 @@
         <span class="value">{{ w }}</span>
       </a>
       {% endfor %}
+
+      {% if ag.facebook %}
+      <a class="contact-row social-row" href="{{ ag.facebook }}" target="_blank">
+        <span class="icon">📘</span>
+        <span class="label">Facebook</span>
+        <span class="value">Profilo</span>
+      </a>
+      {% endif %}
+
+      {% if ag.instagram %}
+      <a class="contact-row social-row" href="{{ ag.instagram }}" target="_blank">
+        <span class="icon">📸</span>
+        <span class="label">Instagram</span>
+        <span class="value">Profilo</span>
+      </a>
+      {% endif %}
+
+      {% if ag.linkedin %}
+      <a class="contact-row social-row" href="{{ ag.linkedin }}" target="_blank">
+        <span class="icon">💼</span>
+        <span class="label">LinkedIn</span>
+        <span class="value">Profilo</span>
+      </a>
+      {% endif %}
 
       <a class="contact-row"
          href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
@@ -103,14 +138,37 @@
       </a>
     </section>
 
+    <!-- DATI FISCALI -->
+    {% if ag.piva or ag.sdi %}
+    <section class="card-section">
+      <h2>Dati fiscali</h2>
+
+      {% if ag.piva %}
+      <div class="contact-row">
+        <span class="icon">🏦</span>
+        <span class="label">Partita IVA</span>
+        <span class="value">{{ ag.piva }}</span>
+      </div>
+      {% endif %}
+
+      {% if ag.sdi %}
+      <div class="contact-row">
+        <span class="icon">📥</span>
+        <span class="label">Codice SDI</span>
+        <span class="value">{{ ag.sdi }}</span>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
     <!-- INDIRIZZI -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for adr in addresses %}
-        <div class="address-row">
-          <div class="address-value">{{ adr }}</div>
-        </div>
+      <div class="address-row">
+        <div class="address-value">{{ adr }}</div>
+      </div>
       {% endfor %}
     </section>
     {% endif %}
@@ -121,20 +179,24 @@
       <h2>Documenti</h2>
       <div class="pdf-list">
         {% if ag.pdf1_url %}
-        <a class="pdf-item" href="{{ ag.pdf1_url }}" target="_blank">📄 Documento 1</a>
+        <a class="pdf-item" href="{{ ag.pdf1_url }}" target="_blank">
+          <span class="pdf-icon">📄</span><span>Documento 1</span>
+        </a>
         {% endif %}
         {% if ag.pdf2_url %}
-        <a class="pdf-item" href="{{ ag.pdf2_url }}" target="_blank">📄 Documento 2</a>
+        <a class="pdf-item" href="{{ ag.pdf2_url }}" target="_blank">
+          <span class="pdf-icon">📄</span><span>Documento 2</span>
+        </a>
         {% endif %}
       </div>
     </section>
     {% endif %}
 
-    <!-- GALLERIA FOTO -->
+    <!-- GALLERIA FOTO SCORRIMENTO ORIZZONTALE -->
     {% if gallery %}
     <section class="card-section">
       <h2>Galleria foto</h2>
-      <div class="gallery-grid">
+      <div class="gallery-scroll">
         {% for foto in gallery %}
         <a href="{{ foto }}" target="_blank">
           <img src="{{ foto }}" alt="Foto {{ loop.index }} di {{ ag.name }}">
@@ -144,6 +206,6 @@
     </section>
     {% endif %}
 
-  </div> <!-- /card-outer -->
+  </div>
 </div>
 {% endblock %}
