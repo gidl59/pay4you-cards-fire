@@ -18,8 +18,9 @@
                      {{ url_for('create_agent') }}
                    {% endif %}">
 
+      <!-- Identità -->
       <div>
-        <label>Slug (URL) es. giuseppe → /giuseppe</label>
+        <label>Slug (link card es. giuseppe)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
       </div>
 
@@ -29,20 +30,21 @@
       </div>
 
       <div>
-        <label>Azienda</label>
+        <label>Azienda (es. Pay4You)</label>
         <input type="text" name="company" value="{{ agent.company if agent else '' }}">
       </div>
 
       <div>
-        <label>Ruolo (facoltativo)</label>
+        <label>Ruolo (es. Consulente, Responsabile, Area Manager)</label>
         <input type="text" name="role" value="{{ agent.role if agent else '' }}">
       </div>
 
       <div>
-        <label>Bio / descrizione breve</label>
+        <label>Bio / Descrizione breve</label>
         <textarea name="bio">{{ agent.bio if agent and agent.bio else '' }}</textarea>
       </div>
 
+      <!-- Contatti -->
       <div>
         <label>Telefono mobile</label>
         <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
@@ -59,17 +61,23 @@
       </div>
 
       <div>
-        <label>Siti web (separati da virgola)</label>
+        <label>Pec</label>
+        <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+      </div>
+
+      <div>
+        <label>Sito/i web (separati da virgola)</label>
         <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
       </div>
 
       <div>
-        <label>WhatsApp (numero internazionale)</label>
+        <label>WhatsApp (numero internazionale con +39)</label>
         <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
       </div>
 
+      <!-- Social -->
       <div>
-        <label>Facebook</label>
+        <label>Facebook profilo o pagina</label>
         <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
       </div>
 
@@ -83,11 +91,7 @@
         <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
       </div>
 
-      <div>
-        <label>PEC</label>
-        <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
-      </div>
-
+      <!-- Dati fiscali -->
       <div>
         <label>Partita IVA</label>
         <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
@@ -103,28 +107,31 @@
         <textarea name="addresses">{{ agent.addresses if agent and agent.addresses else '' }}</textarea>
       </div>
 
+      <!-- Foto -->
       <div>
         <label>Foto profilo</label>
         <input type="file" name="photo" accept="image/*">
       </div>
 
-      <div>
-        <label>PDF 1</label>
-        <input type="file" name="pdf1" accept="application/pdf">
-      </div>
+      <!-- PDF 1-6 -->
+      <h3 style="margin-top:8px; font-size:14px; color:#facc15;">Documenti PDF (max 6)</h3>
 
+      {% for i in range(1,7) %}
       <div>
-        <label>PDF 2</label>
-        <input type="file" name="pdf2" accept="application/pdf">
+        <label>PDF {{ i }}</label>
+        <input type="file" name="pdf{{ i }}" accept="application/pdf">
       </div>
+      {% endfor %}
 
+      <!-- Galleria -->
       <div>
         <label>Galleria foto (max 12 immagini)</label>
         <input type="file" name="gallery" accept="image/*" multiple>
       </div>
 
+      <!-- Pulsanti -->
       <div class="agent-form-buttons">
-        <button type="submit">Salva modifiche</button>
+        <button type="submit">Salva</button>
         <a href="{{ url_for('admin_home') }}" class="btn-secondary">Annulla</a>
       </div>
 
