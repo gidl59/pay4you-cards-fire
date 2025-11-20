@@ -8,20 +8,16 @@
 
   <div class="card-outer">
 
-    <!-- Logo in alto -->
+    <!-- Logo -->
     <div class="card-header-row">
-      <img src="{{ url_for('static', filename='logo.png') }}"
-           alt="Pay4You"
-           class="card-logo-big">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You" class="card-logo-big">
     </div>
 
-    <!-- BLOCCO BUSINESS -->
+    <!-- Foto + Nome + Ruolo -->
     <section class="business-card">
       {% if ag.photo_url %}
       <div class="card-profile-photo-wrapper">
-        <img src="{{ ag.photo_url }}"
-             alt="Foto {{ ag.name }}"
-             class="card-profile-photo">
+        <img src="{{ ag.photo_url }}" alt="{{ ag.name }}" class="card-profile-photo">
       </div>
       {% endif %}
 
@@ -50,7 +46,7 @@
       <a class="contact-row"
          href="tel:{{ ag.phone_mobile | replace(' ', '') }}">
         <span class="icon">📱</span>
-        <span class="label">Chiama mobile</span>
+        <span class="label">Mobile</span>
         <span class="value">{{ ag.phone_mobile }}</span>
       </a>
       {% endif %}
@@ -59,7 +55,7 @@
       <a class="contact-row"
          href="tel:{{ ag.phone_office | replace(' ', '') }}">
         <span class="icon">☎️</span>
-        <span class="label">Chiama ufficio</span>
+        <span class="label">Ufficio</span>
         <span class="value">{{ ag.phone_office }}</span>
       </a>
       {% endif %}
@@ -126,15 +122,15 @@
          href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
         <span class="icon">💾</span>
         <span class="label">Salva contatto</span>
-        <span class="value">Scarica vCard</span>
+        <span class="value">vCard</span>
       </a>
 
       <a class="contact-row"
          href="{{ url_for('qr', slug=ag.slug) }}"
          target="_blank">
         <span class="icon">🔳</span>
-        <span class="label">QR code</span>
-        <span class="value">Apri QR</span>
+        <span class="label">QR Code</span>
+        <span class="value">Apri</span>
       </a>
     </section>
 
@@ -146,7 +142,7 @@
       {% if ag.piva %}
       <div class="contact-row">
         <span class="icon">🏦</span>
-        <span class="label">Partita IVA</span>
+        <span class="label">P.IVA</span>
         <span class="value">{{ ag.piva }}</span>
       </div>
       {% endif %}
@@ -173,26 +169,22 @@
     </section>
     {% endif %}
 
-    <!-- DOCUMENTI -->
-    {% if ag.pdf1_url or ag.pdf2_url %}
+    <!-- DOCUMENTI PDF -->
+    {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% if ag.pdf1_url %}
-        <a class="pdf-item" href="{{ ag.pdf1_url }}" target="_blank">
-          <span class="pdf-icon">📄</span><span>Documento 1</span>
+        {% for url in pdfs %}
+        <a class="pdf-item" href="{{ url }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento {{ loop.index }}</span>
         </a>
-        {% endif %}
-        {% if ag.pdf2_url %}
-        <a class="pdf-item" href="{{ ag.pdf2_url }}" target="_blank">
-          <span class="pdf-icon">📄</span><span>Documento 2</span>
-        </a>
-        {% endif %}
+        {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <!-- GALLERIA FOTO SCORRIMENTO ORIZZONTALE -->
+    <!-- GALLERIA FOTO -->
     {% if gallery %}
     <section class="card-section">
       <h2>Galleria foto</h2>
