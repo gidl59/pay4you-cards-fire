@@ -3,7 +3,7 @@
    Full Screen iPhone Blur Edition
    ================================ */
 
-/* GLOBAL */
+/* RESET & GLOBAL */
 * {
   box-sizing: border-box;
 }
@@ -22,15 +22,48 @@ a {
   color: inherit;
 }
 
-/* BASE LAYOUT */
+/* LAYOUT GENERALE PAGINE */
 .page-main {
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - 56px);
   display: flex;
   justify-content: center;
   padding: 18px 10px 28px;
 }
 
-/* CONTAINER PRINCIPALE CARD */
+/* HEADER / NAV SEMPLICE */
+.site-header {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-header-logo {
+  height: 32px;
+}
+
+.site-header-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.site-header-links a {
+  font-size: 14px;
+  margin-left: 10px;
+  color: #facc15;
+}
+
+/* =============================
+   CARD PUBBLICA FULLSCREEN
+   ============================= */
+
 .card-fullscreen {
   position: relative;
   width: 100%;
@@ -54,14 +87,14 @@ a {
 /* CARD PRINCIPALE */
 .card-outer {
   backdrop-filter: blur(20px) saturate(135%);
-  background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(15,23,42,0.82));
+  background: linear-gradient(135deg, rgba(15,23,42,0.94), rgba(15,23,42,0.84));
   border-radius: 26px;
   border: 1px solid rgba(148,163,184,0.35);
   box-shadow: 0 24px 60px rgba(0,0,0,0.80);
   padding: 22px 18px 28px;
 }
 
-/* HEADER: LOGO */
+/* HEADER CARD CON LOGO */
 .card-header-row {
   display: flex;
   justify-content: flex-start;
@@ -90,7 +123,7 @@ a {
   width: 106px;
   height: 106px;
   object-fit: cover;
-  border-radius: 999px;
+  border-radius: 999px;           /* FOTO TONDA */
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
     0 0 0 4px rgba(15,23,42,0.85),
@@ -122,7 +155,13 @@ a {
   font-weight: 500;
 }
 
-/* SEZIONI */
+.card-bio {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+/* SEZIONI CARD (CONTATTI, INDIRIZZI, ECC.) */
 .card-section {
   margin-top: 13px;
   padding: 15px 10px 10px;
@@ -169,9 +208,14 @@ a {
   background: radial-gradient(circle at 0 0, rgba(148,163,184,0.26), transparent 55%);
 }
 
-/* WHATSAPP RIGA SPECIALE */
+/* WHATSAPP */
 .whatsapp-row .value {
   color: #22c55e;
+}
+
+/* SOCIAL */
+.social-row .value {
+  color: #60a5fa;
 }
 
 /* INDIRIZZI */
@@ -184,15 +228,18 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI */
+/* DOCUMENTI – ICONA PDF + NOME (max 4) */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .pdf-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   padding: 6px 10px;
   border-radius: 999px;
@@ -200,33 +247,247 @@ a {
   border: 1px solid rgba(148,163,184,0.6);
 }
 
+.pdf-item span.pdf-icon {
+  font-size: 14px;
+}
+
 .pdf-item:hover {
-  background: rgba(52,211,153,0.85);
+  background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+/* GALLERIA FOTO – SLIDER ORIZZONTALE (B) */
+.gallery-scroll {
+  margin-top: 8px;
+  display: flex;
   gap: 8px;
-  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
-.gallery-grid img {
-  width: 100%;
-  aspect-ratio: 4/3;
+.gallery-scroll a {
+  flex: 0 0 auto;
+}
+
+.gallery-scroll img {
+  width: 140px;
+  height: 95px;
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid rgba(148,163,184,0.5);
 }
 
-/* FOOTER SE SERVE */
+/* FOOTER PICCOLO (SE USATO) */
 .card-footer {
   margin-top: 18px;
   padding-top: 10px;
   font-size: 12px;
   text-align: center;
   color: #9ca3af;
+}
+
+/* =============================
+   STILE AREA ADMIN
+   ============================= */
+
+/* Layout contenitore admin */
+.admin-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Box admin principale */
+.admin-card {
+  backdrop-filter: blur(18px) saturate(130%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+  border-radius: 24px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 22px 55px rgba(0,0,0,0.85);
+  padding: 18px 20px 24px;
+}
+
+/* Titolo pagina admin */
+.admin-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Link "Nuovo agente" */
+.admin-new-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #facc15;
+}
+
+/* Tabella agenti */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 6px;
+}
+
+.admin-table thead tr {
+  border-bottom: 1px solid rgba(75,85,99,0.9);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(30,41,59,0.9);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,42,0.9);
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.admin-table td {
+  color: #e5e7eb;
+}
+
+/* Azioni */
+.admin-actions a {
+  margin-right: 8px;
+  font-size: 13px;
+  color: #93c5fd;
+}
+
+/* Pulsante elimina */
+.admin-actions form {
+  display: inline;
+}
+
+.admin-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,113,113,0.8);
+  background: rgba(127,29,29,0.9);
+  color: #fee2e2;
+  cursor: pointer;
+}
+
+/* FORM AGENTE */
+.agent-form-wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agent-form-title {
+  font-size: 24px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-form label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.agent-form input[type="text"],
+.agent-form input[type="email"],
+.agent-form input[type="tel"],
+.agent-form textarea,
+.agent-form input[type="file"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  font-size: 13px;
+}
+
+.agent-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.agent-form-buttons {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.agent-form button,
+.agent-form a.btn-secondary {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.agent-form button[type="submit"] {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.agent-form a.btn-secondary {
+  display: inline-block;
+  background: rgba(31,41,55,0.95);
+  color: #e5e7eb;
+}
+
+/* LOGIN */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.login-card {
+  backdrop-filter: blur(18px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+  border-radius: 22px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
+  padding: 20px 18px 22px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* RESPONSIVE MOBILE */
@@ -248,5 +509,12 @@ a {
 
   .card-logo-big {
     height: 78px;
+  }
+
+  .admin-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
   }
 }
