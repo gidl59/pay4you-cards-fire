@@ -101,9 +101,21 @@ a {
   margin-bottom: 12px;
 }
 
+/* LOGO CON ANIMAZIONE */
 .card-logo-big {
-  height: 100px; /* puoi aumentare/diminuire se vuoi */
+  height: 100px;
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
+  transition: transform 0.4s ease;
+}
+
+/* Gira quando ci passi sopra */
+.card-logo-big:hover {
+  animation: logo-spin 1.4s linear infinite;
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
@@ -119,11 +131,13 @@ a {
   flex-shrink: 0;
 }
 
+/* FOTO AGENTE: TONDA, CENTRATA, DIMENSIONE FISSA */
 .card-profile-photo {
-  width: 106px;
-  height: 106px;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
-  border-radius: 999px;           /* FOTO TONDA */
+  object-position: center;
+  border-radius: 999px;
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
     0 0 0 4px rgba(15,23,42,0.85),
@@ -255,7 +269,7 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – SLIDER ORIZZONTALE */
+/* GALLERIA FOTO – SLIDER ORIZZONTALE + EFFETTO ZOOM */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
@@ -272,8 +286,14 @@ a {
   width: 140px;
   height: 95px;
   object-fit: cover;
+  object-position: center;
   border-radius: 12px;
   border: 1px solid rgba(148,163,184,0.5);
+  transition: transform 0.25s ease;
+}
+
+.gallery-scroll img:hover {
+  transform: scale(1.06);
 }
 
 /* FOOTER PICCOLO (SE USATO) */
@@ -515,7 +535,7 @@ a {
   }
 
   .card-logo-big {
-    height: 90px; /* logo un po' più grande anche su mobile */
+    height: 90px;
   }
 
   .admin-card {
