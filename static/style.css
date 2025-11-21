@@ -101,18 +101,14 @@ a {
   margin-bottom: 12px;
 }
 
-/* LOGO */
+/* LOGO CON ANIMAZIONE LENTA SEMPRE ATTIVA */
 .card-logo-big {
-  height: 100px;
+  height: 80px; /* leggermente più piccolo */
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
-  transition: transform 0.4s ease;
+  animation: logo-spin 18s linear infinite;
 }
 
-/* Gira quando ci passi sopra (effetto extra, opzionale) */
-.card-logo-big:hover {
-  animation: logo-spin 1.4s linear infinite;
-}
-
+/* Animazione rotazione logo */
 @keyframes logo-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
@@ -131,7 +127,7 @@ a {
   flex-shrink: 0;
 }
 
-/* FOTO AGENTE */
+/* FOTO AGENTE: TONDA, CENTRATA, DIMENSIONE FISSA */
 .card-profile-photo {
   width: 120px;
   height: 120px;
@@ -510,18 +506,6 @@ a {
   cursor: pointer;
 }
 
-/* 🔄 ANIMAZIONE LENTA LOGO + FOTO */
-.card-logo-big,
-.card-profile-photo {
-  animation: slow-spin 30s linear infinite;
-  transform-origin: center center;
-}
-
-@keyframes slow-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
 /* RESPONSIVE MOBILE */
 @media (max-width: 640px) {
   .card-outer {
@@ -547,7 +531,7 @@ a {
   }
 
   .card-logo-big {
-    height: 90px;
+    height: 70px;
   }
 
   .admin-card {
