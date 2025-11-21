@@ -7,7 +7,7 @@ from io import BytesIO
 from flask import (
     Flask,
     render_template,
-    render_template_string,
+render_template_string,
     request,
     redirect,
     url_for,
@@ -21,7 +21,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
 
-# ================== CONFIG BASE ==================
+# ================== CONFIG ==================
 
 load_dotenv()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
@@ -41,7 +41,7 @@ engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": Fa
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
-# ================== MODELLO ==================
+# ================== MODEL ==================
 
 
 class Agent(Base):
@@ -57,8 +57,8 @@ class Agent(Base):
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
 
-    emails = Column(String, nullable=True)      # separati da virgole
-    websites = Column(String, nullable=True)    # separati da virgole
+    emails = Column(String, nullable=True)
+    websites = Column(String, nullable=True)
 
     facebook = Column(String, nullable=True)
     instagram = Column(String, nullable=True)
@@ -71,12 +71,11 @@ class Agent(Base):
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
 
-    addresses = Column(Text, nullable=True)     # uno per riga
+    addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    gallery_urls = Column(Text, nullable=True)  # separati da "|"
+    gallery_urls = Column(Text, nullable=True)
 
-    # fino a 6 documenti PDF
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)
     pdf3_url = Column(String, nullable=True)
@@ -103,7 +102,6 @@ def admin_required(f):
 
 
 def get_storage_client():
-    """Client Firebase (se configurato)."""
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
             return None
@@ -120,7 +118,6 @@ def get_storage_client():
 
 
 def upload_to_firebase(file_storage, folder="uploads"):
-    """Carica un file su Firebase Storage e restituisce l'URL firmato."""
     try:
         client = get_storage_client()
         if not client:
@@ -141,13 +138,12 @@ def upload_to_firebase(file_storage, folder="uploads"):
 
 
 def get_base_url():
-    b = BASE_URL or ""
-    if b:
-        return b
+    if BASE_URL:
+        return BASE_URL
     return request.url_root.strip().rstrip("/")
 
 
-# ================== ROUTES DI SERVIZIO ==================
+# ================== ROUTES BASE ==================
 
 
 @app.get("/")
@@ -162,7 +158,7 @@ def health():
     return "ok", 200
 
 
-# ================== LOGIN / LOGOUT ==================
+# ================== LOGIN ==================
 
 
 @app.get("/login")
@@ -186,7 +182,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ================== AREA ADMIN ==================
+# ================== ADMIN ==================
 
 
 @app.get("/admin")
@@ -208,8 +204,7 @@ def new_agent():
 def create_agent():
     db = SessionLocal()
 
-    # slug sempre minuscolo
-    slug = (request.form.get("slug") or "").strip().lower()
+    slug = (request.form.get("slug") or "").strip()
     name = (request.form.get("name") or "").strip()
 
     if not slug or not name:
@@ -241,7 +236,6 @@ def create_agent():
     data["slug"] = slug
     data["name"] = name
 
-    # upload file
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
 
@@ -290,8 +284,7 @@ def create_agent():
 @admin_required
 def edit_agent(slug):
     db = SessionLocal()
-    # slug normalizzato in minuscolo in lookup
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
     return render_template("agent_form.html", agent=ag)
@@ -301,16 +294,14 @@ def edit_agent(slug):
 @admin_required
 def update_agent(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
-    # slug sempre salvato minuscolo
-    new_slug = (request.form.get("slug") or "").strip().lower()
+    new_slug = (request.form.get("slug") or "").strip()
     if not new_slug:
         return "Slug obbligatorio", 400
 
-    # se cambio slug, controlla che non esista già
     if new_slug != ag.slug and db.query(Agent).filter(Agent.slug == new_slug).first():
         return "Slug già esistente", 400
 
@@ -378,7 +369,7 @@ def update_agent(slug):
 @admin_required
 def delete_agent(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if ag:
         db.delete(ag)
         db.commit()
@@ -391,7 +382,7 @@ def delete_agent(slug):
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         return render_template("404.html"), 404
 
@@ -426,7 +417,7 @@ def public_card(slug):
 @app.get("/<slug>.vcf")
 def vcard(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
@@ -477,7 +468,7 @@ def vcard(slug):
 @app.get("/<slug>/qr.png")
 def qr(slug):
     base = get_base_url()
-    url = f"{base}/{slug.lower()}"
+    url = f"{base}/{slug}"
     img = qrcode.make(url)
     bio = BytesIO()
     img.save(bio, format="PNG")
@@ -485,13 +476,13 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# ================== PDF & SITO CON "TORNA ALLA CARD" ==================
+# ================== PDF & SITO (TORNA ALLA CARD) ==================
 
 
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_view(slug, index):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
@@ -516,7 +507,7 @@ def pdf_view(slug, index):
     </head>
     <body>
       <div class="back-bar">
-        <a href="{{ url_for('public_card', slug=ag.slug|lower) }}" class="back-btn">← Torna alla card</a>
+        <a href="{{ url_for('public_card', slug=ag.slug) }}" class="back-btn">← Torna alla card</a>
       </div>
       <iframe class="pdf-frame" src="{{ pdf_url }}"></iframe>
     </body>
@@ -528,7 +519,7 @@ def pdf_view(slug, index):
 @app.get("/<slug>/site/<int:index>")
 def site_view(slug, index):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug.lower()).first()
+    ag = db.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
@@ -538,6 +529,7 @@ def site_view(slug, index):
 
     site_url = websites[index]
 
+    # niente iframe (Aruba lo blocca), solo bottone + link
     html = """
     <!doctype html>
     <html lang="it">
@@ -547,16 +539,20 @@ def site_view(slug, index):
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
       <style>
-        body { margin:0; padding:0; background:#020617; }
-        .site-frame { width:100%; height:calc(100vh - 60px); border:none; }
-        .back-bar { padding:10px 14px; }
+        body { margin:0; padding:20px; background:#020617; color:#e5e7eb; font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; }
+        .back-bar { margin-bottom:16px; }
+        .site-link { margin-top:12px; }
+        .site-link a { padding:10px 18px; border-radius:999px; border:1px solid rgba(148,163,184,0.8); background:rgba(15,23,42,0.95); color:#e5e7eb; text-decoration:none; }
       </style>
     </head>
     <body>
       <div class="back-bar">
-        <a href="{{ url_for('public_card', slug=ag.slug|lower) }}" class="back-btn">← Torna alla card</a>
+        <a href="{{ url_for('public_card', slug=ag.slug) }}" class="back-btn">← Torna alla card</a>
       </div>
-      <iframe class="site-frame" src="{{ site_url }}"></iframe>
+      <p>Per aprire il sito internet:</p>
+      <div class="site-link">
+        <a href="{{ site_url }}" target="_blank">Apri www</a>
+      </div>
     </body>
     </html>
     """
