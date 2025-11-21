@@ -1,94 +1,116 @@
-/* -------------------------
-   PAY4YOU GLOBAL STYLE
----------------------------*/
+/* ================================
+   PAY4YOU LUXURY CARD STYLE
+   Full Screen iPhone Blur Edition
+   ================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+/* RESET & GLOBAL */
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Poppins', sans-serif;
-  background: radial-gradient(circle at top, #0d1424, #08101f 45%, #050b18 100%);
-  color: #f8fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Oxygen, sans-serif;
+  color: #f9fafb;
+  background: radial-gradient(circle at top, #1f2937, #020617 55%, #000 100%);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* LINK GENERALE */
 a {
-  color: #ffd43b;
   text-decoration: none;
-  transition: 0.3s ease;
-}
-a:hover { opacity: 0.85; }
-
-/* -------------------------
-   HEADER ANIMATO
----------------------------*/
-
-.nav-logo {
-  height: 60px;
-  filter: drop-shadow(0 0 10px rgba(255,214,67,0.55));
-  animation: floating 3s ease-in-out infinite;
+  color: inherit;
 }
 
-@keyframes floating {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-  100% { transform: translateY(0px); }
+/* LAYOUT GENERALE PAGINE */
+.page-main {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  justify-content: center;
+  padding: 18px 10px 28px;
 }
 
-.top-nav {
-  padding: 12px 20px;
+/* HEADER / NAV SEMPLICE */
+.site-header {
+  padding: 10px 18px;
   display: flex;
   align-items: center;
-  gap: 20px;
-  font-size: 18px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* -------------------------
-   CARD PROFILO
----------------------------*/
-
-.card-container {
-  max-width: 900px;
-  margin: 50px auto;
-  background: rgba(6,12,26,0.72);
-  border-radius: 20px;
-  padding: 25px 40px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.08);
+.site-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* LOGO PRINCIPALE CARD */
+.site-header-logo {
+  height: 32px;
+}
+
+.site-header-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.site-header-links a {
+  font-size: 14px;
+  margin-left: 10px;
+  color: #facc15;
+}
+
+/* =============================
+   CARD PUBBLICA FULLSCREEN
+   ============================= */
+
+.card-fullscreen {
+  position: relative;
+  width: 100%;
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+/* SFONDO BLUR E AUREA ORO */
+.card-glass-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(248,250,252,0.20), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(250,204,21,0.18), transparent 55%);
+  filter: blur(38px);
+  opacity: 0.88;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* CARD PRINCIPALE */
+.card-outer {
+  backdrop-filter: blur(20px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.94), rgba(15,23,42,0.84));
+  border-radius: 26px;
+  border: 1px solid rgba(148,163,184,0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.80);
+  padding: 22px 18px 28px;
+}
+
+/* HEADER CARD CON LOGO */
+.card-header-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+/* LOGO CON ANIMAZIONE */
 .card-logo-big {
   height: 100px;
-  filter:
-    drop-shadow(0 0 18px rgba(250,204,21,0.6))
-    drop-shadow(0 8px 18px rgba(0,0,0,0.8));
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
+  transition: transform 0.4s ease;
 }
 
-/* FOTO PROFILO AGENTE */
-.card-profile-photo {
-  width: 125px;
-  height: 125px;
-  object-fit: cover;
-  object-position: center;
-  border-radius: 999px;
-  border: 3px solid rgba(248,250,252,0.95);
-  box-shadow:
-    0 0 0 4px rgba(15,23,42,0.85),
-    0 22px 45px rgba(0,0,0,0.8);
-  transition: transform 0.45s ease, box-shadow 0.45s ease;
-}
-
-/* ROTAZIONE SU HOVER (logo + foto) */
-.card-logo-big:hover,
-.card-profile-photo:hover {
+/* Gira quando ci passi sopra */
+.card-logo-big:hover {
   animation: logo-spin 1.4s linear infinite;
-  box-shadow:
-    0 0 0 4px rgba(15,23,42,0.9),
-    0 0 28px rgba(250,204,21,0.75),
-    0 26px 52px rgba(0,0,0,0.9);
 }
 
 @keyframes logo-spin {
@@ -96,102 +118,430 @@ a:hover { opacity: 0.85; }
   to   { transform: rotate(360deg); }
 }
 
-/* -------------------------
-   SEZIONI E BOX
----------------------------*/
+/* BLOCCO BUSINESS (FOTO + DATI) */
+.business-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 4px 18px;
+  border-bottom: 1px solid rgba(148,163,184,0.30);
+}
 
-.section-title {
-  margin-top: 40px;
-  font-size: 22px;
+.card-profile-photo-wrapper {
+  flex-shrink: 0;
+}
+
+/* FOTO AGENTE: TONDA, CENTRATA, DIMENSIONE FISSA */
+.card-profile-photo {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 999px;
+  border: 3px solid rgba(248,250,252,0.95);
+  box-shadow:
+    0 0 0 4px rgba(15,23,42,0.85),
+    0 0 16px 6px rgba(250,204,21,0.35),
+    0 22px 45px rgba(0,0,0,0.8);
+}
+
+.card-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-name {
+  margin: 0;
+  font-size: 26px;
   font-weight: 600;
-  color: #ffe59f;
+  letter-spacing: 0.01em;
 }
 
-.section-box {
-  margin-top: 10px;
-  background: rgba(8,14,28,0.85);
-  border-radius: 14px;
-  padding: 18px 25px;
-  border: 1px solid rgba(255,255,255,0.05);
+.card-role-main {
+  font-size: 15px;
+  color: #e5e7eb;
 }
 
-/* TABELLE CONTATTI */
+.card-role-sub {
+  font-size: 14px;
+  color: #facc15;
+  font-weight: 500;
+}
+
+.card-bio {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+/* SEZIONI CARD (CONTATTI, INDIRIZZI, ECC.) */
+.card-section {
+  margin-top: 13px;
+  padding: 15px 10px 10px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+  border: 1px solid rgba(51,65,85,0.9);
+}
+
+.card-section h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+/* RIGHE CONTATTI */
 .contact-row {
   display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  font-size: 15px;
-}
-.contact-row:last-child { border-bottom: none; }
-
-/* ICONA CONTATTO */
-.contact-icon {
-  width: 22px;
-  margin-right: 8px;
-  vertical-align: -4px;
-}
-
-/* BOTTONI */
-.btn-primary {
-  background: #ffd43b;
-  color: #000;
-  padding: 10px 16px;
-  font-weight: 600;
-  border-radius: 8px;
-  display: inline-block;
-  margin-top: 12px;
-}
-
-.btn-primary:hover {
-  background: #ffec9d;
-}
-
-/* -------------------------
-   ADMIN TABLE
----------------------------*/
-
-.table-agents {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 25px;
-}
-
-.table-agents th {
-  text-align: left;
-  padding: 10px 8px;
-  font-size: 16px;
-  color: #ffd43b;
-}
-
-.table-agents td {
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-
-.delete-btn {
-  background: #ff3b3b;
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: #fff;
+  align-items: center;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(15,23,42,0.85);
   font-size: 14px;
 }
 
-/* -------------------------
-   MOBILE RESPONSIVE
----------------------------*/
-@media(max-width: 720px){
-  .card-container {
-    padding: 20px;
-    margin: 20px;
+.contact-row:last-child {
+  border-bottom: none;
+}
+
+.contact-row .icon {
+  width: 26px;
+  text-align: center;
+}
+
+.contact-row .label {
+  flex: 1;
+  color: #9ca3af;
+}
+
+.contact-row .value {
+  font-weight: 500;
+}
+
+.contact-row:hover {
+  background: radial-gradient(circle at 0 0, rgba(148,163,184,0.26), transparent 55%);
+}
+
+/* WHATSAPP */
+.whatsapp-row .value {
+  color: #22c55e;
+}
+
+/* SOCIAL */
+.social-row .value {
+  color: #60a5fa;
+}
+
+/* INDIRIZZI */
+.address-row {
+  padding: 5px 2px;
+  font-size: 14px;
+}
+
+.address-value {
+  color: #e5e7eb;
+}
+
+/* DOCUMENTI – ICONA PDF + NOME (max 6) */
+.pdf-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pdf-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.96);
+  border: 1px solid rgba(148,163,184,0.6);
+}
+
+.pdf-item span.pdf-icon {
+  font-size: 14px;
+}
+
+.pdf-item:hover {
+  background: rgba(52,211,153,0.9);
+}
+
+/* GALLERIA FOTO – SLIDER ORIZZONTALE + EFFETTO ZOOM */
+.gallery-scroll {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.gallery-scroll a {
+  flex: 0 0 auto;
+}
+
+.gallery-scroll img {
+  width: 140px;
+  height: 95px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,0.5);
+  transition: transform 0.25s ease;
+}
+
+.gallery-scroll img:hover {
+  transform: scale(1.06);
+}
+
+/* FOOTER PICCOLO (SE USATO) */
+.card-footer {
+  margin-top: 18px;
+  padding-top: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* =============================
+   STILE AREA ADMIN
+   ============================= */
+
+/* Layout contenitore admin */
+.admin-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Box admin principale */
+.admin-card {
+  backdrop-filter: blur(18px) saturate(130%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+  border-radius: 24px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 22px 55px rgba(0,0,0,0.85);
+  padding: 18px 20px 24px;
+}
+
+/* Titolo pagina admin */
+.admin-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Link "Nuovo agente" */
+.admin-new-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #facc15;
+}
+
+/* Tabella agenti */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 6px;
+}
+
+.admin-table thead tr {
+  border-bottom: 1px solid rgba(75,85,99,0.9);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(30,41,59,0.9);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,42,0.9);
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.admin-table td {
+  color: #e5e7eb;
+}
+
+/* Azioni */
+.admin-actions a {
+  margin-right: 8px;
+  font-size: 13px;
+  color: #93c5fd;
+}
+
+/* Pulsante elimina */
+.admin-actions form {
+  display: inline;
+}
+
+.admin-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,113,113,0.8);
+  background: rgba(127,29,29,0.9);
+  color: #fee2e2;
+  cursor: pointer;
+}
+
+/* FORM AGENTE */
+.agent-form-wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agent-form-title {
+  font-size: 24px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-form label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.agent-form input[type="text"],
+.agent-form input[type="email"],
+.agent-form input[type="tel"],
+.agent-form textarea,
+.agent-form input[type="file"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  font-size: 13px;
+}
+
+.agent-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.agent-form-buttons {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.agent-form button,
+.agent-form a.btn-secondary {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.agent-form button[type="submit"] {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.agent-form a.btn-secondary {
+  display: inline-block;
+  background: rgba(31,41,55,0.95);
+  color: #e5e7eb;
+}
+
+/* LOGIN */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.login-card {
+  backdrop-filter: blur(18px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+  border-radius: 22px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
+  padding: 20px 18px 22px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 640px) {
+  .card-outer {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 16px 12px 20px;
   }
 
-  .card-profile-photo {
-    width: 105px;
-    height: 105px;
+  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
+  .business-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-name-block {
+    align-items: center;
+  }
+
+  .card-name {
+    font-size: 22px;
   }
 
   .card-logo-big {
-    height: 85px;
+    height: 90px;
+  }
+
+  .admin-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
   }
 }
