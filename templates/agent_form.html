@@ -5,220 +5,205 @@
 {% endblock %}
 
 {% block content %}
+<div class="admin-wrapper">
+  <div class="admin-card agent-form-wrapper">
+    <h1 class="agent-form-title">
+      {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
+    </h1>
 
-<h1>
-  {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
-</h1>
+    <form class="agent-form"
+          method="post"
+          enctype="multipart/form-data"
+          action="{% if agent %}{{ url_for('update_agent', slug=agent.slug) }}{% else %}{{ url_for('create_agent') }}{% endif %}">
 
-<form method="post"
-      enctype="multipart/form-data"
-      action="{% if agent %}{{ url_for('update_agent', slug=agent.slug) }}{% else %}{{ url_for('create_agent') }}{% endif %}">
+      <!-- Slug -->
+      <div>
+        <label for="slug">Slug (URL) <small>es. <code>giuseppe</code> → /giuseppe</small></label>
+        <input type="text"
+               id="slug"
+               name="slug"
+               value="{{ agent.slug if agent else '' }}"
+               required>
+      </div>
 
-  <!-- Slug -->
-  <p>
-    <label for="slug">
-      Slug (URL)
-      <small>es. <code>giuseppe</code> → /giuseppe</small>
-    </label><br>
-    <input type="text"
-           id="slug"
-           name="slug"
-           value="{{ agent.slug if agent else '' }}"
-           required>
-  </p>
+      <!-- Nome completo -->
+      <div>
+        <label for="name">Nome completo</label>
+        <input type="text"
+               id="name"
+               name="name"
+               value="{{ agent.name if agent else '' }}"
+               required>
+      </div>
 
-  <!-- Nome -->
-  <p>
-    <label for="name">Nome completo</label><br>
-    <input type="text"
-           id="name"
-           name="name"
-           value="{{ agent.name if agent else '' }}"
-           required>
-  </p>
+      <!-- Azienda -->
+      <div>
+        <label for="company">Azienda</label>
+        <input type="text"
+               id="company"
+               name="company"
+               value="{{ agent.company if agent else 'Pay4You' }}">
+      </div>
 
-  <!-- Azienda -->
-  <p>
-    <label for="company">Azienda</label><br>
-    <input type="text"
-           id="company"
-           name="company"
-           value="{{ agent.company if agent else 'Pay4You' }}">
-  </p>
+      <!-- Ruolo -->
+      <div>
+        <label for="role">Ruolo (facoltativo)</label>
+        <input type="text"
+               id="role"
+               name="role"
+               value="{{ agent.role if agent else '' }}">
+      </div>
 
-  <!-- Ruolo -->
-  <p>
-    <label for="role">Ruolo (facoltativo)</label><br>
-    <input type="text"
-           id="role"
-           name="role"
-           value="{{ agent.role if agent else '' }}">
-  </p>
+      <!-- Bio -->
+      <div>
+        <label for="bio">Bio / descrizione breve</label>
+        <textarea id="bio" name="bio">{% if agent and agent.bio %}{{ agent.bio }}{% endif %}</textarea>
+      </div>
 
-  <!-- Bio -->
-  <p>
-    <label for="bio">Bio / descrizione breve</label><br>
-    <textarea id="bio"
-              name="bio"
-              rows="3"
-              cols="60">{% if agent and agent.bio %}{{ agent.bio }}{% endif %}</textarea>
-  </p>
+      <!-- TELEFONI -->
+      <div>
+        <label for="phone_mobile">Telefono mobile</label>
+        <input type="text"
+               id="phone_mobile"
+               name="phone_mobile"
+               value="{{ agent.phone_mobile if agent else '' }}">
+      </div>
 
-  <!-- Telefoni -->
-  <p>
-    <label for="phone_mobile">Telefono mobile</label><br>
-    <input type="text"
-           id="phone_mobile"
-           name="phone_mobile"
-           value="{{ agent.phone_mobile if agent else '' }}">
-  </p>
+      <div>
+        <label for="phone_office">Telefono ufficio</label>
+        <input type="text"
+               id="phone_office"
+               name="phone_office"
+               value="{{ agent.phone_office if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="phone_office">Telefono ufficio</label><br>
-    <input type="text"
-           id="phone_office"
-           name="phone_office"
-           value="{{ agent.phone_office if agent else '' }}">
-  </p>
+      <!-- EMAIL / SITI -->
+      <div>
+        <label for="emails">Email (separate da virgola)</label>
+        <input type="text"
+               id="emails"
+               name="emails"
+               value="{{ agent.emails if agent else '' }}">
+      </div>
 
-  <!-- Email / siti -->
-  <p>
-    <label for="emails">Email (separate da virgola)</label><br>
-    <input type="text"
-           id="emails"
-           name="emails"
-           value="{{ agent.emails if agent else '' }}">
-  </p>
+      <div>
+        <label for="websites">Siti web (separati da virgola)</label>
+        <input type="text"
+               id="websites"
+               name="websites"
+               value="{{ agent.websites if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="websites">Siti web (separati da virgola)</label><br>
-    <input type="text"
-           id="websites"
-           name="websites"
-           value="{{ agent.websites if agent else '' }}">
-  </p>
+      <!-- WHATSAPP & SOCIAL -->
+      <div>
+        <label for="whatsapp">WhatsApp (numero internazionale)</label>
+        <input type="text"
+               id="whatsapp"
+               name="whatsapp"
+               value="{{ agent.whatsapp if agent else '' }}">
+      </div>
 
-  <!-- WhatsApp + social -->
-  <p>
-    <label for="whatsapp">WhatsApp (numero internazionale)</label><br>
-    <input type="text"
-           id="whatsapp"
-           name="whatsapp"
-           value="{{ agent.whatsapp if agent else '' }}">
-  </p>
+      <div>
+        <label for="facebook">Facebook</label>
+        <input type="text"
+               id="facebook"
+               name="facebook"
+               value="{{ agent.facebook if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="facebook">Facebook</label><br>
-    <input type="text"
-           id="facebook"
-           name="facebook"
-           value="{{ agent.facebook if agent else '' }}">
-  </p>
+      <div>
+        <label for="instagram">Instagram</label>
+        <input type="text"
+               id="instagram"
+               name="instagram"
+               value="{{ agent.instagram if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="instagram">Instagram</label><br>
-    <input type="text"
-           id="instagram"
-           name="instagram"
-           value="{{ agent.instagram if agent else '' }}">
-  </p>
+      <div>
+        <label for="linkedin">LinkedIn</label>
+        <input type="text"
+               id="linkedin"
+               name="linkedin"
+               value="{{ agent.linkedin if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="linkedin">LinkedIn</label><br>
-    <input type="text"
-           id="linkedin"
-           name="linkedin"
-           value="{{ agent.linkedin if agent else '' }}">
-  </p>
+      <!-- PEC / P.IVA / SDI -->
+      <div>
+        <label for="pec">PEC</label>
+        <input type="text"
+               id="pec"
+               name="pec"
+               value="{{ agent.pec if agent else '' }}">
+      </div>
 
-  <!-- PEC / PIVA / SDI -->
-  <p>
-    <label for="pec">PEC</label><br>
-    <input type="text"
-           id="pec"
-           name="pec"
-           value="{{ agent.pec if agent else '' }}">
-  </p>
+      <div>
+        <label for="piva">Partita IVA</label>
+        <input type="text"
+               id="piva"
+               name="piva"
+               value="{{ agent.piva if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="piva">Partita IVA</label><br>
-    <input type="text"
-           id="piva"
-           name="piva"
-           value="{{ agent.piva if agent else '' }}">
-  </p>
+      <div>
+        <label for="sdi">Codice SDI</label>
+        <input type="text"
+               id="sdi"
+               name="sdi"
+               value="{{ agent.sdi if agent else '' }}">
+      </div>
 
-  <p>
-    <label for="sdi">Codice SDI</label><br>
-    <input type="text"
-           id="sdi"
-           name="sdi"
-           value="{{ agent.sdi if agent else '' }}">
-  </p>
+      <!-- INDIRIZZI -->
+      <div>
+        <label for="addresses">Indirizzi (uno per riga)</label>
+        <textarea id="addresses" name="addresses">{% if agent and agent.addresses %}{{ agent.addresses }}{% endif %}</textarea>
+      </div>
 
-  <!-- Indirizzi -->
-  <p>
-    <label for="addresses">Indirizzi (uno per riga)</label><br>
-    <textarea id="addresses"
-              name="addresses"
-              rows="3"
-              cols="60">{% if agent and agent.addresses %}{{ agent.addresses }}{% endif %}</textarea>
-  </p>
+      <!-- FOTO PROFILO -->
+      <div>
+        <label for="photo">Foto profilo</label>
+        <input type="file"
+               id="photo"
+               name="photo"
+               accept="image/*">
+        {% if agent and agent.photo_url %}
+          <small>Foto già presente. Carica un file solo se vuoi sostituirla.</small>
+        {% endif %}
+      </div>
 
-  <!-- Foto profilo -->
-  <p>
-    <label for="photo">Foto profilo</label><br>
-    <input type="file"
-           id="photo"
-           name="photo"
-           accept="image/*">
-    {% if agent and agent.photo_url %}
-      <br><small>Foto già presente. Carica un file solo se vuoi sostituirla.</small>
-    {% endif %}
-  </p>
+      <!-- PDF 1–6 -->
+      <div>
+        <label>PDF (max 6 documenti)</label>
+        <input type="file" name="pdf1" accept="application/pdf">
+        <input type="file" name="pdf2" accept="application/pdf">
+        <input type="file" name="pdf3" accept="application/pdf">
+        <input type="file" name="pdf4" accept="application/pdf">
+        <input type="file" name="pdf5" accept="application/pdf">
+        <input type="file" name="pdf6" accept="application/pdf">
+        {% if agent and agent.pdf1_url %}
+          <small>Documenti già presenti. Carica nuovi PDF solo se vuoi sostituirli.</small>
+        {% endif %}
+      </div>
 
-  <!-- PDF (6 campi verticali) -->
-  <p>
-    <strong>PDF (max 6 documenti)</strong><br><br>
+      <!-- GALLERIA -->
+      <div>
+        <label for="gallery">Galleria foto (max 12 immagini)</label>
+        <input type="file"
+               id="gallery"
+               name="gallery"
+               accept="image/*"
+               multiple>
+        {% if agent and agent.gallery_urls %}
+          <small>Galleria già presente. Carica nuove immagini solo se vuoi sostituirla.</small>
+        {% endif %}
+      </div>
 
-    <label for="pdf1">PDF 1</label><br>
-    <input type="file" id="pdf1" name="pdf1" accept="application/pdf"><br><br>
+      <!-- BOTTONI -->
+      <div class="agent-form-buttons">
+        <button type="submit">Salva modifiche</button>
+        <a href="{{ url_for('admin_home') }}" class="btn-secondary">Annulla</a>
+      </div>
 
-    <label for="pdf2">PDF 2</label><br>
-    <input type="file" id="pdf2" name="pdf2" accept="application/pdf"><br><br>
-
-    <label for="pdf3">PDF 3</label><br>
-    <input type="file" id="pdf3" name="pdf3" accept="application/pdf"><br><br>
-
-    <label for="pdf4">PDF 4</label><br>
-    <input type="file" id="pdf4" name="pdf4" accept="application/pdf"><br><br>
-
-    <label for="pdf5">PDF 5</label><br>
-    <input type="file" id="pdf5" name="pdf5" accept="application/pdf"><br><br>
-
-    <label for="pdf6">PDF 6</label><br>
-    <input type="file" id="pdf6" name="pdf6" accept="application/pdf">
-  </p>
-
-  <!-- Galleria foto -->
-  <p>
-    <label for="gallery">Galleria foto (max 12 immagini)</label><br>
-    <input type="file"
-           id="gallery"
-           name="gallery"
-           accept="image/*"
-           multiple>
-    {% if agent and agent.gallery_urls %}
-      <br><small>Galleria già presente. Carica nuove immagini solo se vuoi sostituirla.</small>
-    {% endif %}
-  </p>
-
-  <!-- Bottoni -->
-  <p>
-    <button type="submit">Salva modifiche</button>
-    <a href="{{ url_for('admin_home') }}">Annulla</a>
-  </p>
-
-</form>
-
+    </form>
+  </div>
+</div>
 {% endblock %}
