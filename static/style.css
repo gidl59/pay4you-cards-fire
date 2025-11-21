@@ -101,14 +101,18 @@ a {
   margin-bottom: 12px;
 }
 
-/* LOGO CON ANIMAZIONE LENTA SEMPRE ATTIVA */
+/* LOGO CON ANIMAZIONE */
 .card-logo-big {
-  height: 80px; /* leggermente più piccolo */
+  height: 100px;
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
-  animation: logo-spin 18s linear infinite;
+  transition: transform 0.4s ease;
 }
 
-/* Animazione rotazione logo */
+/* Gira quando ci passi sopra */
+.card-logo-big:hover {
+  animation: logo-spin 1.4s linear infinite;
+}
+
 @keyframes logo-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
@@ -531,7 +535,7 @@ a {
   }
 
   .card-logo-big {
-    height: 70px;
+    height: 90px;
   }
 
   .admin-card {
@@ -540,4 +544,43 @@ a {
     border-left: none;
     border-right: none;
   }
+}
+
+/* =============================
+   OVERLAY PER SITO / PDF
+   ============================= */
+
+.hidden {
+  display: none;
+}
+
+.viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: #020617;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer-topbar {
+  padding: 8px 12px;
+  background: linear-gradient(90deg, #0f172a, #111827);
+  border-bottom: 1px solid rgba(148,163,184,0.5);
+}
+
+.viewer-back-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.8);
+  background: rgba(15,23,42,0.95);
+  color: #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.viewer-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
 }
