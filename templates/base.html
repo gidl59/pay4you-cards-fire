@@ -1,79 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pay4You Digital Card</title>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            background: linear-gradient(135deg, #061020, #0b1224 35%, #0f142e 85%);
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 0;
-            color: #fff;
-        }
-
-        header.topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            background: rgba(0,0,0,0.15);
-        }
-
-        header .logo-mini img {
-            height: 42px;
-            animation: pulse 3s infinite ease-in-out;
-            cursor: pointer;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1);}
-            50% { transform: scale(1.08);}
-            100% { transform: scale(1);}
-        }
-
-        nav a {
-            margin-left: 18px;
-            color: #ffd000;
-            text-decoration: none;
-            font-weight: 500;
-            transition: 0.2s;
-        }
-
-        nav a:hover {
-            color: #ffffff;
-            text-shadow: 0 0 6px #ffd000;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>Pay4You Cards – {% block title %}{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
 
-<header class="topbar">
-    <div class="logo-mini">
-        <img src="{{ url_for('static', filename='img/logo-pay4you.png') }}" alt="Pay4You">
-    </div>
+<header class="site-header">
+  <div class="site-header-left">
+    <img
+      src="{{ url_for('static', filename='logo.png') }}"
+      alt="Pay4You"
+      class="site-header-logo"
+    >
+    <div class="site-header-title">Pay4You Digital Card</div>
+  </div>
 
+  <nav class="site-header-links">
     {% if session.get('admin') %}
-    <nav>
-        <a href="{{ url_for('admin_home') }}">Pannello agenti</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </nav>
+      <a href="{{ url_for('admin_home') }}">Pannello agenti</a>
+      <!-- card principale di Giuseppe; puoi cambiare lo slug se serve -->
+      <a href="{{ url_for('public_card', slug='giuseppe') }}">Vai alle card</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Admin</a>
     {% endif %}
+  </nav>
 </header>
 
-<div class="container">
-    {% block content %}{% endblock %}
-</div>
+<main class="page-main">
+  {% block content %}{% endblock %}
+</main>
 
 </body>
 </html>
