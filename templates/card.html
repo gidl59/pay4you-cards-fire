@@ -7,7 +7,7 @@
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
-    <!-- HEADER LOGO -->
+    <!-- HEADER CON LOGO -->
     <div class="card-header-row">
       <img src="{{ url_for('static', filename='logo.png') }}"
            alt="Pay4You"
@@ -15,179 +15,187 @@
     </div>
 
     <!-- BLOCCO FOTO + DATI -->
-    <div class="business-card">
+    <section class="business-card">
       {% if ag.photo_url %}
       <div class="card-profile-photo-wrapper">
         <img src="{{ ag.photo_url }}"
-             alt="{{ ag.name }}"
+             alt="Foto profilo {{ ag.name }}"
              class="card-profile-photo">
       </div>
       {% endif %}
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
-
         {% if ag.role %}
           <div class="card-role-main">{{ ag.role }}</div>
         {% endif %}
-
         {% if ag.company %}
           <div class="card-role-sub">{{ ag.company }}</div>
         {% endif %}
-
         {% if ag.bio %}
-          <div class="card-bio">{{ ag.bio }}</div>
+          <p class="card-bio">{{ ag.bio }}</p>
         {% endif %}
       </div>
-    </div>
+    </section>
 
     <!-- CONTATTI -->
     <section class="card-section">
       <h2>Contatti</h2>
 
       {% if ag.phone_mobile %}
-      <a class="contact-row" href="tel:{{ ag.phone_mobile }}">
-        <span class="icon">📱</span>
-        <span class="label">Chiama mobile</span>
-        <span class="value">{{ ag.phone_mobile }}</span>
-      </a>
+      <div class="contact-row">
+        <div class="icon">📱</div>
+        <div class="label">Chiama mobile</div>
+        <div class="value">
+          <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
+        </div>
+      </div>
       {% endif %}
 
       {% if ag.phone_office %}
-      <a class="contact-row" href="tel:{{ ag.phone_office }}">
-        <span class="icon">☎️</span>
-        <span class="label">Chiama ufficio</span>
-        <span class="value">{{ ag.phone_office }}</span>
-      </a>
+      <div class="contact-row">
+        <div class="icon">☎️</div>
+        <div class="label">Chiama ufficio</div>
+        <div class="value">
+          <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
+        </div>
+      </div>
       {% endif %}
 
       {% if ag.whatsapp %}
-      <a class="contact-row whatsapp-row"
-         href="https://wa.me/{{ ag.whatsapp|replace('+','') }}"
-         target="_blank">
-        <span class="icon">🟢</span>
-        <span class="label">WhatsApp</span>
-        <span class="value">{{ ag.whatsapp }}</span>
-      </a>
+      <div class="contact-row whatsapp-row">
+        <div class="icon">🟢</div>
+        <div class="label">WhatsApp</div>
+        <div class="value">
+          <a href="https://wa.me/{{ ag.whatsapp|replace('+','') }}" target="_blank">
+            {{ ag.whatsapp }}
+          </a>
+        </div>
+      </div>
       {% endif %}
 
-      {% if emails and emails|length > 0 %}
-      <a class="contact-row" href="mailto:{{ emails[0] }}">
-        <span class="icon">✉️</span>
-        <span class="label">Email</span>
-        <span class="value">{{ emails[0] }}</span>
-      </a>
-      {% endif %}
-
-      {% if emails and emails|length > 1 %}
-      <a class="contact-row" href="mailto:{{ emails[1] }}">
-        <span class="icon">✉️</span>
-        <span class="label">Email</span>
-        <span class="value">{{ emails[1] }}</span>
-      </a>
-      {% endif %}
+      {% for e in emails %}
+      <div class="contact-row">
+        <div class="icon">✉️</div>
+        <div class="label">Email</div>
+        <div class="value">
+          <a href="mailto:{{ e }}">{{ e }}</a>
+        </div>
+      </div>
+      {% endfor %}
 
       {% if ag.pec %}
-      <a class="contact-row" href="mailto:{{ ag.pec }}">
-        <span class="icon">📮</span>
-        <span class="label">PEC</span>
-        <span class="value">{{ ag.pec }}</span>
-      </a>
+      <div class="contact-row">
+        <div class="icon">📮</div>
+        <div class="label">PEC</div>
+        <div class="value">
+          <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
+        </div>
+      </div>
       {% endif %}
 
-      {% if websites and websites|length > 0 %}
-      <a class="contact-row"
-         href="{{ url_for('site_view', slug=ag.slug, index=0) }}">
-        <span class="icon">🌐</span>
-        <span class="label">Sito internet</span>
-        <span class="value">{{ websites[0] }}</span>
-      </a>
-      {% endif %}
+      {% for w in websites %}
+      <div class="contact-row social-row">
+        <div class="icon">🌐</div>
+        <div class="label">Sito internet</div>
+        <div class="value">
+          <a href="{{ w }}" target="_blank">{{ w }}</a>
+        </div>
+      </div>
+      {% endfor %}
 
       {% if ag.facebook %}
-      <a class="contact-row social-row" href="{{ ag.facebook }}" target="_blank">
-        <span class="icon">📘</span>
-        <span class="label">Facebook</span>
-        <span class="value">Profilo</span>
-      </a>
+      <div class="contact-row social-row">
+        <div class="icon">📘</div>
+        <div class="label">Facebook</div>
+        <div class="value">
+          <a href="{{ ag.facebook }}" target="_blank">{{ ag.facebook }}</a>
+        </div>
+      </div>
       {% endif %}
 
       {% if ag.instagram %}
-      <a class="contact-row social-row" href="{{ ag.instagram }}" target="_blank">
-        <span class="icon">📸</span>
-        <span class="label">Instagram</span>
-        <span class="value">Profilo</span>
-      </a>
+      <div class="contact-row social-row">
+        <div class="icon">📸</div>
+        <div class="label">Instagram</div>
+        <div class="value">
+          <a href="{{ ag.instagram }}" target="_blank">{{ ag.instagram }}</a>
+        </div>
+      </div>
       {% endif %}
 
       {% if ag.linkedin %}
-      <a class="contact-row social-row" href="{{ ag.linkedin }}" target="_blank">
-        <span class="icon">💼</span>
-        <span class="label">LinkedIn</span>
-        <span class="value">Profilo</span>
-      </a>
+      <div class="contact-row social-row">
+        <div class="icon">💼</div>
+        <div class="label">LinkedIn</div>
+        <div class="value">
+          <a href="{{ ag.linkedin }}" target="_blank">{{ ag.linkedin }}</a>
+        </div>
+      </div>
       {% endif %}
 
-      <!-- SALVA CONTATTO -->
-      <a class="contact-row" href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-        <span class="icon">💾</span>
-        <span class="label">Salva contatto</span>
-        <span class="value">Scarica vCard</span>
-      </a>
+      <!-- SALVA CONTATTO + QR -->
+      <div class="contact-row">
+        <div class="icon">💾</div>
+        <div class="label">Salva contatto</div>
+        <div class="value">
+          <a href="{{ url_for('vcard', slug=ag.slug, download=1) }}">
+            Scarica vCard
+          </a>
+        </div>
+      </div>
 
-      <!-- QR -->
-      <a class="contact-row" href="{{ url_for('qr', slug=ag.slug) }}" target="_blank">
-        <span class="icon">🔲</span>
-        <span class="label">QR code</span>
-        <span class="value">Apri QR</span>
-      </a>
+      <div class="contact-row">
+        <div class="icon">🔳</div>
+        <div class="label">QR code</div>
+        <div class="value">
+          <a href="{{ url_for('qr', slug=ag.slug) }}" target="_blank">
+            Apri QR
+          </a>
+        </div>
+      </div>
     </section>
 
     <!-- DATI FISCALI -->
     {% if ag.piva or ag.sdi %}
     <section class="card-section">
       <h2>Dati fiscali</h2>
-
       {% if ag.piva %}
-      <div class="contact-row">
-        <span class="icon">🏛️</span>
-        <span class="label">Partita IVA</span>
-        <span class="value">{{ ag.piva }}</span>
+      <div class="address-row">
+        <div class="label">🏛️ Partita IVA</div>
+        <div class="address-value">{{ ag.piva }}</div>
       </div>
       {% endif %}
-
       {% if ag.sdi %}
-      <div class="contact-row">
-        <span class="icon">🧾</span>
-        <span class="label">Codice SDI</span>
-        <span class="value">{{ ag.sdi }}</span>
+      <div class="address-row">
+        <div class="label">🧾 Codice SDI</div>
+        <div class="address-value">{{ ag.sdi }}</div>
       </div>
       {% endif %}
     </section>
     {% endif %}
 
     <!-- INDIRIZZI -->
-    {% if addresses and addresses|length > 0 %}
+    {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
-      {% for a in addresses %}
+      {% for addr in addresses %}
       <div class="address-row">
-        <div class="address-value">{{ a }}</div>
+        <div class="address-value">{{ addr }}</div>
       </div>
       {% endfor %}
     </section>
     {% endif %}
 
     <!-- DOCUMENTI PDF -->
-    {% if pdf_urls and pdf_urls|length > 0 %}
+    {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% for idx, url in pdf_urls %}
-        <a class="pdf-item"
-           href="{{ url_for('pdf_view', slug=ag.slug, index=idx) }}">
+        {% for p in pdfs %}
+        <a class="pdf-item" href="{{ p.url }}" target="_blank">
           <span class="pdf-icon">📄</span>
-          <span>Documento {{ loop.index }}</span>
+          <span>Documento {{ p.idx }}</span>
         </a>
         {% endfor %}
       </div>
@@ -195,13 +203,13 @@
     {% endif %}
 
     <!-- GALLERIA FOTO -->
-    {% if gallery and gallery|length > 0 %}
+    {% if gallery %}
     <section class="card-section">
       <h2>Galleria foto</h2>
       <div class="gallery-scroll">
-        {% for img in gallery %}
-        <a href="{{ img }}" target="_blank">
-          <img src="{{ img }}" alt="Foto {{ loop.index }}">
+        {% for g in gallery %}
+        <a href="{{ g }}" target="_blank">
+          <img src="{{ g }}" alt="Foto {{ loop.index }}">
         </a>
         {% endfor %}
       </div>
