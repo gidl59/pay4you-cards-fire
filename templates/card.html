@@ -6,155 +6,141 @@
 <div class="card-fullscreen">
   <div class="card-glass-bg"></div>
 
-  <article class="card-outer">
+  <div class="card-outer">
     <!-- HEADER LOGO -->
-    <header class="card-header-row">
-      <img
-        src="{{ url_for('static', filename='logo.png') }}"
-        alt="Pay4You"
-        class="card-logo-big"
-      >
-    </header>
+    <div class="card-header-row">
+      <img src="{{ url_for('static', filename='logo.png') }}"
+           alt="Pay4You"
+           class="card-logo-big">
+    </div>
 
-    <!-- BLOCCO FOTO + DATI BASE -->
-    <section class="business-card">
+    <!-- BLOCCO FOTO + DATI -->
+    <div class="business-card">
+      {% if ag.photo_url %}
       <div class="card-profile-photo-wrapper">
-        {% if ag.photo_url %}
-          <img src="{{ ag.photo_url }}" alt="{{ ag.name }}" class="card-profile-photo">
-        {% else %}
-          <div class="card-profile-photo card-profile-photo--placeholder"></div>
-        {% endif %}
+        <img src="{{ ag.photo_url }}"
+             alt="{{ ag.name }}"
+             class="card-profile-photo">
       </div>
+      {% endif %}
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
+
         {% if ag.role %}
           <div class="card-role-main">{{ ag.role }}</div>
         {% endif %}
+
         {% if ag.company %}
           <div class="card-role-sub">{{ ag.company }}</div>
         {% endif %}
+
         {% if ag.bio %}
-          <p class="card-bio">{{ ag.bio }}</p>
+          <div class="card-bio">{{ ag.bio }}</div>
         {% endif %}
       </div>
-    </section>
+    </div>
 
     <!-- CONTATTI -->
     <section class="card-section">
       <h2>Contatti</h2>
 
       {% if ag.phone_mobile %}
-      <div class="contact-row">
-        <div class="icon">📱</div>
-        <div class="label">Chiama mobile</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
-        </div>
-      </div>
+      <a class="contact-row" href="tel:{{ ag.phone_mobile }}">
+        <span class="icon">📱</span>
+        <span class="label">Chiama mobile</span>
+        <span class="value">{{ ag.phone_mobile }}</span>
+      </a>
       {% endif %}
 
       {% if ag.phone_office %}
-      <div class="contact-row">
-        <div class="icon">☎️</div>
-        <div class="label">Chiama ufficio</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
-        </div>
-      </div>
+      <a class="contact-row" href="tel:{{ ag.phone_office }}">
+        <span class="icon">☎️</span>
+        <span class="label">Chiama ufficio</span>
+        <span class="value">{{ ag.phone_office }}</span>
+      </a>
       {% endif %}
 
       {% if ag.whatsapp %}
-      <div class="contact-row whatsapp-row">
-        <div class="icon">🟢</div>
-        <div class="label">WhatsApp</div>
-        <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp | replace('+','') }}">{{ ag.whatsapp }}</a>
-        </div>
-      </div>
+      <a class="contact-row whatsapp-row"
+         href="https://wa.me/{{ ag.whatsapp|replace('+','') }}"
+         target="_blank">
+        <span class="icon">🟢</span>
+        <span class="label">WhatsApp</span>
+        <span class="value">{{ ag.whatsapp }}</span>
+      </a>
       {% endif %}
 
-      {# Email lavoro / personali #}
-      {% for e in emails %}
-      <div class="contact-row">
-        <div class="icon">📧</div>
-        <div class="label">Email</div>
-        <div class="value">
-          <a href="mailto:{{ e }}">{{ e }}</a>
-        </div>
-      </div>
-      {% endfor %}
+      {% if emails and emails|length > 0 %}
+      <a class="contact-row" href="mailto:{{ emails[0] }}">
+        <span class="icon">✉️</span>
+        <span class="label">Email</span>
+        <span class="value">{{ emails[0] }}</span>
+      </a>
+      {% endif %}
+
+      {% if emails and emails|length > 1 %}
+      <a class="contact-row" href="mailto:{{ emails[1] }}">
+        <span class="icon">✉️</span>
+        <span class="label">Email</span>
+        <span class="value">{{ emails[1] }}</span>
+      </a>
+      {% endif %}
 
       {% if ag.pec %}
-      <div class="contact-row">
-        <div class="icon">📮</div>
-        <div class="label">PEC</div>
-        <div class="value">
-          <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
-        </div>
-      </div>
+      <a class="contact-row" href="mailto:{{ ag.pec }}">
+        <span class="icon">📮</span>
+        <span class="label">PEC</span>
+        <span class="value">{{ ag.pec }}</span>
+      </a>
       {% endif %}
 
-      {# SITO INTERNET → APRE NELL’OVERLAY CON TORNA INDIETRO #}
-      {% if websites %}
-      {% for w in websites %}
-      <div class="contact-row">
-        <div class="icon">🌐</div>
-        <div class="label">Sito internet</div>
-        <div class="value">
-          <a href="#" onclick="openOverlay('{{ w }}'); return false;">{{ w }}</a>
-        </div>
-      </div>
-      {% endfor %}
+      {% if websites and websites|length > 0 %}
+      <a class="contact-row"
+         href="{{ url_for('site_view', slug=ag.slug|lower, index=0) }}">
+        <span class="icon">🌐</span>
+        <span class="label">Sito internet</span>
+        <span class="value">{{ websites[0] }}</span>
+      </a>
       {% endif %}
 
       {% if ag.facebook %}
-      <div class="contact-row social-row">
-        <div class="icon">📘</div>
-        <div class="label">Facebook</div>
-        <div class="value">
-          <a href="{{ ag.facebook }}" target="_blank">Profilo</a>
-        </div>
-      </div>
+      <a class="contact-row social-row" href="{{ ag.facebook }}" target="_blank">
+        <span class="icon">📘</span>
+        <span class="label">Facebook</span>
+        <span class="value">Profilo</span>
+      </a>
       {% endif %}
 
       {% if ag.instagram %}
-      <div class="contact-row social-row">
-        <div class="icon">📸</div>
-        <div class="label">Instagram</div>
-        <div class="value">
-          <a href="{{ ag.instagram }}" target="_blank">Profilo</a>
-        </div>
-      </div>
+      <a class="contact-row social-row" href="{{ ag.instagram }}" target="_blank">
+        <span class="icon">📸</span>
+        <span class="label">Instagram</span>
+        <span class="value">Profilo</span>
+      </a>
       {% endif %}
 
       {% if ag.linkedin %}
-      <div class="contact-row social-row">
-        <div class="icon">💼</div>
-        <div class="label">LinkedIn</div>
-        <div class="value">
-          <a href="{{ ag.linkedin }}" target="_blank">Profilo</a>
-        </div>
-      </div>
+      <a class="contact-row social-row" href="{{ ag.linkedin }}" target="_blank">
+        <span class="icon">💼</span>
+        <span class="label">LinkedIn</span>
+        <span class="value">Profilo</span>
+      </a>
       {% endif %}
 
-      <!-- SALVA CONTATTO (vCard) -->
-      <div class="contact-row">
-        <div class="icon">💾</div>
-        <div class="label">Salva contatto</div>
-        <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">Scarica vCard</a>
-        </div>
-      </div>
+      <!-- SALVA CONTATTO -->
+      <a class="contact-row" href="{{ url_for('vcard', slug=ag.slug|lower) }}?download=1">
+        <span class="icon">💾</span>
+        <span class="label">Salva contatto</span>
+        <span class="value">Scarica vCard</span>
+      </a>
 
-      <!-- QR (già perfetto, non tocchiamo logica) -->
-      <div class="contact-row">
-        <div class="icon">🔳</div>
-        <div class="label">QR code</div>
-        <div class="value">
-          <a href="{{ url_for('qr', slug=ag.slug) }}" target="_blank">Apri QR</a>
-        </div>
-      </div>
+      <!-- QR -->
+      <a class="contact-row" href="{{ url_for('qr', slug=ag.slug|lower) }}" target="_blank">
+        <span class="icon">🔲</span>
+        <span class="label">QR code</span>
+        <span class="value">Apri QR</span>
+      </a>
     </section>
 
     <!-- DATI FISCALI -->
@@ -164,105 +150,64 @@
 
       {% if ag.piva %}
       <div class="contact-row">
-        <div class="icon">🏛️</div>
-        <div class="label">Partita IVA</div>
-        <div class="value">{{ ag.piva }}</div>
+        <span class="icon">🏛️</span>
+        <span class="label">Partita IVA</span>
+        <span class="value">{{ ag.piva }}</span>
       </div>
       {% endif %}
 
       {% if ag.sdi %}
       <div class="contact-row">
-        <div class="icon">📑</div>
-        <div class="label">Codice SDI</div>
-        <div class="value">{{ ag.sdi }}</div>
+        <span class="icon">🧾</span>
+        <span class="label">Codice SDI</span>
+        <span class="value">{{ ag.sdi }}</span>
       </div>
       {% endif %}
     </section>
     {% endif %}
 
     <!-- INDIRIZZI -->
-    {% if addresses %}
+    {% if addresses and addresses|length > 0 %}
     <section class="card-section">
       <h2>Indirizzi</h2>
-      {% for addr in addresses %}
+      {% for a in addresses %}
       <div class="address-row">
-        <div class="address-value">{{ addr }}</div>
+        <div class="address-value">{{ a }}</div>
       </div>
       {% endfor %}
     </section>
     {% endif %}
 
-    <!-- DOCUMENTI PDF (max 6) – APRONO IN OVERLAY -->
-    {% set pdfs = [] %}
-    {% if ag.pdf1_url %}{% set _ = pdfs.append(('Documento 1', ag.pdf1_url)) %}{% endif %}
-    {% if ag.pdf2_url %}{% set _ = pdfs.append(('Documento 2', ag.pdf2_url)) %}{% endif %}
-    {% if ag.pdf3_url %}{% set _ = pdfs.append(('Documento 3', ag.pdf3_url)) %}{% endif %}
-    {% if ag.pdf4_url %}{% set _ = pdfs.append(('Documento 4', ag.pdf4_url)) %}{% endif %}
-    {% if ag.pdf5_url %}{% set _ = pdfs.append(('Documento 5', ag.pdf5_url)) %}{% endif %}
-    {% if ag.pdf6_url %}{% set _ = pdfs.append(('Documento 6', ag.pdf6_url)) %}{% endif %}
-
-    {% if pdfs %}
+    <!-- DOCUMENTI PDF -->
+    {% if pdf_urls and pdf_urls|length > 0 %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% for label, url in pdfs %}
-        <a href="#"
-           class="pdf-item"
-           onclick="openOverlay('{{ url }}'); return false;">
+        {% for idx, url in pdf_urls %}
+        <a class="pdf-item"
+           href="{{ url_for('pdf_view', slug=ag.slug|lower, index=idx) }}">
           <span class="pdf-icon">📄</span>
-          <span>{{ label }}</span>
+          <span>Documento {{ loop.index }}</span>
         </a>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <!-- GALLERIA FOTO (già perfetta, non tocchiamo JS: solo visuale) -->
-    {% if gallery %}
+    <!-- GALLERIA FOTO -->
+    {% if gallery and gallery|length > 0 %}
     <section class="card-section">
       <h2>Galleria foto</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
         <a href="{{ img }}" target="_blank">
-          <img src="{{ img }}" alt="Foto Pay4You">
+          <img src="{{ img }}" alt="Foto {{ loop.index }}">
         </a>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <footer class="card-footer">
-      Pay4You Digital Card
-    </footer>
-  </article>
-</div>
-
-<!-- OVERLAY VISUALIZZAZIONE (PDF + SITO) CON BOTTONE TORNA ALLA CARD -->
-<div id="viewer-overlay" class="viewer-overlay hidden">
-  <div class="viewer-topbar">
-    <button type="button" class="viewer-back-btn" onclick="closeOverlay()">
-      ← Torna alla card
-    </button>
   </div>
-  <iframe id="viewer-frame" class="viewer-frame" src="" frameborder="0"></iframe>
 </div>
-
-<script>
-  function openOverlay(url) {
-    const overlay = document.getElementById('viewer-overlay');
-    const frame   = document.getElementById('viewer-frame');
-    if (!overlay || !frame) return;
-    frame.src = url;
-    overlay.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function closeOverlay() {
-    const overlay = document.getElementById('viewer-overlay');
-    const frame   = document.getElementById('viewer-frame');
-    if (!overlay || !frame) return;
-    frame.src = 'about:blank';
-    overlay.classList.add('hidden');
-  }
-</script>
 {% endblock %}
