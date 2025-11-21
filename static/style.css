@@ -584,3 +584,16 @@ a {
   border: none;
   width: 100%;
 }
+.back-btn {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.95);
+  border: 1px solid rgba(148,163,184,0.8);
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+.back-btn:hover {
+  background: rgba(30,64,175,0.9);
+}
