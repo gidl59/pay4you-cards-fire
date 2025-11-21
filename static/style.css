@@ -158,7 +158,7 @@ a {
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  animation: avatar-rotate 14s linear infinite;
+  animation: avatar-rotate 7s linear infinite;
 }
 
 .avatar-face {
