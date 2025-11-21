@@ -131,7 +131,7 @@ a {
   flex-shrink: 0;
 }
 
-/* FOTO AGENTE: TONDA, CENTRATA, DIMENSIONE FISSA */
+/* FOTO AGENTE: TONDA CLASSICA (non più usata ma lasciata per sicurezza) */
 .card-profile-photo {
   width: 120px;
   height: 120px;
@@ -145,6 +145,56 @@ a {
     0 22px 45px rgba(0,0,0,0.8);
 }
 
+/* === FOTO AGENTE – ROTAZIONE LENTA FRONTE/RETRO CON LOGO === */
+.avatar-flip {
+  width: 120px;
+  height: 120px;
+  perspective: 800px;
+  border-radius: 999px;
+}
+
+.avatar-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: avatar-rotate 14s linear infinite;
+}
+
+.avatar-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border: 3px solid rgba(248,250,252,0.95);
+  box-shadow:
+    0 0 0 4px rgba(15,23,42,0.85),
+    0 0 16px 6px rgba(250,204,21,0.35),
+    0 22px 45px rgba(0,0,0,0.8);
+}
+
+.avatar-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.avatar-back {
+  transform: rotateY(180deg);
+  background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
+}
+
+@keyframes avatar-rotate {
+  0%   { transform: rotateY(0deg); }
+  35%  { transform: rotateY(0deg); }
+  50%  { transform: rotateY(180deg); }
+  85%  { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* BLOCCO NOMI / RUOLI */
 .card-name-block {
   display: flex;
   flex-direction: column;
@@ -296,6 +346,14 @@ a {
   transform: scale(1.06);
 }
 
+/* Bottone per le thumb della galleria */
+.gallery-thumb-btn {
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
 /* FOOTER PICCOLO (SE USATO) */
 .card-footer {
   margin-top: 18px;
@@ -303,6 +361,57 @@ a {
   font-size: 12px;
   text-align: center;
   color: #9ca3af;
+}
+
+/* =============================
+   STILE MODAL QR / GALLERIA
+   ============================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-box {
+  background: #020617;
+  border-radius: 18px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(148,163,184,0.7);
+  text-align: center;
+  max-width: 320px;
+  width: 90%;
+}
+
+.modal-box h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.modal-close-btn {
+  margin-top: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #facc15;
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Bottone link stile testo (per QR, ecc.) */
+.link-button {
+  border: none;
+  padding: 0;
+  background: none;
+  color: #60a5fa;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 /* =============================
@@ -544,56 +653,4 @@ a {
     border-left: none;
     border-right: none;
   }
-}
-
-/* =============================
-   OVERLAY PER SITO / PDF
-   ============================= */
-
-.hidden {
-  display: none;
-}
-
-.viewer-overlay {
-  position: fixed;
-  inset: 0;
-  background: #020617;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-}
-
-.viewer-topbar {
-  padding: 8px 12px;
-  background: linear-gradient(90deg, #0f172a, #111827);
-  border-bottom: 1px solid rgba(148,163,184,0.5);
-}
-
-.viewer-back-btn {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(148,163,184,0.8);
-  background: rgba(15,23,42,0.95);
-  color: #e5e7eb;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.viewer-frame {
-  flex: 1;
-  border: none;
-  width: 100%;
-}
-.back-btn {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(15,23,42,0.95);
-  border: 1px solid rgba(148,163,184,0.8);
-  color: #e5e7eb;
-  font-size: 14px;
-}
-
-.back-btn:hover {
-  background: rgba(30,64,175,0.9);
 }
