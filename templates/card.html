@@ -7,7 +7,8 @@
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
-    <!-- HEADER CON LOGO -->
+
+    <!-- HEADER CON LOGO ANIMATO -->
     <div class="card-header-row">
       <img src="{{ url_for('static', filename='logo.png') }}"
            alt="Pay4You"
@@ -16,6 +17,8 @@
 
     <!-- BLOCCO FOTO + DATI -->
     <section class="business-card">
+
+      {# FOTO AGENTE #}
       {% if ag.photo_url %}
       <div class="card-profile-photo-wrapper">
         <img src="{{ ag.photo_url }}"
@@ -26,17 +29,48 @@
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
+
         {% if ag.role %}
           <div class="card-role-main">{{ ag.role }}</div>
         {% endif %}
+
         {% if ag.company %}
           <div class="card-role-sub">{{ ag.company }}</div>
         {% endif %}
+
         {% if ag.bio %}
           <p class="card-bio">{{ ag.bio }}</p>
         {% endif %}
       </div>
     </section>
+
+    {# PREPARO LISTE DIRETTAMENTE QUI, SENZA DIPENDERE DA app.py #}
+    {% set emails = [] %}
+    {% if ag.emails %}
+      {% for e in ag.emails.split(',') %}
+        {% if e.strip() %}
+          {% set _ = emails.append(e.strip()) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% set websites = [] %}
+    {% if ag.websites %}
+      {% for w in ag.websites.split(',') %}
+        {% if w.strip() %}
+          {% set _ = websites.append(w.strip()) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% set addresses = [] %}
+    {% if ag.addresses %}
+      {% for a in ag.addresses.split('\n') %}
+        {% if a.strip() %}
+          {% set _ = addresses.append(a.strip()) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
 
     <!-- CONTATTI -->
     <section class="card-section">
@@ -187,22 +221,68 @@
     </section>
     {% endif %}
 
-    <!-- DOCUMENTI PDF -->
-    {% if pdfs %}
+    <!-- DOCUMENTI PDF (FINO A 6) -->
+    {% set pdf1 = ag.pdf1_url %}
+    {% set pdf2 = ag.pdf2_url %}
+    {% set pdf3 = ag.pdf3_url if ag is defined and ag.pdf3_url is defined else None %}
+    {% set pdf4 = ag.pdf4_url if ag is defined and ag.pdf4_url is defined else None %}
+    {% set pdf5 = ag.pdf5_url if ag is defined and ag.pdf5_url is defined else None %}
+    {% set pdf6 = ag.pdf6_url if ag is defined and ag.pdf6_url is defined else None %}
+
+    {% if pdf1 or pdf2 or pdf3 or pdf4 or pdf5 or pdf6 %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% for p in pdfs %}
-        <a class="pdf-item" href="{{ p.url }}" target="_blank">
+        {% if pdf1 %}
+        <a class="pdf-item" href="{{ pdf1 }}" target="_blank">
           <span class="pdf-icon">📄</span>
-          <span>Documento {{ p.idx }}</span>
+          <span>Documento 1</span>
         </a>
-        {% endfor %}
+        {% endif %}
+        {% if pdf2 %}
+        <a class="pdf-item" href="{{ pdf2 }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento 2</span>
+        </a>
+        {% endif %}
+        {% if pdf3 %}
+        <a class="pdf-item" href="{{ pdf3 }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento 3</span>
+        </a>
+        {% endif %}
+        {% if pdf4 %}
+        <a class="pdf-item" href="{{ pdf4 }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento 4</span>
+        </a>
+        {% endif %}
+        {% if pdf5 %}
+        <a class="pdf-item" href="{{ pdf5 }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento 5</span>
+        </a>
+        {% endif %}
+        {% if pdf6 %}
+        <a class="pdf-item" href="{{ pdf6 }}" target="_blank">
+          <span class="pdf-icon">📄</span>
+          <span>Documento 6</span>
+        </a>
+        {% endif %}
       </div>
     </section>
     {% endif %}
 
     <!-- GALLERIA FOTO -->
+    {% set gallery = [] %}
+    {% if ag.gallery_urls %}
+      {% for g in ag.gallery_urls.split('|') %}
+        {% if g.strip() %}
+          {% set _ = gallery.append(g.strip()) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
     {% if gallery %}
     <section class="card-section">
       <h2>Galleria foto</h2>
