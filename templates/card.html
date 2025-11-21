@@ -97,7 +97,7 @@
 
       {% if websites and websites|length > 0 %}
       <a class="contact-row"
-         href="{{ url_for('site_view', slug=ag.slug|lower, index=0) }}">
+         href="{{ url_for('site_view', slug=ag.slug, index=0) }}">
         <span class="icon">🌐</span>
         <span class="label">Sito internet</span>
         <span class="value">{{ websites[0] }}</span>
@@ -129,14 +129,14 @@
       {% endif %}
 
       <!-- SALVA CONTATTO -->
-      <a class="contact-row" href="{{ url_for('vcard', slug=ag.slug|lower) }}?download=1">
+      <a class="contact-row" href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
         <span class="icon">💾</span>
         <span class="label">Salva contatto</span>
         <span class="value">Scarica vCard</span>
       </a>
 
       <!-- QR -->
-      <a class="contact-row" href="{{ url_for('qr', slug=ag.slug|lower) }}" target="_blank">
+      <a class="contact-row" href="{{ url_for('qr', slug=ag.slug) }}" target="_blank">
         <span class="icon">🔲</span>
         <span class="label">QR code</span>
         <span class="value">Apri QR</span>
@@ -185,7 +185,7 @@
       <div class="pdf-list">
         {% for idx, url in pdf_urls %}
         <a class="pdf-item"
-           href="{{ url_for('pdf_view', slug=ag.slug|lower, index=idx) }}">
+           href="{{ url_for('pdf_view', slug=ag.slug, index=idx) }}">
           <span class="pdf-icon">📄</span>
           <span>Documento {{ loop.index }}</span>
         </a>
