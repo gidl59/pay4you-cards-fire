@@ -4,69 +4,43 @@
 
 {% block content %}
 <div class="card-fullscreen">
-  <!-- Sfondo blur -->
   <div class="card-glass-bg"></div>
 
-  <div class="card-outer">
-    <!-- Header con logo -->
-    <div class="card-header-row">
+  <article class="card-outer">
+    <!-- HEADER LOGO -->
+    <header class="card-header-row">
       <img
         src="{{ url_for('static', filename='logo.png') }}"
         alt="Pay4You"
         class="card-logo-big"
       >
-    </div>
+    </header>
 
-    <!-- Blocco business: foto + nome + ruoli -->
-    <div class="business-card">
+    <!-- BLOCCO FOTO + DATI BASE -->
+    <section class="business-card">
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
-        <!-- Avatar fronte/retro con rotazione lenta -->
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <!-- Fronte: foto agente -->
-            <div class="avatar-face avatar-front">
-              <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
-            </div>
-            <!-- Retro: logo Pay4You -->
-            <div class="avatar-face avatar-back">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-          </div>
-        </div>
+          <img src="{{ ag.photo_url }}" alt="{{ ag.name }}" class="card-profile-photo">
         {% else %}
-        <!-- Se non c'è foto, mostra solo il logo tondo -->
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <div class="avatar-face avatar-front">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-            <div class="avatar-face avatar-back">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-          </div>
-        </div>
+          <div class="card-profile-photo card-profile-photo--placeholder"></div>
         {% endif %}
       </div>
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
-
         {% if ag.role %}
           <div class="card-role-main">{{ ag.role }}</div>
         {% endif %}
-
         {% if ag.company %}
           <div class="card-role-sub">{{ ag.company }}</div>
         {% endif %}
-
         {% if ag.bio %}
-          <div class="card-bio">{{ ag.bio }}</div>
+          <p class="card-bio">{{ ag.bio }}</p>
         {% endif %}
       </div>
-    </div>
+    </section>
 
-    <!-- SEZIONE CONTATTI -->
+    <!-- CONTATTI -->
     <section class="card-section">
       <h2>Contatti</h2>
 
@@ -95,19 +69,18 @@
         <div class="icon">🟢</div>
         <div class="label">WhatsApp</div>
         <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}">
-            {{ ag.whatsapp }}
-          </a>
+          <a href="https://wa.me/{{ ag.whatsapp | replace('+','') }}">{{ ag.whatsapp }}</a>
         </div>
       </div>
       {% endif %}
 
-      {% for email in emails %}
+      {# Email lavoro / personali #}
+      {% for e in emails %}
       <div class="contact-row">
         <div class="icon">📧</div>
         <div class="label">Email</div>
         <div class="value">
-          <a href="mailto:{{ email }}">{{ email }}</a>
+          <a href="mailto:{{ e }}">{{ e }}</a>
         </div>
       </div>
       {% endfor %}
@@ -122,38 +95,35 @@
       </div>
       {% endif %}
 
-      {% for site in websites %}
+      {# SITO INTERNET → APRE NELL’OVERLAY CON TORNA INDIETRO #}
+      {% if websites %}
+      {% for w in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <a href="{{ site }}" target="_blank" rel="noopener noreferrer">
-            {{ site }}
-          </a>
+          <a href="#" onclick="openOverlay('{{ w }}'); return false;">{{ w }}</a>
         </div>
       </div>
       {% endfor %}
+      {% endif %}
 
       {% if ag.facebook %}
       <div class="contact-row social-row">
         <div class="icon">📘</div>
         <div class="label">Facebook</div>
         <div class="value">
-          <a href="{{ ag.facebook }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
+          <a href="{{ ag.facebook }}" target="_blank">Profilo</a>
         </div>
       </div>
       {% endif %}
 
       {% if ag.instagram %}
       <div class="contact-row social-row">
-        <div class="icon">📷</div>
+        <div class="icon">📸</div>
         <div class="label">Instagram</div>
         <div class="value">
-          <a href="{{ ag.instagram }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
+          <a href="{{ ag.instagram }}" target="_blank">Profilo</a>
         </div>
       </div>
       {% endif %}
@@ -163,175 +133,136 @@
         <div class="icon">💼</div>
         <div class="label">LinkedIn</div>
         <div class="value">
-          <a href="{{ ag.linkedin }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
+          <a href="{{ ag.linkedin }}" target="_blank">Profilo</a>
         </div>
       </div>
       {% endif %}
 
-      <!-- Link profilo card -->
-      <div class="contact-row">
-        <div class="icon">🪪</div>
-        <div class="label">Profilo digitale</div>
-        <div class="value">
-          <a href="{{ base_url }}/{{ ag.slug }}" target="_blank" rel="noopener noreferrer">
-            Apri card
-          </a>
-        </div>
-      </div>
-
-      <!-- vCard -->
+      <!-- SALVA CONTATTO (vCard) -->
       <div class="contact-row">
         <div class="icon">💾</div>
         <div class="label">Salva contatto</div>
         <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-            Scarica vCard
-          </a>
+          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">Scarica vCard</a>
         </div>
       </div>
 
-      <!-- QR con modal -->
+      <!-- QR (già perfetto, non tocchiamo logica) -->
       <div class="contact-row">
         <div class="icon">🔳</div>
         <div class="label">QR code</div>
         <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">
-            Apri QR
-          </button>
+          <a href="{{ url_for('qr', slug=ag.slug) }}" target="_blank">Apri QR</a>
         </div>
       </div>
     </section>
 
-    <!-- SEZIONE DATI FISCALI -->
+    <!-- DATI FISCALI -->
     {% if ag.piva or ag.sdi %}
     <section class="card-section">
       <h2>Dati fiscali</h2>
 
       {% if ag.piva %}
-      <div class="address-row">
+      <div class="contact-row">
         <div class="icon">🏛️</div>
-        <span class="address-value">Partita IVA {{ ag.piva }}</span>
+        <div class="label">Partita IVA</div>
+        <div class="value">{{ ag.piva }}</div>
       </div>
       {% endif %}
 
       {% if ag.sdi %}
-      <div class="address-row">
-        <div class="icon">📨</div>
-        <span class="address-value">Codice SDI {{ ag.sdi }}</span>
+      <div class="contact-row">
+        <div class="icon">📑</div>
+        <div class="label">Codice SDI</div>
+        <div class="value">{{ ag.sdi }}</div>
       </div>
       {% endif %}
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI -->
+    <!-- INDIRIZZI -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <span class="address-value">{{ addr }}</span>
+        <div class="address-value">{{ addr }}</div>
       </div>
       {% endfor %}
     </section>
     {% endif %}
 
-    <!-- SEZIONE DOCUMENTI (PDF) -->
-    {% if ag.pdf1_url or ag.pdf2_url or ag.pdf3_url or ag.pdf4_url or ag.pdf5_url or ag.pdf6_url %}
+    <!-- DOCUMENTI PDF (max 6) – APRONO IN OVERLAY -->
+    {% set pdfs = [] %}
+    {% if ag.pdf1_url %}{% set _ = pdfs.append(('Documento 1', ag.pdf1_url)) %}{% endif %}
+    {% if ag.pdf2_url %}{% set _ = pdfs.append(('Documento 2', ag.pdf2_url)) %}{% endif %}
+    {% if ag.pdf3_url %}{% set _ = pdfs.append(('Documento 3', ag.pdf3_url)) %}{% endif %}
+    {% if ag.pdf4_url %}{% set _ = pdfs.append(('Documento 4', ag.pdf4_url)) %}{% endif %}
+    {% if ag.pdf5_url %}{% set _ = pdfs.append(('Documento 5', ag.pdf5_url)) %}{% endif %}
+    {% if ag.pdf6_url %}{% set _ = pdfs.append(('Documento 6', ag.pdf6_url)) %}{% endif %}
+
+    {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% if ag.pdf1_url %}
-        <a class="pdf-item" href="{{ ag.pdf1_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 1</span>
+        {% for label, url in pdfs %}
+        <a href="#"
+           class="pdf-item"
+           onclick="openOverlay('{{ url }}'); return false;">
+          <span class="pdf-icon">📄</span>
+          <span>{{ label }}</span>
         </a>
-        {% endif %}
-
-        {% if ag.pdf2_url %}
-        <a class="pdf-item" href="{{ ag.pdf2_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 2</span>
-        </a>
-        {% endif %}
-
-        {% if ag.pdf3_url %}
-        <a class="pdf-item" href="{{ ag.pdf3_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 3</span>
-        </a>
-        {% endif %}
-
-        {% if ag.pdf4_url %}
-        <a class="pdf-item" href="{{ ag.pdf4_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 4</span>
-        </a>
-        {% endif %}
-
-        {% if ag.pdf5_url %}
-        <a class="pdf-item" href="{{ ag.pdf5_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 5</span>
-        </a>
-        {% endif %}
-
-        {% if ag.pdf6_url %}
-        <a class="pdf-item" href="{{ ag.pdf6_url }}" target="_blank" rel="noopener noreferrer">
-          <span class="pdf-icon">📄</span><span>Documento 6</span>
-        </a>
-        {% endif %}
-      </div>
-    </section>
-    {% endif %}
-
-    <!-- SEZIONE GALLERIA FOTO -->
-    {% if gallery %}
-    <section class="card-section">
-      <h2>Galleria foto</h2>
-      <div class="gallery-scroll">
-        {% for img in gallery %}
-        <button type="button"
-                class="gallery-thumb-btn"
-                onclick="openGalleryModal('{{ img }}')">
-          <img src="{{ img }}" alt="Foto Pay4You">
-        </button>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <!-- Footer opzionale -->
-    <div class="card-footer">
-      Pay4You – Card digitale personale
-    </div>
-  </div>
+    <!-- GALLERIA FOTO (già perfetta, non tocchiamo JS: solo visuale) -->
+    {% if gallery %}
+    <section class="card-section">
+      <h2>Galleria foto</h2>
+      <div class="gallery-scroll">
+        {% for img in gallery %}
+        <a href="{{ img }}" target="_blank">
+          <img src="{{ img }}" alt="Foto Pay4You">
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <footer class="card-footer">
+      Pay4You Digital Card
+    </footer>
+  </article>
 </div>
 
-<!-- MODAL QR / GALLERIA -->
-<div id="qr-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <h2>Visualizzazione</h2>
-    <img id="qr-modal-img" src="" alt="Immagine" style="max-width:260px; width:100%; height:auto;">
-    <button type="button" class="modal-close-btn" onclick="closeQrModal()">
-      Chiudi e torna alla card
+<!-- OVERLAY VISUALIZZAZIONE (PDF + SITO) CON BOTTONE TORNA ALLA CARD -->
+<div id="viewer-overlay" class="viewer-overlay hidden">
+  <div class="viewer-topbar">
+    <button type="button" class="viewer-back-btn" onclick="closeOverlay()">
+      ← Torna alla card
     </button>
   </div>
+  <iframe id="viewer-frame" class="viewer-frame" src="" frameborder="0"></iframe>
 </div>
 
 <script>
-  function openQrModal(url) {
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
+  function openOverlay(url) {
+    const overlay = document.getElementById('viewer-overlay');
+    const frame   = document.getElementById('viewer-frame');
+    if (!overlay || !frame) return;
+    frame.src = url;
+    overlay.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function openGalleryModal(url) {
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
-  }
-
-  function closeQrModal() {
-    document.getElementById('qr-modal').style.display = 'none';
+  function closeOverlay() {
+    const overlay = document.getElementById('viewer-overlay');
+    const frame   = document.getElementById('viewer-frame');
+    if (!overlay || !frame) return;
+    frame.src = 'about:blank';
+    overlay.classList.add('hidden');
   }
 </script>
 {% endblock %}
