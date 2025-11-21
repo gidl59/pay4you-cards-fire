@@ -101,22 +101,11 @@ a {
   margin-bottom: 12px;
 }
 
-/* LOGO + FOTO AGENTE ROTAZIONE LENTA */
-.card-logo-big,
-.card-profile-photo {
-  animation: slow-spin 30s linear infinite;
-  transform-origin: center center;
-}
-
-@keyframes slow-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-/* LOGO PAY4YOU GRANDINO */
+/* LOGO CON ANIMAZIONE LENTA */
 .card-logo-big {
   height: 100px;
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
+  animation: slow-spin 30s linear infinite;
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
@@ -132,7 +121,7 @@ a {
   flex-shrink: 0;
 }
 
-/* FOTO AGENTE: TONDA, CENTRATA, DIMENSIONE FISSA */
+/* FOTO AGENTE: ROTAZIONE LENTA */
 .card-profile-photo {
   width: 120px;
   height: 120px;
@@ -144,6 +133,13 @@ a {
     0 0 0 4px rgba(15,23,42,0.85),
     0 0 16px 6px rgba(250,204,21,0.35),
     0 22px 45px rgba(0,0,0,0.8);
+  animation: slow-spin 30s linear infinite;
+}
+
+/* ANIMAZIONE ROTAZIONE LENTA */
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .card-name-block {
@@ -243,7 +239,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI – ICONA PDF + NOME (max 6) */
+/* DOCUMENTI – ICONA PDF + NOME */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -270,13 +266,17 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – SLIDER ORIZZONTALE + EFFETTO ZOOM */
+/* GALLERIA FOTO – SLIDER ORIZZONTALE */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 4px;
+}
+
+.gallery-scroll a {
+  flex: 0 0 auto;
 }
 
 .gallery-scroll img {
@@ -293,7 +293,7 @@ a {
   transform: scale(1.06);
 }
 
-/* FOOTER PICCOLO (SE USATO) */
+/* FOOTER PICCOLO */
 .card-footer {
   margin-top: 18px;
   padding-top: 10px;
@@ -342,4 +342,184 @@ a {
 
 .admin-table th,
 .admin-table td {
-  padding:auto;
+  padding: 8px 6px;
+}
+
+.admin-table thead tr {
+  border-bottom: 1px solid rgba(75,85,99,0.9);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(30,41,59,0.9);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,42,0.9);
+}
+
+.admin-actions a {
+  margin-right: 8px;
+  font-size: 13px;
+  color: #93c5fd;
+}
+
+.admin-actions form {
+  display: inline;
+}
+
+.admin-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,113,113,0.8);
+  background: rgba(127,29,29,0.9);
+  color: #fee2e2;
+  cursor: pointer;
+}
+
+/* FORM AGENTE */
+.agent-form-wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agent-form-title {
+  font-size: 24px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-form label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.agent-form input[type="text"],
+.agent-form input[type="email"],
+.agent-form input[type="tel"],
+.agent-form textarea,
+.agent-form input[type="file"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  font-size: 13px;
+}
+
+.agent-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.agent-form-buttons {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.agent-form button[type="submit"] {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-form a.btn-secondary {
+  display: inline-block;
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: rgba(31,41,55,0.95);
+  color: #e5e7eb;
+}
+
+/* LOGIN */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.login-card {
+  backdrop-filter: blur(18px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+  border-radius: 22px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
+  padding: 20px 18px 22px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 640px) {
+  .card-outer {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 16px 12px 20px;
+  }
+
+  .business-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-name-block {
+    align-items: center;
+  }
+
+  .card-name {
+    font-size: 22px;
+  }
+
+  .card-logo-big {
+    height: 90px;
+  }
+
+  .admin-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
+  }
+}
