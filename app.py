@@ -5,25 +5,16 @@ from datetime import datetime, timedelta
 from io import BytesIO
 
 from flask import (
-    Flask,
-    render_template,
-render_template_string,
-    request,
-    redirect,
-    url_for,
-    send_file,
-    session,
-    abort,
-    Response,
+    Flask, render_template, request, redirect,
+    url_for, send_file, session, abort, Response
 )
 from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
 
-# ================== CONFIG ==================
-
 load_dotenv()
+
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
@@ -34,14 +25,16 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB upload
+
+# -------------------- DATABASE --------------------
 
 DB_URL = "sqlite:///data.db"
-engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DB_URL, echo=False, connect_args={"check_same_thread": False}
+)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
-
-# ================== MODEL ==================
 
 
 class Agent(Base):
@@ -49,6 +42,7 @@ class Agent(Base):
 
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
+
     name = Column(String, nullable=False)
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
@@ -57,8 +51,8 @@ class Agent(Base):
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
 
-    emails = Column(String, nullable=True)
-    websites = Column(String, nullable=True)
+    emails = Column(String, nullable=True)        # separati da virgola
+    websites = Column(String, nullable=True)      # separati da virgola
 
     facebook = Column(String, nullable=True)
     instagram = Column(String, nullable=True)
@@ -71,10 +65,10 @@ class Agent(Base):
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
 
-    addresses = Column(Text, nullable=True)
+    addresses = Column(Text, nullable=True)       # uno per riga
 
     photo_url = Column(String, nullable=True)
-    gallery_urls = Column(Text, nullable=True)
+    gallery_urls = Column(Text, nullable=True)    # separati da |
 
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)
@@ -86,7 +80,7 @@ class Agent(Base):
 
 Base.metadata.create_all(engine)
 
-# ================== HELPER ==================
+# -------------------- UTILITY --------------------
 
 
 def admin_required(f):
@@ -102,34 +96,45 @@ def admin_required(f):
 
 
 def get_storage_client():
+    """
+    Client Firebase Storage (se configurato).
+    Se non è configurato, ritorna None e l'app continua a funzionare,
+    ma i file non vengono caricati.
+    """
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
             return None
+
         from google.cloud import storage
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         tmp.write(FIREBASE_CREDENTIALS_JSON.encode("utf-8"))
         tmp.flush()
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
+
         return storage.Client(project=FIREBASE_PROJECT_ID)
     except Exception as e:
-        app.logger.exception("Firebase disabled due to error: %s", e)
+        app.logger.exception("Firebase disabled: %s", e)
         return None
 
 
 def upload_to_firebase(file_storage, folder="uploads"):
+    """
+    Carica un file su Firebase Storage.
+    Ritorna URL firmato oppure None in caso di errore.
+    """
     try:
         client = get_storage_client()
         if not client:
             return None
+
         bucket = client.bucket(FIREBASE_BUCKET)
         ext = os.path.splitext(file_storage.filename or "")[1].lower()
         key = f"{folder}/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}{ext}"
         blob = bucket.blob(key)
         blob.upload_from_file(file_storage.stream, content_type=file_storage.mimetype)
         url = blob.generate_signed_url(
-            expiration=datetime.utcnow() + timedelta(days=3650),
-            method="GET",
+            expiration=datetime.utcnow() + timedelta(days=3650), method="GET"
         )
         return url
     except Exception as e:
@@ -143,14 +148,14 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 
-# ================== ROUTES BASE ==================
+# -------------------- ROTTE BASE --------------------
 
 
 @app.get("/")
 def home():
-    return redirect(url_for("admin_home")) if session.get("admin") else redirect(
-        url_for("login")
-    )
+    if session.get("admin"):
+        return redirect(url_for("admin_home"))
+    return redirect(url_for("login"))
 
 
 @app.get("/health")
@@ -158,7 +163,7 @@ def health():
     return "ok", 200
 
 
-# ================== LOGIN ==================
+# -------------------- LOGIN --------------------
 
 
 @app.get("/login")
@@ -182,7 +187,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ================== ADMIN ==================
+# -------------------- AREA ADMIN --------------------
 
 
 @app.get("/admin")
@@ -204,41 +209,29 @@ def new_agent():
 def create_agent():
     db = SessionLocal()
 
-    slug = (request.form.get("slug") or "").strip()
-    name = (request.form.get("name") or "").strip()
-
-    if not slug or not name:
-        return "Slug e Nome sono obbligatori", 400
-
-    if db.query(Agent).filter(Agent.slug == slug).first():
-        return "Slug già esistente", 400
-
-    fields = [
-        "company",
-        "role",
-        "bio",
-        "phone_mobile",
-        "phone_office",
-        "emails",
-        "websites",
-        "facebook",
-        "instagram",
-        "linkedin",
-        "tiktok",
-        "telegram",
-        "whatsapp",
-        "pec",
-        "piva",
-        "sdi",
+    base_fields = [
+        "slug", "name", "company", "role", "bio",
+        "phone_mobile", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok",
+        "telegram", "whatsapp",
+        "pec", "piva", "sdi",
         "addresses",
     ]
-    data = {k: (request.form.get(k) or "").strip() for k in fields}
-    data["slug"] = slug
-    data["name"] = name
+    data = {k: request.form.get(k, "").strip() for k in base_fields}
 
+    if not data["slug"] or not data["name"]:
+        return "Slug e Nome sono obbligatori", 400
+
+    # Normalizzo slug in minuscolo senza spazi
+    data["slug"] = data["slug"].strip().replace(" ", "").lower()
+
+    if db.query(Agent).filter_by(slug=data["slug"]).first():
+        return "Slug già esistente", 400
+
+    # File
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
-
     pdf_files = [
         request.files.get("pdf1"),
         request.files.get("pdf2"),
@@ -250,19 +243,20 @@ def create_agent():
 
     photo_url = upload_to_firebase(photo, "photos") if photo and photo.filename else None
 
-    pdf_urls = []
-    for f in pdf_files:
-        if f and f.filename:
-            pdf_urls.append(upload_to_firebase(f, "pdf"))
-        else:
-            pdf_urls.append(None)
-
     gallery_urls = []
     for f in gallery_files[:12]:
         if f and f.filename:
             u = upload_to_firebase(f, "gallery")
             if u:
                 gallery_urls.append(u)
+
+    pdf_urls = []
+    for f in pdf_files:
+        if f and f.filename:
+            u = upload_to_firebase(f, "pdf")
+            pdf_urls.append(u if u else None)
+        else:
+            pdf_urls.append(None)
 
     ag = Agent(
         **data,
@@ -275,6 +269,7 @@ def create_agent():
         pdf5_url=pdf_urls[4],
         pdf6_url=pdf_urls[5],
     )
+
     db.add(ag)
     db.commit()
     return redirect(url_for("admin_home"))
@@ -284,7 +279,7 @@ def create_agent():
 @admin_required
 def edit_agent(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
+    ag = db.query(Agent).filter_by(slug=slug.lower()).first()
     if not ag:
         abort(404)
     return render_template("agent_form.html", agent=ag)
@@ -294,49 +289,44 @@ def edit_agent(slug):
 @admin_required
 def update_agent(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
+    ag = db.query(Agent).filter_by(slug=slug.lower()).first()
     if not ag:
         abort(404)
 
-    new_slug = (request.form.get("slug") or "").strip()
-    if not new_slug:
-        return "Slug obbligatorio", 400
-
-    if new_slug != ag.slug and db.query(Agent).filter(Agent.slug == new_slug).first():
-        return "Slug già esistente", 400
-
-    ag.slug = new_slug
-    ag.name = (request.form.get("name") or "").strip()
-
+    # Aggiorno campi testo
     for k in [
-        "company",
-        "role",
-        "bio",
-        "phone_mobile",
-        "phone_office",
-        "emails",
-        "websites",
-        "facebook",
-        "instagram",
-        "linkedin",
-        "tiktok",
-        "telegram",
-        "whatsapp",
-        "pec",
-        "piva",
-        "sdi",
+        "slug", "name", "company", "role", "bio",
+        "phone_mobile", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok",
+        "telegram", "whatsapp",
+        "pec", "piva", "sdi",
         "addresses",
     ]:
-        setattr(ag, k, (request.form.get(k) or "").strip())
+        val = request.form.get(k, "").strip()
+        if k == "slug":
+            val = val.replace(" ", "").lower()
+        setattr(ag, k, val)
 
+    # File opzionali: se non carichi nulla, lascia i precedenti
     photo = request.files.get("photo")
+    gallery_files = request.files.getlist("gallery")
+    pdf_files = [
+        request.files.get("pdf1"),
+        request.files.get("pdf2"),
+        request.files.get("pdf3"),
+        request.files.get("pdf4"),
+        request.files.get("pdf5"),
+        request.files.get("pdf6"),
+    ]
+
     if photo and photo.filename:
         u = upload_to_firebase(photo, "photos")
         if u:
             ag.photo_url = u
 
-    gallery_files = request.files.getlist("gallery")
-    if gallery_files and any(g.filename for g in gallery_files):
+    # Se carichi almeno una nuova immagine, rimpiazzi l'intera galleria
+    if gallery_files and any(f.filename for f in gallery_files):
         urls = []
         for f in gallery_files[:12]:
             if f and f.filename:
@@ -346,16 +336,9 @@ def update_agent(slug):
         if urls:
             ag.gallery_urls = "|".join(urls)
 
-    pdf_files = [
-        request.files.get("pdf1"),
-        request.files.get("pdf2"),
-        request.files.get("pdf3"),
-        request.files.get("pdf4"),
-        request.files.get("pdf5"),
-        request.files.get("pdf6"),
-    ]
-    pdf_attrs = ["pdf1_url", "pdf2_url", "pdf3_url", "pdf4_url", "pdf5_url", "pdf6_url"]
-    for f, attr in zip(pdf_files, pdf_attrs):
+    # PDF: aggiorno solo quelli caricati
+    pdf_attr = ["pdf1_url", "pdf2_url", "pdf3_url", "pdf4_url", "pdf5_url", "pdf6_url"]
+    for f, attr in zip(pdf_files, pdf_attr):
         if f and f.filename:
             u = upload_to_firebase(f, "pdf")
             if u:
@@ -369,33 +352,33 @@ def update_agent(slug):
 @admin_required
 def delete_agent(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
+    ag = db.query(Agent).filter_by(slug=slug.lower()).first()
     if ag:
         db.delete(ag)
         db.commit()
     return redirect(url_for("admin_home"))
 
 
-# ================== CARD PUBBLICA ==================
+# -------------------- CARD PUBBLICA --------------------
 
 
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
+    ag = db.query(Agent).filter_by(slug=slug.lower()).first()
     if not ag:
-        return render_template("404.html"), 404
+        abort(404)
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
     emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
     websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
 
-    pdf_urls = []
+    pdfs = []
     for idx in range(1, 7):
         url = getattr(ag, f"pdf{idx}_url", None)
         if url:
-            pdf_urls.append((idx, url))
+            pdfs.append({"idx": idx, "url": url})
 
     base = get_base_url()
 
@@ -407,17 +390,17 @@ def public_card(slug):
         emails=emails,
         websites=websites,
         addresses=addresses,
-        pdf_urls=pdf_urls,
+        pdfs=pdfs,
     )
 
 
-# ================== VCF & QR ==================
+# -------------------- VCARD & QR --------------------
 
 
 @app.get("/<slug>.vcf")
 def vcard(slug):
     db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
+    ag = db.query(Agent).filter_by(slug=slug.lower()).first()
     if not ag:
         abort(404)
 
@@ -476,90 +459,7 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# ================== PDF & SITO (TORNA ALLA CARD) ==================
-
-
-@app.get("/<slug>/pdf/<int:index>")
-def pdf_view(slug, index):
-    db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    pdf_attr = f"pdf{index}_url"
-    pdf_url = getattr(ag, pdf_attr, None)
-    if not pdf_url:
-        abort(404)
-
-    html = """
-    <!doctype html>
-    <html lang="it">
-    <head>
-      <meta charset="utf-8">
-      <title>Documento – {{ ag.name }}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-      <style>
-        body { margin:0; padding:0; background:#020617; }
-        .pdf-frame { width:100%; height:calc(100vh - 60px); border:none; }
-        .back-bar { padding:10px 14px; }
-      </style>
-    </head>
-    <body>
-      <div class="back-bar">
-        <a href="{{ url_for('public_card', slug=ag.slug) }}" class="back-btn">← Torna alla card</a>
-      </div>
-      <iframe class="pdf-frame" src="{{ pdf_url }}"></iframe>
-    </body>
-    </html>
-    """
-    return render_template_string(html, ag=ag, pdf_url=pdf_url)
-
-
-@app.get("/<slug>/site/<int:index>")
-def site_view(slug, index):
-    db = SessionLocal()
-    ag = db.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
-    if index < 0 or index >= len(websites):
-        abort(404)
-
-    site_url = websites[index]
-
-    # niente iframe (Aruba lo blocca), solo bottone + link
-    html = """
-    <!doctype html>
-    <html lang="it">
-    <head>
-      <meta charset="utf-8">
-      <title>Sito – {{ ag.name }}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-      <style>
-        body { margin:0; padding:20px; background:#020617; color:#e5e7eb; font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; }
-        .back-bar { margin-bottom:16px; }
-        .site-link { margin-top:12px; }
-        .site-link a { padding:10px 18px; border-radius:999px; border:1px solid rgba(148,163,184,0.8); background:rgba(15,23,42,0.95); color:#e5e7eb; text-decoration:none; }
-      </style>
-    </head>
-    <body>
-      <div class="back-bar">
-        <a href="{{ url_for('public_card', slug=ag.slug) }}" class="back-btn">← Torna alla card</a>
-      </div>
-      <p>Per aprire il sito internet:</p>
-      <div class="site-link">
-        <a href="{{ site_url }}" target="_blank">Apri www</a>
-      </div>
-    </body>
-    </html>
-    """
-    return render_template_string(html, ag=ag, site_url=site_url)
-
-
-# ================== 404 ==================
+# -------------------- ERRORI --------------------
 
 
 @app.errorhandler(404)
