@@ -101,11 +101,21 @@ a {
   margin-bottom: 12px;
 }
 
-/* LOGO CON ANIMAZIONE LENTA */
+/* LOGO */
 .card-logo-big {
   height: 100px;
   filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
-  animation: slow-spin 30s linear infinite;
+  transition: transform 0.4s ease;
+}
+
+/* Gira quando ci passi sopra (effetto extra, opzionale) */
+.card-logo-big:hover {
+  animation: logo-spin 1.4s linear infinite;
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
@@ -121,7 +131,7 @@ a {
   flex-shrink: 0;
 }
 
-/* FOTO AGENTE: ROTAZIONE LENTA */
+/* FOTO AGENTE */
 .card-profile-photo {
   width: 120px;
   height: 120px;
@@ -133,13 +143,6 @@ a {
     0 0 0 4px rgba(15,23,42,0.85),
     0 0 16px 6px rgba(250,204,21,0.35),
     0 22px 45px rgba(0,0,0,0.8);
-  animation: slow-spin 30s linear infinite;
-}
-
-/* ANIMAZIONE ROTAZIONE LENTA */
-@keyframes slow-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
 }
 
 .card-name-block {
@@ -239,7 +242,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI – ICONA PDF + NOME */
+/* DOCUMENTI – ICONA PDF + NOME (max 6) */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -266,7 +269,7 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – SLIDER ORIZZONTALE */
+/* GALLERIA FOTO – SLIDER ORIZZONTALE + EFFETTO ZOOM */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
@@ -293,7 +296,7 @@ a {
   transform: scale(1.06);
 }
 
-/* FOOTER PICCOLO */
+/* FOOTER PICCOLO (SE USATO) */
 .card-footer {
   margin-top: 18px;
   padding-top: 10px;
@@ -306,12 +309,14 @@ a {
    STILE AREA ADMIN
    ============================= */
 
+/* Layout contenitore admin */
 .admin-wrapper {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
 
+/* Box admin principale */
 .admin-card {
   backdrop-filter: blur(18px) saturate(130%);
   background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
@@ -321,12 +326,14 @@ a {
   padding: 18px 20px 24px;
 }
 
+/* Titolo pagina admin */
 .admin-title {
   margin: 0 0 12px;
   font-size: 24px;
   font-weight: 600;
 }
 
+/* Link "Nuovo agente" */
 .admin-new-link {
   display: inline-block;
   margin-bottom: 10px;
@@ -334,6 +341,7 @@ a {
   color: #facc15;
 }
 
+/* Tabella agenti */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -357,12 +365,24 @@ a {
   background: rgba(15,23,42,0.9);
 }
 
+.admin-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.admin-table td {
+  color: #e5e7eb;
+}
+
+/* Azioni */
 .admin-actions a {
   margin-right: 8px;
   font-size: 13px;
   color: #93c5fd;
 }
 
+/* Pulsante elimina */
 .admin-actions form {
   display: inline;
 }
@@ -426,22 +446,23 @@ a {
   gap: 10px;
 }
 
-.agent-form button[type="submit"] {
+.agent-form button,
+.agent-form a.btn-secondary {
   padding: 7px 14px;
   font-size: 13px;
   border-radius: 999px;
   border: none;
+  cursor: pointer;
+}
+
+.agent-form button[type="submit"] {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   color: #022c22;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .agent-form a.btn-secondary {
   display: inline-block;
-  padding: 7px 14px;
-  font-size: 13px;
-  border-radius: 999px;
   background: rgba(31,41,55,0.95);
   color: #e5e7eb;
 }
@@ -489,6 +510,18 @@ a {
   cursor: pointer;
 }
 
+/* 🔄 ANIMAZIONE LENTA LOGO + FOTO */
+.card-logo-big,
+.card-profile-photo {
+  animation: slow-spin 30s linear infinite;
+  transform-origin: center center;
+}
+
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* RESPONSIVE MOBILE */
 @media (max-width: 640px) {
   .card-outer {
@@ -498,6 +531,7 @@ a {
     padding: 16px 12px 20px;
   }
 
+  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
   .business-card {
     flex-direction: column;
     align-items: center;
