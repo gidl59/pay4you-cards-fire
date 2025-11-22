@@ -420,7 +420,7 @@ def pdf_viewer(slug, index):
 
 
 # --------------------------------------------------
-# VCARD & QR (con FOTO incorporata e link card)
+# VCARD & QR (con FOTO + "Card digitale" come terzo sito)
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
@@ -467,16 +467,17 @@ def vcard(slug):
     if getattr(ag, "pec", None):
         lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
 
-    # Siti internet
+    # Siti internet "normali"
     if getattr(ag, "websites", None):
         for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
 
-    # URL principale della card (per PDF, galleria, ecc.)
+    # URL principale della card (come "terzo sito" con etichetta Apple)
     card_url = f"{base}/{ag.slug}"
-    lines.append(f"URL:{card_url}")
+    lines.append(f"item1.URL:{card_url}")
+    lines.append("item1.X-ABLabel:Card digitale Pay4You")
 
-    # FOTO PROFILO INCORPORATA (Base64)
+    # FOTO PROFILO INCORPORATA (Base64) – se supportata dal client
     if getattr(ag, "photo_url", None):
         photo_url = ag.photo_url
         if photo_url.startswith("/"):
@@ -505,7 +506,7 @@ def vcard(slug):
         raw_addrs = [a.strip() for a in ag.addresses.split("\n") if a.strip()]
         if raw_addrs:
             first_addr = raw_addrs[0].replace(";", ",")
-            # ADR: POBox;Extended;Street;Street;Locality;Region;PostalCode;Country
+            # ADR: POBox;Extended;Street;Locality;Region;PostalCode;Country
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
     # Dati fiscali in campi custom + NOTE
