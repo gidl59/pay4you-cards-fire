@@ -1,4 +1,6 @@
 import os
+import base64
+import requests
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response
@@ -55,7 +57,7 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
-    # pdf1_url contiene tutti gli URL PDF separati da |
+    # pdf1_url contiene tutti gli URL PDF separati da "|"
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)  # non usato ora, tenuto per compatibilità
 
@@ -106,7 +108,6 @@ def upload_file(file_storage, folder="uploads"):
         return None
 
     client = get_storage_client()
-
     ext = os.path.splitext(file_storage.filename or "")[1].lower()
 
     if client and FIREBASE_BUCKET:
@@ -124,7 +125,7 @@ def upload_file(file_storage, folder="uploads"):
             return url
         except Exception as e:
             app.logger.exception("Firebase upload failed: %s", e)
-            # fallback a salvataggio locale qui sotto
+            # fallback a salvataggio locale
 
     # Fallback locale in static/<folder>
     try:
@@ -169,7 +170,11 @@ def health():
 # --------------------------------------------------
 @app.get("/login")
 def login():
-    return render_template("login.html", error=None, next=request.args.get("next", "/admin"))
+    return render_template(
+        "login.html",
+        error=None,
+        next=request.args.get("next", "/admin")
+    )
 
 
 @app.post("/login")
@@ -397,7 +402,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro (se usato)
+# VIEWER PDF – (se vorrai usarlo a parte)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -415,7 +420,7 @@ def pdf_viewer(slug, index):
 
 
 # --------------------------------------------------
-# VCARD & QR (VERSIONE POTENZIATA)
+# VCARD & QR (con FOTO incorporata e link card)
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
@@ -471,19 +476,36 @@ def vcard(slug):
     card_url = f"{base}/{ag.slug}"
     lines.append(f"URL:{card_url}")
 
-    # Foto profilo come URL (se relativa, la trasformiamo in assoluta)
+    # FOTO PROFILO INCORPORATA (Base64)
     if getattr(ag, "photo_url", None):
         photo_url = ag.photo_url
         if photo_url.startswith("/"):
             photo_url = f"{base}{photo_url}"
-        lines.append(f"PHOTO;VALUE=URI:{photo_url}")
+
+        try:
+            r = requests.get(photo_url, timeout=5)
+            if r.ok and r.content:
+                mime = r.headers.get("Content-Type", "image/jpeg").lower()
+                if "png" in mime:
+                    img_type = "PNG"
+                else:
+                    img_type = "JPEG"
+                b64 = base64.b64encode(r.content).decode("ascii")
+                # vCard 3.0: PHOTO incorporata
+                lines.append(f"PHOTO;ENCODING=b;TYPE={img_type}:{b64}")
+            else:
+                # fallback: URL, se il client la supporta
+                lines.append(f"PHOTO;VALUE=URI:{photo_url}")
+        except Exception:
+            # in caso di errore rete, almeno mettiamo l'URL
+            lines.append(f"PHOTO;VALUE=URI:{photo_url}")
 
     # Indirizzo (prendiamo il primo disponibile)
     if getattr(ag, "addresses", None):
         raw_addrs = [a.strip() for a in ag.addresses.split("\n") if a.strip()]
         if raw_addrs:
             first_addr = raw_addrs[0].replace(";", ",")
-            # ADR: POBox;Extended;Street;Locality;Region;PostalCode;Country
+            # ADR: POBox;Extended;Street;Street;Locality;Region;PostalCode;Country
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
     # Dati fiscali in campi custom + NOTE
