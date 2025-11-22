@@ -4,7 +4,16 @@
   <meta charset="utf-8">
   <title>Pay4You Cards – {% block title %}{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- CSS principale -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Cropper.js per ritaglio foto profilo (solo admin form la usa) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css"
+  >
+  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
 </head>
 <body>
 
