@@ -190,7 +190,7 @@
         <div class="label">Salva contatto</div>
         <div class="value">
           <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-            Scarica vCard
+            Salva contatto
           </a>
         </div>
       </div>
@@ -243,57 +243,18 @@
     {% endif %}
 
     <!-- SEZIONE DOCUMENTI (PDF) -->
-    {% if ag.pdf1_url or ag.pdf2_url or ag.pdf3_url or ag.pdf4_url or ag.pdf5_url or ag.pdf6_url %}
+    {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% if ag.pdf1_url %}
+        {% for pdf_url in pdfs %}
         <button type="button"
                 class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf1_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 1</span>
+                onclick="openFrameModal('{{ pdf_url }}')">
+          <span class="pdf-icon">📄</span>
+          <span>Documento {{ loop.index }}</span>
         </button>
-        {% endif %}
-
-        {% if ag.pdf2_url %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf2_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 2</span>
-        </button>
-        {% endif %}
-
-        {% if ag.pdf3_url %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf3_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 3</span>
-        </button>
-        {% endif %}
-
-        {% if ag.pdf4_url %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf4_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 4</span>
-        </button>
-        {% endif %}
-
-        {% if ag.pdf5_url %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf5_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 5</span>
-        </button>
-        {% endif %}
-
-        {% if ag.pdf6_url %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ ag.pdf6_url }}')">
-          <span class="pdf-icon">📄</span><span>Documento 6</span>
-        </button>
-        {% endif %}
+        {% endfor %}
       </div>
     </section>
     {% endif %}
