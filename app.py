@@ -55,7 +55,7 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
-    # Useremo pdf1_url come "lista" di URL PDF separati da |
+    # pdf1_url contiene tutti gli URL PDF separati da |
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)  # non usato ora, tenuto per compatibilità
 
@@ -397,7 +397,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro
+# VIEWER PDF – con freccia indietro (se usato)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -415,7 +415,7 @@ def pdf_viewer(slug, index):
 
 
 # --------------------------------------------------
-# VCARD & QR
+# VCARD & QR (VERSIONE POTENZIATA)
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
@@ -424,7 +424,7 @@ def vcard(slug):
     if not ag:
         abort(404)
 
-    # Proviamo a dividere Nome/Cognome per compatibilità iPhone
+    base = get_base_url()
     full_name = ag.name or ""
     parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
@@ -440,39 +440,79 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
+
+    # Ruolo / azienda
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
+    if getattr(ag, "company", None):
+        lines.append(f"ORG:{ag.company}")
+
+    # Telefoni
     if getattr(ag, "phone_mobile", None):
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+
+    # Email lavoro (anche multiple)
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
+
+    # PEC separata
+    if getattr(ag, "pec", None):
+        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
+
+    # Siti internet
     if getattr(ag, "websites", None):
         for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
-    if getattr(ag, "company", None):
-        lines.append(f"ORG:{ag.company}")
+
+    # URL principale della card (per PDF, galleria, ecc.)
+    card_url = f"{base}/{ag.slug}"
+    lines.append(f"URL:{card_url}")
+
+    # Foto profilo come URL (se relativa, la trasformiamo in assoluta)
+    if getattr(ag, "photo_url", None):
+        photo_url = ag.photo_url
+        if photo_url.startswith("/"):
+            photo_url = f"{base}{photo_url}"
+        lines.append(f"PHOTO;VALUE=URI:{photo_url}")
+
+    # Indirizzo (prendiamo il primo disponibile)
+    if getattr(ag, "addresses", None):
+        raw_addrs = [a.strip() for a in ag.addresses.split("\n") if a.strip()]
+        if raw_addrs:
+            first_addr = raw_addrs[0].replace(";", ",")
+            # ADR: POBox;Extended;Street;Locality;Region;PostalCode;Country
+            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
+
+    # Dati fiscali in campi custom + NOTE
+    note_parts = []
+
     if getattr(ag, "piva", None):
         lines.append(f"X-TAX-ID:{ag.piva}")
+        note_parts.append(f"Partita IVA: {ag.piva}")
+
     if getattr(ag, "sdi", None):
         lines.append(f"X-SDI-CODE:{ag.sdi}")
-
-    note_parts = []
-    if getattr(ag, "piva", None):
-        note_parts.append(f"Partita IVA: {ag.piva}")
-    if getattr(ag, "sdi", None):
         note_parts.append(f"SDI: {ag.sdi}")
+
+    # Aggiungiamo sempre il link alla card nelle note
+    note_parts.append(f"Card digitale: {card_url}")
+
     if note_parts:
-        lines.append("NOTE:" + " | ".join(note_parts))
+        note = " | ".join(note_parts).replace(";", "\\;")
+        lines.append("NOTE:" + note)
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
 
-    resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
-    return resp
+    if request.args.get("download") == "1":
+        resp = Response(content, mimetype="text/vcard; charset=utf-8")
+        resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+        return resp
+
+    return Response(content, mimetype="text/vcard; charset=utf-8")
 
 
 @app.get("/<slug>/qr.png")
