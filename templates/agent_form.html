@@ -10,351 +10,130 @@
     {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
   </h1>
 
-  <form
-    class="agent-form"
-    method="post"
-    enctype="multipart/form-data"
-    action="{% if agent %}
-               {{ url_for('update_agent', slug=agent.slug) }}
-             {% else %}
-               {{ url_for('create_agent') }}
-             {% endif %}"
-  >
-    <!-- Dati base -->
-    <label>
-      Slug (es. giuseppe)
-      <input
-        type="text"
-        name="slug"
-        required
-        value="{{ agent.slug if agent else '' }}"
-      >
-    </label>
+  <form class="agent-form" method="post" enctype="multipart/form-data">
 
-    <label>
-      Nome e cognome
-      <input
-        type="text"
-        name="name"
-        required
-        value="{{ agent.name if agent else '' }}"
-      >
-    </label>
+    <!-- Slug -->
+    <label for="slug">Codice card (slug unico – senza spazi)</label>
+    <input type="text" id="slug" name="slug"
+           value="{{ agent.slug if agent else '' }}"
+           placeholder="es: giuseppe" required>
 
-    <label>
-      Ruolo / Qualifica
-      <input
-        type="text"
-        name="role"
-        value="{{ agent.role if agent else '' }}"
-      >
-    </label>
+    <!-- Nome -->
+    <label for="name">Nome e Cognome</label>
+    <input type="text" id="name" name="name"
+           value="{{ agent.name if agent else '' }}" required>
 
-    <label>
-      Azienda
-      <input
-        type="text"
-        name="company"
-        value="{{ agent.company if agent else '' }}"
-      >
-    </label>
+    <!-- Azienda -->
+    <label for="company">Azienda</label>
+    <input type="text" id="company" name="company"
+           value="{{ agent.company if agent else '' }}">
 
-    <label>
-      Descrizione breve (bio)
-      <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
-    </label>
+    <!-- Ruolo -->
+    <label for="role">Ruolo</label>
+    <input type="text" id="role" name="role"
+           value="{{ agent.role if agent else '' }}">
+
+    <!-- Bio -->
+    <label for="bio">Descrizione breve (max 200 caratteri)</label>
+    <textarea id="bio" name="bio" maxlength="200"
+              placeholder="Breve descrizione professionale">{{ agent.bio if agent else '' }}</textarea>
 
     <!-- Contatti -->
-    <label>
-      Mobile
-      <input
-        type="tel"
-        name="phone_mobile"
-        value="{{ agent.phone_mobile if agent else '' }}"
-      >
-    </label>
+    <label for="phone_mobile">Telefono mobile</label>
+    <input type="tel" id="phone_mobile" name="phone_mobile"
+           value="{{ agent.phone_mobile if agent else '' }}">
 
-    <label>
-      Telefono ufficio
-      <input
-        type="tel"
-        name="phone_office"
-        value="{{ agent.phone_office if agent else '' }}"
-      >
-    </label>
+    <label for="phone_office">Telefono ufficio</label>
+    <input type="tel" id="phone_office" name="phone_office"
+           value="{{ agent.phone_office if agent else '' }}">
 
-    <label>
-      WhatsApp
-      <input
-        type="tel"
-        name="whatsapp"
-        value="{{ agent.whatsapp if agent else '' }}"
-      >
-    </label>
+    <!-- EMAIL MULTIPLE -->
+    <label for="emails">Email (separate da virgola)</label>
+    <input type="text" id="emails" name="emails"
+           value="{{ agent.emails if agent else '' }}"
+           placeholder="es: nome@mail.it, info@mail.it">
+    <small style="font-size:12px;color:#9ca3af;">
+      Puoi inserire più email separate da virgola.
+    </small>
 
-    <label>
-      Email (una o più, separate da virgola)
-      <input
-        type="email"
-        name="emails"
-        value="{{ agent.emails if agent else '' }}"
-      >
-    </label>
-
-    <label>
-      PEC
-      <input
-        type="email"
-        name="pec"
-        value="{{ agent.pec if agent else '' }}"
-      >
-    </label>
-
-    <label>
-      Siti internet (uno o più, separati da virgola)
-      <input
-        type="text"
-        name="websites"
-        value="{{ agent.websites if agent else '' }}"
-      >
-    </label>
+    <!-- WEBSITES -->
+    <label for="websites">Siti web (separati da virgola)</label>
+    <input type="text" id="websites" name="websites"
+           value="{{ agent.websites if agent else '' }}"
+           placeholder="https://www.miosito.it, https://www.altro.it">
 
     <!-- Social -->
-    <label>
-      Facebook (URL profilo/pagina)
-      <input
-        type="text"
-        name="facebook"
-        value="{{ agent.facebook if agent else '' }}"
-      >
-    </label>
+    <label for="facebook">Facebook (URL)</label>
+    <input type="text" id="facebook" name="facebook"
+           value="{{ agent.facebook if agent else '' }}">
 
-    <label>
-      Instagram (URL profilo)
-      <input
-        type="text"
-        name="instagram"
-        value="{{ agent.instagram if agent else '' }}"
-      >
-    </label>
+    <label for="instagram">Instagram (URL)</label>
+    <input type="text" id="instagram" name="instagram"
+           value="{{ agent.instagram if agent else '' }}">
 
-    <label>
-      LinkedIn (URL profilo)
-      <input
-        type="text"
-        name="linkedin"
-        value="{{ agent.linkedin if agent else '' }}"
-      >
-    </label>
+    <label for="linkedin">LinkedIn (URL)</label>
+    <input type="text" id="linkedin" name="linkedin"
+           value="{{ agent.linkedin if agent else '' }}">
 
-    <label>
-      TikTok (URL profilo)
-      <input
-        type="text"
-        name="tiktok"
-        value="{{ agent.tiktok if agent else '' }}"
-      >
-    </label>
+    <label for="tiktok">TikTok (URL)</label>
+    <input type="text" id="tiktok" name="tiktok"
+           value="{{ agent.tiktok if agent else '' }}">
 
-    <label>
-      Telegram (username o link)
-      <input
-        type="text"
-        name="telegram"
-        value="{{ agent.telegram if agent else '' }}"
-      >
-    </label>
+    <label for="telegram">Telegram (URL)</label>
+    <input type="text" id="telegram" name="telegram"
+           value="{{ agent.telegram if agent else '' }}">
+
+    <!-- WhatsApp -->
+    <label for="whatsapp">WhatsApp (numero)</label>
+    <input type="text" id="whatsapp" name="whatsapp"
+           value="{{ agent.whatsapp if agent else '' }}"
+           placeholder="+39 333 1234567">
+
+    <!-- PEC -->
+    <label for="pec">PEC</label>
+    <input type="email" id="pec" name="pec"
+           value="{{ agent.pec if agent else '' }}">
 
     <!-- Dati fiscali -->
-    <label>
-      Partita IVA
-      <input
-        type="text"
-        name="piva"
-        value="{{ agent.piva if agent else '' }}"
-      >
-    </label>
+    <label for="piva">Partita IVA</label>
+    <input type="text" id="piva" name="piva"
+           value="{{ agent.piva if agent else '' }}">
 
-    <label>
-      Codice SDI
-      <input
-        type="text"
-        name="sdi"
-        value="{{ agent.sdi if agent else '' }}"
-      >
-    </label>
+    <label for="sdi">Codice SDI</label>
+    <input type="text" id="sdi" name="sdi"
+           value="{{ agent.sdi if agent else '' }}">
 
-    <!-- Indirizzi (uno per riga) -->
-    <label>
-      Indirizzi (uno per riga)
-      <textarea name="addresses">{% if agent and agent.addresses %}{{ agent.addresses }}{% endif %}</textarea>
-    </label>
+    <!-- Indirizzi (multi-linea) -->
+    <label for="addresses">Indirizzi (uno per riga)</label>
+    <textarea id="addresses" name="addresses"
+              placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
 
-    <!-- FOTO PROFILO con CROP OBBLIGATORIO -->
-    <label>
-      Foto profilo agente (ritaglio obbligatorio)
-      <input
-        type="file"
-        name="photo"
-        id="photo_input"
-        accept="image/*"
-      >
-      {% if agent and agent.photo_url %}
-        <small>Foto attuale già presente. Carica una nuova foto solo se vuoi sostituirla.</small>
-      {% else %}
-        <small>Carica una foto quadrata col volto centrato.</small>
-      {% endif %}
-    </label>
+    <!-- FOTO PROFILO -->
+    <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
+    <input type="file" id="photo" name="photo" accept="image/*">
 
-    <!-- DOCUMENTI PDF (fino a 6) -->
-    <label>
-      PDF 1
-      <input type="file" name="pdf1" accept="application/pdf">
-    </label>
-    <label>
-      PDF 2
-      <input type="file" name="pdf2" accept="application/pdf">
-    </label>
-    <label>
-      PDF 3
-      <input type="file" name="pdf3" accept="application/pdf">
-    </label>
-    <label>
-      PDF 4
-      <input type="file" name="pdf4" accept="application/pdf">
-    </label>
-    <label>
-      PDF 5
-      <input type="file" name="pdf5" accept="application/pdf">
-    </label>
-    <label>
-      PDF 6
-      <input type="file" name="pdf6" accept="application/pdf">
-    </label>
+    <!-- DOCUMENTI PDF -->
+    <label>Documenti PDF (max 6)</label>
+    {% for i in range(1, 7) %}
+      <input type="file" name="pdf{{ i }}" accept="application/pdf">
+    {% endfor %}
+    <small style="font-size:12px;color:#9ca3af;">Caricando almeno un nuovo PDF, sostituirai la lista esistente.</small>
 
-    <!-- Galleria foto (rimane senza crop, per ora) -->
-    <label>
-      Galleria foto (max 12 immagini)
-      <input
-        type="file"
-        name="gallery"
-        id="gallery_input"
-        multiple
-        accept="image/*"
-      >
-    </label>
+    <!-- GALLERIA FOTO -->
+    <label>Galleria foto (fino a 12 immagini)</label>
+    <input type="file" name="gallery" accept="image/*" multiple>
+    <small style="font-size:12px;color:#9ca3af;">
+      Se carichi nuove immagini, la galleria precedente verrà sostituita.
+    </small>
 
+    <!-- BOTTONI -->
     <div class="agent-form-buttons">
       <button type="submit">
-        {% if agent %}Salva modifiche{% else %}Crea agente{% endif %}
+        {% if agent %}Aggiorna agente{% else %}Crea agente{% endif %}
       </button>
-      <a href="{{ url_for('admin_home') }}" class="btn-secondary">Annulla</a>
+      <a class="btn-secondary" href="{{ url_for('admin_home') }}">Annulla</a>
     </div>
+
   </form>
 </div>
-
-<!-- MODAL RITAGLIO FOTO PROFILO -->
-<div id="photo-crop-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width: 420px; width: 95%; max-height: 90vh;">
-    <h2>Ritaglia foto profilo</h2>
-    <p style="font-size: 13px; margin-top: 0; margin-bottom: 8px;">
-      Usa le dita (su iPhone) o il mouse per spostare e zoomare. Il cerchio mostrerà l'area visibile.
-    </p>
-    <div style="width:100%; max-height:60vh; overflow:hidden;">
-      <img id="photo-crop-image" src="" alt="Ritaglio foto" style="max-width:100%; display:block;">
-    </div>
-    <div style="margin-top: 10px; display:flex; gap:8px; justify-content:flex-end;">
-      <button type="button" class="btn-secondary modal-close-btn" onclick="cancelPhotoCrop()">
-        Annulla
-      </button>
-      <button type="button" class="modal-close-btn" onclick="confirmPhotoCrop()">
-        Conferma ritaglio
-      </button>
-    </div>
-  </div>
-</div>
-
-<script>
-  (function() {
-    const photoInput = document.getElementById('photo_input');
-    const modal = document.getElementById('photo-crop-modal');
-    const img = document.getElementById('photo-crop-image');
-    let cropper = null;
-    let originalFileName = null;
-
-    if (photoInput) {
-      photoInput.addEventListener('change', function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        originalFileName = file.name || 'profile.jpg';
-
-        const reader = new FileReader();
-        reader.onload = function (ev) {
-          img.src = ev.target.result;
-          modal.style.display = 'flex';
-
-          if (cropper) {
-            cropper.destroy();
-          }
-
-          cropper = new Cropper(img, {
-            aspectRatio: 1,
-            viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 1,
-            responsive: true,
-            background: false,
-            zoomOnWheel: true
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    window.confirmPhotoCrop = function() {
-      if (!cropper || !photoInput) {
-        closePhotoModal();
-        return;
-      }
-
-      const canvas = cropper.getCroppedCanvas({
-        width: 500,
-        height: 500,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
-
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          closePhotoModal();
-          return;
-        }
-        const newFile = new File([blob], originalFileName, { type: 'image/jpeg' });
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(newFile);
-        photoInput.files = dataTransfer.files;
-
-        closePhotoModal();
-      }, 'image/jpeg', 0.9);
-    };
-
-    window.cancelPhotoCrop = function() {
-      // Annulla: svuota l'input, non carica nulla
-      if (photoInput) {
-        photoInput.value = "";
-      }
-      closePhotoModal();
-    };
-
-    function closePhotoModal() {
-      if (cropper) {
-        cropper.destroy();
-        cropper = null;
-      }
-      modal.style.display = 'none';
-      img.src = "";
-    }
-  })();
-</script>
 {% endblock %}
