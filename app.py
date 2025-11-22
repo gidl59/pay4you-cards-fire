@@ -420,7 +420,7 @@ def pdf_viewer(slug, index):
 
 
 # --------------------------------------------------
-# VCARD & QR (con FOTO + "Card digitale" come terzo sito)
+# VCARD & QR – v2.1, foto base64 spezzata, "Card digitale" come sito
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
@@ -441,7 +441,7 @@ def vcard(slug):
 
     lines = [
         "BEGIN:VCARD",
-        "VERSION:3.0",
+        "VERSION:2.1",
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
@@ -454,30 +454,30 @@ def vcard(slug):
 
     # Telefoni
     if getattr(ag, "phone_mobile", None):
-        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+        lines.append(f"TEL;CELL:{ag.phone_mobile}")
     if getattr(ag, "phone_office", None):
-        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+        lines.append(f"TEL;WORK:{ag.phone_office}")
 
     # Email lavoro (anche multiple)
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
-            lines.append(f"EMAIL;TYPE=WORK:{e}")
+            lines.append(f"EMAIL;WORK:{e}")
 
     # PEC separata
     if getattr(ag, "pec", None):
-        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
+        lines.append(f"EMAIL;INTERNET:{ag.pec}")
 
     # Siti internet "normali"
     if getattr(ag, "websites", None):
         for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
 
-    # URL principale della card (come "terzo sito" con etichetta Apple)
+    # URL principale della card (come "Card digitale")
     card_url = f"{base}/{ag.slug}"
     lines.append(f"item1.URL:{card_url}")
     lines.append("item1.X-ABLabel:Card digitale Pay4You")
 
-    # FOTO PROFILO INCORPORATA (Base64) – se supportata dal client
+    # FOTO PROFILO INCORPORATA (Base64, con line folding)
     if getattr(ag, "photo_url", None):
         photo_url = ag.photo_url
         if photo_url.startswith("/"):
@@ -492,14 +492,23 @@ def vcard(slug):
                 else:
                     img_type = "JPEG"
                 b64 = base64.b64encode(r.content).decode("ascii")
-                # vCard 3.0: PHOTO incorporata
-                lines.append(f"PHOTO;ENCODING=b;TYPE={img_type}:{b64}")
+
+                # prima riga
+                header = f"PHOTO;ENCODING=BASE64;TYPE={img_type}:"
+                if len(b64) <= 70:
+                    lines.append(header + b64)
+                else:
+                    first_chunk = b64[:70]
+                    lines.append(header + first_chunk)
+                    rest = b64[70:]
+                    # righe successive: iniziano con uno spazio
+                    for i in range(0, len(rest), 70):
+                        lines.append(" " + rest[i:i+70])
             else:
-                # fallback: URL, se il client la supporta
-                lines.append(f"PHOTO;VALUE=URI:{photo_url}")
+                # fallback: URL (se il client la supporta)
+                lines.append(f"PHOTO;TYPE=JPEG;VALUE=URI:{photo_url}")
         except Exception:
-            # in caso di errore rete, almeno mettiamo l'URL
-            lines.append(f"PHOTO;VALUE=URI:{photo_url}")
+            lines.append(f"PHOTO;TYPE=JPEG;VALUE=URI:{photo_url}")
 
     # Indirizzo (prendiamo il primo disponibile)
     if getattr(ag, "addresses", None):
@@ -507,20 +516,14 @@ def vcard(slug):
         if raw_addrs:
             first_addr = raw_addrs[0].replace(";", ",")
             # ADR: POBox;Extended;Street;Locality;Region;PostalCode;Country
-            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
+            lines.append(f"ADR;WORK:;;{first_addr};;;;")
 
-    # Dati fiscali in campi custom + NOTE
+    # NOTE con dati fiscali + card
     note_parts = []
-
     if getattr(ag, "piva", None):
-        lines.append(f"X-TAX-ID:{ag.piva}")
         note_parts.append(f"Partita IVA: {ag.piva}")
-
     if getattr(ag, "sdi", None):
-        lines.append(f"X-SDI-CODE:{ag.sdi}")
         note_parts.append(f"SDI: {ag.sdi}")
-
-    # Aggiungiamo sempre il link alla card nelle note
     note_parts.append(f"Card digitale: {card_url}")
 
     if note_parts:
@@ -530,12 +533,9 @@ def vcard(slug):
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
 
-    if request.args.get("download") == "1":
-        resp = Response(content, mimetype="text/vcard; charset=utf-8")
-        resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
-        return resp
-
-    return Response(content, mimetype="text/vcard; charset=utf-8")
+    resp = Response(content, mimetype="text/vcard; charset=utf-8")
+    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    return resp
 
 
 @app.get("/<slug>/qr.png")
