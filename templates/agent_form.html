@@ -11,6 +11,7 @@
   </h1>
 
   <form class="agent-form" method="post" enctype="multipart/form-data">
+
     <!-- Slug -->
     <label for="slug">Codice card (slug unico – senza spazi)</label>
     <input type="text" id="slug" name="slug"
@@ -107,9 +108,16 @@
     <textarea id="addresses" name="addresses"
               placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
 
-    <!-- FOTO PROFILO -->
+    <!-- FOTO PROFILO CON CROP -->
     <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
     <input type="file" id="photo" name="photo" accept="image/*">
+
+    <div id="crop-area" style="display:none;margin-top:8px;">
+      <img id="crop-image" style="max-width:100%;border-radius:12px;">
+      <button type="button" id="crop-save" style="margin-top:6px;padding:6px 12px;border-radius:8px;background:#22c55e;color:#111;">Applica ritaglio</button>
+    </div>
+
+    <input type="hidden" id="photo_cropped" name="photo_cropped">
 
     <!-- DOCUMENTI PDF -->
     <label>Documenti PDF (max 6)</label>
@@ -136,114 +144,36 @@
   </form>
 </div>
 
-<!-- MODALE CROP FOTO -->
-<div id="cropper-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <h2>Ritaglia la foto profilo</h2>
-    <div style="width:100%;max-width:360px;margin:0 auto;">
-      <img id="cropper-image" src="" alt="Anteprima foto"
-           style="max-width:100%;display:block;">
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
-      <button type="button" id="cropper-use" class="modal-close-btn">
-        Usa questa foto
-      </button>
-      <button type="button" id="cropper-cancel"
-              class="modal-close-btn"
-              style="background:#111827;color:#e5e7eb;border:1px solid #4b5563;">
-        Annulla
-      </button>
-    </div>
-  </div>
-</div>
+<!-- CROP SCRIPT -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 
 <script>
-  (function() {
-    const input = document.getElementById('photo');
-    const modal = document.getElementById('cropper-modal');
-    const imgEl = document.getElementById('cropper-image');
-    const btnUse = document.getElementById('cropper-use');
-    const btnCancel = document.getElementById('cropper-cancel');
+let cropper;
 
-    let cropper = null;
-    let originalFile = null;
+document.getElementById("photo").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    if (!input) return;
+  const img = document.getElementById("crop-image");
+  img.src = URL.createObjectURL(file);
 
-    // Quando selezioni la foto
-    input.addEventListener('change', function(e) {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
+  document.getElementById("crop-area").style.display = "block";
 
-      originalFile = file;
+  if (cropper) cropper.destroy();
+  cropper = new Cropper(img, {
+    aspectRatio: 1,
+    viewMode: 1,
+  });
+});
 
-      const url = URL.createObjectURL(file);
-      imgEl.src = url;
-      modal.style.display = 'flex';
+document.getElementById("crop-save").addEventListener("click", function () {
+  if (!cropper) return;
 
-      if (cropper) {
-        cropper.destroy();
-        cropper = null;
-      }
-
-      // Inizializza Cropper
-      cropper = new Cropper(imgEl, {
-        aspectRatio: 1,
-        viewMode: 1,
-        autoCropArea: 0.9,
-        responsive: true,
-        background: false,
-        zoomOnWheel: false
-      });
-    });
-
-    // Usa questa foto (salva il ritaglio dentro il file input)
-    btnUse.addEventListener('click', function() {
-      if (!cropper || !originalFile) {
-        modal.style.display = 'none';
-        return;
-      }
-
-      const canvas = cropper.getCroppedCanvas({
-        width: 1000,
-        height: 1000,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
-
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          modal.style.display = 'none';
-          return;
-        }
-
-        const fileName = originalFile.name || 'avatar.jpg';
-        const croppedFile = new File([blob], fileName, { type: 'image/jpeg' });
-
-        // Sostituisce il file nel <input type="file">
-        const dt = new DataTransfer();
-        dt.items.add(croppedFile);
-        input.files = dt.files;
-
-        // Chiudi modale e pulisci
-        modal.style.display = 'none';
-        cropper.destroy();
-        cropper = null;
-        originalFile = null;
-      }, 'image/jpeg', 0.9);
-    });
-
-    // Annulla / chiudi
-    btnCancel.addEventListener('click', function() {
-      modal.style.display = 'none';
-      if (cropper) {
-        cropper.destroy();
-        cropper = null;
-      }
-      // opzionale: svuota il file input
-      // input.value = '';
-    });
-  })();
+  const canvas = cropper.getCroppedCanvas({ width: 1000, height: 1000 });
+  document.getElementById("photo_cropped").value = canvas.toDataURL("image/jpeg", 0.9);
+  alert("Ritaglio applicato! Ora puoi salvare.");
+});
 </script>
 
 {% endblock %}
