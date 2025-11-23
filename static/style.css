@@ -175,15 +175,15 @@ a {
   object-position: center;
 }
 
-/* 🎯 MODIFICA - LOGO BACK -15% TOTALE */
+/* 🎯 LOGO RETRO RIDOTTO –20% totale */
 .avatar-back {
   transform: rotateY(180deg);
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
 }
 
 .avatar-back img {
-  width: 85%;    /* prima 90% → ora 85% */
-  height: 85%;
+  width: 80%;   /* nuova misura */
+  height: 80%;
   object-fit: contain;
   position: absolute;
   top: 50%;
