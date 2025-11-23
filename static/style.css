@@ -138,7 +138,6 @@ a {
   animation: avatar-rotate 7s linear infinite;
 }
 
-/* cerchio + bordo + glow */
 .avatar-face {
   position: absolute;
   inset: 0;
@@ -148,31 +147,20 @@ a {
   border: 3px solid rgba(248,250,252,0.98);
   box-shadow:
     0 0 0 4px rgba(15,23,42,0.9),
-    0 0 18px 6px rgba(250,204,21,0.45),
-    0 22px 45px rgba(0,0,0,0.85);
+    0 0 20px 8px rgba(250,204,21,0.55),
+    0 26px 55px rgba(0,0,0,0.9);
 }
 
-/* FOTO FRONTE – leggermente rimpicciolita per far entrare tutta la testa */
 .avatar-face img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transform: scale(0.95); /* meno zoom, si vede meglio tutta la faccia */
 }
 
-/* RETRO CON LOGO – logo più piccolo dentro al cerchio */
 .avatar-back {
   transform: rotateY(180deg);
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
-}
-
-.avatar-back img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;   /* non esce dal cerchio */
-  padding: 18px;         /* margine interno per rimpicciolire ancora */
-  transform: none;       /* niente zoom extra */
 }
 
 @keyframes avatar-rotate {
@@ -427,12 +415,14 @@ a {
    STILE AREA ADMIN
    ============================= */
 
+/* Layout contenitore admin */
 .admin-wrapper {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
 
+/* Box admin principale */
 .admin-card {
   backdrop-filter: blur(18px) saturate(130%);
   background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
@@ -442,12 +432,14 @@ a {
   padding: 18px 20px 24px;
 }
 
+/* Titolo pagina admin */
 .admin-title {
   margin: 0 0 12px;
   font-size: 24px;
   font-weight: 600;
 }
 
+/* Link "Nuovo agente" */
 .admin-new-link {
   display: inline-block;
   margin-bottom: 10px;
@@ -455,6 +447,7 @@ a {
   color: #facc15;
 }
 
+/* Tabella agenti */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -488,12 +481,14 @@ a {
   color: #e5e7eb;
 }
 
+/* Azioni */
 .admin-actions a {
   margin-right: 10px;
   font-size: 13px;
   color: #93c5fd;
 }
 
+/* Pulsante NFC */
 .btn-nfc {
   padding: 3px 10px;
   font-size: 12px;
@@ -505,6 +500,7 @@ a {
   margin-right: 4px;
 }
 
+/* Pulsante elimina */
 .admin-actions form {
   display: inline;
 }
@@ -641,6 +637,7 @@ a {
     padding: 16px 12px 20px;
   }
 
+  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
   .business-card {
     flex-direction: column;
     align-items: center;
