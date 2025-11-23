@@ -108,16 +108,9 @@
     <textarea id="addresses" name="addresses"
               placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
 
-    <!-- FOTO PROFILO CON CROP -->
+    <!-- FOTO PROFILO -->
     <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
     <input type="file" id="photo" name="photo" accept="image/*">
-
-    <div id="crop-area" style="display:none;margin-top:8px;">
-      <img id="crop-image" style="max-width:100%;border-radius:12px;">
-      <button type="button" id="crop-save" style="margin-top:6px;padding:6px 12px;border-radius:8px;background:#22c55e;color:#111;">Applica ritaglio</button>
-    </div>
-
-    <input type="hidden" id="photo_cropped" name="photo_cropped">
 
     <!-- DOCUMENTI PDF -->
     <label>Documenti PDF (max 6)</label>
@@ -144,36 +137,134 @@
   </form>
 </div>
 
-<!-- CROP SCRIPT -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<!-- MODAL RITAGLIO FOTO -->
+<div id="cropper-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h2>Ritaglia la foto profilo</h2>
+    <div style="max-width: 360px; max-height: 360px; margin: 0 auto;">
+      <img id="cropper-image"
+           src=""
+           alt="Anteprima foto"
+           style="max-width:100%; display:block;">
+    </div>
+    <div class="agent-form-buttons" style="justify-content:center; margin-top:12px;">
+      <button type="button" id="cropper-confirm">Usa questa foto</button>
+      <button type="button" class="btn-secondary" id="cropper-cancel">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cropper.js -->
+<link rel="stylesheet"
+      href="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.css">
+<script src="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.js"></script>
 
 <script>
-let cropper;
+  (function () {
+    const inputPhoto   = document.getElementById("photo");
+    const modal        = document.getElementById("cropper-modal");
+    const image        = document.getElementById("cropper-image");
+    const btnConfirm   = document.getElementById("cropper-confirm");
+    const btnCancel    = document.getElementById("cropper-cancel");
+    let cropper        = null;
+    let originalFile   = null;
 
-document.getElementById("photo").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (!file) return;
+    if (!inputPhoto) return;
 
-  const img = document.getElementById("crop-image");
-  img.src = URL.createObjectURL(file);
+    // Quando selezioni una foto
+    inputPhoto.addEventListener("change", function (e) {
+      const files = e.target.files;
+      if (!files || !files.length) return;
 
-  document.getElementById("crop-area").style.display = "block";
+      originalFile = files[0];
 
-  if (cropper) cropper.destroy();
-  cropper = new Cropper(img, {
-    aspectRatio: 1,
-    viewMode: 1,
-  });
-});
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        image.src = ev.target.result;
 
-document.getElementById("crop-save").addEventListener("click", function () {
-  if (!cropper) return;
+        // Mostra il modal
+        modal.style.display = "flex";
 
-  const canvas = cropper.getCroppedCanvas({ width: 1000, height: 1000 });
-  document.getElementById("photo_cropped").value = canvas.toDataURL("image/jpeg", 0.9);
-  alert("Ritaglio applicato! Ora puoi salvare.");
-});
+        // Distruggi cropper precedente se esiste
+        if (cropper) {
+          cropper.destroy();
+          cropper = null;
+        }
+
+        // Inizializza Cropper con cerchio più grande e centrato
+        cropper = new Cropper(image, {
+          aspectRatio: 1,
+          viewMode: 1,
+          dragMode: "move",
+          background: false,
+          responsive: true,
+          autoCropArea: 0.9,
+          movable: true,
+          zoomable: true,
+          scalable: false,
+          cropBoxResizable: false,
+          minCropBoxWidth: 280,
+          minCropBoxHeight: 280,
+          ready() {
+            const data = cropper.getContainerData();
+            const boxSize = Math.min(data.width, data.height) * 0.75;
+
+            cropper.setCropBoxData({
+              left: (data.width  - boxSize) / 2,
+              top:  (data.height - boxSize) / 2,
+              width: boxSize,
+              height: boxSize
+            });
+
+            // leggero zoom iniziale sul volto
+            cropper.zoomTo(1.2);
+          }
+        });
+      };
+      reader.readAsDataURL(originalFile);
+    });
+
+    // Conferma ritaglio
+    btnConfirm.addEventListener("click", function () {
+      if (!cropper || !originalFile) {
+        modal.style.display = "none";
+        return;
+      }
+
+      const canvas = cropper.getCroppedCanvas({
+        width: 1000,
+        height: 1000
+      });
+
+      canvas.toBlob(function (blob) {
+        if (!blob) {
+          modal.style.display = "none";
+          return;
+        }
+
+        const fileName = originalFile.name || "avatar.jpg";
+        const croppedFile = new File([blob], fileName, { type: blob.type });
+
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(croppedFile);
+        inputPhoto.files = dataTransfer.files;
+
+        modal.style.display = "none";
+        cropper.destroy();
+        cropper = null;
+      }, "image/jpeg", 0.92);
+    });
+
+    // Annulla ritaglio
+    btnCancel.addEventListener("click", function () {
+      modal.style.display = "none";
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+      // Se vuoi, puoi anche svuotare il file selezionato:
+      // inputPhoto.value = "";
+    });
+  })();
 </script>
-
 {% endblock %}
