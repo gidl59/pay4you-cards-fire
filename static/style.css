@@ -168,35 +168,24 @@ a {
     0 26px 55px rgba(0,0,0,0.85);
 }
 
-/* FRONTE: FOTO AGENTE */
-.avatar-front img {
+.avatar-face img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
 }
 
-/* RETRO: LOGO PAY4YOU RIDOTTO -10% */
 .avatar-back {
   transform: rotateY(180deg);
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-color: rgba(250,204,21,0.9);
-  box-shadow:
-    0 0 0 4px rgba(15,23,42,0.85),
-    0 0 26px 10px rgba(250,204,21,0.70),
-    0 30px 60px rgba(0,0,0,0.95);
 }
 
-/* LOGO NEL RETRO (ridotto a 60%) */
+/* LOGO SUL RETRO RIDOTTO -10% */
 .avatar-back img {
-  width: 60%;
-  height: 60%;
+  width: 90%;
+  height: 90%;
   object-fit: contain;
   object-position: center;
-  margin: 20% auto;
 }
 
 @keyframes avatar-rotate {
@@ -238,7 +227,7 @@ a {
   color: #cbd5f5;
 }
 
-/* SEZIONI CARD */
+/* SEZIONI CARD (CONTATTI, INDIRIZZI, ECC.) */
 .card-section {
   margin-top: 13px;
   padding: 15px 10px 10px;
@@ -305,7 +294,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI PDF */
+/* DOCUMENTI – PILL */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -324,17 +313,30 @@ a {
   border: 1px solid rgba(148,163,184,0.6);
 }
 
+.pdf-item span.pdf-icon {
+  font-size: 14px;
+}
+
 .pdf-item:hover {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO */
+/* GALLERIA FOTO – QUADRATA */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
+}
+
+.gallery-scroll a,
+.gallery-thumb-btn {
+  flex: 0 0 auto;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
 }
 
 .gallery-scroll img {
@@ -362,6 +364,57 @@ a {
 }
 
 /* =============================
+   MODAL QR / GALLERIA
+   ============================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-box {
+  background: #020617;
+  border-radius: 18px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(148,163,184,0.7);
+  text-align: center;
+  max-width: 320px;
+  width: 90%;
+}
+
+.modal-box h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.modal-close-btn {
+  margin-top: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #facc15;
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Bottone link stile testo (per QR, ecc.) */
+.link-button {
+  border: none;
+  padding: 0;
+  background: none;
+  color: #60a5fa;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* =============================
    AREA ADMIN
    ============================= */
 
@@ -371,6 +424,7 @@ a {
   margin: 0 auto;
 }
 
+/* card admin con scroll orizzontale se serve */
 .admin-card {
   backdrop-filter: blur(18px) saturate(130%);
   background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
@@ -381,6 +435,20 @@ a {
   overflow-x: auto;
 }
 
+.admin-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.admin-new-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #facc15;
+}
+
+/* Tabella agenti */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -392,6 +460,29 @@ a {
   padding: 8px 6px;
 }
 
+.admin-table thead tr {
+  border-bottom: 1px solid rgba(75,85,99,0.9);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(30,41,59,0.9);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,42,0.9);
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.admin-table td {
+  color: #e5e7eb;
+}
+
+/* Colonna azioni */
 .admin-actions {
   white-space: nowrap;
 }
@@ -403,8 +494,14 @@ a {
   font-size: 13px;
 }
 
+/* link azioni */
 .admin-actions a {
   color: #93c5fd;
+}
+
+/* Pulsante elimina */
+.admin-actions form {
+  display: inline;
 }
 
 .admin-actions button {
@@ -423,23 +520,143 @@ a {
   margin: 0 auto;
 }
 
+.agent-form-title {
+  font-size: 24px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
 .agent-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.agent-form input,
+.agent-form label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.agent-form input[type="text"],
+.agent-form input[type="email"],
+.agent-form input[type="tel"],
 .agent-form textarea,
-.agent-form select {
+.agent-form input[type="file"] {
   width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  font-size: 13px;
+}
+
+.agent-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.agent-form-buttons {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.agent-form button,
+.agent-form a.btn-secondary {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.agent-form button[type="submit"] {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.agent-form a.btn-secondary {
+  display: inline-block;
+  background: rgba(31,41,55,0.95);
+  color: #e5e7eb;
+}
+
+/* LOGIN */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.login-card {
+  backdrop-filter: blur(18px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+  border-radius: 22px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
+  padding: 20px 18px 22px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* RESPONSIVE MOBILE */
 @media (max-width: 640px) {
+  .card-outer {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 16px 12px 20px;
+  }
+
   .business-card {
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+
+  .card-name-block {
+    align-items: center;
+  }
+
+  .card-name {
+    font-size: 22px;
+  }
+
+  .card-logo-big {
+    height: 90px;
+  }
+
+  .admin-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
   }
 }
