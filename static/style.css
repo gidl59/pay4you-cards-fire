@@ -1,6 +1,5 @@
 /* ================================
    PAY4YOU LUXURY CARD STYLE
-   Full Screen iPhone Blur Edition
    ================================ */
 
 /* RESET & GLOBAL */
@@ -30,7 +29,7 @@ a {
   padding: 18px 10px 28px;
 }
 
-/* HEADER / NAV SEMPLICE */
+/* HEADER / NAV */
 .site-header {
   padding: 10px 18px;
   display: flex;
@@ -71,7 +70,7 @@ a {
   margin: 0 auto;
 }
 
-/* SFONDO BLUR E AUREA ORO */
+/* SFONDO BLUR */
 .card-glass-bg {
   position: fixed;
   inset: 0;
@@ -94,7 +93,7 @@ a {
   padding: 22px 18px 28px;
 }
 
-/* HEADER CARD CON LOGO (statico) */
+/* HEADER CARD – LOGO CHE GIRA */
 .card-header-row {
   display: flex;
   justify-content: flex-start;
@@ -102,20 +101,31 @@ a {
 }
 
 .card-logo-big {
-  height: 72px;
-  filter: drop-shadow(0 3px 8px rgba(250,204,21,0.45));
+  height: 100px;
+  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.45));
+  transform-origin: center center;
+  animation: logo-spin 10s linear infinite;
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
 .business-card {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   padding: 10px 4px 18px;
   border-bottom: 1px solid rgba(148,163,184,0.30);
 }
 
-/* FOTO AGENTE CLASSICA (di backup, se servisse) */
+.card-profile-photo-wrapper {
+  flex-shrink: 0;
+}
+
+/* FOTO AGENTE CLASSICA (fallback) */
 .card-profile-photo {
   width: 160px;
   height: 160px;
@@ -125,15 +135,15 @@ a {
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
     0 0 0 4px rgba(15,23,42,0.85),
-    0 0 22px 8px rgba(250,204,21,0.40),
-    0 26px 55px rgba(0,0,0,0.9);
+    0 0 16px 6px rgba(250,204,21,0.35),
+    0 22px 45px rgba(0,0,0,0.8);
 }
 
-/* === FOTO AGENTE – ROTAZIONE LENTA FRONTE/RETRO CON LOGO === */
+/* FOTO AGENTE – ROTAZIONE FRONTE/RETRO CON LOGO */
 .avatar-flip {
   width: 160px;
   height: 160px;
-  perspective: 900px;
+  perspective: 800px;
   border-radius: 999px;
 }
 
@@ -153,9 +163,9 @@ a {
   backface-visibility: hidden;
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
-    0 0 0 4px rgba(15,23,42,0.92),
-    0 0 24px 8px rgba(250,204,21,0.40),
-    0 28px 60px rgba(0,0,0,0.95);
+    0 0 0 4px rgba(15,23,42,0.85),
+    0 0 22px 8px rgba(250,204,21,0.40),
+    0 26px 55px rgba(0,0,0,0.85);
 }
 
 .avatar-face img {
@@ -165,15 +175,9 @@ a {
   object-position: center;
 }
 
-/* Retro con logo Pay4You leggermente più piccolo e centrato */
-.avatar-back img {
-  object-fit: contain;
-  padding: 18px;
-  background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
-}
-
 .avatar-back {
   transform: rotateY(180deg);
+  background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
 }
 
 @keyframes avatar-rotate {
@@ -282,7 +286,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI – ICONA PDF + NOME (lista) */
+/* DOCUMENTI – PILL */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -309,7 +313,7 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – QUADRATA + SCROLL ORIZZONTALE */
+/* GALLERIA FOTO – QUADRATA */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
@@ -318,33 +322,31 @@ a {
   padding-bottom: 4px;
 }
 
-.gallery-scroll a {
-  flex: 0 0 auto;
-}
-
-.gallery-scroll img {
-  width: 150px;
-  height: 150px;
-  object-fit: cover;
-  object-position: center;
-  border-radius: 16px;
-  border: 1px solid rgba(148,163,184,0.5);
-  transition: transform 0.25s ease;
-}
-
-.gallery-scroll img:hover {
-  transform: scale(1.06);
-}
-
-/* Bottone per le thumb della galleria */
+.gallery-scroll a,
 .gallery-thumb-btn {
+  flex: 0 0 auto;
   border: none;
   padding: 0;
   background: none;
   cursor: pointer;
 }
 
-/* FOOTER PICCOLO (SE USATO) */
+.gallery-scroll img {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,0.5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.gallery-scroll img:hover {
+  transform: scale(1.06);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+}
+
+/* FOOTER */
 .card-footer {
   margin-top: 18px;
   padding-top: 10px;
@@ -354,7 +356,7 @@ a {
 }
 
 /* =============================
-   STILE MODAL QR / GALLERIA
+   MODAL QR / GALLERIA
    ============================= */
 
 .modal-overlay {
@@ -405,17 +407,16 @@ a {
 }
 
 /* =============================
-   STILE AREA ADMIN
+   AREA ADMIN
    ============================= */
 
-/* Layout contenitore admin */
 .admin-wrapper {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
 
-/* Box admin principale */
+/* card admin con scroll orizzontale se serve */
 .admin-card {
   backdrop-filter: blur(18px) saturate(130%);
   background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
@@ -423,16 +424,15 @@ a {
   border: 1px solid rgba(75,85,99,0.9);
   box-shadow: 0 22px 55px rgba(0,0,0,0.85);
   padding: 18px 20px 24px;
+  overflow-x: auto;
 }
 
-/* Titolo pagina admin */
 .admin-title {
   margin: 0 0 12px;
   font-size: 24px;
   font-weight: 600;
 }
 
-/* Link "Nuovo agente" */
 .admin-new-link {
   display: inline-block;
   margin-bottom: 10px;
@@ -445,7 +445,6 @@ a {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  table-layout: fixed;
 }
 
 .admin-table th,
@@ -475,41 +474,20 @@ a {
   color: #e5e7eb;
 }
 
-/* larghezze colonne */
-.admin-table th:nth-child(1),
-.admin-table td:nth-child(1) {
-  width: 14%;
-}
-
-.admin-table th:nth-child(2),
-.admin-table td:nth-child(2) {
-  width: 26%;
-}
-
-.admin-table th:nth-child(3),
-.admin-table td:nth-child(3) {
-  width: 22%;
-}
-
-.admin-table th:nth-child(4),
-.admin-table td:nth-child(4) {
-  width: 18%;
-}
-
-.admin-table th:nth-child(5),
-.admin-table td:nth-child(5) {
-  width: 20%;
-}
-
-/* Azioni */
+/* Colonna azioni */
 .admin-actions {
   white-space: nowrap;
 }
 
-.admin-actions a {
+.admin-actions a,
+.admin-actions button {
   display: inline-block;
-  margin-right: 8px;
+  margin-right: 6px;
   font-size: 13px;
+}
+
+/* link azioni */
+.admin-actions a {
   color: #93c5fd;
 }
 
@@ -520,7 +498,6 @@ a {
 
 .admin-actions button {
   padding: 3px 8px;
-  font-size: 12px;
   border-radius: 999px;
   border: 1px solid rgba(248,113,113,0.8);
   background: rgba(127,29,29,0.9);
@@ -650,7 +627,6 @@ a {
     padding: 16px 12px 20px;
   }
 
-  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
   .business-card {
     flex-direction: column;
     align-items: center;
@@ -666,7 +642,7 @@ a {
   }
 
   .card-logo-big {
-    height: 64px;
+    height: 90px;
   }
 
   .admin-card {
