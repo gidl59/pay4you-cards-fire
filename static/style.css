@@ -175,15 +175,15 @@ a {
   object-position: center;
 }
 
-/* ⬇️ MODIFICA QUI: LOGO RETRO -10% */
+/* 🎯 MODIFICA - LOGO BACK -15% TOTALE */
 .avatar-back {
   transform: rotateY(180deg);
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
 }
 
 .avatar-back img {
-  width: 90%;      /* ← PRIMA ERA 100%, ORA -10% */
-  height: 90%;     /* ← PRIMA ERA 100%, ORA -10% */
+  width: 85%;    /* prima 90% → ora 85% */
+  height: 85%;
   object-fit: contain;
   position: absolute;
   top: 50%;
