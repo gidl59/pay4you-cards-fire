@@ -94,62 +94,45 @@ a {
   padding: 22px 18px 28px;
 }
 
-/* HEADER CARD CON LOGO */
+/* HEADER CARD CON LOGO (statico) */
 .card-header-row {
   display: flex;
   justify-content: flex-start;
   margin-bottom: 12px;
 }
 
-/* LOGO HEADER (in alto a sinistra) */
 .card-logo-big {
-  height: 100px;
-  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
-  transition: transform 0.4s ease;
-}
-
-/* Gira quando ci passi sopra */
-.card-logo-big:hover {
-  animation: logo-spin 1.4s linear infinite;
-}
-
-@keyframes logo-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  height: 72px;
+  filter: drop-shadow(0 3px 8px rgba(250,204,21,0.45));
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
 .business-card {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
   padding: 10px 4px 18px;
   border-bottom: 1px solid rgba(148,163,184,0.30);
 }
 
-.card-profile-photo-wrapper {
-  flex-shrink: 0;
-}
-
-/* VECCHIA FOTO TONDA – lasciata per sicurezza (non usata) */
+/* FOTO AGENTE CLASSICA (di backup, se servisse) */
 .card-profile-photo {
-  width: 120px;
-  height: 120px;
+  width: 160px;
+  height: 160px;
   object-fit: cover;
   object-position: center;
   border-radius: 999px;
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
     0 0 0 4px rgba(15,23,42,0.85),
-    0 0 16px 6px rgba(250,204,21,0.35),
-    0 22px 45px rgba(0,0,0,0.8);
+    0 0 22px 8px rgba(250,204,21,0.40),
+    0 26px 55px rgba(0,0,0,0.9);
 }
 
 /* === FOTO AGENTE – ROTAZIONE LENTA FRONTE/RETRO CON LOGO === */
-/* CERCHIO PIÙ GRANDE: 180x180 */
 .avatar-flip {
-  width: 180px;
-  height: 180px;
+  width: 160px;
+  height: 160px;
   perspective: 900px;
   border-radius: 999px;
 }
@@ -162,7 +145,6 @@ a {
   animation: avatar-rotate 7s linear infinite;
 }
 
-/* Facce fronte/retro, stesso cerchio */
 .avatar-face {
   position: absolute;
   inset: 0;
@@ -171,12 +153,11 @@ a {
   backface-visibility: hidden;
   border: 3px solid rgba(248,250,252,0.95);
   box-shadow:
-    0 0 0 4px rgba(15,23,42,0.85),
-    0 0 18px 8px rgba(250,204,21,0.40),
-    0 24px 55px rgba(0,0,0,0.85);
+    0 0 0 4px rgba(15,23,42,0.92),
+    0 0 24px 8px rgba(250,204,21,0.40),
+    0 28px 60px rgba(0,0,0,0.95);
 }
 
-/* FOTO AGENTE: riempie bene il cerchio */
 .avatar-face img {
   width: 100%;
   height: 100%;
@@ -184,19 +165,15 @@ a {
   object-position: center;
 }
 
-/* RETRO CON LOGO: logo più piccolo e centrato */
-.avatar-back {
-  transform: rotateY(180deg);
+/* Retro con logo Pay4You leggermente più piccolo e centrato */
+.avatar-back img {
+  object-fit: contain;
+  padding: 18px;
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
 }
 
-.avatar-back img {
-  width: 72%;
-  height: 72%;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  margin: 14% auto 0 auto; /* centrato dentro il cerchio */
+.avatar-back {
+  transform: rotateY(180deg);
 }
 
 @keyframes avatar-rotate {
@@ -305,7 +282,7 @@ a {
   color: #e5e7eb;
 }
 
-/* DOCUMENTI – ICONA PDF + NOME (max 6) */
+/* DOCUMENTI – ICONA PDF + NOME (lista) */
 .pdf-list {
   display: flex;
   flex-wrap: wrap;
@@ -332,23 +309,17 @@ a {
   background: rgba(52,211,153,0.9);
 }
 
-/* GALLERIA FOTO – SLIDER ORIZZONTALE + EFFETTO ZOOM */
-/* Thumb QUADRATE e più grandi */
+/* GALLERIA FOTO – QUADRATA + SCROLL ORIZZONTALE */
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
 }
 
-.gallery-scroll a,
-.gallery-thumb-btn {
+.gallery-scroll a {
   flex: 0 0 auto;
-  border: none;
-  padding: 0;
-  background: none;
-  cursor: pointer;
 }
 
 .gallery-scroll img {
@@ -356,13 +327,21 @@ a {
   height: 150px;
   object-fit: cover;
   object-position: center;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid rgba(148,163,184,0.5);
   transition: transform 0.25s ease;
 }
 
 .gallery-scroll img:hover {
   transform: scale(1.06);
+}
+
+/* Bottone per le thumb della galleria */
+.gallery-thumb-btn {
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
 }
 
 /* FOOTER PICCOLO (SE USATO) */
@@ -394,7 +373,7 @@ a {
   padding: 16px 18px 18px;
   border: 1px solid rgba(148,163,184,0.7);
   text-align: center;
-  max-width: 340px;
+  max-width: 320px;
   width: 90%;
 }
 
@@ -466,6 +445,7 @@ a {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  table-layout: fixed;
 }
 
 .admin-table th,
@@ -495,34 +475,39 @@ a {
   color: #e5e7eb;
 }
 
-/* Larghezze colonne per più respiro */
+/* larghezze colonne */
 .admin-table th:nth-child(1),
 .admin-table td:nth-child(1) {
-  width: 18%;
+  width: 14%;
 }
 
 .admin-table th:nth-child(2),
 .admin-table td:nth-child(2) {
-  width: 32%;
+  width: 26%;
 }
 
 .admin-table th:nth-child(3),
 .admin-table td:nth-child(3) {
-  width: 24%;
+  width: 22%;
 }
 
 .admin-table th:nth-child(4),
 .admin-table td:nth-child(4) {
-  width: 16%;
+  width: 18%;
 }
 
 .admin-table th:nth-child(5),
 .admin-table td:nth-child(5) {
-  width: 10%;
+  width: 20%;
 }
 
 /* Azioni */
+.admin-actions {
+  white-space: nowrap;
+}
+
 .admin-actions a {
+  display: inline-block;
   margin-right: 8px;
   font-size: 13px;
   color: #93c5fd;
@@ -681,7 +666,7 @@ a {
   }
 
   .card-logo-big {
-    height: 90px;
+    height: 64px;
   }
 
   .admin-card {
