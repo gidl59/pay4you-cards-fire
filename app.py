@@ -1,6 +1,10 @@
 import os
 import base64
-import requests
+from io import BytesIO
+from datetime import datetime, timedelta
+import uuid
+import tempfile
+
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response
@@ -9,9 +13,6 @@ from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
-from io import BytesIO
-from datetime import datetime, timedelta
-import uuid, tempfile
 
 load_dotenv()
 
@@ -57,16 +58,16 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
-    # pdf1_url contiene tutti gli URL PDF separati da "|"
+    # useremo pdf1_url come lista URL separata da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # non usato ora, tenuto per compatibilità
+    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
 
 
 Base.metadata.create_all(engine)
 
 
 # --------------------------------------------------
-# Helper per autenticazione admin
+# Helper autenticazione admin
 # --------------------------------------------------
 def admin_required(f):
     from functools import wraps
@@ -102,7 +103,7 @@ def get_storage_client():
 def upload_file(file_storage, folder="uploads"):
     """
     Se Firebase è configurato, carica su bucket.
-    Altrimenti salva in static/<folder> e restituisce URL statico.
+    Altrimenti salva in static/<folder> e restituisce URL statico relativo.
     """
     if not file_storage or not file_storage.filename:
         return None
@@ -110,9 +111,10 @@ def upload_file(file_storage, folder="uploads"):
     client = get_storage_client()
     ext = os.path.splitext(file_storage.filename or "")[1].lower()
 
+    # Tentativo Firebase
     if client and FIREBASE_BUCKET:
         try:
-            from google.cloud import storage  # noqa
+            from google.cloud import storage  # noqa: F401
 
             bucket = client.bucket(FIREBASE_BUCKET)
             key = f"{folder}/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}{ext}"
@@ -125,19 +127,54 @@ def upload_file(file_storage, folder="uploads"):
             return url
         except Exception as e:
             app.logger.exception("Firebase upload failed: %s", e)
-            # fallback a salvataggio locale
+            # fallback locale
 
-    # Fallback locale in static/<folder>
+    # Fallback locale
     try:
         uploads_folder = os.path.join(app.static_folder, folder)
         os.makedirs(uploads_folder, exist_ok=True)
         filename = f"{uuid.uuid4().hex}{ext}"
         fullpath = os.path.join(uploads_folder, filename)
         file_storage.save(fullpath)
-        # URL relativo allo static
         return url_for("static", filename=f"{folder}/{filename}", _external=False)
     except Exception as e:
         app.logger.exception("Local upload failed: %s", e)
+        return None
+
+
+def save_cropped_image(data_url, folder="photos"):
+    """
+    Salva un'immagine base64 (dataURL da canvas) in static/<folder>
+    e restituisce l'URL statico relativo.
+    """
+    if not data_url:
+        return None
+
+    try:
+        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
+        if "," in data_url:
+            header, b64data = data_url.split(",", 1)
+        else:
+            b64data = data_url
+            header = ""
+
+        ext = ".jpg"
+        if "png" in header.lower():
+            ext = ".png"
+
+        img_bytes = base64.b64decode(b64data)
+
+        uploads_folder = os.path.join(app.static_folder, folder)
+        os.makedirs(uploads_folder, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        fullpath = os.path.join(uploads_folder, filename)
+
+        with open(fullpath, "wb") as f:
+            f.write(img_bytes)
+
+        return url_for("static", filename=f"{folder}/{filename}", _external=False)
+    except Exception as e:
+        app.logger.exception("save_cropped_image failed: %s", e)
         return None
 
 
@@ -170,11 +207,7 @@ def health():
 # --------------------------------------------------
 @app.get("/login")
 def login():
-    return render_template(
-        "login.html",
-        error=None,
-        next=request.args.get("next", "/admin")
-    )
+    return render_template("login.html", error=None, next=request.args.get("next", "/admin"))
 
 
 @app.post("/login")
@@ -248,11 +281,16 @@ def create_agent():
 
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
+    cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO
-    photo_url = upload_file(photo, "photos") if photo and photo.filename else None
+    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
+    photo_url = None
+    if cropped_b64:
+        photo_url = save_cropped_image(cropped_b64, "photos")
+    elif photo and photo.filename:
+        photo_url = upload_file(photo, "photos")
 
-    # PDF 1–6
+    # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
     for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
@@ -328,9 +366,14 @@ def update_agent(slug):
 
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
+    cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO
-    if photo and photo.filename:
+    # FOTO PROFILO – SCELTA A: se esiste photo_cropped, sovrascrive SEMPRE
+    if cropped_b64:
+        u = save_cropped_image(cropped_b64, "photos")
+        if u:
+            ag.photo_url = u
+    elif photo and photo.filename:
         u = upload_file(photo, "photos")
         if u:
             ag.photo_url = u
@@ -402,7 +445,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – (se vorrai usarlo a parte)
+# VIEWER PDF – con freccia indietro
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -420,7 +463,7 @@ def pdf_viewer(slug, index):
 
 
 # --------------------------------------------------
-# VCARD & QR – v2.1, foto base64 spezzata, "Card digitale" come sito
+# VCARD & QR
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
@@ -429,7 +472,6 @@ def vcard(slug):
     if not ag:
         abort(404)
 
-    base = get_base_url()
     full_name = ag.name or ""
     parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
@@ -441,94 +483,36 @@ def vcard(slug):
 
     lines = [
         "BEGIN:VCARD",
-        "VERSION:2.1",
+        "VERSION:3.0",
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
-
-    # Ruolo / azienda
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
-    if getattr(ag, "company", None):
-        lines.append(f"ORG:{ag.company}")
-
-    # Telefoni
     if getattr(ag, "phone_mobile", None):
-        lines.append(f"TEL;CELL:{ag.phone_mobile}")
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
     if getattr(ag, "phone_office", None):
-        lines.append(f"TEL;WORK:{ag.phone_office}")
-
-    # Email lavoro (anche multiple)
+        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
-            lines.append(f"EMAIL;WORK:{e}")
-
-    # PEC separata
-    if getattr(ag, "pec", None):
-        lines.append(f"EMAIL;INTERNET:{ag.pec}")
-
-    # Siti internet "normali"
+            lines.append(f"EMAIL;TYPE=WORK:{e}")
     if getattr(ag, "websites", None):
-        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
+        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
             lines.append(f"URL:{w}")
+    if getattr(ag, "company", None):
+        lines.append(f"ORG:{ag.company}")
+    if getattr(ag, "piva", None):
+        lines.append(f"X-TAX-ID:{ag.piva}")
+    if getattr(ag, "sdi", None):
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
 
-    # URL principale della card (come "Card digitale")
-    card_url = f"{base}/{ag.slug}"
-    lines.append(f"item1.URL:{card_url}")
-    lines.append("item1.X-ABLabel:Card digitale Pay4You")
-
-    # FOTO PROFILO INCORPORATA (Base64, con line folding)
-    if getattr(ag, "photo_url", None):
-        photo_url = ag.photo_url
-        if photo_url.startswith("/"):
-            photo_url = f"{base}{photo_url}"
-
-        try:
-            r = requests.get(photo_url, timeout=5)
-            if r.ok and r.content:
-                mime = r.headers.get("Content-Type", "image/jpeg").lower()
-                if "png" in mime:
-                    img_type = "PNG"
-                else:
-                    img_type = "JPEG"
-                b64 = base64.b64encode(r.content).decode("ascii")
-
-                # prima riga
-                header = f"PHOTO;ENCODING=BASE64;TYPE={img_type}:"
-                if len(b64) <= 70:
-                    lines.append(header + b64)
-                else:
-                    first_chunk = b64[:70]
-                    lines.append(header + first_chunk)
-                    rest = b64[70:]
-                    # righe successive: iniziano con uno spazio
-                    for i in range(0, len(rest), 70):
-                        lines.append(" " + rest[i:i+70])
-            else:
-                # fallback: URL (se il client la supporta)
-                lines.append(f"PHOTO;TYPE=JPEG;VALUE=URI:{photo_url}")
-        except Exception:
-            lines.append(f"PHOTO;TYPE=JPEG;VALUE=URI:{photo_url}")
-
-    # Indirizzo (prendiamo il primo disponibile)
-    if getattr(ag, "addresses", None):
-        raw_addrs = [a.strip() for a in ag.addresses.split("\n") if a.strip()]
-        if raw_addrs:
-            first_addr = raw_addrs[0].replace(";", ",")
-            # ADR: POBox;Extended;Street;Locality;Region;PostalCode;Country
-            lines.append(f"ADR;WORK:;;{first_addr};;;;")
-
-    # NOTE con dati fiscali + card
     note_parts = []
     if getattr(ag, "piva", None):
         note_parts.append(f"Partita IVA: {ag.piva}")
     if getattr(ag, "sdi", None):
         note_parts.append(f"SDI: {ag.sdi}")
-    note_parts.append(f"Card digitale: {card_url}")
-
     if note_parts:
-        note = " | ".join(note_parts).replace(";", "\\;")
-        lines.append("NOTE:" + note)
+        lines.append("NOTE:" + " | ".join(note_parts))
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
