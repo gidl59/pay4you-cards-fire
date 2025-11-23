@@ -101,21 +101,12 @@ a {
   margin-bottom: 12px;
 }
 
-/* LOGO CON ANIMAZIONE */
+/* LOGO PAY4YOU (puoi usare la versione oro) */
 .card-logo-big {
-  height: 100px;
-  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.5));
-  transition: transform 0.4s ease;
-}
-
-/* Gira quando ci passi sopra */
-.card-logo-big:hover {
-  animation: logo-spin 1.4s linear infinite;
-}
-
-@keyframes logo-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  height: 90px;
+  filter:
+    drop-shadow(0 0 12px rgba(250,204,21,0.45))
+    drop-shadow(0 14px 30px rgba(0,0,0,0.85));
 }
 
 /* BLOCCO BUSINESS (FOTO + DATI) */
@@ -131,25 +122,11 @@ a {
   flex-shrink: 0;
 }
 
-/* FOTO AGENTE: TONDA CLASSICA (non più usata ma lasciata per sicurezza) */
-.card-profile-photo {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  object-position: center;
-  border-radius: 999px;
-  border: 3px solid rgba(248,250,252,0.95);
-  box-shadow:
-    0 0 0 4px rgba(15,23,42,0.85),
-    0 0 16px 6px rgba(250,204,21,0.35),
-    0 22px 45px rgba(0,0,0,0.8);
-}
-
-/* === FOTO AGENTE – ROTAZIONE LENTA FRONTE/RETRO CON LOGO + LED RING === */
+/* === FOTO AGENTE – ROTAZIONE LENTA FRONTE/RETRO CON LOGO === */
 .avatar-flip {
-  width: 120px;
-  height: 120px;
-  perspective: 800px;
+  width: 160px;
+  height: 160px;
+  perspective: 900px;
   border-radius: 999px;
 }
 
@@ -161,71 +138,43 @@ a {
   animation: avatar-rotate 7s linear infinite;
 }
 
-/* Anello LED dorato che ruota intorno alla foto */
-.avatar-inner::before {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background:
-    conic-gradient(
-      from 0deg,
-      rgba(250,204,21,0.0),
-      rgba(250,204,21,0.9),
-      rgba(250,204,21,0.0) 60%,
-      rgba(250,204,21,0.0)
-    );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 1px));
-  animation: led-ring-spin 4s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes led-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
+/* cerchio + bordo + glow */
 .avatar-face {
   position: absolute;
   inset: 0;
   border-radius: 999px;
   overflow: hidden;
   backface-visibility: hidden;
-  border: 3px solid rgba(248,250,252,0.95);
+  border: 3px solid rgba(248,250,252,0.98);
   box-shadow:
-    0 0 0 4px rgba(15,23,42,0.85),
-    0 0 16px 6px rgba(250,204,21,0.35),
-    0 22px 45px rgba(0,0,0,0.8);
-  z-index: 1;
+    0 0 0 4px rgba(15,23,42,0.9),
+    0 0 18px 6px rgba(250,204,21,0.45),
+    0 22px 45px rgba(0,0,0,0.85);
 }
 
+/* FOTO FRONTE – leggermente rimpicciolita per far entrare tutta la testa */
 .avatar-face img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
+  transform: scale(0.95); /* meno zoom, si vede meglio tutta la faccia */
 }
 
+/* RETRO CON LOGO – logo più piccolo dentro al cerchio */
 .avatar-back {
   transform: rotateY(180deg);
   background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .avatar-back img {
-  width: 68%;
-  height: 68%;
-  object-fit: contain;
-  object-position: center;
-  filter: drop-shadow(0 0 14px rgba(250,204,21,0.75));
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* non esce dal cerchio */
+  padding: 18px;         /* margine interno per rimpicciolire ancora */
+  transform: none;       /* niente zoom extra */
 }
 
-/* Rotazione ciclica volto ↔ logo */
 @keyframes avatar-rotate {
   0%   { transform: rotateY(0deg); }
   35%  { transform: rotateY(0deg); }
@@ -294,9 +243,21 @@ a {
   border-bottom: none;
 }
 
+/* ICONA PERSONALIZZATA TONDA */
 .contact-row .icon {
-  width: 26px;
-  text-align: center;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(250,204,21,0.8);
+  background: radial-gradient(circle at 30% 0, #111827, #020617 75%);
+  box-shadow:
+    0 0 0 1px rgba(15,23,42,1),
+    0 0 12px rgba(15,23,42,0.9);
+  font-size: 17px;
 }
 
 .contact-row .label {
@@ -363,27 +324,35 @@ a {
 .gallery-scroll {
   margin-top: 8px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
 }
 
-.gallery-scroll a {
+.gallery-scroll a,
+.gallery-scroll button {
   flex: 0 0 auto;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
 }
 
+/* Thumb quadrate 160x160 */
 .gallery-scroll img {
-  width: 140px;
-  height: 95px;
+  width: 160px;
+  height: 160px;
   object-fit: cover;
   object-position: center;
-  border-radius: 12px;
+  border-radius: 18px;
   border: 1px solid rgba(148,163,184,0.5);
-  transition: transform 0.25s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .gallery-scroll img:hover {
-  transform: scale(1.06);
+  transform: scale(1.04);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.85);
 }
 
 /* Bottone per le thumb della galleria */
@@ -458,14 +427,12 @@ a {
    STILE AREA ADMIN
    ============================= */
 
-/* Layout contenitore admin */
 .admin-wrapper {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
 
-/* Box admin principale */
 .admin-card {
   backdrop-filter: blur(18px) saturate(130%);
   background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
@@ -475,14 +442,12 @@ a {
   padding: 18px 20px 24px;
 }
 
-/* Titolo pagina admin */
 .admin-title {
   margin: 0 0 12px;
   font-size: 24px;
   font-weight: 600;
 }
 
-/* Link "Nuovo agente" */
 .admin-new-link {
   display: inline-block;
   margin-bottom: 10px;
@@ -490,16 +455,15 @@ a {
   color: #facc15;
 }
 
-/* Tabella agenti */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .admin-table th,
 .admin-table td {
-  padding: 8px 6px;
+  padding: 10px 8px;
 }
 
 .admin-table thead tr {
@@ -524,20 +488,29 @@ a {
   color: #e5e7eb;
 }
 
-/* Azioni */
 .admin-actions a {
-  margin-right: 8px;
+  margin-right: 10px;
   font-size: 13px;
   color: #93c5fd;
 }
 
-/* Pulsante elimina */
+.btn-nfc {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,250,252,0.8);
+  background: rgba(127,29,29,0.9);
+  color: #fee2e2;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
 .admin-actions form {
   display: inline;
 }
 
 .admin-actions button {
-  padding: 3px 8px;
+  padding: 3px 10px;
   font-size: 12px;
   border-radius: 999px;
   border: 1px solid rgba(248,113,113,0.8);
@@ -668,7 +641,6 @@ a {
     padding: 16px 12px 20px;
   }
 
-  /* FOTO + TESTI CENTRATI IN COLONNA SU MOBILE */
   .business-card {
     flex-direction: column;
     align-items: center;
@@ -684,7 +656,7 @@ a {
   }
 
   .card-logo-big {
-    height: 90px;
+    height: 80px;
   }
 
   .admin-card {
