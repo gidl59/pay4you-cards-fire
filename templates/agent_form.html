@@ -108,9 +108,16 @@
     <textarea id="addresses" name="addresses"
               placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
 
-    <!-- FOTO PROFILO -->
+    <!-- FOTO PROFILO CON CROP -->
     <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
     <input type="file" id="photo" name="photo" accept="image/*">
+
+    <div id="crop-area" style="display:none;margin-top:8px;">
+      <img id="crop-image" style="max-width:100%;border-radius:12px;">
+      <button type="button" id="crop-save" style="margin-top:6px;padding:6px 12px;border-radius:8px;background:#22c55e;color:#111;">Applica ritaglio</button>
+    </div>
+
+    <input type="hidden" id="photo_cropped" name="photo_cropped">
 
     <!-- DOCUMENTI PDF -->
     <label>Documenti PDF (max 6)</label>
@@ -136,4 +143,37 @@
 
   </form>
 </div>
+
+<!-- CROP SCRIPT -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+
+<script>
+let cropper;
+
+document.getElementById("photo").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const img = document.getElementById("crop-image");
+  img.src = URL.createObjectURL(file);
+
+  document.getElementById("crop-area").style.display = "block";
+
+  if (cropper) cropper.destroy();
+  cropper = new Cropper(img, {
+    aspectRatio: 1,
+    viewMode: 1,
+  });
+});
+
+document.getElementById("crop-save").addEventListener("click", function () {
+  if (!cropper) return;
+
+  const canvas = cropper.getCroppedCanvas({ width: 1000, height: 1000 });
+  document.getElementById("photo_cropped").value = canvas.toDataURL("image/jpeg", 0.9);
+  alert("Ritaglio applicato! Ora puoi salvare.");
+});
+</script>
+
 {% endblock %}
