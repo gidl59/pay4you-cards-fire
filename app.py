@@ -1,545 +1,280 @@
 import os
-import base64
-from io import BytesIO
-from datetime import datetime, timedelta
-import uuid
-import tempfile
+import datetime
+import io
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, send_file, session, abort, Response
+    url_for, flash, send_file, abort
 )
-from sqlalchemy import create_engine, Column, Integer, String, Text
-from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 import qrcode
 
-load_dotenv()
+# ---------------------------------------------------------------------------
+# App & Config
+# ---------------------------------------------------------------------------
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
-BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
-APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
-FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
-FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
-FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
-
-app = Flask(__name__)
-app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
-
-DB_URL = "sqlite:///data.db"
-engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(bind=engine)
-Base = declarative_base()
+db = SQLAlchemy()
+migrate = Migrate()
 
 
-class Agent(Base):
+def create_app():
+    app = Flask(__name__)
+
+    # Secret key (per session e flash). In produzione mettila come variabile d'ambiente.
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key")
+
+    # Database URL da variabile d'ambiente (Render -> Environment -> DATABASE_URL)
+    db_url = os.environ.get("DATABASE_URL")
+
+    # Render / alcuni provider usano ancora "postgres://" ma SQLAlchemy vuole "postgresql://"
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+    if not db_url:
+        # Fallback locale per sviluppo
+        db_url = "sqlite:///card.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # Cartella per le immagini/foto agenti
+    upload_folder = os.environ.get("UPLOAD_FOLDER", os.path.join(app.root_path, "uploads"))
+    os.makedirs(upload_folder, exist_ok=True)
+    app.config["UPLOAD_FOLDER"] = upload_folder
+
+    db.init_app(app)
+    migrate.init_app(app, db)
+
+    register_routes(app)
+
+    return app
+
+
+# ---------------------------------------------------------------------------
+# Modelli
+# ---------------------------------------------------------------------------
+
+
+class Agent(db.Model):
     __tablename__ = "agents"
 
-    id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
-    name = Column(String, nullable=False)
-    company = Column(String, nullable=True)
-    role = Column(String, nullable=True)
-    bio = Column(Text, nullable=True)
-    phone_mobile = Column(String, nullable=True)
-    phone_office = Column(String, nullable=True)
-    emails = Column(String, nullable=True)
-    websites = Column(String, nullable=True)
-    facebook = Column(String, nullable=True)
-    instagram = Column(String, nullable=True)
-    linkedin = Column(String, nullable=True)
-    tiktok = Column(String, nullable=True)
-    telegram = Column(String, nullable=True)
-    whatsapp = Column(String, nullable=True)
-    pec = Column(String, nullable=True)
-    piva = Column(String, nullable=True)
-    sdi = Column(String, nullable=True)
-    addresses = Column(Text, nullable=True)
-    photo_url = Column(String, nullable=True)
-    gallery_urls = Column(Text, nullable=True)
-    # useremo pdf1_url come lista URL separata da "|"
-    pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(120), nullable=True)
+    company = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    whatsapp = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    slug = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    photo_filename = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Agent {self.id} {self.name!r}>"
 
 
-Base.metadata.create_all(engine)
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
-# --------------------------------------------------
-# Helper autenticazione admin
-# --------------------------------------------------
-def admin_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not session.get("admin"):
-            return redirect(url_for("login", next=request.path))
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-# --------------------------------------------------
-# Firebase (se disponibile) + Upload locale
-# --------------------------------------------------
-def get_storage_client():
-    try:
-        if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
-            return None
-        from google.cloud import storage
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-        tmp.write(FIREBASE_CREDENTIALS_JSON.encode("utf-8"))
-        tmp.flush()
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
-        return storage.Client(project=FIREBASE_PROJECT_ID)
-    except Exception as e:
-        app.logger.exception("Firebase disabled due to error: %s", e)
+def save_photo(app: Flask, file_storage):
+    """Salva il file immagine caricato e restituisce il nome del file."""
+    if not file_storage:
+        return None
+    if file_storage.filename == "":
         return None
 
+    filename = file_storage.filename
+    # in produzione puoi sanificare meglio il nome file
+    upload_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    file_storage.save(upload_path)
+    return filename
 
-def upload_file(file_storage, folder="uploads"):
-    """
-    Se Firebase è configurato, carica su bucket.
-    Altrimenti salva in static/<folder> e restituisce URL statico relativo.
-    """
-    if not file_storage or not file_storage.filename:
-        return None
 
-    client = get_storage_client()
-    ext = os.path.splitext(file_storage.filename or "")[1].lower()
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
-    # Tentativo Firebase
-    if client and FIREBASE_BUCKET:
-        try:
-            from google.cloud import storage  # noqa: F401
 
-            bucket = client.bucket(FIREBASE_BUCKET)
-            key = f"{folder}/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}{ext}"
-            blob = bucket.blob(key)
-            blob.upload_from_file(file_storage.stream, content_type=file_storage.mimetype)
-            url = blob.generate_signed_url(
-                expiration=datetime.utcnow() + timedelta(days=3650),
-                method="GET",
+def register_routes(app: Flask):
+    @app.route("/")
+    def index():
+        """Home semplice: reindirizza alla lista agenti oppure mostra landing."""
+        agents = Agent.query.order_by(Agent.created_at.desc()).all()
+        return render_template("index.html", agents=agents)
+
+    # ----------------------- ADMIN: lista agenti ---------------------------
+
+    @app.route("/admin/agents")
+    def admin_agents():
+        agents = Agent.query.order_by(Agent.created_at.desc()).all()
+        return render_template("admin/agents_list.html", agents=agents)
+
+    # ----------------------- ADMIN: nuovo agente ---------------------------
+
+    @app.route("/admin/agents/new", methods=["GET", "POST"], endpoint="admin_new_agent")
+    def admin_new_agent():
+        if request.method == "POST":
+            name = request.form.get("name") or ""
+            slug = request.form.get("slug") or ""
+            role = request.form.get("role")
+            company = request.form.get("company")
+            phone = request.form.get("phone")
+            whatsapp = request.form.get("whatsapp")
+            email = request.form.get("email")
+            description = request.form.get("description")
+
+            if not name or not slug:
+                flash("Nome e slug sono obbligatori.", "danger")
+                return redirect(url_for("admin_new_agent"))
+
+            # Controllo slug unico
+            existing = Agent.query.filter_by(slug=slug).first()
+            if existing:
+                flash("Slug già utilizzato. Scegline un altro.", "danger")
+                return redirect(url_for("admin_new_agent"))
+
+            photo_filename = None
+            if "photo" in request.files:
+                photo_file = request.files["photo"]
+                photo_filename = save_photo(app, photo_file)
+
+            agent = Agent(
+                name=name,
+                slug=slug,
+                role=role,
+                company=company,
+                phone=phone,
+                whatsapp=whatsapp,
+                email=email,
+                description=description,
+                photo_filename=photo_filename,
             )
-            return url
-        except Exception as e:
-            app.logger.exception("Firebase upload failed: %s", e)
-            # fallback locale
+            db.session.add(agent)
+            db.session.commit()
+            flash("Agente creato con successo.", "success")
+            return redirect(url_for("admin_agents"))
 
-    # Fallback locale
-    try:
-        uploads_folder = os.path.join(app.static_folder, folder)
-        os.makedirs(uploads_folder, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}{ext}"
-        fullpath = os.path.join(uploads_folder, filename)
-        file_storage.save(fullpath)
-        return url_for("static", filename=f"{folder}/{filename}", _external=False)
-    except Exception as e:
-        app.logger.exception("Local upload failed: %s", e)
-        return None
+        # GET
+        return render_template("admin/agent_form.html", agent=None, agent_id=None)
 
+    # ----------------------- ADMIN: modifica agente ------------------------
 
-def save_cropped_image(data_url, folder="photos"):
-    """
-    Salva un'immagine base64 (dataURL da canvas) in static/<folder>
-    e restituisce l'URL statico relativo.
-    """
-    if not data_url:
-        return None
-
-    try:
-        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
-        if "," in data_url:
-            header, b64data = data_url.split(",", 1)
-        else:
-            b64data = data_url
-            header = ""
-
-        ext = ".jpg"
-        if "png" in header.lower():
-            ext = ".png"
-
-        img_bytes = base64.b64decode(b64data)
-
-        uploads_folder = os.path.join(app.static_folder, folder)
-        os.makedirs(uploads_folder, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}{ext}"
-        fullpath = os.path.join(uploads_folder, filename)
-
-        with open(fullpath, "wb") as f:
-            f.write(img_bytes)
-
-        return url_for("static", filename=f"{folder}/{filename}", _external=False)
-    except Exception as e:
-        app.logger.exception("save_cropped_image failed: %s", e)
-        return None
-
-
-def get_base_url():
-    b = BASE_URL or ""
-    if b:
-        return b
-    from flask import request
-
-    return request.url_root.strip().rstrip("/")
-
-
-# --------------------------------------------------
-# ROUTES BASE
-# --------------------------------------------------
-@app.get("/")
-def home():
-    if session.get("admin"):
-        return redirect(url_for("admin_home"))
-    return redirect(url_for("login"))
-
-
-@app.get("/health")
-def health():
-    return "ok", 200
-
-
-# --------------------------------------------------
-# LOGIN / LOGOUT
-# --------------------------------------------------
-@app.get("/login")
-def login():
-    return render_template("login.html", error=None, next=request.args.get("next", "/admin"))
-
-
-@app.post("/login")
-def login_post():
-    pw = request.form.get("password", "")
-    nxt = request.form.get("next", "/admin")
-    if pw == ADMIN_PASSWORD:
-        session["admin"] = True
-        return redirect(nxt)
-    return render_template("login.html", error="Password errata", next=nxt)
-
-
-@app.get("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
-
-# --------------------------------------------------
-# ADMIN – LISTA AGENTI
-# --------------------------------------------------
-@app.get("/admin")
-@admin_required
-def admin_home():
-    db = SessionLocal()
-    agents = db.query(Agent).order_by(Agent.name).all()
-    return render_template("admin_list.html", agents=agents)
-
-
-# --------------------------------------------------
-# ADMIN – NUOVO AGENTE
-# --------------------------------------------------
-@app.get("/admin/new")
-@admin_required
-def new_agent():
-    return render_template("agent_form.html", agent=None)
-
-
-@app.post("/admin/new")
-@admin_required
-def create_agent():
-    db = SessionLocal()
-    fields = [
-        "slug",
-        "name",
-        "company",
-        "role",
-        "bio",
-        "phone_mobile",
-        "phone_office",
-        "emails",
-        "websites",
-        "facebook",
-        "instagram",
-        "linkedin",
-        "tiktok",
-        "telegram",
-        "whatsapp",
-        "pec",
-        "piva",
-        "sdi",
-        "addresses",
-    ]
-    data = {k: request.form.get(k, "").strip() for k in fields}
-
-    if not data["slug"] or not data["name"]:
-        return "Slug e Nome sono obbligatori", 400
-
-    if db.query(Agent).filter_by(slug=data["slug"]).first():
-        return "Slug già esistente", 400
-
-    photo = request.files.get("photo")
-    gallery_files = request.files.getlist("gallery")
-    cropped_b64 = request.form.get("photo_cropped", "").strip()
-
-    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
-    photo_url = None
-    if cropped_b64:
-        photo_url = save_cropped_image(cropped_b64, "photos")
-    elif photo and photo.filename:
-        photo_url = upload_file(photo, "photos")
-
-    # PDF 1–6 (lista in pdf1_url separata da "|")
-    pdf_urls = []
-    for i in range(1, 7):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf")
-            if u:
-                pdf_urls.append(u)
-    pdf_joined = "|".join(pdf_urls) if pdf_urls else None
-
-    # GALLERIA (max 12)
-    gallery_urls = []
-    for f in gallery_files[:12]:
-        if f and f.filename:
-            u = upload_file(f, "gallery")
-            if u:
-                gallery_urls.append(u)
-
-    ag = Agent(
-        **data,
-        photo_url=photo_url,
-        pdf1_url=pdf_joined,
-        pdf2_url=None,
-        gallery_urls="|".join(gallery_urls) if gallery_urls else None,
+    @app.route(
+        "/admin/agents/<int:agent_id>/edit",
+        methods=["GET", "POST"],
+        endpoint="admin_edit_agent",
     )
-    db.add(ag)
-    db.commit()
-    return redirect(url_for("admin_home"))
+    def admin_edit_agent(agent_id):
+        agent = Agent.query.get_or_404(agent_id)
+
+        if request.method == "POST":
+            name = request.form.get("name") or ""
+            slug = request.form.get("slug") or ""
+            role = request.form.get("role")
+            company = request.form.get("company")
+            phone = request.form.get("phone")
+            whatsapp = request.form.get("whatsapp")
+            email = request.form.get("email")
+            description = request.form.get("description")
+
+            if not name or not slug:
+                flash("Nome e slug sono obbligatori.", "danger")
+                return redirect(url_for("admin_edit_agent", agent_id=agent.id))
+
+            # Se lo slug è stato cambiato, controlliamo che non sia già usato da un altro
+            existing = Agent.query.filter(Agent.slug == slug, Agent.id != agent.id).first()
+            if existing:
+                flash("Slug già utilizzato da un altro agente.", "danger")
+                return redirect(url_for("admin_edit_agent", agent_id=agent.id))
+
+            agent.name = name
+            agent.slug = slug
+            agent.role = role
+            agent.company = company
+            agent.phone = phone
+            agent.whatsapp = whatsapp
+            agent.email = email
+            agent.description = description
+
+            if "photo" in request.files:
+                photo_file = request.files["photo"]
+                if photo_file and photo_file.filename:
+                    photo_filename = save_photo(app, photo_file)
+                    agent.photo_filename = photo_filename
+
+            db.session.commit()
+            flash("Agente aggiornato con successo.", "success")
+            return redirect(url_for("admin_agents"))
+
+        # GET
+        return render_template("admin/agent_form.html", agent=agent, agent_id=agent.id)
+
+    # ----------------------- Scheda pubblica agente ------------------------
+
+    @app.route("/a/<slug>", endpoint="public_card")
+    def public_card(slug):
+        agent = Agent.query.filter_by(slug=slug).first_or_404()
+        return render_template("card.html", agent=agent)
+
+    # ----------------------- VCF: biglietto da visita ----------------------
+
+    @app.route("/admin/agents/<int:agent_id>/vcf")
+    def agent_vcf(agent_id):
+        agent = Agent.query.get_or_404(agent_id)
+
+        vcf_lines = [
+            "BEGIN:VCARD",
+            "VERSION:3.0",
+            f"FN:{agent.name}",
+        ]
+        if agent.company:
+            vcf_lines.append(f"ORG:{agent.company}")
+        if agent.phone:
+            vcf_lines.append(f"TEL;TYPE=CELL:{agent.phone}")
+        if agent.email:
+            vcf_lines.append(f"EMAIL;TYPE=INTERNET:{agent.email}")
+        vcf_lines.append("END:VCARD")
+
+        vcf_data = "\r\n".join(vcf_lines)
+        vcf_bytes = vcf_data.encode("utf-8")
+
+        return send_file(
+            io.BytesIO(vcf_bytes),
+            mimetype="text/vcard",
+            as_attachment=True,
+            download_name=f"{agent.slug}.vcf",
+        )
+
+    # ----------------------- QR code per la card ---------------------------
+
+    @app.route("/admin/agents/<int:agent_id>/qr")
+    def agent_qr(agent_id):
+        agent = Agent.query.get_or_404(agent_id)
+        # URL pubblico della card
+        card_url = url_for("public_card", slug=agent.slug, _external=True)
+
+        qr_img = qrcode.make(card_url)
+        img_io = io.BytesIO()
+        qr_img.save(img_io, "PNG")
+        img_io.seek(0)
+
+        return send_file(img_io, mimetype="image/png")
 
 
-# --------------------------------------------------
-# ADMIN – MODIFICA / ELIMINA
-# --------------------------------------------------
-@app.get("/admin/<slug>/edit")
-@admin_required
-def edit_agent(slug):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-    return render_template("agent_form.html", agent=ag)
-
-
-@app.post("/admin/<slug>/edit")
-@admin_required
-def update_agent(slug):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-
-    for k in [
-        "slug",
-        "name",
-        "company",
-        "role",
-        "bio",
-        "phone_mobile",
-        "phone_office",
-        "emails",
-        "websites",
-        "facebook",
-        "instagram",
-        "linkedin",
-        "tiktok",
-        "telegram",
-        "whatsapp",
-        "pec",
-        "piva",
-        "sdi",
-        "addresses",
-    ]:
-        setattr(ag, k, request.form.get(k, "").strip())
-
-    photo = request.files.get("photo")
-    gallery_files = request.files.getlist("gallery")
-    cropped_b64 = request.form.get("photo_cropped", "").strip()
-
-    # FOTO PROFILO – SCELTA A: se esiste photo_cropped, sovrascrive SEMPRE
-    if cropped_b64:
-        u = save_cropped_image(cropped_b64, "photos")
-        if u:
-            ag.photo_url = u
-    elif photo and photo.filename:
-        u = upload_file(photo, "photos")
-        if u:
-            ag.photo_url = u
-
-    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
-    new_pdf_urls = []
-    for i in range(1, 7):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf")
-            if u:
-                new_pdf_urls.append(u)
-    if new_pdf_urls:
-        ag.pdf1_url = "|".join(new_pdf_urls)
-
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria
-    if gallery_files and any(g.filename for g in gallery_files):
-        urls = []
-        for f in gallery_files[:12]:
-            if f and f.filename:
-                u = upload_file(f, "gallery")
-                if u:
-                    urls.append(u)
-        if urls:
-            ag.gallery_urls = "|".join(urls)
-
-    db.commit()
-    return redirect(url_for("admin_home"))
-
-
-@app.post("/admin/<slug>/delete")
-@admin_required
-def delete_agent(slug):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if ag:
-        db.delete(ag)
-        db.commit()
-    return redirect(url_for("admin_home"))
-
-
-# --------------------------------------------------
-# CARD PUBBLICA
-# --------------------------------------------------
-@app.get("/<slug>")
-def public_card(slug):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-
-    gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
-    emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
-    addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
-    pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
-
-    base = get_base_url()
-    return render_template(
-        "card.html",
-        ag=ag,
-        base_url=base,
-        gallery=gallery,
-        emails=emails,
-        websites=websites,
-        addresses=addresses,
-        pdfs=pdfs,
-    )
-
-
-# --------------------------------------------------
-# VIEWER PDF – con freccia indietro
-# --------------------------------------------------
-@app.get("/<slug>/pdf/<int:index>")
-def pdf_viewer(slug, index):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-
-    pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
-    if index < 1 or index > len(pdfs):
-        abort(404)
-
-    pdf_url = pdfs[index - 1]
-    return render_template("pdf_viewer.html", ag=ag, pdf_url=pdf_url, index=index)
-
-
-# --------------------------------------------------
-# VCARD & QR
-# --------------------------------------------------
-@app.get("/<slug>.vcf")
-def vcard(slug):
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-
-    full_name = ag.name or ""
-    parts = full_name.strip().split(" ", 1)
-    if len(parts) == 2:
-        first_name = parts[0]
-        last_name = parts[1]
-    else:
-        first_name = full_name
-        last_name = ""
-
-    lines = [
-        "BEGIN:VCARD",
-        "VERSION:3.0",
-        f"FN:{full_name}",
-        f"N:{last_name};{first_name};;;",
-    ]
-    if getattr(ag, "role", None):
-        lines.append(f"TITLE:{ag.role}")
-    if getattr(ag, "phone_mobile", None):
-        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
-    if getattr(ag, "phone_office", None):
-        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
-    if getattr(ag, "emails", None):
-        for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
-            lines.append(f"EMAIL;TYPE=WORK:{e}")
-    if getattr(ag, "websites", None):
-        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
-            lines.append(f"URL:{w}")
-    if getattr(ag, "company", None):
-        lines.append(f"ORG:{ag.company}")
-    if getattr(ag, "piva", None):
-        lines.append(f"X-TAX-ID:{ag.piva}")
-    if getattr(ag, "sdi", None):
-        lines.append(f"X-SDI-CODE:{ag.sdi}")
-
-    note_parts = []
-    if getattr(ag, "piva", None):
-        note_parts.append(f"Partita IVA: {ag.piva}")
-    if getattr(ag, "sdi", None):
-        note_parts.append(f"SDI: {ag.sdi}")
-    if note_parts:
-        lines.append("NOTE:" + " | ".join(note_parts))
-
-    lines.append("END:VCARD")
-    content = "\r\n".join(lines)
-
-    resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
-    return resp
-
-
-@app.get("/<slug>/qr.png")
-def qr(slug):
-    base = get_base_url()
-    url = f"{base}/{slug}"
-    img = qrcode.make(url)
-    bio = BytesIO()
-    img.save(bio, format="PNG")
-    bio.seek(0)
-    return send_file(bio, mimetype="image/png")
-
-
-# --------------------------------------------------
-# ERRORI
-# --------------------------------------------------
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("404.html"), 404
-
+# ---------------------------------------------------------------------------
+# Entrypoint per esecuzione locale: `python app.py`
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    flask_app = create_app()
+    # debug=True solo in sviluppo
+    flask_app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
