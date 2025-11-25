@@ -122,17 +122,15 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI IN MODAL CON TASTO "TORNA ALLA CARD" #}
+      {# SITI INTERNET: APERTI IN NUOVA SCHEDA (NO MODAL) #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openFrameModal('{{ site }}')">
+          <a href="{{ site }}" target="_blank" rel="noopener noreferrer">
             Vai al sito
-          </button>
+          </a>
         </div>
       </div>
       {% endfor %}
@@ -298,7 +296,7 @@
   </div>
 </div>
 
-<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
+<!-- MODAL PER PDF (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
     <h2>Visualizzazione</h2>
