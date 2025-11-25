@@ -122,15 +122,17 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI IN NUOVA SCHEDA (NO MODAL) #}
+      {# SITI INTERNET: APERTI IN MODAL CON TASTO "TORNA ALLA CARD" #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <a href="{{ site }}" target="_blank" rel="noopener noreferrer">
+          <button type="button"
+                  class="link-button"
+                  onclick="openFrameModal('{{ site }}')">
             Vai al sito
-          </a>
+          </button>
         </div>
       </div>
       {% endfor %}
@@ -228,17 +230,14 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI (CLICK = GOOGLE MAPS) -->
+    <!-- SEZIONE INDIRIZZI (LINK A GOOGLE MAPS) -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <a href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="address-value">
-          {{ addr }}
+        <a href="{{ addr.url }}" target="_blank" rel="noopener noreferrer">
+          <span class="address-value">{{ addr.text }}</span>
         </a>
       </div>
       {% endfor %}
@@ -296,7 +295,7 @@
   </div>
 </div>
 
-<!-- MODAL PER PDF (IFRAME) -->
+<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
     <h2>Visualizzazione</h2>
