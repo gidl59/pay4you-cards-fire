@@ -25,7 +25,7 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 20MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
 DB_URL = "sqlite:///data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -185,6 +185,21 @@ def get_base_url():
     from flask import request
 
     return request.url_root.strip().rstrip("/")
+
+
+def normalize_url(u):
+    """
+    Garantisce che l'URL inizi con http:// o https://.
+    Serve per evitare la pagina nera quando il sito è scritto tipo 'www.sito.it'.
+    """
+    if not u:
+        return None
+    u = u.strip()
+    if not u:
+        return None
+    if not (u.startswith("http://") or u.startswith("https://")):
+        return "https://" + u
+    return u
 
 
 # --------------------------------------------------
@@ -368,7 +383,7 @@ def update_agent(slug):
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – SCELTA A: se esiste photo_cropped, sovrascrive SEMPRE
+    # FOTO PROFILO – se esiste photo_cropped, sovrascrive SEMPRE
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -426,8 +441,12 @@ def public_card(slug):
         abort(404)
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
+
     emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
+
+    raw_websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
+    websites = [normalize_url(w) for w in raw_websites if normalize_url(w)]
+
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
     pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
 
