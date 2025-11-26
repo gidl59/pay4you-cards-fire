@@ -663,3 +663,17 @@ a {
     border-right: none;
   }
 }
+.copy-iban-btn {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.iban-row .label i {
+  margin-right: 4px;
+}
+
+.iban-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  word-break: break-all;
+}
