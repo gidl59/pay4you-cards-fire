@@ -122,17 +122,18 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI IN MODAL CON TASTO "TORNA ALLA CARD" #}
+      {# SITI INTERNET: APERTI IN NUOVA SCHEDA (evita schermata nera) #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openFrameModal('{{ site }}')">
+          <a class="link-button"
+             href="{{ site }}"
+             target="_blank"
+             rel="noopener noreferrer">
             Vai al sito
-          </button>
+          </a>
         </div>
       </div>
       {% endfor %}
@@ -230,17 +231,17 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI (click → Google Maps in modal) -->
+    <!-- SEZIONE INDIRIZZI (cliccabili su Google Maps) -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <button type="button"
-                class="link-button"
-                onclick="openFrameModal('https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}')">
+        <a class="link-button"
+           href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
+           target="_blank" rel="noopener noreferrer">
           <span class="address-value">{{ addr }}</span>
-        </button>
+        </a>
       </div>
       {% endfor %}
     </section>
@@ -297,10 +298,10 @@
   </div>
 </div>
 
-<!-- MODAL PER SITO INTERNET / PDF / MAPPE (IFRAME) -->
+<!-- MODAL PER PDF (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-    <h2>Visualizzazione</h2>
+    <h2>Visualizzazione documento</h2>
     <iframe id="frame-modal-iframe"
             src=""
             style="width:100%; height: calc(90vh - 80px); border:none; border-radius: 12px; background:#000;"></iframe>
