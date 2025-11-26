@@ -1,139 +1,173 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h4 class="mb-3">
-  {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
-</h4>
+<div class="container-fluid" style="max-width: 900px;">
+  <h4 class="mb-4">
+    {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
+  </h4>
 
-<form method="post" enctype="multipart/form-data">
-  <div class="card p-3 mb-3">
-    <h5>Dati principali</h5>
+  <form method="post" enctype="multipart/form-data">
 
-    <div class="mb-2">
-      <label class="form-label">Nome e cognome</label>
-      <input type="text" name="name" class="form-control"
-             value="{{ agent.name if agent else '' }}" required />
+    <!-- DATI PRINCIPALI -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-light py-2">
+        <strong>Dati principali</strong>
+      </div>
+      <div class="card-body">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nome e cognome</label>
+            <input type="text" name="name" class="form-control"
+                   value="{{ agent.name if agent else '' }}" required />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Ruolo / qualifica</label>
+            <input type="text" name="role" class="form-control"
+                   value="{{ agent.role if agent else '' }}" />
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Foto profilo (file)</label>
+            <input type="file" name="photo" class="form-control" accept="image/*" />
+            {% if agent and agent.photo_url %}
+              <small class="text-muted">Foto attuale: {{ agent.photo_url }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label">Ruolo / qualifica</label>
-      <input type="text" name="role" class="form-control"
-             value="{{ agent.role if agent else '' }}" />
+    <!-- CONTATTI -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-light py-2">
+        <strong>Contatti</strong>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label">Telefono</label>
+            <input type="tel" name="phone" class="form-control"
+                   pattern="[0-9+ ]{6,20}"
+                   value="{{ agent.phone if agent else '' }}"
+                   placeholder="+39 333 1234567" />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ agent.email if agent else '' }}" />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Sito web</label>
+            <input type="url" name="website" class="form-control"
+                   value="{{ agent.website if agent else '' }}"
+                   placeholder="https://www.pay4you.store" />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">WhatsApp (numero)</label>
+            <input type="tel" name="whatsapp" class="form-control"
+                   value="{{ agent.whatsapp if agent else '' }}"
+                   placeholder="+39 333 1234567" />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Facebook (link)</label>
+            <input type="url" name="facebook" class="form-control"
+                   value="{{ agent.facebook if agent else '' }}" />
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Instagram (link)</label>
+            <input type="url" name="instagram" class="form-control"
+                   value="{{ agent.instagram if agent else '' }}" />
+          </div>
+
+        </div>
+      </div>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label">Foto profilo (file)</label>
-      <input type="file" name="photo" class="form-control" accept="image/*" />
-      {% if agent and agent.photo_url %}
-        <small class="text-muted">Foto attuale: {{ agent.photo_url }}</small>
-      {% endif %}
-    </div>
-  </div>
+    <!-- DATI FISCALI -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-light py-2">
+        <strong>Dati fiscali</strong>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
 
-  <div class="card p-3 mb-3">
-    <h5>Contatti</h5>
+          <div class="col-md-6">
+            <label class="form-label">Ragione sociale</label>
+            <input type="text" name="company" class="form-control"
+                   value="{{ agent.company if agent else '' }}"
+                   placeholder="Es. Pay4You di Giuseppe Di Lisio" />
+          </div>
 
-    <div class="mb-2">
-      <label class="form-label">Telefono</label>
-      <input type="tel" name="phone" class="form-control"
-             pattern="[0-9+ ]{6,20}"
-             value="{{ agent.phone if agent else '' }}"
-             placeholder="+39 333 1234567" />
-    </div>
+          <div class="col-md-6">
+            <label class="form-label">Indirizzo</label>
+            <input type="text" name="address" class="form-control"
+                   value="{{ agent.address if agent else '' }}"
+                   placeholder="Via ..., Città" />
+          </div>
 
-    <div class="mb-2">
-      <label class="form-label">Email</label>
-      <input type="email" name="email" class="form-control"
-             value="{{ agent.email if agent else '' }}" />
-    </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fa-solid fa-house"></i> Partita IVA
+            </label>
+            <input type="text" name="piva" class="form-control"
+                   pattern="[0-9]{11}"
+                   value="{{ agent.piva if agent and agent.piva else '' }}"
+                   placeholder="11 cifre (solo numeri)" />
+            <small class="text-muted">Campo separato dal telefono.</small>
+          </div>
 
-    <div class="mb-2">
-      <label class="form-label">Sito web</label>
-      <input type="url" name="website" class="form-control"
-             value="{{ agent.website if agent else '' }}"
-             placeholder="https://www.pay4you.store" />
-    </div>
+          <div class="col-md-6">
+            <label class="form-label">Codice fiscale</label>
+            <input type="text" name="tax_code" class="form-control"
+                   value="{{ agent.tax_code if agent else '' }}" />
+          </div>
 
-    <div class="mb-2">
-      <label class="form-label">WhatsApp (numero)</label>
-      <input type="tel" name="whatsapp" class="form-control"
-             value="{{ agent.whatsapp if agent else '' }}"
-             placeholder="+39 333 1234567" />
-    </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fa-solid fa-building-columns"></i> IBAN banca
+            </label>
+            <input type="text" name="iban" class="form-control"
+                   value="{{ agent.iban if agent and agent.iban else '' }}"
+                   placeholder="IT60 X054 2811 1010 0000 0123 456" />
+            <small class="text-muted">Puoi inserirlo con o senza spazi.</small>
+          </div>
 
-    <div class="mb-2">
-      <label class="form-label">Facebook (link)</label>
-      <input type="url" name="facebook" class="form-control"
-             value="{{ agent.facebook if agent else '' }}" />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">Instagram (link)</label>
-      <input type="url" name="instagram" class="form-control"
-             value="{{ agent.instagram if agent else '' }}" />
-    </div>
-  </div>
-
-  <div class="card p-3 mb-3">
-    <h5>Dati fiscali</h5>
-
-    <div class="mb-2">
-      <label class="form-label">Ragione sociale</label>
-      <input type="text" name="company" class="form-control"
-             value="{{ agent.company if agent else '' }}"
-             placeholder="Es. Pay4You di Giuseppe Di Lisio" />
+        </div>
+      </div>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label">Indirizzo</label>
-      <input type="text" name="address" class="form-control"
-             value="{{ agent.address if agent else '' }}"
-             placeholder="Via ..., Città" />
+    <!-- DESCRIZIONE -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-light py-2">
+        <strong>Descrizione</strong>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <textarea name="bio" rows="3" class="form-control"
+                    placeholder="Breve descrizione / servizi">{{ agent.bio if agent else '' }}</textarea>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label">
-        <i class="fa-solid fa-house"></i> Partita IVA
-      </label>
-      <input type="text" name="piva" class="form-control"
-             pattern="[0-9]{11}"
-             value="{{ agent.piva if agent and agent.piva else '' }}"
-             placeholder="11 cifre (solo numeri)" />
-      <small class="text-muted">Campo separato dal telefono.</small>
+    <div class="mt-3 mb-4 d-flex justify-content-between">
+      <a href="/admin" class="btn btn-outline-light">
+        Annulla
+      </a>
+      <button type="submit" class="btn btn-primary">
+        Salva agente
+      </button>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label">Codice fiscale</label>
-      <input type="text" name="tax_code" class="form-control"
-             value="{{ agent.tax_code if agent else '' }}" />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">
-        <i class="fa-solid fa-building-columns"></i> IBAN banca
-      </label>
-      <input type="text" name="iban" class="form-control"
-             value="{{ agent.iban if agent and agent.iban else '' }}"
-             placeholder="IT60 X054 2811 1010 0000 0123 456" />
-      <small class="text-muted">Puoi inserirlo con o senza spazi.</small>
-    </div>
-  </div>
-
-  <div class="card p-3 mb-3">
-    <h5>Descrizione</h5>
-    <div class="mb-2">
-      <textarea name="bio" rows="3" class="form-control"
-                placeholder="Breve descrizione / servizi">{{ agent.bio if agent else '' }}</textarea>
-    </div>
-  </div>
-
-  <div class="mt-3">
-    <button type="submit" class="btn btn-primary">
-      Salva agente
-    </button>
-    <a href="/admin" class="btn btn-secondary">
-      Annulla
-    </a>
-  </div>
-</form>
+  </form>
+</div>
 {% endblock %}
+
