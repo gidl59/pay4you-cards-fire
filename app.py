@@ -25,7 +25,8 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
+# 200MB (puoi ridurre se vuoi)
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 
 DB_URL = "sqlite:///data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -368,7 +369,7 @@ def update_agent(slug):
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se abbiamo il ritaglio, sovrascrive
+    # FOTO PROFILO – se esiste photo_cropped, sovrascrive SEMPRE
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -445,8 +446,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – (non più usato se apri tutto nel modal iframe,
-# ma lo lascio per compatibilità)
+# VIEWER PDF – (se ancora usato)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -488,25 +488,55 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
+
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
+
     if getattr(ag, "phone_mobile", None):
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+
+    # EMAIL
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
+
+    # SITI WEB + URL card
+    sites = []
     if getattr(ag, "websites", None):
-        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
-            lines.append(f"URL:{w}")
+        sites = [w.strip() for w in ag.websites.split(",") if w.strip()]
+
+    try:
+        base = get_base_url()
+        card_url = f"{base}/{ag.slug}"
+        if card_url not in sites:
+            sites.append(card_url)
+    except Exception:
+        pass
+
+    for w in sites:
+        lines.append(f"URL:{w}")
+
+    # Azienda
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
+
+    # Dati fiscali
     if getattr(ag, "piva", None):
         lines.append(f"X-TAX-ID:{ag.piva}")
     if getattr(ag, "sdi", None):
         lines.append(f"X-SDI-CODE:{ag.sdi}")
 
+    # Indirizzi (LABEL + ADR generico)
+    if getattr(ag, "addresses", None):
+        for addr in [x.strip() for x in ag.addresses.split("\n") if x.strip()]:
+            safe_addr = addr.replace("\n", " ").replace("\r", " ")
+            lines.append(f"LABEL;TYPE=WORK:{safe_addr}")
+            lines.append(f"ADR;TYPE=WORK:;;;{safe_addr};;;;")
+
+    # NOTE con riepilogo dati fiscali
     note_parts = []
     if getattr(ag, "piva", None):
         note_parts.append(f"Partita IVA: {ag.piva}")
