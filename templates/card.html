@@ -230,15 +230,17 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI (LINK A GOOGLE MAPS) -->
+    <!-- SEZIONE INDIRIZZI (click → Google Maps in modal) -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <a href="{{ addr.url }}" target="_blank" rel="noopener noreferrer">
-          <span class="address-value">{{ addr.text }}</span>
-        </a>
+        <button type="button"
+                class="link-button"
+                onclick="openFrameModal('https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}')">
+          <span class="address-value">{{ addr }}</span>
+        </button>
       </div>
       {% endfor %}
     </section>
@@ -295,7 +297,7 @@
   </div>
 </div>
 
-<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
+<!-- MODAL PER SITO INTERNET / PDF / MAPPE (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
     <h2>Visualizzazione</h2>
