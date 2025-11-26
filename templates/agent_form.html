@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Nuovo agente – Pay4You{% endblock %}
+{% block title %}{% if agent %}Modifica agente{% else %}Nuovo agente{% endif %} – Pay4You{% endblock %}
 
 {% block content %}
 <div class="container-fluid" style="max-width: 900px;">
@@ -9,6 +9,26 @@
   </h4>
 
   <form method="post" enctype="multipart/form-data">
+
+    <!-- IMPOSTAZIONI CARD (SLUG) -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-light py-2">
+        <strong>Impostazioni card</strong>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Slug (link breve)</label>
+            <input type="text" name="slug" class="form-control"
+                   value="{{ agent.slug if agent else '' }}"
+                   placeholder="es. giuseppe-di-lisio" required />
+            <small class="text-muted">
+              Verrà usato nell'indirizzo della card. Slug e Nome sono obbligatori.
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- DATI PRINCIPALI -->
     <div class="card shadow-sm mb-3">
@@ -36,6 +56,9 @@
             {% if agent and agent.photo_url %}
               <small class="text-muted">Foto attuale: {{ agent.photo_url }}</small>
             {% endif %}
+            <small class="text-muted d-block">
+              Dopo il caricamento potrai usare il crop per centrare la foto (come prima).
+            </small>
           </div>
 
         </div>
@@ -172,62 +195,42 @@
       </div>
     </div>
 
-    <!-- DOCUMENTI PDF -->
+    <!-- DOCUMENTI PDF (6) -->
     <div class="card shadow-sm mb-3">
       <div class="card-header bg-dark text-light py-2">
         <strong>Documenti (PDF)</strong>
       </div>
       <div class="card-body">
         <div class="row g-3">
+          {% for i in range(1,7) %}
           <div class="col-md-6">
-            <label class="form-label">PDF 1</label>
-            <input type="file" name="pdf1" class="form-control" accept="application/pdf" />
+            <label class="form-label">PDF {{ i }}</label>
+            <input type="file" name="pdf{{ i }}" class="form-control" accept="application/pdf" />
           </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 2</label>
-            <input type="file" name="pdf2" class="form-control" accept="application/pdf" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 3</label>
-            <input type="file" name="pdf3" class="form-control" accept="application/pdf" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 4</label>
-            <input type="file" name="pdf4" class="form-control" accept="application/pdf" />
-          </div>
+          {% endfor %}
         </div>
         <small class="text-muted d-block mt-2">
-          Verranno mostrati nella sezione “Documenti” della card.
+          Verranno mostrati nella sezione “Documenti” della card (fino a 6).
         </small>
       </div>
     </div>
 
-    <!-- GALLERIA FOTO -->
+    <!-- GALLERIA FOTO (12) -->
     <div class="card shadow-sm mb-3">
       <div class="card-header bg-dark text-light py-2">
         <strong>Galleria foto</strong>
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Foto 1</label>
-            <input type="file" name="gallery1" class="form-control" accept="image/*" />
+          {% for i in range(1,13) %}
+          <div class="col-md-4">
+            <label class="form-label">Foto {{ i }}</label>
+            <input type="file" name="gallery{{ i }}" class="form-control" accept="image/*" />
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 2</label>
-            <input type="file" name="gallery2" class="form-control" accept="image/*" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 3</label>
-            <input type="file" name="gallery3" class="form-control" accept="image/*" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 4</label>
-            <input type="file" name="gallery4" class="form-control" accept="image/*" />
-          </div>
+          {% endfor %}
         </div>
         <small class="text-muted d-block mt-2">
-          Le immagini saranno mostrate nella galleria della card.
+          Le immagini saranno mostrate nella galleria della card (fino a 12).
         </small>
       </div>
     </div>
