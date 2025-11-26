@@ -677,3 +677,20 @@ a {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   word-break: break-all;
 }
+.copy-iban-btn {
+  background: #111827;
+  color: #fff;
+  border: 1px solid #00b4ff;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+  width: 100%;
+  margin-top: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.copy-iban-btn:hover {
+  background: #00b4ff;
+  color: #111827;
+}
+.p4y-fiscal-row { padding: 3px 0; font-size: 14px; }
