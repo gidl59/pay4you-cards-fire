@@ -1,341 +1,195 @@
 {% extends "base.html" %}
 
-{% block title %}{{ ag.name }}{% endblock %}
-
 {% block content %}
-<div class="card-fullscreen">
-  <!-- Sfondo blur -->
-  <div class="card-glass-bg"></div>
+<div class="card-wrapper">
 
-  <div class="card-outer">
-    <!-- Header con logo -->
-    <div class="card-header-row">
-      <img
-        src="{{ url_for('static', filename='logo.png') }}"
-        alt="Pay4You"
-        class="card-logo-big"
-      >
-    </div>
+  <div class="p4y-card">
+    <header class="p4y-header">
+      <div class="p4y-logo">
+        <div class="p4y-logo-circle">P4Y</div>
+        <div class="p4y-logo-text">
+          <span class="p4y-logo-main">Pay4You</span>
+          <span class="p4y-logo-sub">Digital Business Card</span>
+        </div>
+      </div>
+    </header>
 
-    <!-- Blocco business: foto + nome + ruoli -->
-    <div class="business-card">
-      <div class="card-profile-photo-wrapper">
-        {% if ag.photo_url %}
-        <!-- Avatar fronte/retro con rotazione lenta -->
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <!-- Fronte: foto agente -->
-            <div class="avatar-face avatar-front">
-              <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
-            </div>
-            <!-- Retro: logo Pay4You -->
-            <div class="avatar-face avatar-back">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-          </div>
+    <section class="p4y-main">
+      <div class="p4y-top">
+        <div class="p4y-photo">
+          {% if agent.photo_url %}
+            <img src="{{ agent.photo_url }}" alt="Foto profilo" />
+          {% else %}
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Foto profilo" />
+          {% endif %}
         </div>
-        {% else %}
-        <!-- Se non c'è foto, mostra solo il logo tondo -->
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <div class="avatar-face avatar-front">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-            <div class="avatar-face avatar-back">
-              <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-            </div>
-          </div>
+        <div class="p4y-info">
+          <h1>{{ agent.name }}</h1>
+          {% if agent.role %}
+            <h2>{{ agent.role }}</h2>
+          {% endif %}
+          {% if agent.company %}
+            <p class="p4y-company">{{ agent.company }}</p>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
 
-      <div class="card-name-block">
-        <h1 class="card-name">{{ ag.name }}</h1>
-
-        {% if ag.role %}
-          <div class="card-role-main">{{ ag.role }}</div>
+      <ul class="p4y-contact-list">
+        {% if agent.phone %}
+        <li>
+          <i class="fa-solid fa-phone"></i>
+          <a href="tel:{{ agent.phone | replace(' ', '') }}">{{ agent.phone }}</a>
+        </li>
         {% endif %}
 
-        {% if ag.company %}
-          <div class="card-role-sub">{{ ag.company }}</div>
+        {% if agent.email %}
+        <li>
+          <i class="fa-solid fa-envelope"></i>
+          <a href="mailto:{{ agent.email }}">{{ agent.email }}</a>
+        </li>
         {% endif %}
 
-        {% if ag.bio %}
-          <div class="card-bio">{{ ag.bio }}</div>
+        {% if agent.website %}
+        <li>
+          <i class="fa-solid fa-globe"></i>
+          <a href="{{ agent.website }}" target="_blank" rel="noopener">
+            {{ agent.website }}
+          </a>
+        </li>
+        {% endif %}
+
+        {% if agent.address %}
+        <li>
+          <i class="fa-solid fa-location-dot"></i>
+          <span>{{ agent.address }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </section>
+
+    <!-- SOCIAL -->
+    <section class="p4y-section">
+      <h3><i class="fa-solid fa-share-nodes"></i> Contatti rapidi</h3>
+      <div class="p4y-social-buttons">
+        {% if agent.whatsapp %}
+          <a class="p4y-social-btn"
+             href="https://wa.me/{{ agent.whatsapp|replace(' ', '') }}"
+             target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+          </a>
+        {% endif %}
+        {% if agent.facebook %}
+          <a class="p4y-social-btn"
+             href="{{ agent.facebook }}"
+             target="_blank" rel="noopener">
+            <i class="fa-brands fa-facebook"></i> Facebook
+          </a>
+        {% endif %}
+        {% if agent.instagram %}
+          <a class="p4y-social-btn"
+             href="{{ agent.instagram }}"
+             target="_blank" rel="noopener">
+            <i class="fa-brands fa-instagram"></i> Instagram
+          </a>
         {% endif %}
       </div>
-    </div>
+    </section>
 
-    <!-- SEZIONE CONTATTI -->
-    <section class="card-section">
-      <h2>Contatti</h2>
+    <!-- DATI FISCALI -->
+    {% if agent.company or agent.piva or agent.tax_code or agent.iban %}
+    <section class="p4y-section">
+      <h3><i class="fa-solid fa-file-invoice"></i> Dati fiscali</h3>
+      <ul class="p4y-fiscal-list">
+        {% if agent.company %}
+        <li>
+          <span class="label">Ragione sociale</span>
+          <span>{{ agent.company }}</span>
+        </li>
+        {% endif %}
 
-      {% if ag.phone_mobile %}
-      <div class="contact-row">
-        <div class="icon">📱</div>
-        <div class="label">Chiama mobile</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
-        </div>
-      </div>
-      {% endif %}
+        {% if agent.piva %}
+        <li>
+          <span class="label">
+            <i class="fa-solid fa-house"></i> Partita IVA
+          </span>
+          <span>{{ agent.piva }}</span>
+        </li>
+        {% endif %}
 
-      {% if ag.phone_office %}
-      <div class="contact-row">
-        <div class="icon">☎️</div>
-        <div class="label">Chiama ufficio</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
-        </div>
-      </div>
-      {% endif %}
+        {% if agent.tax_code %}
+        <li>
+          <span class="label">Cod. fiscale</span>
+          <span>{{ agent.tax_code }}</span>
+        </li>
+        {% endif %}
 
-      {% if ag.whatsapp %}
-      <div class="contact-row whatsapp-row">
-        <div class="icon">🟢</div>
-        <div class="label">WhatsApp</div>
-        <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}">
-            {{ ag.whatsapp }}
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      {% for email in emails %}
-      <div class="contact-row">
-        <div class="icon">📧</div>
-        <div class="label">Email</div>
-        <div class="value">
-          <a href="mailto:{{ email }}">{{ email }}</a>
-        </div>
-      </div>
-      {% endfor %}
-
-      {% if ag.pec %}
-      <div class="contact-row">
-        <div class="icon">📮</div>
-        <div class="label">PEC</div>
-        <div class="value">
-          <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
-        </div>
-      </div>
-      {% endif %}
-
-      {# SITI INTERNET: aggiungo ?card=slug per gestire il tasto "Torna alla card" nel sito #}
-      {% for site in websites %}
-      <div class="contact-row">
-        <div class="icon">🌐</div>
-        <div class="label">Sito internet</div>
-        <div class="value">
-          <a href="{{ site }}?card={{ ag.slug }}" target="_blank" rel="noopener noreferrer">
-            Vai al sito
-          </a>
-        </div>
-      </div>
-      {% endfor %}
-
-      {% if ag.facebook %}
-      <div class="contact-row social-row">
-        <div class="icon">📘</div>
-        <div class="label">Facebook</div>
-        <div class="value">
-          <a href="{{ ag.facebook }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if ag.instagram %}
-      <div class="contact-row social-row">
-        <div class="icon">📷</div>
-        <div class="label">Instagram</div>
-        <div class="value">
-          <a href="{{ ag.instagram }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if ag.linkedin %}
-      <div class="contact-row social-row">
-        <div class="icon">💼</div>
-        <div class="label">LinkedIn</div>
-        <div class="value">
-          <a href="{{ ag.linkedin }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Link profilo card -->
-      <div class="contact-row">
-        <div class="icon">🪪</div>
-        <div class="label">Profilo digitale</div>
-        <div class="value">
-          <a href="{{ base_url }}/{{ ag.slug }}" target="_blank" rel="noopener noreferrer">
-            Apri card
-          </a>
-        </div>
-      </div>
-
-      <!-- vCard -->
-      <div class="contact-row">
-        <div class="icon">💾</div>
-        <div class="label">Salva contatto</div>
-        <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-            Salva contatto
-          </a>
-        </div>
-      </div>
-
-      <!-- QR con modal -->
-      <div class="contact-row">
-        <div class="icon">🔳</div>
-        <div class="label">QR code</div>
-        <div class="value">
+        {% if agent.iban %}
+        <li class="iban-row">
+          <span class="label">
+            <i class="fa-solid fa-building-columns"></i> IBAN
+          </span>
+          <span class="iban-value" id="ibanText">
+            {{ agent.iban }}
+          </span>
+        </li>
+        <li class="iban-row">
+          <span class="label"></span>
           <button type="button"
-                  class="link-button"
-                  onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">
-            Apri QR
+                  class="btn btn-sm btn-outline-light copy-iban-btn"
+                  data-iban="{{ agent.iban }}"
+                  id="copyIbanBtn">
+            <i class="fa-regular fa-copy"></i> Copia IBAN
           </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SEZIONE DATI FISCALI -->
-    {% if ag.piva or ag.sdi %}
-    <section class="card-section">
-      <h2>Dati fiscali</h2>
-
-      {% if ag.piva %}
-      <div class="address-row">
-        <div class="icon">🏛️</div>
-        <span class="address-value">Partita IVA {{ ag.piva }}</span>
-      </div>
-      {% endif %}
-
-      {% if ag.sdi %}
-      <div class="address-row">
-        <div class="icon">📨</div>
-        <span class="address-value">Codice SDI {{ ag.sdi }}</span>
-      </div>
-      {% endif %}
+        </li>
+        {% endif %}
+      </ul>
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI -->
-    {% if addresses %}
-    <section class="card-section">
-      <h2>Indirizzi</h2>
-      {% for addr in addresses %}
-      <div class="address-row">
-        <a href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
-           target="_blank" rel="noopener noreferrer"
-           class="address-value">
-          {{ addr }}
-        </a>
-      </div>
-      {% endfor %}
+    {% if agent.bio %}
+    <section class="p4y-section">
+      <h3><i class="fa-solid fa-circle-info"></i> Chi sono</h3>
+      <p>{{ agent.bio }}</p>
     </section>
     {% endif %}
 
-    <!-- SEZIONE DOCUMENTI (PDF) -->
-    {% if pdfs %}
-    <section class="card-section">
-      <h2>Documenti</h2>
-      <div class="pdf-list">
-        {% for pdf_url in pdfs %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ pdf_url }}')">
-          <span class="pdf-icon">📄</span>
-          <span>Documento {{ loop.index }}</span>
-        </button>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    <footer class="p4y-footer">
+      <a href="{{ url_for('download_vcf', agent_id=agent.id) }}"
+         class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-address-card"></i> Salva contatto
+      </a>
+      <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">
+        Torna all'area admin
+      </a>
+    </footer>
 
-    <!-- SEZIONE GALLERIA FOTO -->
-    {% if gallery %}
-    <section class="card-section">
-      <h2>Galleria foto</h2>
-      <div class="gallery-scroll">
-        {% for img in gallery %}
-        <button type="button"
-                class="gallery-thumb-btn"
-                onclick="openGalleryModal('{{ img }}')">
-          <img src="{{ img }}" alt="Foto Pay4You">
-        </button>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
-
-    <!-- Footer opzionale -->
-    <div class="card-footer">
-      Pay4You – Card digitale personale
-    </div>
-  </div>
-</div>
-
-<!-- MODAL QR / GALLERIA (IMMAGINI) -->
-<div id="qr-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <h2>Visualizzazione</h2>
-    <img id="qr-modal-img" src="" alt="Immagine" style="max-width:260px; width:100%; height:auto;">
-    <button type="button" class="modal-close-btn" onclick="closeQrModal()">
-      Chiudi e torna alla card
-    </button>
-  </div>
-</div>
-
-<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
-<div id="frame-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-    <h2>Visualizzazione</h2>
-    <iframe id="frame-modal-iframe"
-            src=""
-            style="width:100%; height: calc(90vh - 80px); border:none; border-radius: 12px; background:#000;"></iframe>
-    <button type="button" class="modal-close-btn" onclick="closeFrameModal()">
-      Chiudi e torna alla card
-    </button>
   </div>
 </div>
 
 <script>
-  function openQrModal(url) {
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
-  }
-
-  function openGalleryModal(url) {
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
-  }
-
-  function closeQrModal() {
-    document.getElementById('qr-modal').style.display = 'none';
-    document.getElementById('qr-modal-img').src = "";
-  }
-
-  function openFrameModal(url) {
-    const iframe = document.getElementById('frame-modal-iframe');
-    iframe.src = url;
-    document.getElementById('frame-modal').style.display = 'flex';
-  }
-
-  function closeFrameModal() {
-    const iframe = document.getElementById('frame-modal-iframe');
-    iframe.src = "";
-    document.getElementById('frame-modal').style.display = 'none';
-  }
+  // bottone "Copia IBAN"
+  (function () {
+    const btn = document.getElementById('copyIbanBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      const iban = this.getAttribute('data-iban');
+      if (!iban) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(iban.trim())
+          .then(() => {
+            this.innerHTML = '<i class="fa-solid fa-check"></i> Copiato!';
+            setTimeout(() => {
+              this.innerHTML = '<i class="fa-regular fa-copy"></i> Copia IBAN';
+            }, 1500);
+          })
+          .catch(() => {
+            alert('Non riesco a copiare in automatico. Copia manualmente: ' + iban);
+          });
+      } else {
+        // fallback
+        alert('Copiatura automatica non supportata. Copia manualmente: ' + iban);
+      }
+    });
+  })();
 </script>
 {% endblock %}
