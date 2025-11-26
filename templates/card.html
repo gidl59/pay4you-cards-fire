@@ -122,17 +122,15 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI TRAMITE RIQUADRO (MODAL) CON "TORNA ALLA CARD" #}
+      {# SITI INTERNET: aggiungo ?card=slug per gestire il tasto "Torna alla card" nel sito #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openSiteModal('{{ site }}')">
+          <a href="{{ site }}?card={{ ag.slug }}" target="_blank" rel="noopener noreferrer">
             Vai al sito
-          </button>
+          </a>
         </div>
       </div>
       {% endfor %}
@@ -230,16 +228,16 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI (cliccabili su Google Maps) -->
+    <!-- SEZIONE INDIRIZZI -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <a class="link-button"
-           href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
-           target="_blank" rel="noopener noreferrer">
-          <span class="address-value">{{ addr }}</span>
+        <a href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
+           target="_blank" rel="noopener noreferrer"
+           class="address-value">
+          {{ addr }}
         </a>
       </div>
       {% endfor %}
@@ -297,35 +295,14 @@
   </div>
 </div>
 
-<!-- MODAL PER PDF (IFRAME) -->
+<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-    <h2>Visualizzazione documento</h2>
+    <h2>Visualizzazione</h2>
     <iframe id="frame-modal-iframe"
             src=""
             style="width:100%; height: calc(90vh - 80px); border:none; border-radius: 12px; background:#000;"></iframe>
     <button type="button" class="modal-close-btn" onclick="closeFrameModal()">
-      Chiudi e torna alla card
-    </button>
-  </div>
-</div>
-
-<!-- MODAL PER SITO INTERNET (riquadro con "Apri il sito" + "Torna alla card") -->
-<div id="site-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width: 360px; width: 90%;">
-    <h2>Sito internet</h2>
-    <p style="font-size:14px; color:#e5e7eb; margin-bottom:14px;">
-      Stai per aprire il sito internet in una nuova scheda.
-    </p>
-    <a id="site-modal-link"
-       href="#"
-       target="_blank"
-       rel="noopener noreferrer"
-       class="modal-close-btn"
-       style="display:inline-block; text-decoration:none; margin-bottom:8px;">
-      Apri il sito
-    </a>
-    <button type="button" class="modal-close-btn" onclick="closeSiteModal()">
       Chiudi e torna alla card
     </button>
   </div>
@@ -359,19 +336,6 @@
     const iframe = document.getElementById('frame-modal-iframe');
     iframe.src = "";
     document.getElementById('frame-modal').style.display = 'none';
-  }
-
-  // MODAL SITO INTERNET
-  function openSiteModal(url) {
-    const link = document.getElementById('site-modal-link');
-    link.href = url;
-    document.getElementById('site-modal').style.display = 'flex';
-  }
-
-  function closeSiteModal() {
-    document.getElementById('site-modal').style.display = 'none';
-    const link = document.getElementById('site-modal-link');
-    link.href = "#";
   }
 </script>
 {% endblock %}
