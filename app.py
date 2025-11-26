@@ -187,21 +187,6 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 
-def normalize_url(u):
-    """
-    Garantisce che l'URL inizi con http:// o https://.
-    Serve per evitare la pagina nera quando il sito è scritto tipo 'www.sito.it'.
-    """
-    if not u:
-        return None
-    u = u.strip()
-    if not u:
-        return None
-    if not (u.startswith("http://") or u.startswith("https://")):
-        return "https://" + u
-    return u
-
-
 # --------------------------------------------------
 # ROUTES BASE
 # --------------------------------------------------
@@ -383,7 +368,7 @@ def update_agent(slug):
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se esiste photo_cropped, sovrascrive SEMPRE
+    # FOTO PROFILO – se abbiamo il ritaglio, sovrascrive
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -441,12 +426,8 @@ def public_card(slug):
         abort(404)
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
-
     emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
-
-    raw_websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
-    websites = [normalize_url(w) for w in raw_websites if normalize_url(w)]
-
+    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
     pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
 
@@ -464,7 +445,8 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro
+# VIEWER PDF – (non più usato se apri tutto nel modal iframe,
+# ma lo lascio per compatibilità)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -516,7 +498,7 @@ def vcard(slug):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
     if getattr(ag, "websites", None):
-        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
+        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
