@@ -1,249 +1,152 @@
 {% extends "base.html" %}
 
-{% block title %}
-  {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
-{% endblock %}
-
 {% block content %}
-<div class="agent-form-wrapper">
-  <h1 class="agent-form-title">
-    {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
-  </h1>
+<h4 class="mb-3">
+  {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
+</h4>
 
-  <form class="agent-form" method="post" enctype="multipart/form-data">
-    <!-- Slug -->
-    <label for="slug">Codice card (slug unico – senza spazi)</label>
-    <input type="text" id="slug" name="slug"
-           value="{{ agent.slug if agent else '' }}"
-           placeholder="es: giuseppe" required>
+<form method="post"
+      enctype="multipart/form-data"
+      action="{% if agent and agent_id is not none %}
+                 {{ url_for('admin_edit_agent', agent_id=agent_id) }}
+               {% else %}
+                 {{ url_for('admin_new_agent') }}
+               {% endif %}">
 
-    <!-- Nome -->
-    <label for="name">Nome e Cognome</label>
-    <input type="text" id="name" name="name"
-           value="{{ agent.name if agent else '' }}" required>
+  <!-- per sicurezza -->
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-    <!-- Azienda -->
-    <label for="company">Azienda</label>
-    <input type="text" id="company" name="company"
-           value="{{ agent.company if agent else '' }}">
+  <div class="card p-3 mb-3">
+    <h5>Dati principali</h5>
 
-    <!-- Ruolo -->
-    <label for="role">Ruolo</label>
-    <input type="text" id="role" name="role"
-           value="{{ agent.role if agent else '' }}">
-
-    <!-- Bio -->
-    <label for="bio">Descrizione breve (max 200 caratteri)</label>
-    <textarea id="bio" name="bio" maxlength="200"
-              placeholder="Breve descrizione professionale">{{ agent.bio if agent else '' }}</textarea>
-
-    <!-- Contatti -->
-    <label for="phone_mobile">Telefono mobile</label>
-    <input type="tel" id="phone_mobile" name="phone_mobile"
-           value="{{ agent.phone_mobile if agent else '' }}">
-
-    <label for="phone_office">Telefono ufficio</label>
-    <input type="tel" id="phone_office" name="phone_office"
-           value="{{ agent.phone_office if agent else '' }}">
-
-    <!-- EMAIL MULTIPLE -->
-    <label for="emails">Email (separate da virgola)</label>
-    <input type="text" id="emails" name="emails"
-           value="{{ agent.emails if agent else '' }}"
-           placeholder="es: nome@mail.it, info@mail.it">
-    <small style="font-size:12px;color:#9ca3af;">
-      Puoi inserire più email separate da virgola.
-    </small>
-
-    <!-- WEBSITES -->
-    <label for="websites">Siti web (separati da virgola)</label>
-    <input type="text" id="websites" name="websites"
-           value="{{ agent.websites if agent else '' }}"
-           placeholder="https://www.miosito.it, https://www.altro.it">
-
-    <!-- Social -->
-    <label for="facebook">Facebook (URL)</label>
-    <input type="text" id="facebook" name="facebook"
-           value="{{ agent.facebook if agent else '' }}">
-
-    <label for="instagram">Instagram (URL)</label>
-    <input type="text" id="instagram" name="instagram"
-           value="{{ agent.instagram if agent else '' }}">
-
-    <label for="linkedin">LinkedIn (URL)</label>
-    <input type="text" id="linkedin" name="linkedin"
-           value="{{ agent.linkedin if agent else '' }}">
-
-    <label for="tiktok">TikTok (URL)</label>
-    <input type="text" id="tiktok" name="tiktok"
-           value="{{ agent.tiktok if agent else '' }}">
-
-    <label for="telegram">Telegram (URL)</label>
-    <input type="text" id="telegram" name="telegram"
-           value="{{ agent.telegram if agent else '' }}">
-
-    <!-- WhatsApp -->
-    <label for="whatsapp">WhatsApp (numero)</label>
-    <input type="text" id="whatsapp" name="whatsapp"
-           value="{{ agent.whatsapp if agent else '' }}"
-           placeholder="+39 333 1234567">
-
-    <!-- PEC -->
-    <label for="pec">PEC</label>
-    <input type="email" id="pec" name="pec"
-           value="{{ agent.pec if agent else '' }}">
-
-    <!-- Dati fiscali -->
-    <label for="piva">Partita IVA</label>
-    <input type="text" id="piva" name="piva"
-           value="{{ agent.piva if agent else '' }}">
-
-    <label for="sdi">Codice SDI</label>
-    <input type="text" id="sdi" name="sdi"
-           value="{{ agent.sdi if agent else '' }}">
-
-    <!-- Indirizzi (multi-linea) -->
-    <label for="addresses">Indirizzi (uno per riga)</label>
-    <textarea id="addresses" name="addresses"
-              placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
-
-    <!-- FOTO PROFILO -->
-    <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
-    <input type="file" id="photo" name="photo" accept="image/*">
-
-    <!-- DOCUMENTI PDF -->
-    <label>Documenti PDF (max 6)</label>
-    {% for i in range(1, 7) %}
-      <input type="file" name="pdf{{ i }}" accept="application/pdf">
-    {% endfor %}
-    <small style="font-size:12px;color:#9ca3af;">Caricando almeno un nuovo PDF, sostituirai la lista esistente.</small>
-
-    <!-- GALLERIA FOTO -->
-    <label>Galleria foto (fino a 12 immagini)</label>
-    <input type="file" name="gallery" accept="image/*" multiple>
-    <small style="font-size:12px;color:#9ca3af;">
-      Se carichi nuove immagini, la galleria precedente verrà sostituita.
-    </small>
-
-    <!-- BOTTONI -->
-    <div class="agent-form-buttons">
-      <button type="submit">
-        {% if agent %}Aggiorna agente{% else %}Crea agente{% endif %}
-      </button>
-      <a class="btn-secondary" href="{{ url_for('admin_home') }}">Annulla</a>
+    <div class="mb-2">
+      <label class="form-label">Nome e cognome</label>
+      <input type="text" name="name" class="form-control"
+             value="{{ agent.name if agent else '' }}" required />
     </div>
 
-  </form>
-</div>
-
-<!-- MODALE CROP FOTO -->
-<div id="cropper-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <h2>Ritaglia la foto profilo</h2>
-    <div style="width:100%;max-width:360px;margin:0 auto;">
-      <img id="cropper-image" src="" alt="Anteprima foto"
-           style="max-width:100%;display:block;">
+    <div class="mb-2">
+      <label class="form-label">Ruolo / qualifica</label>
+      <input type="text" name="role" class="form-control"
+             value="{{ agent.role if agent else '' }}" />
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
-      <button type="button" id="cropper-use" class="modal-close-btn">
-        Usa questa foto
-      </button>
-      <button type="button" id="cropper-cancel"
-              class="modal-close-btn"
-              style="background:#111827;color:#e5e7eb;border:1px solid #4b5563;">
-        Annulla
-      </button>
+
+    <div class="mb-2">
+      <label class="form-label">Foto profilo (file)</label>
+      <input type="file" name="photo" class="form-control" accept="image/*" />
+      {% if agent and agent.photo_url %}
+        <small class="text-muted">Foto attuale: {{ agent.photo_url }}</small>
+      {% endif %}
     </div>
   </div>
-</div>
 
-<script>
-  (function() {
-    const input = document.getElementById('photo');
-    const modal = document.getElementById('cropper-modal');
-    const imgEl = document.getElementById('cropper-image');
-    const btnUse = document.getElementById('cropper-use');
-    const btnCancel = document.getElementById('cropper-cancel');
+  <div class="card p-3 mb-3">
+    <h5>Contatti</h5>
 
-    let cropper = null;
-    let originalFile = null;
+    <div class="mb-2">
+      <label class="form-label">Telefono</label>
+      <input type="tel" name="phone" class="form-control"
+             pattern="[0-9+ ]{6,20}"
+             value="{{ agent.phone if agent else '' }}"
+             placeholder="+39 333 1234567" />
+    </div>
 
-    if (!input) return;
+    <div class="mb-2">
+      <label class="form-label">Email</label>
+      <input type="email" name="email" class="form-control"
+             value="{{ agent.email if agent else '' }}" />
+    </div>
 
-    // Quando selezioni la foto
-    input.addEventListener('change', function(e) {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
+    <div class="mb-2">
+      <label class="form-label">Sito web</label>
+      <input type="url" name="website" class="form-control"
+             value="{{ agent.website if agent else '' }}"
+             placeholder="https://www.pay4you.store" />
+    </div>
 
-      originalFile = file;
+    <div class="mb-2">
+      <label class="form-label">WhatsApp (numero)</label>
+      <input type="tel" name="whatsapp" class="form-control"
+             value="{{ agent.whatsapp if agent else '' }}"
+             placeholder="+39 333 1234567" />
+    </div>
 
-      const url = URL.createObjectURL(file);
-      imgEl.src = url;
-      modal.style.display = 'flex';
+    <div class="mb-2">
+      <label class="form-label">Facebook (link)</label>
+      <input type="url" name="facebook" class="form-control"
+             value="{{ agent.facebook if agent else '' }}" />
+    </div>
 
-      if (cropper) {
-        cropper.destroy();
-        cropper = null;
-      }
+    <div class="mb-2">
+      <label class="form-label">Instagram (link)</label>
+      <input type="url" name="instagram" class="form-control"
+             value="{{ agent.instagram if agent else '' }}" />
+    </div>
+  </div>
 
-      // Inizializza Cropper
-      cropper = new Cropper(imgEl, {
-        aspectRatio: 1,
-        viewMode: 1,
-        autoCropArea: 0.9,
-        responsive: true,
-        background: false,
-        zoomOnWheel: false
-      });
-    });
+  <div class="card p-3 mb-3">
+    <h5>Dati fiscali</h5>
 
-    // Usa questa foto (salva il ritaglio dentro il file input)
-    btnUse.addEventListener('click', function() {
-      if (!cropper || !originalFile) {
-        modal.style.display = 'none';
-        return;
-      }
+    <div class="mb-2">
+      <label class="form-label">Ragione sociale</label>
+      <input type="text" name="company" class="form-control"
+             value="{{ agent.company if agent else '' }}"
+             placeholder="Es. Pay4You di Giuseppe Di Lisio" />
+    </div>
 
-      const canvas = cropper.getCroppedCanvas({
-        width: 1000,
-        height: 1000,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
+    <div class="mb-2">
+      <label class="form-label">Indirizzo</label>
+      <input type="text" name="address" class="form-control"
+             value="{{ agent.address if agent else '' }}"
+             placeholder="Via ..., Città" />
+    </div>
 
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          modal.style.display = 'none';
-          return;
-        }
+    <div class="mb-2">
+      <label class="form-label">
+        <i class="fa-solid fa-house"></i> Partita IVA
+      </label>
+      <input type="text" name="piva" class="form-control"
+             pattern="[0-9]{11}"
+             value="{{ agent.piva if agent and agent.piva else '' }}"
+             placeholder="11 cifre (solo numeri)" />
+      <small class="text-muted">Non è più considerata come numero di telefono.</small>
+    </div>
 
-        const fileName = originalFile.name || 'avatar.jpg';
-        const croppedFile = new File([blob], fileName, { type: 'image/jpeg' });
+    <div class="mb-2">
+      <label class="form-label">Codice fiscale</label>
+      <input type="text" name="tax_code" class="form-control"
+             value="{{ agent.tax_code if agent else '' }}" />
+    </div>
 
-        // Sostituisce il file nel <input type="file">
-        const dt = new DataTransfer();
-        dt.items.add(croppedFile);
-        input.files = dt.files;
+    <div class="mb-2">
+      <label class="form-label">
+        <i class="fa-solid fa-building-columns"></i> IBAN banca
+      </label>
+      <input type="text" name="iban" class="form-control"
+             value="{{ agent.iban if agent and agent.iban else '' }}"
+             placeholder="IT60 X054 2811 1010 0000 0123 456" />
+      <small class="text-muted">Puoi scriverlo con o senza spazi.</small>
+    </div>
+  </div>
 
-        // Chiudi modale e pulisci
-        modal.style.display = 'none';
-        cropper.destroy();
-        cropper = null;
-        originalFile = null;
-      }, 'image/jpeg', 0.9);
-    });
+  <div class="card p-3 mb-3">
+    <h5>Descrizione</h5>
+    <div class="mb-2">
+      <textarea name="bio" rows="3" class="form-control"
+                placeholder="Breve descrizione / servizi">
+        {{ agent.bio if agent else '' }}
+      </textarea>
+    </div>
+  </div>
 
-    // Annulla / chiudi
-    btnCancel.addEventListener('click', function() {
-      modal.style.display = 'none';
-      if (cropper) {
-        cropper.destroy();
-        cropper = null;
-      }
-      // opzionale: svuota il file input
-      // input.value = '';
-    });
-  })();
-</script>
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">
+      Salva agente
+    </button>
+    <a href="{{ url_for('admin_list') }}" class="btn btn-secondary">
+      Annulla
+    </a>
+  </div>
 
+</form>
 {% endblock %}
