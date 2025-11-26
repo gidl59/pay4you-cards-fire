@@ -5,14 +5,7 @@
   {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
 </h4>
 
-<form method="post"
-      enctype="multipart/form-data"
-      action="{% if agent and agent_id is not none %}
-                 {{ url_for('admin_edit_agent', agent_id=agent_id) }}
-               {% else %}
-                 {{ url_for('admin_new_agent') }}
-               {% endif %}">
-
+<form method="post" enctype="multipart/form-data">
   <div class="card p-3 mb-3">
     <h5>Dati principali</h5>
 
@@ -138,11 +131,9 @@
     <button type="submit" class="btn btn-primary">
       Salva agente
     </button>
-    <!-- link semplice per non far esplodere url_for -->
     <a href="/admin" class="btn btn-secondary">
       Annulla
     </a>
   </div>
-
 </form>
 {% endblock %}
