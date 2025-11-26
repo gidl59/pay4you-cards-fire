@@ -1,255 +1,228 @@
 {% extends "base.html" %}
 
+{% block title %}{{ ag.name }}{% endblock %}
+
 {% block content %}
-<div class="container-fluid" style="max-width: 900px;">
-  <h4 class="mb-4">
-    {% if agent %}Modifica agente{% else %}Nuovo agente{% endif %}
-  </h4>
+<div class="card-page">
 
-  <form method="post" enctype="multipart/form-data">
+  <!-- HEADER -->
+  <header class="p4y-header">
+    <div class="p4y-logo">Pay4You</div>
+  </header>
 
-    <!-- DATI PRINCIPALI -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Dati principali</strong>
+  <!-- HERO -->
+  <section class="card-hero">
+    {% if ag.photo_url %}
+      <div class="card-photo">
+        <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
       </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-md-6">
-            <label class="form-label">Nome e cognome</label>
-            <input type="text" name="name" class="form-control"
-                   value="{{ agent.name if agent else '' }}" required />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Ruolo / qualifica</label>
-            <input type="text" name="role" class="form-control"
-                   value="{{ agent.role if agent else '' }}" />
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Foto profilo (file)</label>
-            <input type="file" name="photo" class="form-control" accept="image/*" />
-            {% if agent and agent.photo_url %}
-              <small class="text-muted">Foto attuale: {{ agent.photo_url }}</small>
-            {% endif %}
-          </div>
-
-        </div>
+      <h1 class="card-name">{{ ag.name }}</h1>
+      <div class="card-brand">Pay4You</div>
+    {% else %}
+      <div class="card-photo placeholder">
+        <span>Pay4You</span>
       </div>
-    </div>
+      <h1 class="card-name">{{ ag.name }}</h1>
+      <div class="card-brand">Pay4You</div>
+    {% endif %}
 
-    <!-- CONTATTI -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Contatti</strong>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
+    {% if ag.role %}
+      <div class="card-role">{{ ag.role }}</div>
+    {% endif %}
+    {% if ag.company %}
+      <div class="card-company">{{ ag.company }}</div>
+    {% endif %}
+    {% if ag.bio %}
+      <p class="card-bio">{{ ag.bio }}</p>
+    {% endif %}
+  </section>
 
-          <div class="col-md-6">
-            <label class="form-label">Telefono mobile</label>
-            <input type="tel" name="phone_mobile" class="form-control"
-                   pattern="[0-9+ ]{6,20}"
-                   value="{{ agent.phone_mobile if agent else '' }}"
-                   placeholder="+39 333 1234567" />
-          </div>
+  <!-- CONTATTI -->
+  <section class="card-section">
+    <h2>Contatti</h2>
 
-          <div class="col-md-6">
-            <label class="form-label">Telefono ufficio</label>
-            <input type="tel" name="phone_office" class="form-control"
-                   pattern="[0-9+ ]{6,20}"
-                   value="{{ agent.phone_office if agent else '' }}"
-                   placeholder="+39 0874 ..." />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control"
-                   value="{{ agent.email if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">PEC</label>
-            <input type="email" name="pec" class="form-control"
-                   value="{{ agent.pec if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Sito web</label>
-            <input type="url" name="website" class="form-control"
-                   value="{{ agent.website if agent else '' }}"
-                   placeholder="https://www.pay4you.store" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">WhatsApp (numero)</label>
-            <input type="tel" name="whatsapp" class="form-control"
-                   value="{{ agent.whatsapp if agent else '' }}"
-                   placeholder="+39 333 1234567" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Facebook (link)</label>
-            <input type="url" name="facebook" class="form-control"
-                   value="{{ agent.facebook if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Instagram (link)</label>
-            <input type="url" name="instagram" class="form-control"
-                   value="{{ agent.instagram if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">LinkedIn (link)</label>
-            <input type="url" name="linkedin" class="form-control"
-                   value="{{ agent.linkedin if agent else '' }}" />
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- DATI FISCALI -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Dati fiscali</strong>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-md-6">
-            <label class="form-label">Ragione sociale</label>
-            <input type="text" name="company" class="form-control"
-                   value="{{ agent.company if agent else '' }}"
-                   placeholder="Es. Pay4You di Giuseppe Di Lisio" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Indirizzo</label>
-            <input type="text" name="address" class="form-control"
-                   value="{{ agent.address if agent else '' }}"
-                   placeholder="Via ..., Città" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">
-              <i class="fa-solid fa-house"></i> Partita IVA
-            </label>
-            <input type="text" name="piva" class="form-control"
-                   pattern="[0-9]{11}"
-                   value="{{ agent.piva if agent and agent.piva else '' }}"
-                   placeholder="11 cifre (solo numeri)" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Codice SDI</label>
-            <input type="text" name="sdi" class="form-control"
-                   value="{{ agent.sdi if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Codice fiscale</label>
-            <input type="text" name="tax_code" class="form-control"
-                   value="{{ agent.tax_code if agent else '' }}" />
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">
-              <i class="fa-solid fa-building-columns"></i> IBAN banca
-            </label>
-            <input type="text" name="iban" class="form-control"
-                   value="{{ agent.iban if agent and agent.iban else '' }}"
-                   placeholder="IT60 X054 2811 1010 0000 0123 456" />
-            <small class="text-muted">Puoi inserirlo con o senza spazi.</small>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- DOCUMENTI PDF -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Documenti (PDF)</strong>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">PDF 1</label>
-            <input type="file" name="pdf1" class="form-control" accept="application/pdf" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 2</label>
-            <input type="file" name="pdf2" class="form-control" accept="application/pdf" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 3</label>
-            <input type="file" name="pdf3" class="form-control" accept="application/pdf" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">PDF 4</label>
-            <input type="file" name="pdf4" class="form-control" accept="application/pdf" />
-          </div>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Verranno mostrati nella sezione “Documenti” della card.
-        </small>
-      </div>
-    </div>
-
-    <!-- GALLERIA FOTO -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Galleria foto</strong>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Foto 1</label>
-            <input type="file" name="gallery1" class="form-control" accept="image/*" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 2</label>
-            <input type="file" name="gallery2" class="form-control" accept="image/*" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 3</label>
-            <input type="file" name="gallery3" class="form-control" accept="image/*" />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Foto 4</label>
-            <input type="file" name="gallery4" class="form-control" accept="image/*" />
-          </div>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Le immagini saranno mostrate nella galleria della card.
-        </small>
-      </div>
-    </div>
-
-    <!-- DESCRIZIONE -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-dark text-light py-2">
-        <strong>Descrizione</strong>
-      </div>
-      <div class="card-body">
-        <textarea name="bio" rows="3" class="form-control"
-                  placeholder="Breve descrizione / servizi">{{ agent.bio if agent else '' }}</textarea>
-      </div>
-    </div>
-
-    <div class="mb-4 d-flex justify-content-between">
-      <a href="/admin" class="btn btn-outline-light">
-        Annulla
+    {% if ag.phone_mobile %}
+      <a class="card-btn" href="tel:{{ ag.phone_mobile|replace(' ', '') }}">
+        <span class="icon">📱</span>
+        <span class="text">
+          <strong>Chiama mobile</strong><br>
+          {{ ag.phone_mobile }}
+        </span>
       </a>
-      <button type="submit" class="btn btn-primary">
-        Salva agente
-      </button>
-    </div>
+    {% endif %}
 
-  </form>
+    {% if ag.phone_office %}
+      <a class="card-btn" href="tel:{{ ag.phone_office|replace(' ', '') }}">
+        <span class="icon">☎️</span>
+        <span class="text">
+          <strong>Chiama ufficio</strong><br>
+          {{ ag.phone_office }}
+        </span>
+      </a>
+    {% endif %}
+
+    {% if ag.whatsapp %}
+      <a class="card-btn" href="https://wa.me/{{ ag.whatsapp|replace(' ', '') }}" target="_blank">
+        <span class="icon">🟢</span>
+        <span class="text">
+          <strong>WhatsApp</strong><br>
+          {{ ag.whatsapp }}
+        </span>
+      </a>
+    {% endif %}
+
+    {% for email in emails %}
+      <a class="card-btn" href="mailto:{{ email }}">
+        <span class="icon">📧</span>
+        <span class="text">
+          <strong>Email</strong><br>
+          {{ email }}
+        </span>
+      </a>
+    {% endfor %}
+
+    {% if ag.pec %}
+      <a class="card-btn" href="mailto:{{ ag.pec }}">
+        <span class="icon">📮</span>
+        <span class="text">
+          <strong>PEC</strong><br>
+          {{ ag.pec }}
+        </span>
+      </a>
+    {% endif %}
+
+    {# SITI INTERNET #}
+    {% for site in websites %}
+      <a class="card-btn" href="{{ site }}" target="_blank">
+        <span class="icon">🌐</span>
+        <span class="text">
+          <strong>Sito internet</strong><br>
+          Vai al sito
+        </span>
+      </a>
+    {% endfor %}
+
+    {% if ag.facebook %}
+      <a class="card-btn" href="{{ ag.facebook }}" target="_blank">
+        <span class="icon">📘</span>
+        <span class="text">
+          <strong>Facebook</strong><br>
+          Profilo
+        </span>
+      </a>
+    {% endif %}
+
+    {% if ag.instagram %}
+      <a class="card-btn" href="{{ ag.instagram }}" target="_blank">
+        <span class="icon">📷</span>
+        <span class="text">
+          <strong>Instagram</strong><br>
+          Profilo
+        </span>
+      </a>
+    {% endif %}
+
+    {% if ag.linkedin %}
+      <a class="card-btn" href="{{ ag.linkedin }}" target="_blank">
+        <span class="icon">💼</span>
+        <span class="text">
+          <strong>LinkedIn</strong><br>
+          Profilo
+        </span>
+      </a>
+    {% endif %}
+  </section>
+
+  <!-- AZIONI DIGITALI -->
+  <section class="card-section">
+    <h2>Strumenti</h2>
+
+    <a class="card-btn" href="{{ url_for('public_card', slug=ag.slug) }}">
+      <span class="icon">🪪</span>
+      <span class="text">
+        <strong>Profilo digitale</strong><br>
+        Apri card
+      </span>
+    </a>
+
+    <a class="card-btn" href="{{ url_for('vcard', slug=ag.slug) }}">
+      <span class="icon">💾</span>
+      <span class="text">
+        <strong>Salva contatto</strong><br>
+        Salva contatto
+      </span>
+    </a>
+
+    <a class="card-btn" href="{{ url_for('qr', slug=ag.slug) }}">
+      <span class="icon">🔳</span>
+      <span class="text">
+        <strong>QR code</strong><br>
+        Apri QR
+      </span>
+    </a>
+  </section>
+
+  <!-- DATI FISCALI -->
+  {% if ag.piva or ag.sdi %}
+  <section class="card-section">
+    <h2>Dati fiscali</h2>
+    {% if ag.piva %}
+      <div class="card-row">
+        <span class="icon">🏛️</span>
+        <span class="text">Partita IVA {{ ag.piva }}</span>
+      </div>
+    {% endif %}
+    {% if ag.sdi %}
+      <div class="card-row">
+        <span class="icon">📨</span>
+        <span class="text">Codice SDI {{ ag.sdi }}</span>
+      </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- INDIRIZZI -->
+  {% if addresses %}
+  <section class="card-section">
+    <h2>Indirizzi</h2>
+    {% for addr in addresses %}
+      <div class="card-row">
+        <span class="icon">📍</span>
+        <span class="text">{{ addr }}</span>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <!-- DOCUMENTI -->
+  {% if pdfs %}
+  <section class="card-section">
+    <h2>Documenti</h2>
+    {% for pdf_url in pdfs %}
+      <a class="card-btn" href="{{ pdf_url }}" target="_blank">
+        <span class="icon">📄</span>
+        <span class="text">Documento {{ loop.index }}</span>
+      </a>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <!-- GALLERIA -->
+  {% if gallery %}
+  <section class="card-section">
+    <h2>Galleria foto</h2>
+    <div class="card-gallery">
+      {% for img in gallery %}
+        <div class="gallery-item">
+          <img src="{{ img }}" alt="Foto Pay4You">
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <footer class="card-footer">
+    Pay4You – Card digitale personale
+  </footer>
 </div>
 {% endblock %}
