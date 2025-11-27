@@ -5,7 +5,7 @@
 {% block content %}
 
 <style>
-  /* Disabilita stile/click su tel autogenerati (es. Partita IVA su iPhone) */
+  /* Se il browser prova ancora a trasformare numeri in link tel, li "neutralizziamo" */
   a[href^="tel"]:not(.phone-link) {
     text-decoration: none !important;
     color: inherit !important;
@@ -369,7 +369,8 @@
 
   function copyIban(iban, btn) {
     if (!iban) return;
-    // Metodo classico, compatibile ovunque
+
+    // Metodo super-compatibile: textarea + execCommand
     const textarea = document.createElement('textarea');
     textarea.value = iban;
     textarea.setAttribute('readonly', '');
@@ -379,8 +380,9 @@
     textarea.select();
     try {
       document.execCommand('copy');
+      alert('IBAN copiato negli appunti:\n' + iban);
     } catch (e) {
-      console.error(e);
+      alert('IBAN: ' + iban);
     }
     document.body.removeChild(textarea);
 
