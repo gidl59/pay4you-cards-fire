@@ -1,47 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
+  <title>{% block title %}Pay4You Cards{% endblock %}</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Importantissimo per P.IVA/IBAN: evita che il browser li trasformi in link telefono -->
+  <meta name="format-detection" content="telephone=no">
 
-  <!-- Titolo generico, modificabile nei template -->
-  <title>{% block title %}Pay4You – Card digitale{% endblock %}</title>
-
-  <!-- Bootstrap (se lo avevi prima, lo lasciamo) -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Font Awesome per le icone -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Stile personalizzato Pay4You -->
+  <!-- Il tuo CSS principale -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-  <style>
-    body {
-      background: #0b0e1a;
-      color: #ffffff;
-      font-family: system-ui, -apple-system, "SF Pro Text", Roboto, sans-serif;
-    }
-    .p4y-header {
-      text-align: center;
-      padding: 15px 0;
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      color: #ffcc00;
-    }
-  </style>
+  <!-- (opzionale) favicon se ce l'hai -->
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+  <!-- Libreria per il crop della foto profilo -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
+  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
 </head>
-
 <body>
+  <div class="app-shell">
+    {% if session.get('admin') %}
+    <header class="app-header">
+      <div class="app-header-left">
+        <span class="app-logo-text">Pay4You – Card digitale</span>
+      </div>
+      <div class="app-header-right">
+        <a href="{{ url_for('admin_home') }}" class="header-link">Agenti</a>
+        <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+      </div>
+    </header>
+    {% endif %}
 
-  <!-- CONTENUTO PAGINE -->
-  <main class="container py-3">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- Bootstrap JS (se serve per upload/galleria ecc.) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
+    <main class="app-main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 </body>
 </html>
