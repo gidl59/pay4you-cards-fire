@@ -102,6 +102,12 @@
     <input type="text" id="sdi" name="sdi"
            value="{{ agent.sdi if agent else '' }}">
 
+    <!-- IBAN -->
+    <label for="iban">IBAN banca</label>
+    <input type="text" id="iban" name="iban"
+           value="{{ agent.pdf2_url if agent and agent.pdf2_url else '' }}"
+           placeholder="IT60 X054 2811 1010 0000 0000 000">
+
     <!-- Indirizzi (multi-linea) -->
     <label for="addresses">Indirizzi (uno per riga)</label>
     <textarea id="addresses" name="addresses"
