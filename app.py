@@ -61,7 +61,7 @@ class Agent(Base):
     gallery_urls = Column(Text, nullable=True)
     # useremo pdf1_url come lista URL separata da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
+    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità (la usiamo per IBAN)
 
 
 Base.metadata.create_all(engine)
@@ -280,6 +280,9 @@ def create_agent():
     if db.query(Agent).filter_by(slug=data["slug"]).first():
         return "Slug già esistente", 400
 
+    # 🔹 IBAN dal form (lo salveremo in pdf2_url)
+    iban = request.form.get("iban", "").strip()
+
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
@@ -313,7 +316,7 @@ def create_agent():
         **data,
         photo_url=photo_url,
         pdf1_url=pdf_joined,
-        pdf2_url=None,
+        pdf2_url=iban,  # 🔹 qui salviamo l'IBAN
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
     )
     db.add(ag)
@@ -364,6 +367,9 @@ def update_agent(slug):
         "addresses",
     ]:
         setattr(ag, k, request.form.get(k, "").strip())
+
+    # 🔹 aggiorniamo anche l'IBAN (sempre in pdf2_url)
+    ag.pdf2_url = request.form.get("iban", "").strip()
 
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
@@ -575,4 +581,3 @@ def not_found(e):
 if __name__ == "__main__":
     # Avvio locale (su Render viene usato gunicorn, quindi questo non viene eseguito)
     app.run(host="0.0.0.0", port=5000, debug=True)
-
