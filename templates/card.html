@@ -75,7 +75,7 @@
         <div class="icon">📱</div>
         <div class="label">Chiama mobile</div>
         <div class="value">
-          <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
+          <a href="tel:{{ ag.phone_mobile|replace(' ', '') }}">{{ ag.phone_mobile }}</a>
         </div>
       </div>
       {% endif %}
@@ -85,7 +85,7 @@
         <div class="icon">☎️</div>
         <div class="label">Chiama ufficio</div>
         <div class="value">
-          <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
+          <a href="tel:{{ ag.phone_office|replace(' ', '') }}">{{ ag.phone_office }}</a>
         </div>
       </div>
       {% endif %}
@@ -122,17 +122,16 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI IN MODAL CON TASTO "TORNA ALLA CARD" #}
+      {# SITI INTERNET: apertura diretta in nuova scheda, senza modal #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
         <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openFrameModal('{{ site }}')">
+          <a href="{{ site }}" class="link-button"
+             target="_blank" rel="noopener noreferrer">
             Vai al sito
-          </button>
+          </a>
         </div>
       </div>
       {% endfor %}
@@ -244,14 +243,15 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE INDIRIZZI (LINK A GOOGLE MAPS) -->
+    <!-- SEZIONE INDIRIZZI (link a Google Maps) -->
     {% if addresses %}
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <a href="{{ addr.url }}" target="_blank" rel="noopener noreferrer">
-          <span class="address-value">{{ addr.text }}</span>
+        <a href="https://maps.google.com?q={{ addr|urlencode }}"
+           target="_blank" rel="noopener noreferrer">
+          <span class="address-value">{{ addr }}</span>
         </a>
       </div>
       {% endfor %}
@@ -291,7 +291,7 @@
     </section>
     {% endif %}
 
-    <!-- Footer opzionale -->
+    <!-- Footer -->
     <div class="card-footer">
       Pay4You – Card digitale personale
     </div>
@@ -302,14 +302,15 @@
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <h2>Visualizzazione</h2>
-    <img id="qr-modal-img" src="" alt="Immagine" style="max-width:260px; width:100%; height:auto;">
+    <img id="qr-modal-img" src="" alt="Immagine"
+         style="max-width:260px; width:100%; height:auto;">
     <button type="button" class="modal-close-btn" onclick="closeQrModal()">
       Chiudi e torna alla card
     </button>
   </div>
 </div>
 
-<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
+<!-- MODAL PER SITO INTERNET / PDF (IFRAME) - usato solo per PDF e galleria -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
     <h2>Visualizzazione</h2>
@@ -358,8 +359,10 @@
       navigator.clipboard.writeText(iban).then(function () {
         const oldText = btn.textContent;
         btn.textContent = '✔ IBAN copiato';
+        btn.style.color = '#22c55e';
         setTimeout(function () {
           btn.textContent = oldText;
+          btn.style.color = '';
         }, 1500);
       }).catch(function () {
         alert('IBAN: ' + iban);
