@@ -210,7 +210,7 @@
     </section>
 
     <!-- SEZIONE DATI FISCALI -->
-    {% if ag.piva or ag.sdi %}
+    {% if ag.piva or ag.sdi or ag.pdf2_url %}
     <section class="card-section">
       <h2>Dati fiscali</h2>
 
@@ -225,6 +225,20 @@
       <div class="address-row">
         <div class="icon">📨</div>
         <span class="address-value">Codice SDI {{ ag.sdi }}</span>
+      </div>
+      {% endif %}
+
+      {% if ag.pdf2_url %}
+      <div class="address-row">
+        <div class="icon">🏠</div>
+        <span class="address-value">
+          IBAN {{ ag.pdf2_url }}
+          <button type="button"
+                  class="link-button"
+                  onclick="copyIban({{ ag.pdf2_url|tojson }}, this)">
+            📋 Copia IBAN
+          </button>
+        </span>
       </div>
       {% endif %}
     </section>
@@ -336,6 +350,23 @@
     const iframe = document.getElementById('frame-modal-iframe');
     iframe.src = "";
     document.getElementById('frame-modal').style.display = 'none';
+  }
+
+  function copyIban(iban, btn) {
+    if (!iban) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(iban).then(function () {
+        const oldText = btn.textContent;
+        btn.textContent = '✔ IBAN copiato';
+        setTimeout(function () {
+          btn.textContent = oldText;
+        }, 1500);
+      }).catch(function () {
+        alert('IBAN: ' + iban);
+      });
+    } else {
+      alert('IBAN: ' + iban);
+    }
   }
 </script>
 {% endblock %}
