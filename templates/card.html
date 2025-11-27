@@ -2,8 +2,8 @@
 {% block title %}{{ ag.name }}{% endblock %}
 {% block content %}
 
-<!-- Stop al comportamento telefono su PIVA/IBAN -->
 <style>
+  /* Evita che il browser trasformi tutto in link tel (soprattutto P.IVA, IBAN) */
   a[href^="tel"]:not(.phone-link) {
     text-decoration: none !important;
     pointer-events: none !important;
@@ -74,7 +74,11 @@
       <div class="contact-row">
         <div class="icon">📱</div>
         <div class="label">Chiama mobile</div>
-        <div class="value"><a href="tel:{{ ag.phone_mobile|replace(' ', '') }}" class="phone-link">{{ ag.phone_mobile }}</a></div>
+        <div class="value">
+          <a href="tel:{{ ag.phone_mobile|replace(' ', '') }}" class="phone-link">
+            {{ ag.phone_mobile }}
+          </a>
+        </div>
       </div>
       {% endif %}
 
@@ -82,7 +86,11 @@
       <div class="contact-row">
         <div class="icon">☎️</div>
         <div class="label">Chiama ufficio</div>
-        <div class="value"><a href="tel:{{ ag.phone_office|replace(' ', '') }}" class="phone-link">{{ ag.phone_office }}</a></div>
+        <div class="value">
+          <a href="tel:{{ ag.phone_office|replace(' ', '') }}" class="phone-link">
+            {{ ag.phone_office }}
+          </a>
+        </div>
       </div>
       {% endif %}
 
@@ -90,7 +98,11 @@
       <div class="contact-row whatsapp-row">
         <div class="icon">🟢</div>
         <div class="label">WhatsApp</div>
-        <div class="value"><a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+','') }}">{{ ag.whatsapp }}</a></div>
+        <div class="value">
+          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+','') }}">
+            {{ ag.whatsapp }}
+          </a>
+        </div>
       </div>
       {% endif %}
 
@@ -98,7 +110,9 @@
       <div class="contact-row">
         <div class="icon">📧</div>
         <div class="label">Email</div>
-        <div class="value"><a href="mailto:{{ email }}">{{ email }}</a></div>
+        <div class="value">
+          <a href="mailto:{{ email }}">{{ email }}</a>
+        </div>
       </div>
       {% endfor %}
 
@@ -106,7 +120,9 @@
       <div class="contact-row">
         <div class="icon">📮</div>
         <div class="label">PEC</div>
-        <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
+        <div class="value">
+          <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
+        </div>
       </div>
       {% endif %}
 
@@ -114,36 +130,71 @@
       <div class="contact-row">
         <div class="icon">🌐</div>
         <div class="label">Sito internet</div>
-        <div class="value"><a href="{{ site }}" class="link-button" target="_blank">Vai al sito</a></div>
+        <div class="value">
+          <a href="{{ site }}" class="link-button" target="_blank" rel="noopener noreferrer">
+            Vai al sito
+          </a>
+        </div>
       </div>
       {% endfor %}
 
       {% if ag.facebook %}
-      <div class="contact-row"><div class="icon">📘</div><div class="label">Facebook</div><div class="value"><a href="{{ ag.facebook }}" target="_blank">Profilo</a></div></div>
+      <div class="contact-row">
+        <div class="icon">📘</div>
+        <div class="label">Facebook</div>
+        <div class="value">
+          <a href="{{ ag.facebook }}" target="_blank" rel="noopener noreferrer">Profilo</a>
+        </div>
+      </div>
       {% endif %}
       {% if ag.instagram %}
-      <div class="contact-row"><div class="icon">📷</div><div class="label">Instagram</div><div class="value"><a href="{{ ag.instagram }}" target="_blank">Profilo</a></div></div>
+      <div class="contact-row">
+        <div class="icon">📷</div>
+        <div class="label">Instagram</div>
+        <div class="value">
+          <a href="{{ ag.instagram }}" target="_blank" rel="noopener noreferrer">Profilo</a>
+        </div>
+      </div>
       {% endif %}
       {% if ag.linkedin %}
-      <div class="contact-row"><div class="icon">💼</div><div class="label">LinkedIn</div><div class="value"><a href="{{ ag.linkedin }}" target="_blank">Profilo</a></div></div>
+      <div class="contact-row">
+        <div class="icon">💼</div>
+        <div class="label">LinkedIn</div>
+        <div class="value">
+          <a href="{{ ag.linkedin }}" target="_blank" rel="noopener noreferrer">Profilo</a>
+        </div>
+      </div>
       {% endif %}
 
       <div class="contact-row">
         <div class="icon">🪪</div>
         <div class="label">Profilo digitale</div>
-        <div class="value"><a href="{{ base_url }}/{{ ag.slug }}" target="_blank">Apri card</a></div>
+        <div class="value">
+          <a href="{{ base_url }}/{{ ag.slug }}" target="_blank" rel="noopener noreferrer">
+            Apri card
+          </a>
+        </div>
       </div>
 
       <div class="contact-row">
         <div class="icon">💾</div>
         <div class="label">Salva contatto</div>
-        <div class="value"><a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">Salva contatto</a></div>
+        <div class="value">
+          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
+            Salva contatto
+          </a>
+        </div>
       </div>
 
       <div class="contact-row">
         <div class="icon">🔳</div>
         <div class="label">QR code</div>
-        <div class="value"><button type="button" class="link-button" onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">Apri QR</button></div>
+        <div class="value">
+          <button type="button" class="link-button"
+                  onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">
+            Apri QR
+          </button>
+        </div>
       </div>
     </section>
 
@@ -153,17 +204,29 @@
       <h2>Dati fiscali</h2>
 
       {% if ag.piva %}
-      <div class="address-row"><div class="icon">🏛️</div><span class="address-value">Partita IVA {{ ag.piva }}</span></div>
+      <div class="address-row">
+        <div class="icon">🏛️</div>
+        <span class="address-value">Partita IVA {{ ag.piva }}</span>
+      </div>
       {% endif %}
+
       {% if ag.sdi %}
-      <div class="address-row"><div class="icon">📨</div><span class="address-value">Codice SDI {{ ag.sdi }}</span></div>
+      <div class="address-row">
+        <div class="icon">📨</div>
+        <span class="address-value">Codice SDI {{ ag.sdi }}</span>
+      </div>
       {% endif %}
+
       {% if ag.pdf2_url %}
       <div class="address-row">
         <div class="icon">🏠</div>
         <span class="address-value">
           IBAN {{ ag.pdf2_url }}
-          <button type="button" class="link-button" onclick="copyIban({{ ag.pdf2_url|tojson }}, this)">📋 Copia IBAN</button>
+          <button type="button"
+                  class="link-button"
+                  onclick="copyIban({{ ag.pdf2_url|tojson }}, this)">
+            📋 Copia IBAN
+          </button>
         </span>
       </div>
       {% endif %}
@@ -175,7 +238,12 @@
     <section class="card-section">
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
-      <div class="address-row"><a href="https://maps.google.com?q={{ addr|urlencode }}" target="_blank"><span class="address-value">{{ addr }}</span></a></div>
+      <div class="address-row">
+        <a href="https://maps.google.com?q={{ addr|urlencode }}"
+           target="_blank" rel="noopener noreferrer">
+          <span class="address-value">{{ addr }}</span>
+        </a>
+      </div>
       {% endfor %}
     </section>
     {% endif %}
@@ -186,7 +254,11 @@
       <h2>Documenti</h2>
       <div class="pdf-list">
         {% for pdf_url in pdfs %}
-        <button type="button" class="pdf-item" onclick="openFrameModal('{{ pdf_url }}')"><span class="pdf-icon">📄</span><span>Documento {{ loop.index }}</span></button>
+        <button type="button" class="pdf-item"
+                onclick="openFrameModal('{{ pdf_url }}')">
+          <span class="pdf-icon">📄</span>
+          <span>Documento {{ loop.index }}</span>
+        </button>
         {% endfor %}
       </div>
     </section>
@@ -198,7 +270,10 @@
       <h2>Galleria foto</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
-        <button type="button" class="gallery-thumb-btn" onclick="openGalleryModal('{{ img }}')"><img src="{{ img }}" alt="Foto Pay4You"></button>
+        <button type="button" class="gallery-thumb-btn"
+                onclick="openGalleryModal('{{ img }}')">
+          <img src="{{ img }}" alt="Foto Pay4You">
+        </button>
         {% endfor %}
       </div>
     </section>
@@ -215,41 +290,108 @@
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <h2>Visualizzazione</h2>
-    <img id="qr-modal-img" src="" style="max-width:260px">
-    <button class="modal-close-btn" onclick="closeQrModal()">Chiudi e torna alla card</button>
+    <img id="qr-modal-img" src="" style="max-width:260px;width:100%;height:auto;">
+    <button class="modal-close-btn" onclick="closeQrModal()">
+      Chiudi e torna alla card
+    </button>
   </div>
 </div>
 
 <!-- MODAL PDF -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:96%;height:90vh;">
+  <div class="modal-box" style="max-width:96%;width:96%;height:90vh;">
     <h2>Visualizzazione</h2>
-    <iframe id="frame-modal-iframe" style="width:100%;height:calc(90vh - 80px);border:none;border-radius:12px;background:#000;"></iframe>
-    <button class="modal-close-btn" onclick="closeFrameModal()">Chiudi e torna alla card</button>
+    <iframe id="frame-modal-iframe"
+            style="width:100%;height:calc(90vh - 80px);border:none;
+                   border-radius:12px;background:#000;"></iframe>
+    <button class="modal-close-btn" onclick="closeFrameModal()">
+      Chiudi e torna alla card
+    </button>
   </div>
 </div>
 
 <script>
-  function openQrModal(url){document.getElementById('qr-modal-img').src=url;document.getElementById('qr-modal').style.display='flex';}
-  function openGalleryModal(url){openQrModal(url);}
-  function closeQrModal(){document.getElementById('qr-modal').style.display='none';document.getElementById('qr-modal-img').src="";}
-  function openFrameModal(url){document.getElementById('frame-modal-iframe').src=url;document.getElementById('frame-modal').style.display='flex';}
-  function closeFrameModal(){document.getElementById('frame-modal').style.display='none';document.getElementById('frame-modal-iframe').src="";}
+  function openQrModal(url) {
+    const img = document.getElementById('qr-modal-img');
+    img.src = url;
+    document.getElementById('qr-modal').style.display = 'flex';
+  }
 
-  function copyIban(iban, btn){
-    if(!iban) return;
-    const textarea=document.createElement("textarea");
-    textarea.value=iban;
-    textarea.style.position="absolute";
-    textarea.style.left="-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-    const old=btn.textContent;
-    btn.textContent="✔ IBAN copiato";
-    btn.style.color="#22c55e";
-    setTimeout(()=>{btn.textContent=old;btn.style.color="";},1500);
+  function openGalleryModal(url) {
+    openQrModal(url);
+  }
+
+  function closeQrModal() {
+    document.getElementById('qr-modal').style.display = 'none';
+    document.getElementById('qr-modal-img').src = "";
+  }
+
+  function openFrameModal(url) {
+    const iframe = document.getElementById('frame-modal-iframe');
+    iframe.src = url;
+    document.getElementById('frame-modal').style.display = 'flex';
+  }
+
+  function closeFrameModal() {
+    const iframe = document.getElementById('frame-modal-iframe');
+    iframe.src = "";
+    document.getElementById('frame-modal').style.display = 'none';
+  }
+
+  function copyIban(iban, btn) {
+    if (!iban) {
+      alert("IBAN non disponibile");
+      return;
+    }
+
+    let copied = false;
+
+    // API moderna
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(iban).then(function () {
+        copied = true;
+        afterCopy(iban, btn, copied);
+      }).catch(function () {
+        fallbackCopyIban(iban, btn);
+      });
+    } else {
+      fallbackCopyIban(iban, btn);
+    }
+  }
+
+  function fallbackCopyIban(iban, btn) {
+    let copied = false;
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = iban;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      copied = true;
+    } catch (e) {
+      console.error(e);
+    }
+    afterCopy(iban, btn, copied);
+  }
+
+  function afterCopy(iban, btn, copied) {
+    if (copied) {
+      alert("IBAN copiato negli appunti:\n" + iban);
+    } else {
+      alert("Non riesco a copiare automaticamente.\nIBAN:\n" + iban);
+    }
+
+    const oldText = btn.textContent;
+    btn.textContent = "✔ IBAN copiato";
+    btn.style.color = "#22c55e";
+    setTimeout(function () {
+      btn.textContent = oldText;
+      btn.style.color = "";
+    }, 1500);
   }
 </script>
 
