@@ -3,19 +3,16 @@
 {% block title %}{{ ag.name }}{% endblock %}
 
 {% block content %}
-{# Scegliamo il logo da usare: se c'è custom_logo_url usiamo quello, altrimenti logo Pay4You #}
-{% set logo_src = ag.custom_logo_url if ag.custom_logo_url else url_for('static', filename='logo.png') %}
-
 <div class="card-fullscreen">
   <!-- Sfondo blur -->
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
-    <!-- Header con logo (che gira) -->
+    <!-- Header con logo (usa extra_logo se presente) -->
     <div class="card-header-row">
       <img
-        src="{{ logo_src }}"
-        alt="Logo agente"
+        src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+        alt="Logo"
         class="card-logo-big"
       >
     </div>
@@ -31,21 +28,30 @@
             <div class="avatar-face avatar-front">
               <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
             </div>
-            <!-- Retro: logo personalizzato o Pay4You -->
+            <!-- Retro: logo (extra o Pay4You) -->
             <div class="avatar-face avatar-back">
-              <img src="{{ logo_src }}" alt="Logo">
+              <img
+                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+                alt="Logo"
+              >
             </div>
           </div>
         </div>
         {% else %}
-        <!-- Se non c'è foto, mostra solo il logo tondo -->
+        <!-- Se non c'è foto, mostra solo il logo tondo che gira fronte/retro -->
         <div class="avatar-flip">
           <div class="avatar-inner">
             <div class="avatar-face avatar-front">
-              <img src="{{ logo_src }}" alt="Logo">
+              <img
+                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+                alt="Logo"
+              >
             </div>
             <div class="avatar-face avatar-back">
-              <img src="{{ logo_src }}" alt="Logo">
+              <img
+                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+                alt="Logo"
+              >
             </div>
           </div>
         </div>
@@ -125,7 +131,7 @@
       </div>
       {% endif %}
 
-      {# SITI INTERNET: aperti in modal con iframe + tasto "torna alla card" #}
+      {# SITI INTERNET: APERTI IN MODAL CON TASTO "TORNA ALLA CARD" #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
@@ -239,12 +245,7 @@
       <h2>Indirizzi</h2>
       {% for addr in addresses %}
       <div class="address-row">
-        <a class="address-value"
-           href="https://www.google.com/maps/search/?api=1&query={{ addr|urlencode }}"
-           target="_blank"
-           rel="noopener noreferrer">
-          {{ addr }}
-        </a>
+        <span class="address-value">{{ addr }}</span>
       </div>
       {% endfor %}
     </section>
