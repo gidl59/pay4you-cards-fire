@@ -25,7 +25,7 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB (ampio margine)
 
 DB_URL = "sqlite:///data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -56,14 +56,14 @@ class Agent(Base):
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
     addresses = Column(Text, nullable=True)
+
     photo_url = Column(String, nullable=True)
+    extra_logo_url = Column(String, nullable=True)  # logo personalizzato (header + retro foto)
+
     gallery_urls = Column(Text, nullable=True)
-    # Lista URL PDF separati da "|"
+    # useremo pdf1_url come lista URL separata da "|"
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
-
-    # ⬇️ NUOVO: logo personalizzato per quell'agente
-    custom_logo_url = Column(String, nullable=True)
 
 
 Base.metadata.create_all(engine)
@@ -283,6 +283,7 @@ def create_agent():
         return "Slug già esistente", 400
 
     photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
@@ -293,11 +294,10 @@ def create_agent():
     elif photo and photo.filename:
         photo_url = upload_file(photo, "photos")
 
-    # ⬇️ NUOVO: LOGO PERSONALIZZATO
-    logo_file = request.files.get("logo_custom")
-    custom_logo_url = None
-    if logo_file and logo_file.filename:
-        custom_logo_url = upload_file(logo_file, "logos")
+    # LOGO EXTRA
+    extra_logo_url = None
+    if extra_logo and extra_logo.filename:
+        extra_logo_url = upload_file(extra_logo, "logos")
 
     # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
@@ -320,10 +320,10 @@ def create_agent():
     ag = Agent(
         **data,
         photo_url=photo_url,
+        extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
         pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
-        custom_logo_url=custom_logo_url,
     )
     db.add(ag)
     db.commit()
@@ -375,11 +375,11 @@ def update_agent(slug):
         setattr(ag, k, request.form.get(k, "").strip())
 
     photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
-    logo_file = request.files.get("logo_custom")
 
-    # FOTO PROFILO – SCELTA: se esiste photo_cropped, sovrascrive SEMPRE
+    # FOTO PROFILO – se c'è ritaglio, sovrascrive
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -389,11 +389,11 @@ def update_agent(slug):
         if u:
             ag.photo_url = u
 
-    # LOGO PERSONALIZZATO – se carichi un nuovo file, sostituisce quello precedente
-    if logo_file and logo_file.filename:
-        u = upload_file(logo_file, "logos")
+    # LOGO EXTRA – se carichi un nuovo file, sostituisce
+    if extra_logo and extra_logo.filename:
+        u = upload_file(extra_logo, "logos")
         if u:
-            ag.custom_logo_url = u
+            ag.extra_logo_url = u
 
     # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
@@ -462,7 +462,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – (se ancora usato)
+# VIEWER PDF – con freccia indietro (se usi template dedicato)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -514,8 +514,14 @@ def vcard(slug):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
     if getattr(ag, "websites", None):
-        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
+        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
+
+    # Aggiungiamo anche l'URL della card digitale
+    base = get_base_url()
+    card_url = f"{base}/{ag.slug}"
+    lines.append(f"URL:{card_url}")
+
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
     if getattr(ag, "piva", None):
@@ -535,7 +541,7 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    resp.headers["Content-Disposition"] = f'attachment; filename=\"{ag.slug}.vcf\"'
     return resp
 
 
