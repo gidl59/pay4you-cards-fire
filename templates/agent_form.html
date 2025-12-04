@@ -108,33 +108,41 @@
     <textarea id="addresses" name="addresses"
               placeholder="Via, CAP, Città&#10;Secondo indirizzo">{{ agent.addresses if agent else '' }}</textarea>
 
-    <!-- FOTO PROFILO con crop -->
+    <!-- FOTO PROFILO + CROP -->
     <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
-    <input type="file" id="photo" name="photo" accept="image/*">
+    <input type="file" id="photo" name="photo" accept="image/*" onchange="onPhotoChange(event)">
 
+    <!-- Qui salviamo il risultato del ritaglio per app.py -->
     <input type="hidden" id="photo_cropped" name="photo_cropped">
 
-    <div style="margin-top:8px;">
-      <canvas id="photo-canvas" width="400" height="400"
-              style="max-width:100%; border-radius:16px; border:1px solid #4b5563;"></canvas>
-      <small style="display:block;font-size:12px;color:#9ca3af;margin-top:4px;">
-        Carica la foto, verrà centrata e ritagliata in formato quadrato.
+    <div id="photo-crop-wrapper" style="margin-top:8px;">
+      <canvas id="photo-canvas"
+              style="max-width:100%; border-radius:12px; border:1px solid rgba(148,163,184,0.6); background:#020617;"></canvas>
+      <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button"
+                onclick="applyCrop()"
+                style="padding:6px 12px; border-radius:999px; border:none; background:#22c55e; color:#022c22; font-size:13px; font-weight:600; cursor:pointer;">
+          Salva ritaglio
+        </button>
+        <button type="button"
+                onclick="resetCrop()"
+                style="padding:6px 12px; border-radius:999px; border:none; background:#1f2937; color:#e5e7eb; font-size:13px; cursor:pointer;">
+          Annulla ritaglio
+        </button>
+      </div>
+      <small style="font-size:12px;color:#9ca3af;">
+        Carica la foto, verrà centrata in un riquadro quadrato. Premi “Salva ritaglio” prima di salvare l'agente.
       </small>
     </div>
-
-    <!-- LOGO PERSONALIZZATO -->
-    <label for="logo_custom">Logo personalizzato (PNG/JPG, opzionale)</label>
-    <input type="file" id="logo_custom" name="logo_custom" accept="image/*">
-    <small style="font-size:12px;color:#9ca3af;">
-      Se carichi un logo qui, verrà usato al posto del logo Pay4You nella card e dietro la foto dell'agente.
-    </small>
 
     <!-- DOCUMENTI PDF -->
     <label>Documenti PDF (max 6)</label>
     {% for i in range(1, 7) %}
       <input type="file" name="pdf{{ i }}" accept="application/pdf">
     {% endfor %}
-    <small style="font-size:12px;color:#9ca3af;">Caricando almeno un nuovo PDF, sostituirai la lista esistente.</small>
+    <small style="font-size:12px;color:#9ca3af;">
+      Caricando almeno un nuovo PDF, sostituirai la lista esistente.
+    </small>
 
     <!-- GALLERIA FOTO -->
     <label>Galleria foto (fino a 12 immagini)</label>
@@ -155,48 +163,59 @@
 </div>
 
 <script>
-  (function () {
-    const fileInput = document.getElementById('photo');
-    const hiddenField = document.getElementById('photo_cropped');
-    const canvas = document.getElementById('photo-canvas');
-    const ctx = canvas.getContext('2d');
+  let originalImage = null;
 
-    function clearCanvas() {
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  function onPhotoChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        originalImage = img;
+        drawCenteredSquare(img);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function drawCenteredSquare(img) {
+    const canvas  = document.getElementById('photo-canvas');
+    const ctx     = canvas.getContext('2d');
+
+    const size = 400;  // quadrato 400×400 (ridotto poi dal browser)
+    canvas.width  = size;
+    canvas.height = size;
+
+    const minSide = Math.min(img.width, img.height);
+    const sx = (img.width  - minSide) / 2;
+    const sy = (img.height - minSide) / 2;
+
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+  }
+
+  function applyCrop() {
+    const canvas = document.getElementById('photo-canvas');
+    const hidden = document.getElementById('photo_cropped');
+
+    if (!canvas.width || !canvas.height) {
+      alert("Carica prima una foto, poi ritaglia.");
+      return;
     }
 
-    clearCanvas();
+    hidden.value = canvas.toDataURL("image/jpeg", 0.9);
+    alert("Ritaglio salvato. Ora puoi salvare l'agente.");
+  }
 
-    fileInput.addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (ev) {
-        const img = new Image();
-        img.onload = function () {
-          const cw = canvas.width;
-          const ch = canvas.height;
-          clearCanvas();
-
-          const iw = img.width;
-          const ih = img.height;
-          const scale = Math.max(cw / iw, ch / ih);
-
-          const nw = iw * scale;
-          const nh = ih * scale;
-          const dx = (cw - nw) / 2;
-          const dy = (ch - nh) / 2;
-
-          ctx.drawImage(img, dx, dy, nw, nh);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          hiddenField.value = dataUrl;
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  })();
+  function resetCrop() {
+    originalImage = null;
+    document.getElementById('photo_cropped').value = "";
+    const canvas = document.getElementById('photo-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 </script>
 {% endblock %}
