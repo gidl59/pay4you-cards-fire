@@ -25,8 +25,7 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-# 200MB (puoi ridurre se vuoi)
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
 DB_URL = "sqlite:///data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -59,9 +58,12 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
     photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
-    # useremo pdf1_url come lista URL separata da "|"
+    # Lista URL PDF separati da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # usata per IBAN
+    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
+
+    # ⬇️ NUOVO: logo personalizzato per quell'agente
+    custom_logo_url = Column(String, nullable=True)
 
 
 Base.metadata.create_all(engine)
@@ -145,12 +147,14 @@ def upload_file(file_storage, folder="uploads"):
 
 def save_cropped_image(data_url, folder="photos"):
     """
-    (NON usato più, ma lo lasciamo se ti servisse in futuro)
+    Salva un'immagine base64 (dataURL da canvas) in static/<folder>
+    e restituisce l'URL statico relativo.
     """
     if not data_url:
         return None
 
     try:
+        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
         if "," in data_url:
             header, b64data = data_url.split(",", 1)
         else:
@@ -278,16 +282,22 @@ def create_agent():
     if db.query(Agent).filter_by(slug=data["slug"]).first():
         return "Slug già esistente", 400
 
-    # 👉 IBAN
-    iban = request.form.get("iban", "").strip()
-
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
+    cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – come prima, solo dal file (che ora è già ritagliato dal JS)
+    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
     photo_url = None
-    if photo and photo.filename:
+    if cropped_b64:
+        photo_url = save_cropped_image(cropped_b64, "photos")
+    elif photo and photo.filename:
         photo_url = upload_file(photo, "photos")
+
+    # ⬇️ NUOVO: LOGO PERSONALIZZATO
+    logo_file = request.files.get("logo_custom")
+    custom_logo_url = None
+    if logo_file and logo_file.filename:
+        custom_logo_url = upload_file(logo_file, "logos")
 
     # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
@@ -311,8 +321,9 @@ def create_agent():
         **data,
         photo_url=photo_url,
         pdf1_url=pdf_joined,
-        pdf2_url=iban,  # 👉 IBAN salvato qui
+        pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
+        custom_logo_url=custom_logo_url,
     )
     db.add(ag)
     db.commit()
@@ -363,17 +374,26 @@ def update_agent(slug):
     ]:
         setattr(ag, k, request.form.get(k, "").strip())
 
-    # 👉 aggiorniamo IBAN
-    ag.pdf2_url = request.form.get("iban", "").strip()
-
     photo = request.files.get("photo")
     gallery_files = request.files.getlist("gallery")
+    cropped_b64 = request.form.get("photo_cropped", "").strip()
+    logo_file = request.files.get("logo_custom")
 
-    # FOTO PROFILO – come prima
-    if photo and photo.filename:
+    # FOTO PROFILO – SCELTA: se esiste photo_cropped, sovrascrive SEMPRE
+    if cropped_b64:
+        u = save_cropped_image(cropped_b64, "photos")
+        if u:
+            ag.photo_url = u
+    elif photo and photo.filename:
         u = upload_file(photo, "photos")
         if u:
             ag.photo_url = u
+
+    # LOGO PERSONALIZZATO – se carichi un nuovo file, sostituisce quello precedente
+    if logo_file and logo_file.filename:
+        u = upload_file(logo_file, "logos")
+        if u:
+            ag.custom_logo_url = u
 
     # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
@@ -442,6 +462,24 @@ def public_card(slug):
 
 
 # --------------------------------------------------
+# VIEWER PDF – (se ancora usato)
+# --------------------------------------------------
+@app.get("/<slug>/pdf/<int:index>")
+def pdf_viewer(slug, index):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    pdfs = [u.strip() for u in (ag.pdf1_url or "").split("|") if u.strip()]
+    if index < 1 or index > len(pdfs):
+        abort(404)
+
+    pdf_url = pdfs[index - 1]
+    return render_template("pdf_viewer.html", ag=ag, pdf_url=pdf_url, index=index)
+
+
+# --------------------------------------------------
 # VCARD & QR
 # --------------------------------------------------
 @app.get("/<slug>.vcf")
@@ -466,65 +504,30 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
-
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
-
     if getattr(ag, "phone_mobile", None):
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
-
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
-
-    # EMAIL
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
-
-    # SITI WEB + URL card
-    sites = []
     if getattr(ag, "websites", None):
-        sites = [w.strip() for w in ag.websites.split(",") if w.strip()]
-
-    try:
-        base = get_base_url()
-        card_url = f"{base}/{ag.slug}"
-        if card_url not in sites:
-            sites.append(card_url)
-    except Exception:
-        pass
-
-    for w in sites:
-        lines.append(f"URL:{w}")
-
-    # Azienda
+        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
+            lines.append(f"URL:{w}")
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
-
-    # Dati fiscali
     if getattr(ag, "piva", None):
         lines.append(f"X-TAX-ID:{ag.piva}")
     if getattr(ag, "sdi", None):
         lines.append(f"X-SDI-CODE:{ag.sdi}")
-    # 👉 IBAN in vCard
-    if getattr(ag, "pdf2_url", None):
-        lines.append(f"X-IBAN:{ag.pdf2_url}")
 
-    # Indirizzi (LABEL + ADR generico)
-    if getattr(ag, "addresses", None):
-        for addr in [x.strip() for x in ag.addresses.split("\n") if x.strip()]:
-            safe_addr = addr.replace("\n", " ").replace("\r", " ")
-            lines.append(f"LABEL;TYPE=WORK:{safe_addr}")
-            lines.append(f"ADR;TYPE=WORK:;;;{safe_addr};;;;")
-
-    # NOTE con riepilogo dati fiscali + IBAN
     note_parts = []
     if getattr(ag, "piva", None):
         note_parts.append(f"Partita IVA: {ag.piva}")
     if getattr(ag, "sdi", None):
         note_parts.append(f"SDI: {ag.sdi}")
-    if getattr(ag, "pdf2_url", None):
-        note_parts.append(f"IBAN: {ag.pdf2_url}")
     if note_parts:
         lines.append("NOTE:" + " | ".join(note_parts))
 
@@ -556,5 +559,4 @@ def not_found(e):
 
 
 if __name__ == "__main__":
-    # Avvio locale (su Render viene usato gunicorn, quindi questo non viene eseguito)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
