@@ -133,7 +133,7 @@
 
       {# SITI INTERNET:
          - se è pay4you.store -> apre il sito a tutto schermo con ?from=card (freccia di ritorno nel sito)
-         - altrimenti resta in modal con iframe #}
+         - altrimenti APRE IN NUOVA SCHEDA (niente iframe, così funzionano anche quelli che bloccano l'iframe) #}
       {% for site in websites %}
       <div class="contact-row">
         <div class="icon">🌐</div>
@@ -253,39 +253,18 @@
     </section>
     {% endif %}
 
-    <!-- SEZIONE DOCUMENTI (PDF) con Email + WhatsApp -->
+    <!-- SEZIONE DOCUMENTI (PDF) -->
     {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
         {% for pdf_url in pdfs %}
-        <div class="pdf-item">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span class="pdf-icon">📄</span>
-            <span class="pdf-title">Documento {{ loop.index }}</span>
-          </div>
-          <div class="pdf-actions" style="display:flex; flex-wrap:wrap; gap:6px;">
-            <!-- Apri in modal / iframe nella card -->
-            <button type="button"
-                    class="link-button"
-                    onclick="openFrameModal('{{ pdf_url }}')">
-              Apri
-            </button>
-            <!-- Invia via Email -->
-            <a class="link-button"
-               style="text-decoration:none;"
-               href="mailto:?subject=Documento%20Pay4You&body=Ti%20invio%20questo%20documento:%0A{{ pdf_url|urlencode }}">
-              Email
-            </a>
-            <!-- Invia via WhatsApp -->
-            <a class="link-button"
-               style="text-decoration:none;"
-               href="https://wa.me/?text=Ti%20invio%20questo%20documento:%20{{ pdf_url|urlencode }}"
-               target="_blank" rel="noopener">
-              WhatsApp
-            </a>
-          </div>
-        </div>
+        <button type="button"
+                class="pdf-item"
+                onclick="openFrameModal('{{ pdf_url }}')">
+          <span class="pdf-icon">📄</span>
+          <span>Documento {{ loop.index }}</span>
+        </button>
         {% endfor %}
       </div>
     </section>
@@ -317,11 +296,30 @@
 <!-- MODAL QR / GALLERIA (IMMAGINI) -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width:96%; width:96%; max-height:90vh; overflow:auto;">
-    <h2>Visualizzazione</h2>
+    <h2>Visualizzazione immagine</h2>
     <img id="qr-modal-img"
          src=""
          alt="Immagine"
          style="max-width:100%; height:auto; display:block; margin:0 auto;">
+
+    <!-- CONDIVISIONE IMMAGINE DENTRO IL MODAL -->
+    <div id="img-share-row"
+         style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+      <a id="img-email"
+         class="link-button"
+         href="#"
+         style="text-decoration:none;">
+        ➡️ Invia per email
+      </a>
+      <a id="img-wa"
+         class="link-button"
+         href="#"
+         target="_blank" rel="noopener"
+         style="text-decoration:none;">
+        ➡️ Invia via WhatsApp
+      </a>
+    </div>
+
     <button type="button" class="modal-close-btn" onclick="closeQrModal()">
       Chiudi e torna alla card
     </button>
@@ -331,10 +329,29 @@
 <!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-    <h2>Visualizzazione</h2>
+    <h2>Visualizzazione documento</h2>
     <iframe id="frame-modal-iframe"
             src=""
-            style="width:100%; height: calc(90vh - 80px); border:none; border-radius: 12px; background:#000;"></iframe>
+            style="width:100%; height: calc(90vh - 120px); border:none; border-radius: 12px; background:#000;"></iframe>
+
+    <!-- CONDIVISIONE PDF DENTRO IL MODAL (solo se è un PDF) -->
+    <div id="frame-share-row"
+         style="margin-top:10px; display:none; flex-wrap:wrap; gap:8px; justify-content:center;">
+      <a id="frame-email"
+         class="link-button"
+         href="#"
+         style="text-decoration:none;">
+        ➡️ Invia per email
+      </a>
+      <a id="frame-wa"
+         class="link-button"
+         href="#"
+         target="_blank" rel="noopener"
+         style="text-decoration:none;">
+        ➡️ Invia via WhatsApp
+      </a>
+    </div>
+
     <button type="button" class="modal-close-btn" onclick="closeFrameModal()">
       Chiudi e torna alla card
     </button>
@@ -342,54 +359,92 @@
 </div>
 
 <script>
+  let currentImageUrl = null;
+  let currentFrameUrl = null;
+
+  // --- IMMAGINI (QR + GALLERIA) ---
   function openQrModal(url) {
     const img = document.getElementById('qr-modal-img');
     img.src = url;
+    currentImageUrl = url;
+    updateImageShareLinks();
     document.getElementById('qr-modal').style.display = 'flex';
   }
 
   function openGalleryModal(url) {
     const img = document.getElementById('qr-modal-img');
     img.src = url;
+    currentImageUrl = url;
+    updateImageShareLinks();
     document.getElementById('qr-modal').style.display = 'flex';
+  }
+
+  function updateImageShareLinks() {
+    const emailLink = document.getElementById('img-email');
+    const waLink = document.getElementById('img-wa');
+    if (!currentImageUrl || !emailLink || !waLink) return;
+
+    const enc = encodeURIComponent(currentImageUrl);
+    emailLink.href = "mailto:?subject=Immagine%20Pay4You&body=Ti%20invio%20questa%20immagine:%0A" + enc;
+    waLink.href = "https://wa.me/?text=Ti%20invio%20questa%20immagine:%20" + enc;
   }
 
   function closeQrModal() {
     document.getElementById('qr-modal').style.display = 'none';
     document.getElementById('qr-modal-img').src = "";
+    currentImageUrl = null;
   }
 
-  // Nuova funzione: decide come aprire il sito
-  // - se è pay4you.store → apre a tutto schermo con ?from=card
-  // - altrimenti usa la modal con iframe
+  // --- SITI / PDF ---
+  // Se è pay4you.store: stessa scheda con ?from=card (per mostrare freccia sul sito)
+  // Altrimenti: nuova scheda (niente iframe, niente freccia, ma funziona sempre)
   function openWebsiteFromCard(url) {
     if (url.indexOf('pay4you.store') !== -1) {
       try {
-        // Usa URL per aggiungere / aggiornare il parametro from=card
         var u = new URL(url, window.location.href);
         u.searchParams.set('from', 'card');
         window.location.href = u.toString();
       } catch (e) {
-        // Fallback per browser vecchi: gestione come stringa
         var base = url.split('#')[0];
         var sep = base.indexOf('?') === -1 ? '?' : '&';
         window.location.href = base + sep + 'from=card';
       }
     } else {
-      // Per altri siti manteniamo l'iframe dentro la card
-      openFrameModal(url);
+      // Siti esterni: apri in nuova scheda
+      window.open(url, '_blank', 'noopener');
     }
   }
 
   function openFrameModal(url) {
     const iframe = document.getElementById('frame-modal-iframe');
+    const shareRow = document.getElementById('frame-share-row');
+    const emailLink = document.getElementById('frame-email');
+    const waLink = document.getElementById('frame-wa');
+
     iframe.src = url;
+    currentFrameUrl = url;
     document.getElementById('frame-modal').style.display = 'flex';
+
+    // Se è un PDF, mostra i pulsanti di condivisione
+    if (currentFrameUrl && currentFrameUrl.toLowerCase().indexOf('.pdf') !== -1) {
+      const enc = encodeURIComponent(currentFrameUrl);
+      if (emailLink && waLink && shareRow) {
+        emailLink.href = "mailto:?subject=Documento%20Pay4You&body=Ti%20invio%20questo%20documento:%0A" + enc;
+        waLink.href = "https://wa.me/?text=Ti%20invio%20questo%20documento:%20" + enc;
+        shareRow.style.display = 'flex';
+      }
+    } else {
+      // Non è un PDF (es: viewer generico): niente pulsanti
+      if (shareRow) shareRow.style.display = 'none';
+    }
   }
 
   function closeFrameModal() {
     const iframe = document.getElementById('frame-modal-iframe');
+    const shareRow = document.getElementById('frame-share-row');
     iframe.src = "";
+    currentFrameUrl = null;
+    if (shareRow) shareRow.style.display = 'none';
     document.getElementById('frame-modal').style.display = 'none';
   }
 </script>
