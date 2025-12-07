@@ -14,6 +14,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
 
+# --------------------------------------------------
+# CONFIGURAZIONE BASE
+# --------------------------------------------------
 load_dotenv()
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
@@ -23,12 +26,11 @@ FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
 FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = APP_SECRET
-# 200 MB
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
-# 🔴 IMPORTANTISSIMO: DB su disco persistente Render
+# ⚠ IMPORTANTE: DB SU DISCO PERSISTENTE /var/data
 DB_URL = "sqlite:////var/data/data.db"
 
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -36,6 +38,9 @@ SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
+# --------------------------------------------------
+# MODELLO AGENTE
+# --------------------------------------------------
 class Agent(Base):
     _tablename_ = "agents"
 
@@ -45,25 +50,31 @@ class Agent(Base):
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
+
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
     emails = Column(String, nullable=True)
     websites = Column(String, nullable=True)
+
     facebook = Column(String, nullable=True)
     instagram = Column(String, nullable=True)
     linkedin = Column(String, nullable=True)
     tiktok = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
+
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
     addresses = Column(Text, nullable=True)
-    photo_url = Column(String, nullable=True)
+
+    photo_url = Column(String, nullable=True)       # foto profilo
+    extra_logo_url = Column(String, nullable=True)  # logo extra (nuovo progetto)
     gallery_urls = Column(Text, nullable=True)
-    # lista URL PDF separati da "|"
+
+    # pdf1_url usato come lista URL separata da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # tenuto per compatibilità
+    pdf2_url = Column(String, nullable=True)  # tenuto per eventuale compatibilità
 
 
 Base.metadata.create_all(engine)
@@ -88,10 +99,11 @@ def admin_required(f):
 # Firebase (se disponibile) + Upload locale
 # --------------------------------------------------
 def get_storage_client():
+    """Restituisce il client Firebase Storage se configurato, altrimenti None."""
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
             return None
-        from google.cloud import storage  # type: ignore
+        from google.cloud import storage  # noqa: F401
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         tmp.write(FIREBASE_CREDENTIALS_JSON.encode("utf-8"))
@@ -132,7 +144,7 @@ def upload_file(file_storage, folder="uploads"):
             app.logger.exception("Firebase upload failed: %s", e)
             # fallback locale
 
-    # Fallback locale
+    # Fallback locale: static/<folder>
     try:
         uploads_folder = os.path.join(app.static_folder, folder)
         os.makedirs(uploads_folder, exist_ok=True)
@@ -149,6 +161,7 @@ def save_cropped_image(data_url, folder="photos"):
     """
     Salva un'immagine base64 (dataURL da canvas) in static/<folder>
     e restituisce l'URL statico relativo.
+    Usato SOLO se il form invia un campo 'photo_cropped'.
     """
     if not data_url:
         return None
@@ -157,8 +170,8 @@ def save_cropped_image(data_url, folder="photos"):
         if "," in data_url:
             header, b64data = data_url.split(",", 1)
         else:
-            b64data = data_url
             header = ""
+            b64data = data_url
 
         ext = ".jpg"
         if "png" in header.lower():
@@ -181,10 +194,11 @@ def save_cropped_image(data_url, folder="photos"):
 
 
 def get_base_url():
-    b = BASE_URL or ""
-    if b:
-        return b
+    """Base URL pubblico della card."""
+    if BASE_URL:
+        return BASE_URL
     from flask import request
+
     return request.url_root.strip().rstrip("/")
 
 
@@ -280,20 +294,25 @@ def create_agent():
     if db.query(Agent).filter_by(slug=data["slug"]).first():
         return "Slug già esistente", 400
 
+    # FOTO PROFILO (ritagliata lato browser)
     photo = request.files.get("photo")
-    gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
     photo_url = None
     if cropped_b64:
+        # Se il form invia il base64 del ritaglio
         photo_url = save_cropped_image(cropped_b64, "photos")
     elif photo and photo.filename:
+        # Se il JS sostituisce direttamente il file input
         photo_url = upload_file(photo, "photos")
 
-    # PDF 1–12 (lista in pdf1_url separata da "|")
+    # LOGO EXTRA (nuovo progetto)
+    extra_logo_file = request.files.get("extra_logo")
+    extra_logo_url = upload_file(extra_logo_file, "logos") if extra_logo_file and extra_logo_file.filename else None
+
+    # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
-    for i in range(1, 13):
+    for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -301,9 +320,10 @@ def create_agent():
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
-    # GALLERIA (max 20)
+    # GALLERIA (max 12)
+    gallery_files = request.files.getlist("gallery")
     gallery_urls = []
-    for f in gallery_files[:20]:
+    for f in gallery_files[:12]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
@@ -312,6 +332,7 @@ def create_agent():
     ag = Agent(
         **data,
         photo_url=photo_url,
+        extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
         pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
@@ -365,11 +386,10 @@ def update_agent(slug):
     ]:
         setattr(ag, k, request.form.get(k, "").strip())
 
+    # FOTO PROFILO
     photo = request.files.get("photo")
-    gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se c'è ritaglio, sovrascrive
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -379,9 +399,16 @@ def update_agent(slug):
         if u:
             ag.photo_url = u
 
-    # PDF 1–12 – se carichi almeno un PDF nuovo, rimpiazziamo lista
+    # LOGO EXTRA
+    extra_logo_file = request.files.get("extra_logo")
+    if extra_logo_file and extra_logo_file.filename:
+        u = upload_file(extra_logo_file, "logos")
+        if u:
+            ag.extra_logo_url = u
+
+    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
-    for i in range(1, 13):
+    for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -390,10 +417,11 @@ def update_agent(slug):
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria (max 20)
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria
+    gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
-        for f in gallery_files[:20]:
+        for f in gallery_files[:12]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
@@ -446,7 +474,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – (se vorrai usare pagina dedicata)
+# VIEWER PDF – (se mai lo userai)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -488,32 +516,33 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
+
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
+    if getattr(ag, "company", None):
+        lines.append(f"ORG:{ag.company}")
+
     if getattr(ag, "phone_mobile", None):
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
+
     if getattr(ag, "websites", None):
-        for w in [x.strip() for x in ag.websites.split(",") if w.strip()]:
+        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
             lines.append(f"URL:{w}")
-    if getattr(ag, "company", None):
-        lines.append(f"ORG:{ag.company}")
+
+    # Aggiungiamo anche la card come URL
+    base = get_base_url()
+    lines.append(f"URL:{base}/{ag.slug}")
+
     if getattr(ag, "piva", None):
         lines.append(f"X-TAX-ID:{ag.piva}")
     if getattr(ag, "sdi", None):
         lines.append(f"X-SDI-CODE:{ag.sdi}")
-
-    note_parts = []
-    if getattr(ag, "piva", None):
-        note_parts.append(f"Partita IVA: {ag.piva}")
-    if getattr(ag, "sdi", None):
-        note_parts.append(f"SDI: {ag.sdi}")
-    if note_parts:
-        lines.append("NOTE:" + " | ".join(note_parts))
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
@@ -542,5 +571,9 @@ def not_found(e):
     return render_template("404.html"), 404
 
 
+# --------------------------------------------------
+# MAIN (per test locale)
+# --------------------------------------------------
 if _name_ == "_main_":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
