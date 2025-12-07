@@ -16,9 +16,6 @@ import qrcode
 
 load_dotenv()
 
-# --------------------------------------------------
-# CONFIGURAZIONE BASE
-# --------------------------------------------------
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
@@ -26,27 +23,18 @@ FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
 FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB (ampio margine)
 
-# 🔴 IMPORTANTE: DB su disco persistente Render
-DB_URL = "sqlite:////var/data/data.db"
-
-engine = create_engine(
-    DB_URL,
-    echo=False,
-    connect_args={"check_same_thread": False}
-)
+DB_URL = DB_URL = "sqlite:////var/data/data.db"
+engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
-# --------------------------------------------------
-# MODELLO AGENTE
-# --------------------------------------------------
 class Agent(Base):
-    _tablename_ = "agents"
+    __tablename__ = "agents"
 
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
@@ -54,37 +42,28 @@ class Agent(Base):
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
-
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
-
     emails = Column(String, nullable=True)
     websites = Column(String, nullable=True)
-
     facebook = Column(String, nullable=True)
     instagram = Column(String, nullable=True)
     linkedin = Column(String, nullable=True)
     tiktok = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
-
     whatsapp = Column(String, nullable=True)
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
-
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
+    extra_logo_url = Column(String, nullable=True)  # logo personalizzato (header + retro foto)
+
     gallery_urls = Column(Text, nullable=True)
-
-    # pdf1_url: lista di URL PDF separati da "|"
+    # pdf1_url contiene una lista di URL separati da "|" (fino a 12 PDF)
     pdf1_url = Column(String, nullable=True)
-
-    # pdf2_url: usato in passato per IBAN (lo lasciamo per compatibilità)
-    pdf2_url = Column(String, nullable=True)
-
-    # Logo extra personalizzato (header + retro avatar)
-    logo_extra_url = Column(String, nullable=True)
+    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
 
 
 Base.metadata.create_all(engine)
@@ -127,7 +106,7 @@ def get_storage_client():
 def upload_file(file_storage, folder="uploads"):
     """
     Se Firebase è configurato, carica su bucket.
-    Altrimenti salva in static/<folder> e restituisce URL relativo.
+    Altrimenti salva in static/<folder> e restituisce URL statico relativo.
     """
     if not file_storage or not file_storage.filename:
         return None
@@ -151,6 +130,7 @@ def upload_file(file_storage, folder="uploads"):
             return url
         except Exception as e:
             app.logger.exception("Firebase upload failed: %s", e)
+            # fallback locale
 
     # Fallback locale
     try:
@@ -168,17 +148,18 @@ def upload_file(file_storage, folder="uploads"):
 def save_cropped_image(data_url, folder="photos"):
     """
     Salva un'immagine base64 (dataURL da canvas) in static/<folder>
-    e restituisce l'URL relativo.
+    e restituisce l'URL statico relativo.
     """
     if not data_url:
         return None
 
     try:
+        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
         if "," in data_url:
             header, b64data = data_url.split(",", 1)
         else:
-            header = ""
             b64data = data_url
+            header = ""
 
         ext = ".jpg"
         if "png" in header.lower():
@@ -205,6 +186,7 @@ def get_base_url():
     if b:
         return b
     from flask import request
+
     return request.url_root.strip().rstrip("/")
 
 
@@ -301,26 +283,25 @@ def create_agent():
         return "Slug già esistente", 400
 
     photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    logo_extra_file = request.files.get("logo_extra")
-
-    # FOTO PROFILO (ritaglio se presente)
+    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
     photo_url = None
     if cropped_b64:
         photo_url = save_cropped_image(cropped_b64, "photos")
     elif photo and photo.filename:
         photo_url = upload_file(photo, "photos")
 
-    # LOGO EXTRA (se caricato)
-    logo_extra_url = None
-    if logo_extra_file and logo_extra_file.filename:
-        logo_extra_url = upload_file(logo_extra_file, "logos")
+    # LOGO EXTRA
+    extra_logo_url = None
+    if extra_logo and extra_logo.filename:
+        extra_logo_url = upload_file(extra_logo, "logos")
 
-    # PDF 1–6 (lista in pdf1_url separata da "|")
+    # PDF 1–12 (lista in pdf1_url separata da "|")
     pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -328,9 +309,9 @@ def create_agent():
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
-    # GALLERIA (max 12)
+    # GALLERIA (max 20)
     gallery_urls = []
-    for f in gallery_files[:12]:
+    for f in gallery_files[:20]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
@@ -339,9 +320,10 @@ def create_agent():
     ag = Agent(
         **data,
         photo_url=photo_url,
+        extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
+        pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
-        logo_extra_url=logo_extra_url,
     )
     db.add(ag)
     db.commit()
@@ -393,11 +375,11 @@ def update_agent(slug):
         setattr(ag, k, request.form.get(k, "").strip())
 
     photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
-    logo_extra_file = request.files.get("logo_extra")
 
-    # FOTO PROFILO (ritaglio prioritario)
+    # FOTO PROFILO – se c'è ritaglio, sovrascrive
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -407,15 +389,15 @@ def update_agent(slug):
         if u:
             ag.photo_url = u
 
-    # LOGO EXTRA (se carichi un nuovo logo, sostituisce quello vecchio)
-    if logo_extra_file and logo_extra_file.filename:
-        u = upload_file(logo_extra_file, "logos")
+    # LOGO EXTRA – se carichi un nuovo file, sostituisce
+    if extra_logo and extra_logo.filename:
+        u = upload_file(extra_logo, "logos")
         if u:
-            ag.logo_extra_url = u
+            ag.extra_logo_url = u
 
-    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
+    # PDF 1–12 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -424,10 +406,10 @@ def update_agent(slug):
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria (max 20)
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
-        for f in gallery_files[:12]:
+        for f in gallery_files[:20]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
@@ -480,7 +462,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro (se usi la pagina dedicata)
+# VIEWER PDF – con freccia indietro (se usi template dedicato)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -507,9 +489,6 @@ def vcard(slug):
     if not ag:
         abort(404)
 
-    base = get_base_url()
-    card_url = f"{base}/{ag.slug}"
-
     full_name = ag.name or ""
     parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
@@ -525,45 +504,36 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
-
     if getattr(ag, "role", None):
         lines.append(f"TITLE:{ag.role}")
-    if getattr(ag, "company", None):
-        lines.append(f"ORG:{ag.company}")
-
     if getattr(ag, "phone_mobile", None):
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
-
-    # Email multiple
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
-
-    # Siti web + URL card come sito aggiuntivo
-    websites = []
     if getattr(ag, "websites", None):
-        websites.extend([w.strip() for w in ag.websites.split(",") if w.strip()])
-    if card_url and card_url not in websites:
-        websites.append(card_url)
+        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
+            lines.append(f"URL:{w}")
 
-    for w in websites:
-        lines.append(f"URL:{w}")
+    # Aggiungiamo anche l'URL della card digitale
+    base = get_base_url()
+    card_url = f"{base}/{ag.slug}"
+    lines.append(f"URL:{card_url}")
 
-    # Indirizzi (ADR)
-    if getattr(ag, "addresses", None):
-        for addr in [a.strip() for a in ag.addresses.split("\n") if a.strip()]:
-            lines.append(f"ADR;TYPE=WORK:;;;;;{addr}")
+    if getattr(ag, "company", None):
+        lines.append(f"ORG:{ag.company}")
+    if getattr(ag, "piva", None):
+        lines.append(f"X-TAX-ID:{ag.piva}")
+    if getattr(ag, "sdi", None):
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
 
-    # Dati fiscali in NOTE + campi custom
     note_parts = []
     if getattr(ag, "piva", None):
         note_parts.append(f"Partita IVA: {ag.piva}")
-        lines.append(f"X-TAX-ID:{ag.piva}")
     if getattr(ag, "sdi", None):
         note_parts.append(f"SDI: {ag.sdi}")
-        lines.append(f"X-SDI-CODE:{ag.sdi}")
     if note_parts:
         lines.append("NOTE:" + " | ".join(note_parts))
 
@@ -571,7 +541,7 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename=\"{ag.slug}.vcf\"'
+    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     return resp
 
 
@@ -594,5 +564,5 @@ def not_found(e):
     return render_template("404.html"), 404
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
