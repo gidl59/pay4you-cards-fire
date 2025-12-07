@@ -1,727 +1,382 @@
 {% extends "base.html" %}
 
-
 {% block title %}{{ ag.name }}{% endblock %}
 
-
 {% block content %}
-
 <div class="card-fullscreen">
-
   <!-- Sfondo blur -->
-
   <div class="card-glass-bg"></div>
 
-
   <div class="card-outer">
-
     <!-- Header con logo -->
-
     <div class="card-header-row">
-
       <img
-
         src="{{ url_for('static', filename='logo.png') }}"
-
         alt="Pay4You"
-
         class="card-logo-big"
-
       >
-
     </div>
-
 
     <!-- Blocco business: foto + nome + ruoli -->
-
     <div class="business-card">
-
       <div class="card-profile-photo-wrapper">
-
         {% if ag.photo_url %}
-
         <!-- Avatar fronte/retro con rotazione lenta -->
-
         <div class="avatar-flip">
-
           <div class="avatar-inner">
-
             <!-- Fronte: foto agente -->
-
             <div class="avatar-face avatar-front">
-
               <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
-
             </div>
-
             <!-- Retro: logo Pay4You -->
-
             <div class="avatar-face avatar-back">
-
               <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-
             </div>
-
           </div>
-
         </div>
-
         {% else %}
-
         <!-- Se non c'è foto, mostra solo il logo tondo -->
-
         <div class="avatar-flip">
-
           <div class="avatar-inner">
-
             <div class="avatar-face avatar-front">
-
               <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-
             </div>
-
             <div class="avatar-face avatar-back">
-
               <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-
             </div>
-
           </div>
-
         </div>
-
         {% endif %}
-
       </div>
-
 
       <div class="card-name-block">
-
         <h1 class="card-name">{{ ag.name }}</h1>
 
-
         {% if ag.role %}
-
           <div class="card-role-main">{{ ag.role }}</div>
-
         {% endif %}
-
 
         {% if ag.company %}
-
           <div class="card-role-sub">{{ ag.company }}</div>
-
         {% endif %}
-
 
         {% if ag.bio %}
-
           <div class="card-bio">{{ ag.bio }}</div>
-
         {% endif %}
-
       </div>
-
     </div>
-
 
     <!-- SEZIONE CONTATTI -->
-
     <section class="card-section">
-
       <h2>Contatti</h2>
 
-
       {% if ag.phone_mobile %}
-
       <div class="contact-row">
-
         <div class="icon">📱</div>
-
         <div class="label">Chiama mobile</div>
-
         <div class="value">
-
           <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {% if ag.phone_office %}
-
       <div class="contact-row">
-
-        <div class="icon">☎️</div>
-
+        <div class="icon">☎</div>
         <div class="label">Chiama ufficio</div>
-
         <div class="value">
-
           <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {% if ag.whatsapp %}
-
       <div class="contact-row whatsapp-row">
-
         <div class="icon">🟢</div>
-
         <div class="label">WhatsApp</div>
-
         <div class="value">
-
           <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}">
-
             {{ ag.whatsapp }}
-
           </a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {% for email in emails %}
-
       <div class="contact-row">
-
         <div class="icon">📧</div>
-
         <div class="label">Email</div>
-
         <div class="value">
-
           <a href="mailto:{{ email }}">{{ email }}</a>
-
         </div>
-
       </div>
-
       {% endfor %}
-
 
       {% if ag.pec %}
-
       <div class="contact-row">
-
         <div class="icon">📮</div>
-
         <div class="label">PEC</div>
-
         <div class="value">
-
           <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {# SITI INTERNET #}
-
       {% for site in websites %}
-
         {% set is_pay4you = 'pay4you.store' in site %}
-
         {% if is_pay4you %}
-
           {% if '?' in site %}
-
             {% set site_url = site ~ '&from=card&slug=' ~ ag.slug %}
-
           {% else %}
-
             {% set site_url = site ~ '?from=card&slug=' ~ ag.slug %}
-
           {% endif %}
-
         {% else %}
-
           {% set site_url = site %}
-
         {% endif %}
-
       <div class="contact-row">
-
         <div class="icon">🌐</div>
-
         <div class="label">Sito internet</div>
-
         <div class="value">
-
           <a href="{{ site_url }}" target="_blank" rel="noopener noreferrer">
-
             Vai al sito
-
           </a>
-
         </div>
-
       </div>
-
       {% endfor %}
-
 
       {% if ag.facebook %}
-
       <div class="contact-row social-row">
-
         <div class="icon">📘</div>
-
         <div class="label">Facebook</div>
-
         <div class="value">
-
           <a href="{{ ag.facebook }}" target="_blank" rel="noopener noreferrer">
-
             Profilo
-
           </a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {% if ag.instagram %}
-
       <div class="contact-row social-row">
-
         <div class="icon">📷</div>
-
         <div class="label">Instagram</div>
-
         <div class="value">
-
           <a href="{{ ag.instagram }}" target="_blank" rel="noopener noreferrer">
-
             Profilo
-
           </a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       {% if ag.linkedin %}
-
       <div class="contact-row social-row">
-
         <div class="icon">💼</div>
-
         <div class="label">LinkedIn</div>
-
         <div class="value">
-
           <a href="{{ ag.linkedin }}" target="_blank" rel="noopener noreferrer">
-
             Profilo
-
           </a>
-
         </div>
-
       </div>
-
       {% endif %}
-
 
       <!-- Link profilo card -->
-
       <div class="contact-row">
-
         <div class="icon">🪪</div>
-
         <div class="label">Profilo digitale</div>
-
         <div class="value">
-
           <a href="{{ base_url }}/{{ ag.slug }}" target="_blank" rel="noopener noreferrer">
-
             Apri card
-
           </a>
-
         </div>
-
       </div>
-
 
       <!-- vCard -->
-
       <div class="contact-row">
-
         <div class="icon">💾</div>
-
         <div class="label">Salva contatto</div>
-
         <div class="value">
-
           <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-
             Salva contatto
-
           </a>
-
         </div>
-
       </div>
-
 
       <!-- QR con modal -->
-
       <div class="contact-row">
-
         <div class="icon">🔳</div>
-
         <div class="label">QR code</div>
-
         <div class="value">
-
           <button type="button"
-
                   class="link-button"
-
                   onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">
-
             Apri QR
-
           </button>
-
         </div>
-
       </div>
-
     </section>
-
 
     <!-- SEZIONE DATI FISCALI -->
-
     {% if ag.piva or ag.sdi %}
-
     <section class="card-section">
-
       <h2>Dati fiscali</h2>
 
-
       {% if ag.piva %}
-
       <div class="address-row">
-
-        <div class="icon">🏛️</div>
-
+        <div class="icon">🏛</div>
         <span class="address-value">Partita IVA {{ ag.piva }}</span>
-
       </div>
-
       {% endif %}
-
 
       {% if ag.sdi %}
-
       <div class="address-row">
-
         <div class="icon">📨</div>
-
         <span class="address-value">Codice SDI {{ ag.sdi }}</span>
-
       </div>
-
       {% endif %}
-
     </section>
-
     {% endif %}
-
 
     <!-- SEZIONE INDIRIZZI -->
-
     {% if addresses %}
-
     <section class="card-section">
-
       <h2>Indirizzi</h2>
-
       {% for addr in addresses %}
-
       <div class="address-row">
-
         <span class="address-value">
-
           <a href="https://www.google.com/maps/search/{{ addr|urlencode }}"
-
              target="_blank" rel="noopener noreferrer"
-
              style="color:inherit;text-decoration:underline;">
-
             {{ addr }}
-
           </a>
-
         </span>
-
       </div>
-
       {% endfor %}
-
     </section>
-
     {% endif %}
-
 
     <!-- SEZIONE DOCUMENTI (PDF) -->
-
     {% if pdfs %}
-
     <section class="card-section">
-
       <h2>Documenti</h2>
-
       <div class="pdf-list">
-
         {% for pdf_url in pdfs %}
-
         <div class="pdf-item">
-
           <button type="button"
-
                   class="pdf-open-btn"
-
                   onclick="openFrameModal('{{ pdf_url }}')">
-
             <span class="pdf-icon">📄</span>
-
             <span>Documento {{ loop.index }}</span>
-
           </button>
-
           <div class="pdf-share" style="margin-left:8px;font-size:12px;">
-
             <button type="button"
-
                     class="link-button"
-
                     onclick="sharePdfWhatsApp('{{ pdf_url }}')">
-
               WhatsApp
-
             </button>
-
             <button type="button"
-
                     class="link-button"
-
                     onclick="sharePdfEmail('{{ pdf_url }}', {{ loop.index }})">
-
               Email
-
             </button>
-
           </div>
-
         </div>
-
         {% endfor %}
-
       </div>
-
     </section>
-
     {% endif %}
-
 
     <!-- SEZIONE GALLERIA FOTO -->
-
     {% if gallery %}
-
     <section class="card-section">
-
       <h2>Galleria foto</h2>
-
       <div class="gallery-scroll">
-
         {% for img in gallery %}
-
         <button type="button"
-
                 class="gallery-thumb-btn"
-
                 onclick="openGalleryModal('{{ img }}')">
-
           <img src="{{ img }}" alt="Foto Pay4You">
-
         </button>
-
         {% endfor %}
-
       </div>
-
     </section>
-
     {% endif %}
 
-
     <!-- Footer opzionale -->
-
     <div class="card-footer">
-
       Pay4You – Card digitale personale
-
     </div>
-
   </div>
-
 </div>
-
 
 <!-- MODAL QR / GALLERIA (IMMAGINI) -->
-
 <div id="qr-modal" class="modal-overlay" style="display:none;">
-
   <div class="modal-box">
-
     <h2>Visualizzazione</h2>
-
     <img id="qr-modal-img" src="" alt="Immagine"
-
          style="max-width:100%;max-height:80vh;width:auto;height:auto;object-fit:contain;">
-
     <button type="button" class="modal-close-btn" onclick="closeQrModal()">
-
       Chiudi e torna alla card
-
     </button>
-
   </div>
-
 </div>
-
 
 <!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
-
 <div id="frame-modal" class="modal-overlay" style="display:none;">
-
   <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-
     <h2>Visualizzazione</h2>
-
     <iframe id="frame-modal-iframe"
-
             src=""
-
             style="width:100%; height: calc(90vh - 80px); border:none; border-radius: 12px; background:#000;"></iframe>
-
     <button type="button" class="modal-close-btn" onclick="closeFrameModal()">
-
       Chiudi e torna alla card
-
     </button>
-
   </div>
-
 </div>
 
-
 <script>
-
   function openQrModal(url) {
-
     const img = document.getElementById('qr-modal-img');
-
     img.src = url;
-
     document.getElementById('qr-modal').style.display = 'flex';
-
   }
-
 
   function openGalleryModal(url) {
-
     const img = document.getElementById('qr-modal-img');
-
     img.src = url;
-
     document.getElementById('qr-modal').style.display = 'flex';
-
   }
-
 
   function closeQrModal() {
-
     document.getElementById('qr-modal').style.display = 'none';
-
     document.getElementById('qr-modal-img').src = "";
-
   }
-
 
   function openFrameModal(url) {
-
     const iframe = document.getElementById('frame-modal-iframe');
-
     iframe.src = url;
-
     document.getElementById('frame-modal').style.display = 'flex';
-
   }
-
 
   function closeFrameModal() {
-
     const iframe = document.getElementById('frame-modal-iframe');
-
     iframe.src = "";
-
     document.getElementById('frame-modal').style.display = 'none';
-
   }
-
 
   function sharePdfWhatsApp(url) {
-
     const text = 'Ti invio il documento: ' + url;
-
     const wa = 'https://wa.me/?text=' + encodeURIComponent(text);
-
     window.open(wa, '_blank');
-
   }
-
 
   function sharePdfEmail(url, index) {
-
     const subject = 'Documento ' + index;
-
     const body = 'Ti invio il link al documento:\n\n' + url;
-
     const mail = 'mailto:?subject=' + encodeURIComponent(subject) +
-
                  '&body=' + encodeURIComponent(body);
-
     window.location.href = mail;
-
   }
-
 </script>
-
 {% endblock %}
-
