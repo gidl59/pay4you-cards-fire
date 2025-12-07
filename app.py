@@ -23,7 +23,7 @@ FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
 FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = APP_SECRET
 # 200 MB
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
