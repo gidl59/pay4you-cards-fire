@@ -27,7 +27,7 @@ app = Flask(_name_)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
-DB_URL = "sqlite:///data.db"  # se vuoi poi lo cambiamo su /var/data/data.db
+DB_URL = "sqlite:////var/data/data.db"  # se vuoi poi lo cambiamo su /var/data/data.db
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
