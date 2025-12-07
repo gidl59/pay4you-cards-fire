@@ -25,9 +25,12 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(_name_)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
+# 200 MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 
-DB_URL = "sqlite:////var/data/data.db"  # se vuoi poi lo cambiamo su /var/data/data.db
+# 🔴 IMPORTANTISSIMO: DB su disco persistente Render
+DB_URL = "sqlite:////var/data/data.db"
+
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -182,7 +185,6 @@ def get_base_url():
     if b:
         return b
     from flask import request
-
     return request.url_root.strip().rstrip("/")
 
 
@@ -496,7 +498,7 @@ def vcard(slug):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
     if getattr(ag, "websites", None):
-        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
+        for w in [x.strip() for x in ag.websites.split(",") if w.strip()]:
             lines.append(f"URL:{w}")
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
