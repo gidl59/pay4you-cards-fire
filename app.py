@@ -14,11 +14,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
 
+load_dotenv()
+
 # --------------------------------------------------
 # CONFIGURAZIONE BASE
 # --------------------------------------------------
-load_dotenv()
-
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
@@ -28,11 +28,16 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(_name_)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 20MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
+# 🔴 IMPORTANTE: DB su disco persistente Render
 DB_URL = "sqlite:////var/data/data.db"
 
-engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DB_URL,
+    echo=False,
+    connect_args={"check_same_thread": False}
+)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -52,6 +57,7 @@ class Agent(Base):
 
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
+
     emails = Column(String, nullable=True)
     websites = Column(String, nullable=True)
 
@@ -60,20 +66,25 @@ class Agent(Base):
     linkedin = Column(String, nullable=True)
     tiktok = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
-    whatsapp = Column(String, nullable=True)
 
+    whatsapp = Column(String, nullable=True)
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
+
     addresses = Column(Text, nullable=True)
 
-    photo_url = Column(String, nullable=True)       # foto profilo
-    extra_logo_url = Column(String, nullable=True)  # logo extra (nuovo progetto)
+    photo_url = Column(String, nullable=True)
     gallery_urls = Column(Text, nullable=True)
 
-    # pdf1_url usato come lista URL separata da "|"
+    # pdf1_url: lista di URL PDF separati da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # tenuto per eventuale compatibilità
+
+    # pdf2_url: usato in passato per IBAN (lo lasciamo per compatibilità)
+    pdf2_url = Column(String, nullable=True)
+
+    # Logo extra personalizzato (header + retro avatar)
+    logo_extra_url = Column(String, nullable=True)
 
 
 Base.metadata.create_all(engine)
@@ -98,11 +109,10 @@ def admin_required(f):
 # Firebase (se disponibile) + Upload locale
 # --------------------------------------------------
 def get_storage_client():
-    """Restituisce il client Firebase Storage se configurato, altrimenti None."""
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
             return None
-        from google.cloud import storage  # noqa: F401
+        from google.cloud import storage
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         tmp.write(FIREBASE_CREDENTIALS_JSON.encode("utf-8"))
@@ -117,7 +127,7 @@ def get_storage_client():
 def upload_file(file_storage, folder="uploads"):
     """
     Se Firebase è configurato, carica su bucket.
-    Altrimenti salva in static/<folder> e restituisce URL statico relativo.
+    Altrimenti salva in static/<folder> e restituisce URL relativo.
     """
     if not file_storage or not file_storage.filename:
         return None
@@ -141,9 +151,8 @@ def upload_file(file_storage, folder="uploads"):
             return url
         except Exception as e:
             app.logger.exception("Firebase upload failed: %s", e)
-            # fallback locale
 
-    # Fallback locale: static/<folder>
+    # Fallback locale
     try:
         uploads_folder = os.path.join(app.static_folder, folder)
         os.makedirs(uploads_folder, exist_ok=True)
@@ -159,8 +168,7 @@ def upload_file(file_storage, folder="uploads"):
 def save_cropped_image(data_url, folder="photos"):
     """
     Salva un'immagine base64 (dataURL da canvas) in static/<folder>
-    e restituisce l'URL statico relativo.
-    Usato SOLO se il form invia un campo 'photo_cropped'.
+    e restituisce l'URL relativo.
     """
     if not data_url:
         return None
@@ -193,11 +201,10 @@ def save_cropped_image(data_url, folder="photos"):
 
 
 def get_base_url():
-    """Base URL pubblico della card."""
-    if BASE_URL:
-        return BASE_URL
+    b = BASE_URL or ""
+    if b:
+        return b
     from flask import request
-
     return request.url_root.strip().rstrip("/")
 
 
@@ -293,21 +300,23 @@ def create_agent():
     if db.query(Agent).filter_by(slug=data["slug"]).first():
         return "Slug già esistente", 400
 
-    # FOTO PROFILO (ritagliata lato browser)
     photo = request.files.get("photo")
+    gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
+    logo_extra_file = request.files.get("logo_extra")
+
+    # FOTO PROFILO (ritaglio se presente)
     photo_url = None
     if cropped_b64:
-        # Se il form invia il base64 del ritaglio
         photo_url = save_cropped_image(cropped_b64, "photos")
     elif photo and photo.filename:
-        # Se il JS sostituisce direttamente il file input
         photo_url = upload_file(photo, "photos")
 
-    # LOGO EXTRA (nuovo progetto)
-    extra_logo_file = request.files.get("extra_logo")
-    extra_logo_url = upload_file(extra_logo_file, "logos") if extra_logo_file and extra_logo_file.filename else None
+    # LOGO EXTRA (se caricato)
+    logo_extra_url = None
+    if logo_extra_file and logo_extra_file.filename:
+        logo_extra_url = upload_file(logo_extra_file, "logos")
 
     # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
@@ -320,7 +329,6 @@ def create_agent():
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
     # GALLERIA (max 12)
-    gallery_files = request.files.getlist("gallery")
     gallery_urls = []
     for f in gallery_files[:12]:
         if f and f.filename:
@@ -331,10 +339,9 @@ def create_agent():
     ag = Agent(
         **data,
         photo_url=photo_url,
-        extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
-        pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
+        logo_extra_url=logo_extra_url,
     )
     db.add(ag)
     db.commit()
@@ -385,10 +392,12 @@ def update_agent(slug):
     ]:
         setattr(ag, k, request.form.get(k, "").strip())
 
-    # FOTO PROFILO
     photo = request.files.get("photo")
+    gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
+    logo_extra_file = request.files.get("logo_extra")
 
+    # FOTO PROFILO (ritaglio prioritario)
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -398,12 +407,11 @@ def update_agent(slug):
         if u:
             ag.photo_url = u
 
-    # LOGO EXTRA
-    extra_logo_file = request.files.get("extra_logo")
-    if extra_logo_file and extra_logo_file.filename:
-        u = upload_file(extra_logo_file, "logos")
+    # LOGO EXTRA (se carichi un nuovo logo, sostituisce quello vecchio)
+    if logo_extra_file and logo_extra_file.filename:
+        u = upload_file(logo_extra_file, "logos")
         if u:
-            ag.extra_logo_url = u
+            ag.logo_extra_url = u
 
     # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
@@ -417,7 +425,6 @@ def update_agent(slug):
         ag.pdf1_url = "|".join(new_pdf_urls)
 
     # GALLERIA – se carichi nuove foto, sostituisci la galleria
-    gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
         for f in gallery_files[:12]:
@@ -473,7 +480,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – (se mai lo userai)
+# VIEWER PDF – con freccia indietro (se usi la pagina dedicata)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -499,6 +506,9 @@ def vcard(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+
+    base = get_base_url()
+    card_url = f"{base}/{ag.slug}"
 
     full_name = ag.name or ""
     parts = full_name.strip().split(" ", 1)
@@ -526,28 +536,42 @@ def vcard(slug):
     if getattr(ag, "phone_office", None):
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
 
+    # Email multiple
     if getattr(ag, "emails", None):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
 
+    # Siti web + URL card come sito aggiuntivo
+    websites = []
     if getattr(ag, "websites", None):
-        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
-            lines.append(f"URL:{w}")
+        websites.extend([w.strip() for w in ag.websites.split(",") if w.strip()])
+    if card_url and card_url not in websites:
+        websites.append(card_url)
 
-    # Aggiungiamo anche la card come URL
-    base = get_base_url()
-    lines.append(f"URL:{base}/{ag.slug}")
+    for w in websites:
+        lines.append(f"URL:{w}")
 
+    # Indirizzi (ADR)
+    if getattr(ag, "addresses", None):
+        for addr in [a.strip() for a in ag.addresses.split("\n") if a.strip()]:
+            lines.append(f"ADR;TYPE=WORK:;;;;;{addr}")
+
+    # Dati fiscali in NOTE + campi custom
+    note_parts = []
     if getattr(ag, "piva", None):
+        note_parts.append(f"Partita IVA: {ag.piva}")
         lines.append(f"X-TAX-ID:{ag.piva}")
     if getattr(ag, "sdi", None):
+        note_parts.append(f"SDI: {ag.sdi}")
         lines.append(f"X-SDI-CODE:{ag.sdi}")
+    if note_parts:
+        lines.append("NOTE:" + " | ".join(note_parts))
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    resp.headers["Content-Disposition"] = f'attachment; filename=\"{ag.slug}.vcf\"'
     return resp
 
 
@@ -570,9 +594,5 @@ def not_found(e):
     return render_template("404.html"), 404
 
 
-# --------------------------------------------------
-# MAIN (per test locale)
-# --------------------------------------------------
 if _name_ == "_main_":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
