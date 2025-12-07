@@ -28,9 +28,8 @@ FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
 app = Flask(_name_)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 20MB
 
-# ⚠ IMPORTANTE: DB SU DISCO PERSISTENTE /var/data
 DB_URL = "sqlite:////var/data/data.db"
 
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
