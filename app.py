@@ -23,18 +23,18 @@ FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_BUCKET = os.getenv("FIREBASE_BUCKET")
 FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB (ampio margine)
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
-DB_URL = DB_URL = "sqlite:////var/data/data.db"
+DB_URL = "sqlite:///data.db"  # se vuoi poi lo cambiamo su /var/data/data.db
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
 class Agent(Base):
-    __tablename__ = "agents"
+    _tablename_ = "agents"
 
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
@@ -56,14 +56,11 @@ class Agent(Base):
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
     addresses = Column(Text, nullable=True)
-
     photo_url = Column(String, nullable=True)
-    extra_logo_url = Column(String, nullable=True)  # logo personalizzato (header + retro foto)
-
     gallery_urls = Column(Text, nullable=True)
-    # useremo pdf1_url come lista URL separata da "|"
+    # lista URL PDF separati da "|"
     pdf1_url = Column(String, nullable=True)
-    pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
+    pdf2_url = Column(String, nullable=True)  # tenuto per compatibilità
 
 
 Base.metadata.create_all(engine)
@@ -91,7 +88,7 @@ def get_storage_client():
     try:
         if not (FIREBASE_BUCKET and FIREBASE_CREDENTIALS_JSON):
             return None
-        from google.cloud import storage
+        from google.cloud import storage  # type: ignore
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         tmp.write(FIREBASE_CREDENTIALS_JSON.encode("utf-8"))
@@ -154,7 +151,6 @@ def save_cropped_image(data_url, folder="photos"):
         return None
 
     try:
-        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
         if "," in data_url:
             header, b64data = data_url.split(",", 1)
         else:
@@ -283,7 +279,6 @@ def create_agent():
         return "Slug già esistente", 400
 
     photo = request.files.get("photo")
-    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
@@ -294,14 +289,9 @@ def create_agent():
     elif photo and photo.filename:
         photo_url = upload_file(photo, "photos")
 
-    # LOGO EXTRA
-    extra_logo_url = None
-    if extra_logo and extra_logo.filename:
-        extra_logo_url = upload_file(extra_logo, "logos")
-
-    # PDF 1–6 (lista in pdf1_url separata da "|")
+    # PDF 1–12 (lista in pdf1_url separata da "|")
     pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -309,9 +299,9 @@ def create_agent():
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
-    # GALLERIA (max 12)
+    # GALLERIA (max 20)
     gallery_urls = []
-    for f in gallery_files[:12]:
+    for f in gallery_files[:20]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
@@ -320,7 +310,6 @@ def create_agent():
     ag = Agent(
         **data,
         photo_url=photo_url,
-        extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
         pdf2_url=None,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
@@ -375,7 +364,6 @@ def update_agent(slug):
         setattr(ag, k, request.form.get(k, "").strip())
 
     photo = request.files.get("photo")
-    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
@@ -389,15 +377,9 @@ def update_agent(slug):
         if u:
             ag.photo_url = u
 
-    # LOGO EXTRA – se carichi un nuovo file, sostituisce
-    if extra_logo and extra_logo.filename:
-        u = upload_file(extra_logo, "logos")
-        if u:
-            ag.extra_logo_url = u
-
-    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
+    # PDF 1–12 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -406,10 +388,10 @@ def update_agent(slug):
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria (max 20)
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
-        for f in gallery_files[:12]:
+        for f in gallery_files[:20]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
@@ -462,7 +444,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro (se usi template dedicato)
+# VIEWER PDF – (se vorrai usare pagina dedicata)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -514,14 +496,8 @@ def vcard(slug):
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
     if getattr(ag, "websites", None):
-        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
+        for w in [x.strip() for w in ag.websites.split(",") if w.strip()]:
             lines.append(f"URL:{w}")
-
-    # Aggiungiamo anche l'URL della card digitale
-    base = get_base_url()
-    card_url = f"{base}/{ag.slug}"
-    lines.append(f"URL:{card_url}")
-
     if getattr(ag, "company", None):
         lines.append(f"ORG:{ag.company}")
     if getattr(ag, "piva", None):
@@ -541,7 +517,7 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename=\"{ag.slug}.vcf\"'
+    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     return resp
 
 
@@ -564,5 +540,5 @@ def not_found(e):
     return render_template("404.html"), 404
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000)
