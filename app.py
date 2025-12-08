@@ -27,7 +27,7 @@ app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB (ampio margine)
 
-DB_URL = DB_URL = "sqlite:////var/data/data.db"
+DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -61,7 +61,7 @@ class Agent(Base):
     extra_logo_url = Column(String, nullable=True)  # logo personalizzato (header + retro foto)
 
     gallery_urls = Column(Text, nullable=True)
-    # pdf1_url contiene una lista di URL separati da "|" (fino a 12 PDF)
+    # useremo pdf1_url come lista URL separata da "|"
     pdf1_url = Column(String, nullable=True)
     pdf2_url = Column(String, nullable=True)  # tenuta per compatibilità
 
@@ -139,7 +139,9 @@ def upload_file(file_storage, folder="uploads"):
         filename = f"{uuid.uuid4().hex}{ext}"
         fullpath = os.path.join(uploads_folder, filename)
         file_storage.save(fullpath)
-        return url_for("static", filename=f"{folder}/{filename}", _external=False)
+        # URL relativo /static/folder/filename
+        rel_path = os.path.relpath(fullpath, app.root_path).replace(os.path.sep, "/")
+        return "/" + rel_path
     except Exception as e:
         app.logger.exception("Local upload failed: %s", e)
         return None
@@ -175,7 +177,8 @@ def save_cropped_image(data_url, folder="photos"):
         with open(fullpath, "wb") as f:
             f.write(img_bytes)
 
-        return url_for("static", filename=f"{folder}/{filename}", _external=False)
+        rel_path = os.path.relpath(fullpath, app.root_path).replace(os.path.sep, "/")
+        return "/" + rel_path
     except Exception as e:
         app.logger.exception("save_cropped_image failed: %s", e)
         return None
@@ -299,9 +302,9 @@ def create_agent():
     if extra_logo and extra_logo.filename:
         extra_logo_url = upload_file(extra_logo, "logos")
 
-    # PDF 1–12 (lista in pdf1_url separata da "|")
+    # PDF 1–6 (lista in pdf1_url separata da "|")
     pdf_urls = []
-    for i in range(1, 13):
+    for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -309,9 +312,9 @@ def create_agent():
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
-    # GALLERIA (max 20)
+    # GALLERIA (max 12)
     gallery_urls = []
-    for f in gallery_files[:20]:
+    for f in gallery_files[:12]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
@@ -395,9 +398,9 @@ def update_agent(slug):
         if u:
             ag.extra_logo_url = u
 
-    # PDF 1–12 – se carichi almeno un PDF nuovo, rimpiazziamo lista
+    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
-    for i in range(1, 13):
+    for i in range(1, 7):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -406,10 +409,10 @@ def update_agent(slug):
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria (max 20)
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
-        for f in gallery_files[:20]:
+        for f in gallery_files[:12]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
@@ -504,40 +507,67 @@ def vcard(slug):
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
-    if getattr(ag, "role", None):
+
+    # FOTO EMBEDDED BASE64 (se l'immagine è salvata localmente in static/)
+    if ag.photo_url:
+        try:
+            photo_path = ag.photo_url
+
+            # Normalizziamo percorsi tipo "/static/..." o "static/..."
+            if photo_path.startswith("/"):
+                photo_path = photo_path[1:]
+
+            local_path = os.path.join(app.root_path, photo_path)
+            if os.path.exists(local_path):
+                with open(local_path, "rb") as img_file:
+                    b64_photo = base64.b64encode(img_file.read()).decode("utf-8")
+                # La maggior parte dei client accetta TYPE=JPEG anche se il file è PNG
+                lines.append(f"PHOTO;ENCODING=b;TYPE=JPEG:{b64_photo}")
+        except Exception as e:
+            app.logger.exception("Errore embedding foto vCard: %s", e)
+
+    # DATI CONTATTO
+    if ag.role:
         lines.append(f"TITLE:{ag.role}")
-    if getattr(ag, "phone_mobile", None):
+
+    if ag.phone_mobile:
         lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
-    if getattr(ag, "phone_office", None):
+
+    if ag.phone_office:
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
-    if getattr(ag, "emails", None):
+
+    if ag.emails:
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
-    if getattr(ag, "websites", None):
+
+    if ag.websites:
         for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
             lines.append(f"URL:{w}")
 
-    # Aggiungiamo anche l'URL della card digitale
+    # URL della card digitale
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
     lines.append(f"URL:{card_url}")
 
-    if getattr(ag, "company", None):
+    if ag.company:
         lines.append(f"ORG:{ag.company}")
-    if getattr(ag, "piva", None):
+
+    if ag.piva:
         lines.append(f"X-TAX-ID:{ag.piva}")
-    if getattr(ag, "sdi", None):
+
+    if ag.sdi:
         lines.append(f"X-SDI-CODE:{ag.sdi}")
 
     note_parts = []
-    if getattr(ag, "piva", None):
+    if ag.piva:
         note_parts.append(f"Partita IVA: {ag.piva}")
-    if getattr(ag, "sdi", None):
+    if ag.sdi:
         note_parts.append(f"SDI: {ag.sdi}")
     if note_parts:
         lines.append("NOTE:" + " | ".join(note_parts))
 
     lines.append("END:VCARD")
+
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
