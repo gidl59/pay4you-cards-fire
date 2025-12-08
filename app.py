@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
-import urllib.parse  # <-- per ricavare nome file dai vecchi URL
+import urllib.parse  # <-- per ricavare nome file da URL
 
 load_dotenv()
 
@@ -60,7 +60,7 @@ class Agent(Base):
 
     # gallery_urls = "url1|url2|..."
     gallery_urls = Column(Text, nullable=True)
-    # pdf1_url = "nome1||url1|nome2||url2|..."  (nuovo formato)
+    # pdf1_url = "nome1||url1|nome2||url2|..." (nuovo formato)
     # oppure "url1|url2|..." (vecchio formato)
     pdf1_url = Column(Text, nullable=True)
 
@@ -102,6 +102,59 @@ def get_base_url():
         return BASE_URL
     from flask import request
     return request.url_root.strip().rstrip("/")
+
+
+def parse_pdfs(raw: str):
+    """
+    Converte la stringa pdf1_url in una lista di dict:
+    [
+      {"name": "Nome file.pdf", "url": "/static/pdf/xxx.pdf"},
+      ...
+    ]
+
+    Supporta:
+    - NUOVO FORMATO: "nome1||url1|nome2||url2|..."
+      (salvato da create_agent / update_agent)
+    - VECCHIO FORMATO: "url1|url2|..."
+    Evita i duplicati tipo "Nome.pdf" + "abcdef1234.pdf".
+    """
+    pdfs = []
+    if not raw:
+        return pdfs
+
+    tokens = raw.split("|")
+    i = 0
+    while i < len(tokens):
+        item = tokens[i].strip()
+        if not item:
+            i += 1
+            continue
+
+        if "||" in item:
+            # caso "nome||url" in un solo token (raro ma gestito)
+            name, url = item.split("||", 1)
+            name = (name or "Documento").strip()
+            url = url.strip()
+            if url:
+                pdfs.append({"name": name, "url": url})
+            i += 1
+        else:
+            # Possibile pattern: nome , "" , url  (deriva da split("|") su "nome||url")
+            if i + 2 < len(tokens) and tokens[i + 1] == "":
+                name = item or "Documento"
+                url = tokens[i + 2].strip()
+                if url:
+                    pdfs.append({"name": name, "url": url})
+                i += 3
+            else:
+                # Vecchio formato: solo URL
+                url = item
+                parsed = urllib.parse.urlparse(url)
+                filename = os.path.basename(parsed.path) or "Documento"
+                pdfs.append({"name": filename, "url": url})
+                i += 1
+
+    return pdfs
 
 
 # ------------------ ROUTES BASE ------------------
@@ -308,26 +361,7 @@ def public_card(slug):
     websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
 
-    # PDF: supporto sia NUOVO formato (nome||url) sia VECCHIO (solo url)
-    pdfs = []
-    for item in (ag.pdf1_url or "").split("|"):
-        item = item.strip()
-        if not item:
-            continue
-
-        if "||" in item:
-            # nuovo formato
-            name, url = item.split("||", 1)
-            name = name.strip() or "Documento"
-            url = url.strip()
-        else:
-            # vecchio formato: solo URL
-            url = item
-            parsed = urllib.parse.urlparse(url)
-            filename = os.path.basename(parsed.path) or "Documento"
-            name = filename
-
-        pdfs.append({"name": name, "url": url})
+    pdfs = parse_pdfs(ag.pdf1_url or "")
 
     base = get_base_url()
 
@@ -390,7 +424,7 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    resp.headers["Content-Disposition"] = f'attachment; filename=\"{ag.slug}.vcf\"'
     return resp
 
 
