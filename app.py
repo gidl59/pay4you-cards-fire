@@ -151,12 +151,13 @@ def save_cropped_image(data_url, folder="photos"):
     """
     Salva un'immagine base64 (dataURL da canvas) in static/<folder>
     e restituisce l'URL statico relativo.
+    (Attualmente la form usa il ritaglio diretto sul file input, quindi
+     questa funzione viene usata solo se in futuro aggiungi photo_cropped.)
     """
     if not data_url:
         return None
 
     try:
-        # data:image/jpeg;base64,xxxx oppure data:image/png;base64,xxxx
         if "," in data_url:
             header, b64data = data_url.split(",", 1)
         else:
@@ -290,7 +291,7 @@ def create_agent():
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se c'è il ritaglio, usiamo quello SEMPRE
+    # FOTO PROFILO – se c'è il ritaglio base64 (in futuro), usiamo quello SEMPRE
     photo_url = None
     if cropped_b64:
         photo_url = save_cropped_image(cropped_b64, "photos")
@@ -302,9 +303,9 @@ def create_agent():
     if extra_logo and extra_logo.filename:
         extra_logo_url = upload_file(extra_logo, "logos")
 
-    # PDF 1–6 (lista in pdf1_url separata da "|")
+    # PDF 1–12 (lista in pdf1_url separata da "|")
     pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -312,9 +313,9 @@ def create_agent():
                 pdf_urls.append(u)
     pdf_joined = "|".join(pdf_urls) if pdf_urls else None
 
-    # GALLERIA (max 12)
+    # GALLERIA (max 20)
     gallery_urls = []
-    for f in gallery_files[:12]:
+    for f in gallery_files[:20]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
@@ -382,7 +383,7 @@ def update_agent(slug):
     gallery_files = request.files.getlist("gallery")
     cropped_b64 = request.form.get("photo_cropped", "").strip()
 
-    # FOTO PROFILO – se c'è ritaglio, sovrascrive
+    # FOTO PROFILO – se c'è ritaglio base64, sovrascrive
     if cropped_b64:
         u = save_cropped_image(cropped_b64, "photos")
         if u:
@@ -398,9 +399,9 @@ def update_agent(slug):
         if u:
             ag.extra_logo_url = u
 
-    # PDF 1–6 – se carichi almeno un PDF nuovo, rimpiazziamo lista
+    # PDF 1–12 – se carichi almeno un PDF nuovo, rimpiazziamo lista
     new_pdf_urls = []
-    for i in range(1, 7):
+    for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
@@ -409,10 +410,10 @@ def update_agent(slug):
     if new_pdf_urls:
         ag.pdf1_url = "|".join(new_pdf_urls)
 
-    # GALLERIA – se carichi nuove foto, sostituisci la galleria
+    # GALLERIA – se carichi nuove foto, sostituisci la galleria (max 20)
     if gallery_files and any(g.filename for g in gallery_files):
         urls = []
-        for f in gallery_files[:12]:
+        for f in gallery_files[:20]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
@@ -465,7 +466,7 @@ def public_card(slug):
 
 
 # --------------------------------------------------
-# VIEWER PDF – con freccia indietro (se usi template dedicato)
+# VIEWER PDF – opzionale (non usato con la modal attuale, ma lasciato)
 # --------------------------------------------------
 @app.get("/<slug>/pdf/<int:index>")
 def pdf_viewer(slug, index):
@@ -512,16 +513,12 @@ def vcard(slug):
     if ag.photo_url:
         try:
             photo_path = ag.photo_url
-
-            # Normalizziamo percorsi tipo "/static/..." o "static/..."
             if photo_path.startswith("/"):
                 photo_path = photo_path[1:]
-
             local_path = os.path.join(app.root_path, photo_path)
             if os.path.exists(local_path):
                 with open(local_path, "rb") as img_file:
                     b64_photo = base64.b64encode(img_file.read()).decode("utf-8")
-                # La maggior parte dei client accetta TYPE=JPEG anche se il file è PNG
                 lines.append(f"PHOTO;ENCODING=b;TYPE=JPEG:{b64_photo}")
         except Exception as e:
             app.logger.exception("Errore embedding foto vCard: %s", e)
