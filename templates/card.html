@@ -1,57 +1,37 @@
 {% extends "base.html" %}
-
 {% block title %}{{ ag.name }}{% endblock %}
 
 {% block content %}
 <div class="card-fullscreen">
-  <!-- Sfondo blur -->
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
-    <!-- Header con logo (usa extra_logo se presente) -->
     <div class="card-header-row">
-      <img
-        src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
-        alt="Logo"
-        class="card-logo-big"
-      >
+      <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+           alt="Logo" class="card-logo-big">
     </div>
 
-    <!-- Blocco business: foto + nome + ruoli -->
     <div class="business-card">
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
-        <!-- Avatar fronte/retro con rotazione lenta -->
         <div class="avatar-flip">
           <div class="avatar-inner">
-            <!-- Fronte: foto agente -->
             <div class="avatar-face avatar-front">
               <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
             </div>
-            <!-- Retro: logo (extra o Pay4You) -->
             <div class="avatar-face avatar-back">
-              <img
-                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
-                alt="Logo"
-              >
+              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
             </div>
           </div>
         </div>
         {% else %}
-        <!-- Se non c'è foto, mostra solo il logo tondo che gira fronte/retro -->
         <div class="avatar-flip">
           <div class="avatar-inner">
             <div class="avatar-face avatar-front">
-              <img
-                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
-                alt="Logo"
-              >
+              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
             </div>
             <div class="avatar-face avatar-back">
-              <img
-                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
-                alt="Logo"
-              >
+              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
             </div>
           </div>
         </div>
@@ -60,357 +40,211 @@
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
-
-        {% if ag.role %}
-          <div class="card-role-main">{{ ag.role }}</div>
-        {% endif %}
-
-        {% if ag.company %}
-          <div class="card-role-sub">{{ ag.company }}</div>
-        {% endif %}
-
-        {% if ag.bio %}
-          <div class="card-bio">{{ ag.bio }}</div>
-        {% endif %}
+        {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
+        {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
+        {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
       </div>
     </div>
 
-    <!-- SEZIONE CONTATTI -->
+    <!-- CONTATTI -->
     <section class="card-section">
       <h2>Contatti</h2>
 
       {% if ag.phone_mobile %}
       <div class="contact-row">
-        <div class="icon">📱</div>
-        <div class="label">Chiama mobile</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
-        </div>
+        <div class="icon">📱</div><div class="label">Mobile</div>
+        <div class="value"><a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a></div>
       </div>
       {% endif %}
 
       {% if ag.phone_office %}
       <div class="contact-row">
-        <div class="icon">☎️</div>
-        <div class="label">Chiama ufficio</div>
-        <div class="value">
-          <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
-        </div>
+        <div class="icon">☎️</div><div class="label">Ufficio</div>
+        <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
       </div>
       {% endif %}
 
       {% if ag.whatsapp %}
-      <div class="contact-row whatsapp-row">
-        <div class="icon">🟢</div>
-        <div class="label">WhatsApp</div>
+      <div class="contact-row">
+        <div class="icon">🟢</div><div class="label">WhatsApp</div>
         <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}">
-            {{ ag.whatsapp }}
-          </a>
+          <a href="https://wa.me/{{ ag.whatsapp|replace(' ','')|replace('+','') }}">{{ ag.whatsapp }}</a>
         </div>
       </div>
       {% endif %}
 
       {% for email in emails %}
       <div class="contact-row">
-        <div class="icon">📧</div>
-        <div class="label">Email</div>
-        <div class="value">
-          <a href="mailto:{{ email }}">{{ email }}</a>
-        </div>
+        <div class="icon">📧</div><div class="label">Email</div>
+        <div class="value"><a href="mailto:{{ email }}">{{ email }}</a></div>
       </div>
       {% endfor %}
 
       {% if ag.pec %}
       <div class="contact-row">
-        <div class="icon">📮</div>
-        <div class="label">PEC</div>
-        <div class="value">
-          <a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a>
-        </div>
+        <div class="icon">📮</div><div class="label">PEC</div>
+        <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
       </div>
       {% endif %}
 
-      {# SITI INTERNET: APERTI IN MODAL (per pay4you) O NUOVA SCHEDA (se esterni) #}
+      {# SITI INTERNET CON NOME + AZIONI (APRI / EMAIL / WHATSAPP) #}
       {% for site in websites %}
-      <div class="contact-row">
-        <div class="icon">🌐</div>
-        <div class="label">Sito internet</div>
-        <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openFrameModal('{{ site }}')">
-            Vai al sito
-          </button>
+        {% set hostname = site.replace('https://','').replace('http://','').split('/')[0] %}
+        {% set encoded = site|urlencode %}
+        <div class="contact-row">
+          <div class="icon">🌐</div>
+          <div class="label">{{ hostname }}</div>
+          <div class="value">
+            <button type="button" class="link-button"
+                    onclick="openFrameModal('{{ site }}')">
+              Apri
+            </button>
+            <a class="link-button"
+               href="mailto:?subject=Link%20per%20onboarding&body={{ encoded }}"
+               target="_blank" rel="noopener">
+              ✉️ Email
+            </a>
+            <a class="link-button"
+               href="https://wa.me/?text={{ encoded }}"
+               target="_blank" rel="noopener">
+              🟢 WhatsApp
+            </a>
+          </div>
         </div>
-      </div>
       {% endfor %}
 
-      {% if ag.facebook %}
-      <div class="contact-row social-row">
-        <div class="icon">📘</div>
-        <div class="label">Facebook</div>
-        <div class="value">
-          <a href="{{ ag.facebook }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if ag.instagram %}
-      <div class="contact-row social-row">
-        <div class="icon">📷</div>
-        <div class="label">Instagram</div>
-        <div class="value">
-          <a href="{{ ag.instagram }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if ag.linkedin %}
-      <div class="contact-row social-row">
-        <div class="icon">💼</div>
-        <div class="label">LinkedIn</div>
-        <div class="value">
-          <a href="{{ ag.linkedin }}" target="_blank" rel="noopener noreferrer">
-            Profilo
-          </a>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Link profilo card -->
       <div class="contact-row">
-        <div class="icon">🪪</div>
-        <div class="label">Profilo digitale</div>
+        <div class="icon">💾</div><div class="label">Salva contatto</div>
         <div class="value">
-          <a href="{{ base_url }}/{{ ag.slug }}" target="_blank" rel="noopener noreferrer">
-            Apri card
-          </a>
-        </div>
-      </div>
-
-      <!-- vCard -->
-      <div class="contact-row">
-        <div class="icon">💾</div>
-        <div class="label">Salva contatto</div>
-        <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">
-            Salva contatto
-          </a>
-        </div>
-      </div>
-
-      <!-- QR con modal -->
-      <div class="contact-row">
-        <div class="icon">🔳</div>
-        <div class="label">QR code</div>
-        <div class="value">
-          <button type="button"
-                  class="link-button"
-                  onclick="openQrModal('{{ url_for('qr', slug=ag.slug) }}')">
-            Apri QR
-          </button>
+          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">Scarica vCard</a>
         </div>
       </div>
     </section>
 
-    <!-- SEZIONE DATI FISCALI -->
-    {% if ag.piva or ag.sdi %}
-    <section class="card-section">
-      <h2>Dati fiscali</h2>
-
-      {% if ag.piva %}
-      <div class="address-row">
-        <div class="icon">🏛️</div>
-        <span class="address-value">Partita IVA {{ ag.piva }}</span>
-      </div>
-      {% endif %}
-
-      {% if ag.sdi %}
-      <div class="address-row">
-        <div class="icon">📨</div>
-        <span class="address-value">Codice SDI {{ ag.sdi }}</span>
-      </div>
-      {% endif %}
-    </section>
-    {% endif %}
-
-    <!-- SEZIONE INDIRIZZI -->
-    {% if addresses %}
-    <section class="card-section">
-      <h2>Indirizzi</h2>
-      {% for addr in addresses %}
-      <div class="address-row">
-        <span class="address-value">{{ addr }}</span>
-      </div>
-      {% endfor %}
-    </section>
-    {% endif %}
-
-    <!-- SEZIONE DOCUMENTI (PDF) -->
+    <!-- PDF -->
     {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
         {% for pdf_url in pdfs %}
-        <button type="button"
-                class="pdf-item"
-                onclick="openFrameModal('{{ pdf_url }}')">
-          <span class="pdf-icon">📄</span>
-          <span>Documento {{ loop.index }}</span>
-        </button>
+          {% set filename = pdf_url.split('/')[-1].split('?')[0] %}
+          <button class="pdf-item" onclick="openFrameModal('{{ pdf_url }}')">
+            📄 {{ filename }}
+          </button>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <!-- SEZIONE GALLERIA FOTO -->
+    <!-- GALLERIA -->
     {% if gallery %}
     <section class="card-section">
-      <h2>Galleria foto</h2>
+      <h2>Galleria</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
-        <button type="button"
-                class="gallery-thumb-btn"
-                onclick="openGalleryModal('{{ img }}')">
-          <img src="{{ img }}" alt="Foto Pay4You">
+        <button class="gallery-thumb-btn" onclick="openGalleryModal('{{ img }}')">
+          <img src="{{ img }}">
         </button>
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <!-- Footer opzionale -->
-    <div class="card-footer">
-      Pay4You – Card digitale personale
-    </div>
+    <div class="card-footer">Pay4You – Card digitale</div>
   </div>
 </div>
 
-<!-- MODAL QR / GALLERIA (IMMAGINI) -->
+<!-- MODAL IMMAGINI -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <h2>Visualizzazione immagine</h2>
-    <img id="qr-modal-img" src="" alt="Immagine" style="max-width:260px; width:100%; height:auto;">
-
-    <!-- AZIONI DI CONDIVISIONE (DENTRO LA FOTO) -->
+    <img id="qr-modal-img" style="max-width:100%;">
     <div class="modal-share-row">
-      <a id="img-mail-link" class="link-button" href="#" target="_blank" rel="noopener">
-        ✉️ Invia via email
-      </a>
-      <a id="img-wa-link" class="link-button" href="#" target="_blank" rel="noopener">
-        🟢 Invia via WhatsApp
-      </a>
+      <a id="img-mail-link" class="link-button">✉️ Email</a>
+      <a id="img-wa-link" class="link-button">🟢 WhatsApp</a>
     </div>
-
-    <button type="button" class="modal-close-btn" onclick="closeQrModal()">
-      Chiudi e torna alla card
-    </button>
+    <button class="modal-close-btn" onclick="closeQrModal()">Chiudi</button>
   </div>
 </div>
 
-<!-- MODAL PER SITO INTERNET / PDF (IFRAME) -->
+<!-- MODAL PDF / SITI -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width: 96%; width: 96%; height: 90vh;">
-    <h2>Visualizzazione documento / sito</h2>
-    <iframe id="frame-modal-iframe"
-            src=""
-            style="width:100%; height: calc(90vh - 120px); border:none; border-radius: 12px; background:#000;"></iframe>
-
-    <!-- AZIONI DI CONDIVISIONE (DENTRO IL PDF/SITO) -->
+  <div class="modal-box" style="width:96%;height:90vh;">
+    <iframe id="frame-modal-iframe" style="width:100%;height:80vh;"></iframe>
     <div class="modal-share-row">
-      <a id="frame-mail-link" class="link-button" href="#" target="_blank" rel="noopener">
-        ✉️ Invia via email
-      </a>
-      <a id="frame-wa-link" class="link-button" href="#" target="_blank" rel="noopener">
-        🟢 Invia via WhatsApp
-      </a>
+      <a id="frame-mail-link" class="link-button">✉️ Email</a>
+      <a id="frame-wa-link" class="link-button">🟢 WhatsApp</a>
     </div>
-
-    <button type="button" class="modal-close-btn" onclick="closeFrameModal()">
-      Chiudi e torna alla card
-    </button>
+    <button class="modal-close-btn" onclick="closeFrameModal()">Chiudi</button>
   </div>
 </div>
 
 <script>
-  let currentImageUrl = "";
-  let currentFrameUrl = "";
+let currentImageUrl = "", currentFrameUrl = "";
 
-  function updateImageShareLinks() {
-    const mailLink = document.getElementById('img-mail-link');
-    const waLink   = document.getElementById('img-wa-link');
-    if (!currentImageUrl || !mailLink || !waLink) return;
+function updateImageShareLinks() {
+  const e = encodeURIComponent(currentImageUrl);
+  const mail = document.getElementById('img-mail-link');
+  const wa   = document.getElementById('img-wa-link');
+  if (!mail || !wa) return;
+  mail.href = "mailto:?body=" + e;
+  wa.href   = "https://wa.me/?text=" + e;
+}
 
-    const encoded = encodeURIComponent(currentImageUrl);
-    mailLink.href = "mailto:?subject=Immagine%20Pay4You"
-                  + "&body=Ti%20invio%20questa%20immagine:%0A" + encoded;
-    waLink.href   = "https://wa.me/?text=Ti%20invio%20questa%20immagine:%20" + encoded;
+function updateFrameShareLinks() {
+  const e = encodeURIComponent(currentFrameUrl);
+  const mail = document.getElementById('frame-mail-link');
+  const wa   = document.getElementById('frame-wa-link');
+  if (!mail || !wa) return;
+  mail.href = "mailto:?body=" + e;
+  wa.href   = "https://wa.me/?text=" + e;
+}
+
+function openQrModal(url) {
+  currentImageUrl = url;
+  const img = document.getElementById('qr-modal-img');
+  const modal = document.getElementById('qr-modal');
+  img.src = url;
+  modal.style.display = 'flex';
+  updateImageShareLinks();
+}
+
+function openGalleryModal(url) {
+  openQrModal(url);
+}
+
+function closeQrModal() {
+  const modal = document.getElementById('qr-modal');
+  const img = document.getElementById('qr-modal-img');
+  modal.style.display = 'none';
+  img.src = "";
+  currentImageUrl = "";
+}
+
+function openFrameModal(url) {
+  const isOur =
+    url.indexOf('pay4you.store') !== -1 ||
+    url.indexOf('pay4you-cards-fire.onrender.com') !== -1 ||
+    url.startsWith('/');
+
+  if (!isOur) {
+    window.open(url, '_blank');
+    return;
   }
 
-  function updateFrameShareLinks() {
-    const mailLink = document.getElementById('frame-mail-link');
-    const waLink   = document.getElementById('frame-wa-link');
-    if (!currentFrameUrl || !mailLink || !waLink) return;
+  currentFrameUrl = url;
+  const iframe = document.getElementById('frame-modal-iframe');
+  const modal = document.getElementById('frame-modal');
+  iframe.src = url;
+  modal.style.display = 'flex';
+  updateFrameShareLinks();
+}
 
-    const encoded = encodeURIComponent(currentFrameUrl);
-    mailLink.href = "mailto:?subject=Documento%20Pay4You"
-                  + "&body=Ti%20invio%20questo%20link:%0A" + encoded;
-    waLink.href   = "https://wa.me/?text=Ti%20invio%20questo%20link:%20" + encoded;
-  }
-
-  function openQrModal(url) {
-    currentImageUrl = url;
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
-    updateImageShareLinks();
-  }
-
-  function openGalleryModal(url) {
-    currentImageUrl = url;
-    const img = document.getElementById('qr-modal-img');
-    img.src = url;
-    document.getElementById('qr-modal').style.display = 'flex';
-    updateImageShareLinks();
-  }
-
-  function closeQrModal() {
-    document.getElementById('qr-modal').style.display = 'none';
-    document.getElementById('qr-modal-img').src = "";
-    currentImageUrl = "";
-  }
-
-  // Apertura siti / PDF
-  function openFrameModal(url) {
-    const isRelative = url.startsWith('/');  // es: /static/...
-    const isOurDomain =
-      url.indexOf('pay4you.store') !== -1 ||
-      url.indexOf('pay4you-cards-fire.onrender.com') !== -1;
-
-    // Se è un sito ESTERNO (non relativo e non pay4you) -> nuova scheda
-    if (!isRelative && !isOurDomain) {
-      window.open(url, '_blank');
-      return;
-    }
-
-    // Se è pay4you (o URL relativo), apro nel modal con freccia "torna alla card"
-    currentFrameUrl = url;
-    const iframe = document.getElementById('frame-modal-iframe');
-    iframe.src = url;
-    document.getElementById('frame-modal').style.display = 'flex';
-    updateFrameShareLinks();
-  }
-
-  function closeFrameModal() {
-    const iframe = document.getElementById('frame-modal-iframe');
-    iframe.src = "";
-    document.getElementById('frame-modal').style.display = 'none';
-    currentFrameUrl = "";
-  }
+function closeFrameModal() {
+  const iframe = document.getElementById('frame-modal-iframe');
+  const modal = document.getElementById('frame-modal');
+  iframe.src = "";
+  modal.style.display = 'none';
+  currentFrameUrl = "";
+}
 </script>
 {% endblock %}
