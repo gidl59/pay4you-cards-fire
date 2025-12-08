@@ -6,35 +6,18 @@
   <div class="card-glass-bg"></div>
 
   <div class="card-outer">
+
+    <!-- LOGO HEADER -->
     <div class="card-header-row">
       <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
-           alt="Logo" class="card-logo-big">
+           class="card-logo-big">
     </div>
 
+    <!-- PROFILO -->
     <div class="business-card">
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <div class="avatar-face avatar-front">
-              <img src="{{ ag.photo_url }}" alt="{{ ag.name }}">
-            </div>
-            <div class="avatar-face avatar-back">
-              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
-            </div>
-          </div>
-        </div>
-        {% else %}
-        <div class="avatar-flip">
-          <div class="avatar-inner">
-            <div class="avatar-face avatar-front">
-              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
-            </div>
-            <div class="avatar-face avatar-back">
-              <img src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}">
-            </div>
-          </div>
-        </div>
+        <img src="{{ ag.photo_url }}" class="card-profile-photo">
         {% endif %}
       </div>
 
@@ -52,85 +35,48 @@
 
       {% if ag.phone_mobile %}
       <div class="contact-row">
-        <div class="icon">📱</div><div class="label">Mobile</div>
-        <div class="value"><a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.phone_office %}
-      <div class="contact-row">
-        <div class="icon">☎️</div><div class="label">Ufficio</div>
-        <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
+        📱 <a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a>
       </div>
       {% endif %}
 
       {% if ag.whatsapp %}
       <div class="contact-row">
-        <div class="icon">🟢</div><div class="label">WhatsApp</div>
-        <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp|replace(' ','')|replace('+','') }}">{{ ag.whatsapp }}</a>
-        </div>
+        🟢 <a href="https://wa.me/{{ ag.whatsapp|replace(' ','')|replace('+','') }}">{{ ag.whatsapp }}</a>
       </div>
       {% endif %}
 
       {% for email in emails %}
       <div class="contact-row">
-        <div class="icon">📧</div><div class="label">Email</div>
-        <div class="value"><a href="mailto:{{ email }}">{{ email }}</a></div>
+        📧 <a href="mailto:{{ email }}">{{ email }}</a>
       </div>
       {% endfor %}
-
-      {% if ag.pec %}
-      <div class="contact-row">
-        <div class="icon">📮</div><div class="label">PEC</div>
-        <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
-      </div>
-      {% endif %}
-
-      {# SITI INTERNET CON NOME + AZIONI (APRI / EMAIL / WHATSAPP) #}
-      {% for site in websites %}
-        {% set hostname = site.replace('https://','').replace('http://','').split('/')[0] %}
-        {% set encoded = site|urlencode %}
-        <div class="contact-row">
-          <div class="icon">🌐</div>
-          <div class="label">{{ hostname }}</div>
-          <div class="value">
-            <button type="button" class="link-button"
-                    onclick="openFrameModal('{{ site }}')">
-              Apri
-            </button>
-            <a class="link-button"
-               href="mailto:?subject=Link%20per%20onboarding&body={{ encoded }}"
-               target="_blank" rel="noopener">
-              ✉️ Email
-            </a>
-            <a class="link-button"
-               href="https://wa.me/?text={{ encoded }}"
-               target="_blank" rel="noopener">
-              🟢 WhatsApp
-            </a>
-          </div>
-        </div>
-      {% endfor %}
-
-      <div class="contact-row">
-        <div class="icon">💾</div><div class="label">Salva contatto</div>
-        <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}?download=1">Scarica vCard</a>
-        </div>
-      </div>
     </section>
 
-    <!-- PDF -->
+    <!-- SITI INTERNET CON NOME -->
+    {% if websites %}
+    <section class="card-section">
+      <h2>Siti Internet</h2>
+      {% for site in websites %}
+        {% set hostname = site.replace('https://','').replace('http://','').split('/')[0] %}
+        <div class="contact-row">
+          🌐 {{ hostname }}
+          <button onclick="openFrameModal('{{ site }}')">Apri</button>
+          <a href="mailto:?body={{ site }}">Email</a>
+          <a href="https://wa.me/?text={{ site }}">WhatsApp</a>
+        </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- PDF CON NOME VERO -->
     {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
       <div class="pdf-list">
-        {% for pdf_url in pdfs %}
-          {% set filename = pdf_url.split('/')[-1].split('?')[0] %}
-          <button class="pdf-item" onclick="openFrameModal('{{ pdf_url }}')">
-            📄 {{ filename }}
-          </button>
+        {% for pdf in pdfs %}
+        <div class="pdf-item" onclick="openFrameModal('{{ pdf.url }}')">
+          📄 {{ pdf.name }}
+        </div>
         {% endfor %}
       </div>
     </section>
@@ -142,109 +88,82 @@
       <h2>Galleria</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
-        <button class="gallery-thumb-btn" onclick="openGalleryModal('{{ img }}')">
-          <img src="{{ img }}">
-        </button>
+          <img src="{{ img }}" class="gallery-thumb"
+               onclick="openGalleryModal('{{ img }}')">
         {% endfor %}
       </div>
     </section>
     {% endif %}
 
-    <div class="card-footer">Pay4You – Card digitale</div>
+    <div class="card-footer">
+      Pay4You – Card digitale
+    </div>
+
   </div>
 </div>
 
 <!-- MODAL IMMAGINI -->
-<div id="qr-modal" class="modal-overlay" style="display:none;">
+<div id="img-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <img id="qr-modal-img" style="max-width:100%;">
-    <div class="modal-share-row">
-      <a id="img-mail-link" class="link-button">✉️ Email</a>
-      <a id="img-wa-link" class="link-button">🟢 WhatsApp</a>
+    <img id="img-modal-src" style="max-width:100%">
+    <div class="modal-share">
+      <a id="img-mail">Email</a>
+      <a id="img-wa" target="_blank">WhatsApp</a>
     </div>
-    <button class="modal-close-btn" onclick="closeQrModal()">Chiudi</button>
+    <button onclick="closeImg()">Chiudi</button>
   </div>
 </div>
 
-<!-- MODAL PDF / SITI -->
+<!-- MODAL PDF / SITO -->
 <div id="frame-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="width:96%;height:90vh;">
-    <iframe id="frame-modal-iframe" style="width:100%;height:80vh;"></iframe>
-    <div class="modal-share-row">
-      <a id="frame-mail-link" class="link-button">✉️ Email</a>
-      <a id="frame-wa-link" class="link-button">🟢 WhatsApp</a>
+  <div class="modal-box" style="width:95%;height:90vh;">
+    <iframe id="frame-src" style="width:100%;height:80vh;"></iframe>
+    <div class="modal-share">
+      <a id="frame-mail">Email</a>
+      <a id="frame-wa" target="_blank">WhatsApp</a>
     </div>
-    <button class="modal-close-btn" onclick="closeFrameModal()">Chiudi</button>
+    <button onclick="closeFrame()">Chiudi</button>
   </div>
 </div>
 
 <script>
-let currentImageUrl = "", currentFrameUrl = "";
+let currentUrl = "";
 
-function updateImageShareLinks() {
-  const e = encodeURIComponent(currentImageUrl);
-  const mail = document.getElementById('img-mail-link');
-  const wa   = document.getElementById('img-wa-link');
-  if (!mail || !wa) return;
-  mail.href = "mailto:?body=" + e;
-  wa.href   = "https://wa.me/?text=" + e;
+function openGalleryModal(url){
+  currentUrl = url;
+  document.getElementById('img-modal-src').src = url;
+  document.getElementById('img-modal').style.display = 'flex';
+  document.getElementById('img-mail').href = "mailto:?body=" + encodeURIComponent(url);
+  document.getElementById('img-wa').href = "https://wa.me/?text=" + encodeURIComponent(url);
 }
 
-function updateFrameShareLinks() {
-  const e = encodeURIComponent(currentFrameUrl);
-  const mail = document.getElementById('frame-mail-link');
-  const wa   = document.getElementById('frame-wa-link');
-  if (!mail || !wa) return;
-  mail.href = "mailto:?body=" + e;
-  wa.href   = "https://wa.me/?text=" + e;
+function closeImg(){
+  document.getElementById('img-modal').style.display = 'none';
 }
 
-function openQrModal(url) {
-  currentImageUrl = url;
-  const img = document.getElementById('qr-modal-img');
-  const modal = document.getElementById('qr-modal');
-  img.src = url;
-  modal.style.display = 'flex';
-  updateImageShareLinks();
-}
+function openFrameModal(url){
+  const isExternal = !(
+    url.includes('pay4you.store') ||
+    url.includes('onrender.com') ||
+    url.startsWith('/')
+  );
 
-function openGalleryModal(url) {
-  openQrModal(url);
-}
-
-function closeQrModal() {
-  const modal = document.getElementById('qr-modal');
-  const img = document.getElementById('qr-modal-img');
-  modal.style.display = 'none';
-  img.src = "";
-  currentImageUrl = "";
-}
-
-function openFrameModal(url) {
-  const isOur =
-    url.indexOf('pay4you.store') !== -1 ||
-    url.indexOf('pay4you-cards-fire.onrender.com') !== -1 ||
-    url.startsWith('/');
-
-  if (!isOur) {
+  if(isExternal){
     window.open(url, '_blank');
     return;
   }
 
-  currentFrameUrl = url;
-  const iframe = document.getElementById('frame-modal-iframe');
-  const modal = document.getElementById('frame-modal');
-  iframe.src = url;
-  modal.style.display = 'flex';
-  updateFrameShareLinks();
+  currentUrl = url;
+  document.getElementById('frame-src').src = url;
+  document.getElementById('frame-modal').style.display = 'flex';
+  document.getElementById('frame-mail').href = "mailto:?body=" + encodeURIComponent(url);
+  document.getElementById('frame-wa').href = "https://wa.me/?text=" + encodeURIComponent(url);
 }
 
-function closeFrameModal() {
-  const iframe = document.getElementById('frame-modal-iframe');
-  const modal = document.getElementById('frame-modal');
-  iframe.src = "";
-  modal.style.display = 'none';
-  currentFrameUrl = "";
+function closeFrame(){
+  document.getElementById('frame-modal').style.display = 'none';
+  document.getElementById('frame-src').src = "";
 }
 </script>
+
 {% endblock %}
