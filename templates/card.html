@@ -367,22 +367,41 @@
     img.src = "";
   }
 
+ <script>
+  function openQrModal(url) {
+    const img = document.getElementById('qr-modal-img');
+    img.src = url;
+    document.getElementById('qr-modal').style.display = 'flex';
+  }
+
+  function openGalleryModal(url) {
+    const img = document.getElementById('qr-modal-img');
+    img.src = url;
+    document.getElementById('qr-modal').style.display = 'flex';
+  }
+
+  function closeQrModal() {
+    document.getElementById('qr-modal').style.display = 'none';
+    document.getElementById('qr-modal-img').src = "";
+  }
+
+  // ⬇️ QUESTA È LA PARTE IMPORTANTE ⬇️
   function openFrameModal(url) {
+    const isRelative = url.startsWith('/');  // es: /static/pdf/..., /qualcosa
+    const isOurDomain =
+      url.indexOf('pay4you.store') !== -1 ||
+      url.indexOf('pay4you-cards-fire.onrender.com') !== -1;
+
+    // Se è un sito esterno (NON relativo, NON pay4you)
+    if (!isRelative && !isOurDomain) {
+      // apro direttamente in nuova scheda
+      window.open(url, '_blank');
+      return;
+    }
+
+    // Se è pay4you (o URL relativo), uso il modal con la freccia "torna alla card"
     const iframe = document.getElementById('frame-modal-iframe');
-    const mail = document.getElementById('frame-email-link');
-    const wa = document.getElementById('frame-wa-link');
-
     iframe.src = url;
-
-    if (mail) {
-      mail.href = 'mailto:?subject=Link%20Pay4You&body=' +
-                  encodeURIComponent('Ti invio questo link:\n' + url);
-    }
-    if (wa) {
-      wa.href = 'https://wa.me/?text=' +
-                encodeURIComponent('Ti invio questo link: ' + url);
-    }
-
     document.getElementById('frame-modal').style.display = 'flex';
   }
 
@@ -392,4 +411,5 @@
     document.getElementById('frame-modal').style.display = 'none';
   }
 </script>
+
 {% endblock %}
