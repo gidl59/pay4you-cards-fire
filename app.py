@@ -1,10 +1,7 @@
 import os
-import base64
-from io import BytesIO
-from datetime import datetime, timedelta
 import uuid
-import tempfile
-
+from io import BytesIO
+from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response
@@ -22,7 +19,7 @@ APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
 DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -36,48 +33,52 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
-    company = Column(String)
-    role = Column(String)
-    bio = Column(Text)
+    company = Column(String, nullable=True)
+    role = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
 
-    phone_mobile = Column(String)
-    phone_office = Column(String)
-    emails = Column(String)
-    websites = Column(String)
+    phone_mobile = Column(String, nullable=True)
+    phone_office = Column(String, nullable=True)
+    emails = Column(String, nullable=True)
+    websites = Column(String, nullable=True)
 
-    facebook = Column(String)
-    instagram = Column(String)
-    linkedin = Column(String)
-    tiktok = Column(String)
-    telegram = Column(String)
-    whatsapp = Column(String)
-    pec = Column(String)
+    facebook = Column(String, nullable=True)
+    instagram = Column(String, nullable=True)
+    linkedin = Column(String, nullable=True)
+    tiktok = Column(String, nullable=True)
+    telegram = Column(String, nullable=True)
+    whatsapp = Column(String, nullable=True)
+    pec = Column(String, nullable=True)
 
-    piva = Column(String)
-    sdi = Column(String)
-    addresses = Column(Text)
+    piva = Column(String, nullable=True)
+    sdi = Column(String, nullable=True)
+    addresses = Column(Text, nullable=True)
 
-    photo_url = Column(String)
-    extra_logo_url = Column(String)
+    photo_url = Column(String, nullable=True)
+    extra_logo_url = Column(String, nullable=True)
 
-    gallery_urls = Column(Text)
-    pdf1_url = Column(Text)
+    gallery_urls = Column(Text, nullable=True)  # immagini separate da "|"
+    pdf1_url = Column(Text, nullable=True)      # ogni voce = "nome_originale||url"
 
 
 Base.metadata.create_all(engine)
 
 
+# ------------------ Helper ------------------
 def admin_required(f):
     from functools import wraps
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not session.get("admin"):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return wrapper
 
 
 def upload_file(file_storage, folder="uploads"):
+    """Salva il file in static/<folder> e restituisce l'URL relativo."""
     if not file_storage or not file_storage.filename:
         return None
 
@@ -93,13 +94,13 @@ def upload_file(file_storage, folder="uploads"):
 
 
 def get_base_url():
-    b = BASE_URL or ""
-    if b:
-        return b
+    if BASE_URL:
+        return BASE_URL
     from flask import request
     return request.url_root.strip().rstrip("/")
 
 
+# ------------------ ROUTES BASE ------------------
 @app.get("/")
 def home():
     if session.get("admin"):
@@ -107,9 +108,15 @@ def home():
     return redirect(url_for("login"))
 
 
+@app.get("/health")
+def health():
+    return "ok", 200
+
+
+# ------------------ LOGIN ------------------
 @app.get("/login")
 def login():
-    return render_template("login.html")
+    return render_template("login.html", error=None)
 
 
 @app.post("/login")
@@ -127,6 +134,7 @@ def logout():
     return redirect(url_for("login"))
 
 
+# ------------------ ADMIN LISTA ------------------
 @app.get("/admin")
 @admin_required
 def admin_home():
@@ -135,6 +143,7 @@ def admin_home():
     return render_template("admin_list.html", agents=agents)
 
 
+# ------------------ NUOVO AGENTE ------------------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -147,32 +156,39 @@ def create_agent():
     db = SessionLocal()
 
     fields = [
-        "slug","name","company","role","bio","phone_mobile","phone_office",
-        "emails","websites","facebook","instagram","linkedin","tiktok",
-        "telegram","whatsapp","pec","piva","sdi","addresses"
+        "slug", "name", "company", "role", "bio",
+        "phone_mobile", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok",
+        "telegram", "whatsapp", "pec",
+        "piva", "sdi", "addresses",
     ]
-
     data = {k: request.form.get(k, "").strip() for k in fields}
+
+    if not data["slug"] or not data["name"]:
+        return "Slug e Nome sono obbligatori", 400
+
+    if db.query(Agent).filter_by(slug=data["slug"]).first():
+        return "Slug già esistente", 400
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
 
-    photo_url = upload_file(photo, "photos") if photo else None
-    extra_logo_url = upload_file(extra_logo, "logos") if extra_logo else None
+    photo_url = upload_file(photo, "photos") if photo and photo.filename else None
+    extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
-    # ===== PDF CON NOME ORIGINALE =====
-    pdf_urls = []
+    # PDF 1–12: salviamo "nome_originale||url"
+    pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
             if u:
-                pdf_urls.append(f"{f.filename}||{u}")
+                pdf_entries.append(f"{f.filename}||{u}")
+    pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
-    pdf_joined = "|".join(pdf_urls) if pdf_urls else None
-
-    # ===== GALLERIA FINO A 20 =====
+    # GALLERIA fino a 20 immagini
     gallery_urls = []
     for f in gallery_files[:20]:
         if f and f.filename:
@@ -193,11 +209,14 @@ def create_agent():
     return redirect(url_for("admin_home"))
 
 
+# ------------------ MODIFICA / ELIMINA ------------------
 @app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
     return render_template("agent_form.html", agent=ag)
 
 
@@ -206,35 +225,71 @@ def edit_agent(slug):
 def update_agent(slug):
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
 
-    for k in ag.__table__.columns.keys():
-        if k in request.form:
-            setattr(ag, k, request.form.get(k))
+    for k in [
+        "slug", "name", "company", "role", "bio",
+        "phone_mobile", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok",
+        "telegram", "whatsapp", "pec",
+        "piva", "sdi", "addresses",
+    ]:
+        setattr(ag, k, request.form.get(k, "").strip())
 
+    photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
-    if gallery_files and gallery_files[0].filename:
-        urls = []
-        for f in gallery_files[:20]:
-            u = upload_file(f, "gallery")
-            if u:
-                urls.append(u)
-        ag.gallery_urls = "|".join(urls)
 
-    pdf_urls = []
+    if photo and photo.filename:
+        u = upload_file(photo, "photos")
+        if u:
+            ag.photo_url = u
+
+    if extra_logo and extra_logo.filename:
+        u = upload_file(extra_logo, "logos")
+        if u:
+            ag.extra_logo_url = u
+
+    # Se carichi nuovi PDF, sostituiscono la lista
+    pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf")
             if u:
-                pdf_urls.append(f"{f.filename}||{u}")
+                pdf_entries.append(f"{f.filename}||{u}")
+    if pdf_entries:
+        ag.pdf1_url = "|".join(pdf_entries)
 
-    if pdf_urls:
-        ag.pdf1_url = "|".join(pdf_urls)
+    # Se carichi nuove foto galleria, sostituiscono la lista
+    if gallery_files and any(g.filename for g in gallery_files):
+        gallery_urls = []
+        for f in gallery_files[:20]:
+            if f and f.filename:
+                u = upload_file(f, "gallery")
+                if u:
+                    gallery_urls.append(u)
+        if gallery_urls:
+            ag.gallery_urls = "|".join(gallery_urls)
 
     db.commit()
     return redirect(url_for("admin_home"))
 
 
+@app.post("/admin/<slug>/delete")
+@admin_required
+def delete_agent(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if ag:
+        db.delete(ag)
+        db.commit()
+    return redirect(url_for("admin_home"))
+
+
+# ------------------ CARD PUBBLICA ------------------
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
@@ -267,6 +322,58 @@ def public_card(slug):
     )
 
 
+# ------------------ VCARD ------------------
+@app.get("/<slug>.vcf")
+def vcard(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    full_name = ag.name or ""
+    parts = full_name.strip().split(" ", 1)
+    if len(parts) == 2:
+        first_name, last_name = parts[0], parts[1]
+    else:
+        first_name, last_name = full_name, ""
+
+    lines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
+    ]
+
+    if ag.role:
+        lines.append(f"TITLE:{ag.role}")
+    if ag.company:
+        lines.append(f"ORG:{ag.company}")
+    if ag.phone_mobile:
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+    if ag.phone_office:
+        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+    if ag.emails:
+        for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
+            lines.append(f"EMAIL;TYPE=WORK:{e}")
+
+    base = get_base_url()
+    card_url = f"{base}/{ag.slug}"
+    lines.append(f"URL:{card_url}")
+
+    if ag.piva:
+        lines.append(f"X-TAX-ID:{ag.piva}")
+    if ag.sdi:
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
+
+    lines.append("END:VCARD")
+    content = "\r\n".join(lines)
+
+    resp = Response(content, mimetype="text/vcard; charset=utf-8")
+    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    return resp
+
+
+# ------------------ QR CODE ------------------
 @app.get("/<slug>/qr.png")
 def qr(slug):
     base = get_base_url()
@@ -276,3 +383,13 @@ def qr(slug):
     img.save(bio, format="PNG")
     bio.seek(0)
     return send_file(bio, mimetype="image/png")
+
+
+# ------------------ ERRORI ------------------
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html"), 404
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
