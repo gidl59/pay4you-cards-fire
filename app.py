@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
+import urllib.parse  # <-- per ricavare nome file dai vecchi URL
 
 load_dotenv()
 
@@ -57,8 +58,11 @@ class Agent(Base):
     photo_url = Column(String, nullable=True)
     extra_logo_url = Column(String, nullable=True)
 
-    gallery_urls = Column(Text, nullable=True)  # immagini separate da "|"
-    pdf1_url = Column(Text, nullable=True)      # ogni voce = "nome_originale||url"
+    # gallery_urls = "url1|url2|..."
+    gallery_urls = Column(Text, nullable=True)
+    # pdf1_url = "nome1||url1|nome2||url2|..."  (nuovo formato)
+    # oppure "url1|url2|..." (vecchio formato)
+    pdf1_url = Column(Text, nullable=True)
 
 
 Base.metadata.create_all(engine)
@@ -178,7 +182,7 @@ def create_agent():
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
-    # PDF 1–12: salviamo "nome_originale||url"
+    # PDF 1–12: NUOVO FORMATO "nome_originale||url"
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -242,17 +246,19 @@ def update_agent(slug):
     extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
 
+    # Foto: solo se carichi un nuovo file
     if photo and photo.filename:
         u = upload_file(photo, "photos")
         if u:
             ag.photo_url = u
 
+    # Logo extra: solo se carichi un nuovo file
     if extra_logo and extra_logo.filename:
         u = upload_file(extra_logo, "logos")
         if u:
             ag.extra_logo_url = u
 
-    # Se carichi nuovi PDF, sostituiscono la lista
+    # PDF: sostituisco solo se carichi almeno un nuovo file
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -263,7 +269,7 @@ def update_agent(slug):
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
-    # Se carichi nuove foto galleria, sostituiscono la lista
+    # Galleria: sostituisco solo se carichi nuove immagini
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
         for f in gallery_files[:20]:
@@ -302,11 +308,26 @@ def public_card(slug):
     websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
 
+    # PDF: supporto sia NUOVO formato (nome||url) sia VECCHIO (solo url)
     pdfs = []
     for item in (ag.pdf1_url or "").split("|"):
+        item = item.strip()
+        if not item:
+            continue
+
         if "||" in item:
+            # nuovo formato
             name, url = item.split("||", 1)
-            pdfs.append({"name": name, "url": url})
+            name = name.strip() or "Documento"
+            url = url.strip()
+        else:
+            # vecchio formato: solo URL
+            url = item
+            parsed = urllib.parse.urlparse(url)
+            filename = os.path.basename(parsed.path) or "Documento"
+            name = filename
+
+        pdfs.append({"name": name, "url": url})
 
     base = get_base_url()
 
