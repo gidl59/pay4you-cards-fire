@@ -110,6 +110,8 @@
     <!-- FOTO PROFILO -->
     <label for="photo">Foto profilo (consigliata 1000×1000 JPG/PNG)</label>
     <input type="file" id="photo" name="photo" accept="image/*">
+    <!-- Qui salviamo il ritaglio in base64 per app.py -->
+    <input type="hidden" id="photo_cropped" name="photo_cropped" value="">
 
     <!-- LOGO EXTRA (per logo in alto / retro avatar) -->
     <label for="extra_logo">Logo extra (per testata e retro foto)</label>
@@ -169,13 +171,13 @@
 <script>
   (function() {
     const input = document.getElementById('photo');
+    const hiddenCropped = document.getElementById('photo_cropped');
     const modal = document.getElementById('cropper-modal');
     const imgEl = document.getElementById('cropper-image');
     const btnUse = document.getElementById('cropper-use');
     const btnCancel = document.getElementById('cropper-cancel');
 
     let cropper = null;
-    let originalFile = null;
 
     if (!input) return;
 
@@ -183,8 +185,6 @@
     input.addEventListener('change', function(e) {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-
-      originalFile = file;
 
       const url = URL.createObjectURL(file);
       imgEl.src = url;
@@ -206,9 +206,9 @@
       });
     });
 
-    // Usa questa foto (salva il ritaglio dentro il file input)
+    // Usa questa foto (salva il ritaglio in base64 dentro il campo nascosto)
     btnUse.addEventListener('click', function() {
-      if (!cropper || !originalFile) {
+      if (!cropper) {
         modal.style.display = 'none';
         return;
       }
@@ -220,24 +220,16 @@
         imageSmoothingQuality: 'high'
       });
 
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          modal.style.display = 'none';
-          return;
-        }
+      // Salviamo il dataURL JPG nel campo nascosto; app.py userà questo per salvare il file
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      hiddenCropped.value = dataUrl;
 
-        const fileName = originalFile.name || 'avatar.jpg';
-        const croppedFile = new File([blob], fileName, { type: 'image/jpeg' });
+      // opzionale: possiamo anche azzerare l'input file se vuoi usare SOLO il base64
+      // input.value = '';
 
-        const dt = new DataTransfer();
-        dt.items.add(croppedFile);
-        input.files = dt.files;
-
-        modal.style.display = 'none';
-        cropper.destroy();
-        cropper = null;
-        originalFile = null;
-      }, 'image/jpeg', 0.9);
+      modal.style.display = 'none';
+      cropper.destroy();
+      cropper = null;
     });
 
     // Annulla
@@ -249,6 +241,7 @@
       }
       // opzionale: svuotare l'input:
       // input.value = '';
+      hiddenCropped.value = '';
     });
   })();
 </script>
