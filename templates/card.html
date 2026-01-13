@@ -70,7 +70,7 @@
         <div class="icon">🟢</div>
         <div class="label">WhatsApp</div>
         <div class="value">
-          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}" target="_blank">
+          <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}" target="_blank" rel="noopener noreferrer">
             Scrivi su WhatsApp
           </a>
         </div>
@@ -98,10 +98,41 @@
       {% endfor %}
 
       {# =========================
-         PEC / P.IVA / INDIRIZZO
+         SOCIAL / PEC / P.IVA / INDIRIZZO
          (gestione nomi alternativi)
          ========================= #}
 
+      {# Facebook: ag.facebook oppure ag.fb #}
+      {% set _fb = ag.facebook if ag.facebook is defined and ag.facebook else (ag.fb if ag.fb is defined and ag.fb else None) %}
+      {% if _fb %}
+      {% set _fb_url = _fb if _fb.startswith('http') else 'https://facebook.com/' ~ _fb %}
+      <div class="contact-row">
+        <div class="icon">📘</div>
+        <div class="label">Facebook</div>
+        <div class="value">
+          <a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">
+            Apri Facebook
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Instagram: ag.instagram oppure ag.ig #}
+      {% set _ig = ag.instagram if ag.instagram is defined and ag.instagram else (ag.ig if ag.ig is defined and ag.ig else None) %}
+      {% if _ig %}
+      {% set _ig_url = _ig if _ig.startswith('http') else 'https://instagram.com/' ~ _ig|replace('@','') %}
+      <div class="contact-row">
+        <div class="icon">📸</div>
+        <div class="label">Instagram</div>
+        <div class="value">
+          <a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">
+            Apri Instagram
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      {# PEC: ag.pec oppure ag.pec_email #}
       {% set _pec = ag.pec if ag.pec is defined and ag.pec else (ag.pec_email if ag.pec_email is defined and ag.pec_email else None) %}
       {% if _pec %}
       <div class="contact-row">
@@ -111,6 +142,7 @@
       </div>
       {% endif %}
 
+      {# P.IVA: ag.piva oppure ag.partita_iva #}
       {% set _piva = ag.piva if ag.piva is defined and ag.piva else (ag.partita_iva if ag.partita_iva is defined and ag.partita_iva else None) %}
       {% if _piva %}
       <div class="contact-row">
@@ -120,6 +152,7 @@
       </div>
       {% endif %}
 
+      {# Indirizzo: ag.indirizzo oppure ag.address #}
       {% set _addr = ag.indirizzo if ag.indirizzo is defined and ag.indirizzo else (ag.address if ag.address is defined and ag.address else None) %}
       {% if _addr %}
       <div class="contact-row">
@@ -233,7 +266,7 @@ function closeQrModal() {
 
 .pdf-title {
   font-weight: 700;
-  font-size: 1.02rem;   /* ✅ NOME PIÙ GRANDE */
+  font-size: 1.02rem;
   color: #ffffff;
   margin-bottom: 8px;
 }
