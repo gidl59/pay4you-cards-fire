@@ -98,8 +98,7 @@
       {% endfor %}
 
       {# =========================
-         SOCIAL / PEC / P.IVA / INDIRIZZO
-         (gestione nomi alternativi)
+         SOCIAL / PEC / P.IVA / SDI / INDIRIZZI
          ========================= #}
 
       {# Facebook: ag.facebook oppure ag.fb #}
@@ -110,9 +109,7 @@
           <div class="icon">📘</div>
           <div class="label">Facebook</div>
           <div class="value">
-            <a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">
-              Apri Facebook
-            </a>
+            <a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a>
           </div>
         </div>
       {% endif %}
@@ -125,9 +122,35 @@
           <div class="icon">📸</div>
           <div class="label">Instagram</div>
           <div class="value">
-            <a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">
-              Apri Instagram
-            </a>
+            <a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a>
+          </div>
+        </div>
+      {% endif %}
+
+      {# TikTok: ag.tiktok oppure ag.tt #}
+      {% set _tt = ag.tiktok if ag.tiktok is defined and ag.tiktok else (ag.tt if ag.tt is defined and ag.tt else None) %}
+      {% if _tt %}
+        {% set _tt_user = _tt|replace('@','') %}
+        {% set _tt_url = _tt if _tt.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_user %}
+        <div class="contact-row">
+          <div class="icon">🎵</div>
+          <div class="label">TikTok</div>
+          <div class="value">
+            <a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a>
+          </div>
+        </div>
+      {% endif %}
+
+      {# Telegram: ag.telegram oppure ag.tg #}
+      {% set _tg = ag.telegram if ag.telegram is defined and ag.telegram else (ag.tg if ag.tg is defined and ag.tg else None) %}
+      {% if _tg %}
+        {% set _tg_user = _tg|replace('@','') %}
+        {% set _tg_url = _tg if _tg.startswith('http') else 'https://t.me/' ~ _tg_user %}
+        <div class="contact-row">
+          <div class="icon">✈️</div>
+          <div class="label">Telegram</div>
+          <div class="value">
+            <a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a>
           </div>
         </div>
       {% endif %}
@@ -152,25 +175,40 @@
       </div>
       {% endif %}
 
-      {# Indirizzo: tanti possibili nomi #}
-      {% set _addr =
+      {# SDI: ag.sdi oppure ag.codice_sdi #}
+      {% set _sdi = ag.sdi if ag.sdi is defined and ag.sdi else (ag.codice_sdi if ag.codice_sdi is defined and ag.codice_sdi else None) %}
+      {% if _sdi %}
+      <div class="contact-row">
+        <div class="icon">🏷️</div>
+        <div class="label">Codice SDI</div>
+        <div class="value">{{ _sdi }}</div>
+      </div>
+      {% endif %}
+
+      {# INDIRIZZI (uno per riga): ag.indirizzi / ag.indirizzo / ag.address / ag.sede / ag.location #}
+      {% set _addrs_raw =
+        (ag.indirizzi if ag.indirizzi is defined and ag.indirizzi else
         (ag.indirizzo if ag.indirizzo is defined and ag.indirizzo else
         (ag.address if ag.address is defined and ag.address else
-        (ag.indirizzo_attivita if ag.indirizzo_attivita is defined and ag.indirizzo_attivita else
         (ag.sede if ag.sede is defined and ag.sede else
-        (ag.location if ag.location is defined and ag.location else
-        (ag.via if ag.via is defined and ag.via else None)))))) %}
-      {% if _addr %}
-      <div class="contact-row">
-        <div class="icon">📍</div>
-        <div class="label">Indirizzo</div>
-        <div class="value">
-          <a href="https://www.google.com/maps?q={{ _addr|urlencode }}"
-             target="_blank" rel="noopener noreferrer">
-            {{ _addr }}
-          </a>
-        </div>
-      </div>
+        (ag.location if ag.location is defined and ag.location else None))))) %}
+
+      {% if _addrs_raw %}
+        {% set _addr_lines = _addrs_raw.splitlines() %}
+        {% for line in _addr_lines %}
+          {% if line|trim %}
+          <div class="contact-row">
+            <div class="icon">📍</div>
+            <div class="label">Indirizzo{% if _addr_lines|length > 1 %} {{ loop.index }}{% endif %}</div>
+            <div class="value">
+              <a href="https://www.google.com/maps?q={{ line|trim|urlencode }}"
+                 target="_blank" rel="noopener noreferrer">
+                {{ line|trim }}
+              </a>
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
       {% endif %}
 
       <div class="contact-row">
@@ -301,7 +339,7 @@ function closeQrModal() {
   background: #b78924;
 }
 
-/* ✅ SOLO QUI: descrizione breve (bio) più grande */
+/* ✅ descrizione breve (bio) più grande */
 .card-bio{
   font-size: 1.10rem;
   line-height: 1.35;
