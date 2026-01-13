@@ -663,3 +663,37 @@ a {
     border-right: none;
   }
 }
+/* Galleria: thumbs più grandi */
+.gallery-thumb-btn{
+  flex: 0 0 auto;
+  width: 110px;          /* prima erano più piccole: aumenta qui */
+  height: 110px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* L’immagine riempie bene il riquadro */
+.gallery-thumb-btn img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+/* Desktop: quando passi col mouse */
+.gallery-thumb-btn:hover img{
+  transform: scale(1.18);
+  filter: brightness(1.05);
+}
+
+/* Mobile: quando tocchi (stato active) */
+.gallery-thumb-btn:active img{
+  transform: scale(1.18);
+  filter: brightness(1.05);
+}
+
+/* Accessibilità: se qualcuno ha “riduci animazioni” */
+@media (prefers-reduced-motion: reduce){
+  .gallery-thumb-btn img{ transition: none; }
+}
