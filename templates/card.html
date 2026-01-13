@@ -97,6 +97,43 @@
       </div>
       {% endfor %}
 
+      {# =========================
+         PEC / P.IVA / INDIRIZZO
+         (gestione nomi alternativi)
+         ========================= #}
+
+      {% set _pec = ag.pec if ag.pec is defined and ag.pec else (ag.pec_email if ag.pec_email is defined and ag.pec_email else None) %}
+      {% if _pec %}
+      <div class="contact-row">
+        <div class="icon">🏛️</div>
+        <div class="label">PEC</div>
+        <div class="value"><a href="mailto:{{ _pec }}">{{ _pec }}</a></div>
+      </div>
+      {% endif %}
+
+      {% set _piva = ag.piva if ag.piva is defined and ag.piva else (ag.partita_iva if ag.partita_iva is defined and ag.partita_iva else None) %}
+      {% if _piva %}
+      <div class="contact-row">
+        <div class="icon">🧾</div>
+        <div class="label">Partita IVA</div>
+        <div class="value">{{ _piva }}</div>
+      </div>
+      {% endif %}
+
+      {% set _addr = ag.indirizzo if ag.indirizzo is defined and ag.indirizzo else (ag.address if ag.address is defined and ag.address else None) %}
+      {% if _addr %}
+      <div class="contact-row">
+        <div class="icon">📍</div>
+        <div class="label">Indirizzo</div>
+        <div class="value">
+          <a href="https://www.google.com/maps?q={{ _addr|urlencode }}"
+             target="_blank" rel="noopener noreferrer">
+            {{ _addr }}
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="contact-row">
         <div class="icon">💾</div>
         <div class="label">Salva contatto</div>
