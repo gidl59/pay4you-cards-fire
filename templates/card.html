@@ -193,7 +193,7 @@
       </div>
       {% endif %}
 
-      {# ===== INDIRIZZI: prende da "addresses" (se esiste) oppure da vari campi su ag ===== #}
+      {# ===== INDIRIZZI ===== #}
       {% set _addr_source = None %}
       {% if addresses is defined and addresses %}
         {% set _addr_source = addresses %}
@@ -294,30 +294,116 @@
   </div>
 </div>
 
-<!-- MODAL IMMAGINI -->
+<!-- MODAL IMMAGINI (CON FRECCE + CONTATORE) -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <!-- ✅ tolto style inline, ora comanda il CSS -->
+  <div class="modal-box modal-gallery">
+    <button type="button" class="modal-nav-btn prev" onclick="prevGallery()" aria-label="Foto precedente">‹</button>
+
     <img id="qr-modal-img" src="" alt="Foto">
-    <button type="button" class="modal-close-btn" onclick="closeQrModal()">
-      Chiudi
-    </button>
+
+    <button type="button" class="modal-nav-btn next" onclick="nextGallery()" aria-label="Foto successiva">›</button>
+
+    <div class="modal-controls">
+      <div id="modal-counter" class="modal-counter"></div>
+      <button type="button" class="modal-close-btn" onclick="closeQrModal()">Chiudi</button>
+    </div>
   </div>
 </div>
 
 <script>
-function openGalleryModal(url) {
-  const img = document.getElementById('qr-modal-img');
-  img.src = url;
-  document.getElementById('qr-modal').style.display = 'flex';
-}
-function closeQrModal() {
-  document.getElementById('qr-modal').style.display = 'none';
-  document.getElementById('qr-modal-img').src = "";
-}
+  // ✅ lista immagini dalla gallery (Jinja/Flask)
+  const galleryUrls = {{ (gallery if gallery else [])|tojson }};
+
+  let currentIndex = -1;
+  let touchStartX = null;
+
+  function updateModalCounter(){
+    const el = document.getElementById('modal-counter');
+    if (!el) return;
+    if (currentIndex >= 0 && galleryUrls.length){
+      el.textContent = (currentIndex + 1) + " / " + galleryUrls.length;
+    } else {
+      el.textContent = "";
+    }
+  }
+
+  function openGalleryModal(url) {
+    const img = document.getElementById('qr-modal-img');
+
+    const idx = galleryUrls.indexOf(url);
+    currentIndex = (idx >= 0) ? idx : 0;
+
+    img.src = galleryUrls[currentIndex] || url;
+    document.getElementById('qr-modal').style.display = 'flex';
+    updateModalCounter();
+  }
+
+  function closeQrModal() {
+    document.getElementById('qr-modal').style.display = 'none';
+    document.getElementById('qr-modal-img').src = "";
+    currentIndex = -1;
+    updateModalCounter();
+  }
+
+  function showIndex(i){
+    if (!galleryUrls.length) return;
+    currentIndex = (i + galleryUrls.length) % galleryUrls.length; // wrap
+    document.getElementById('qr-modal-img').src = galleryUrls[currentIndex];
+    updateModalCounter();
+  }
+
+  function nextGallery(){
+    if (currentIndex < 0) return;
+    showIndex(currentIndex + 1);
+  }
+
+  function prevGallery(){
+    if (currentIndex < 0) return;
+    showIndex(currentIndex - 1);
+  }
+
+  // ✅ tastiera: sinistra/destra/esc
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('qr-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+
+    if (e.key === 'ArrowRight') nextGallery();
+    if (e.key === 'ArrowLeft') prevGallery();
+    if (e.key === 'Escape') closeQrModal();
+  });
+
+  // ✅ click fuori dal box = chiudi
+  document.addEventListener('click', (e) => {
+    const modal = document.getElementById('qr-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+    if (e.target === modal) closeQrModal();
+  });
+
+  // ✅ swipe mobile
+  document.addEventListener('touchstart', (e) => {
+    const modal = document.getElementById('qr-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+    touchStartX = e.changedTouches[0].clientX;
+  }, {passive:true});
+
+  document.addEventListener('touchend', (e) => {
+    const modal = document.getElementById('qr-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+    if (touchStartX === null) return;
+
+    const endX = e.changedTouches[0].clientX;
+    const delta = endX - touchStartX;
+    touchStartX = null;
+
+    if (Math.abs(delta) > 40) {
+      if (delta < 0) nextGallery();
+      else prevGallery();
+    }
+  }, {passive:true});
 </script>
 
 <style>
+/* PDF */
 .pdf-item {
   background: #181716;
   border-radius: 10px;
@@ -360,12 +446,10 @@ function closeQrModal() {
   font-weight: 600;
 }
 
-/* ===========================
-   ✅ GALLERIA PIÙ GRANDE + ZOOM
-   =========================== */
+/* ✅ GALLERIA PIÙ GRANDE + ZOOM */
 .gallery-scroll img{
-  width: 185px;   /* prima 160 */
-  height: 185px;  /* prima 160 */
+  width: 185px;
+  height: 185px;
   object-fit: cover;
   border-radius: 18px;
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
@@ -383,12 +467,11 @@ function closeQrModal() {
   filter: brightness(1.05);
 }
 
-/* ===========================
-   ✅ MODAL FOTO GRANDISSIMO
-   =========================== */
-.modal-box{
-  width: min(1000px, 94vw);
-  max-width: 1000px;
+/* ✅ MODAL FOTO GRANDISSIMO + FRECCE */
+.modal-gallery{
+  position: relative;
+  width: min(1100px, 96vw);
+  max-width: 1100px;
 }
 #qr-modal-img{
   width: 100%;
@@ -396,6 +479,57 @@ function closeQrModal() {
   max-height: 78vh;
   object-fit: contain;
   border-radius: 14px;
+  display: block;
+}
+
+/* frecce */
+.modal-nav-btn{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.5);
+  background: rgba(2,6,23,0.65);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+.modal-nav-btn:hover{
+  background: rgba(2,6,23,0.82);
+}
+.modal-nav-btn.prev{ left: 10px; }
+.modal-nav-btn.next{ right: 10px; }
+
+/* barra sotto */
+.modal-controls{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.modal-counter{
+  font-size: 13px;
+  color: rgba(229,231,235,0.85);
+}
+
+/* Mobile */
+@media (max-width: 640px){
+  .modal-nav-btn{
+    width: 42px;
+    height: 42px;
+    font-size: 24px;
+  }
+  #qr-modal-img{
+    max-height: 72vh;
+  }
 }
 
 @media (prefers-reduced-motion: reduce){
