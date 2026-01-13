@@ -123,7 +123,7 @@
         </div>
       {% endif %}
 
-      {# LinkedIn (mancava) #}
+      {# LinkedIn #}
       {% set _li = (ag.linkedin if ag.linkedin is defined and ag.linkedin else
                     (ag.linkedin_url if ag.linkedin_url is defined and ag.linkedin_url else
                     (ag.li if ag.li is defined and ag.li else None))) %}
@@ -195,12 +195,9 @@
 
       {# ===== INDIRIZZI: prende da "addresses" (se esiste) oppure da vari campi su ag ===== #}
       {% set _addr_source = None %}
-
-      {# 1) se il backend prepara già una lista "addresses", usala (come emails/websites) #}
       {% if addresses is defined and addresses %}
         {% set _addr_source = addresses %}
       {% else %}
-        {# 2) altrimenti prova vari campi su ag #}
         {% set _addr_source =
           (ag.indirizzi if ag.indirizzi is defined and ag.indirizzi else
           (ag.addresses if ag.addresses is defined and ag.addresses else
@@ -209,7 +206,6 @@
           (ag.address if ag.address is defined and ag.address else None))))) %}
       {% endif %}
 
-      {# Normalizza: se stringa -> split righe; se lista -> usa direttamente #}
       {% if _addr_source %}
         {% if _addr_source is string %}
           {% set _addr_lines = _addr_source.splitlines() %}
@@ -301,7 +297,8 @@
 <!-- MODAL IMMAGINI -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <img id="qr-modal-img" src="" style="max-width:90%;max-height:90vh;">
+    <!-- ✅ tolto style inline, ora comanda il CSS -->
+    <img id="qr-modal-img" src="" alt="Foto">
     <button type="button" class="modal-close-btn" onclick="closeQrModal()">
       Chiudi
     </button>
@@ -361,6 +358,48 @@ function closeQrModal() {
   font-size: 1.10rem;
   line-height: 1.35;
   font-weight: 600;
+}
+
+/* ===========================
+   ✅ GALLERIA PIÙ GRANDE + ZOOM
+   =========================== */
+.gallery-scroll img{
+  width: 185px;   /* prima 160 */
+  height: 185px;  /* prima 160 */
+  object-fit: cover;
+  border-radius: 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  transform: scale(1);
+  will-change: transform;
+}
+.gallery-scroll img:hover{
+  transform: scale(1.12);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
+  filter: brightness(1.05);
+}
+.gallery-thumb-btn:active img{
+  transform: scale(1.12);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
+  filter: brightness(1.05);
+}
+
+/* ===========================
+   ✅ MODAL FOTO GRANDISSIMO
+   =========================== */
+.modal-box{
+  width: min(1000px, 94vw);
+  max-width: 1000px;
+}
+#qr-modal-img{
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .gallery-scroll img{ transition: none; }
 }
 </style>
 
