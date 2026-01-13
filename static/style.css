@@ -380,14 +380,25 @@ a {
   z-index: 9999;
 }
 
+/* ✅ MODAL PIÙ GRANDE */
 .modal-box {
   background: #020617;
   border-radius: 18px;
   padding: 16px 18px 18px;
   border: 1px solid rgba(148,163,184,0.7);
   text-align: center;
-  max-width: 320px;
-  width: 90%;
+
+  width: min(1000px, 94vw);
+  max-width: 1000px;
+}
+
+/* ✅ IMMAGINE NEL MODAL: GRANDISSIMA */
+#qr-modal-img{
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 14px;
 }
 
 .modal-box h2 {
@@ -662,46 +673,45 @@ a {
     border-left: none;
     border-right: none;
   }
+
+  /* ✅ su mobile leggermente più piccole (opzionale) */
+  .gallery-scroll img{
+    width: 170px;
+    height: 170px;
+  }
+
+  #qr-modal-img{
+    max-height: 72vh;
+  }
 }
 
 /* =========================================================
-   ✅ OVERRIDE GALLERIA (mettilo SEMPRE in fondo così vince)
+   ✅ OVERRIDE GALLERIA (sempre in fondo)
    ========================================================= */
 
-/* miniatura più grande + contenitore */
-.gallery-thumb-btn{
-  flex: 0 0 auto;
-  border: none;
-  padding: 0;
-  background: none;
-  cursor: pointer;
-}
-
-/* AUMENTA QUI: dimensione reale delle thumbnails */
+/* ✅ thumbnails più grandi + zoom */
 .gallery-scroll img{
-  width: 185px;   /* <-- prima 160 */
-  height: 185px;  /* <-- prima 160 */
+  width: 185px;   /* prima 160 */
+  height: 185px;  /* prima 160 */
   border-radius: 18px;
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
   transform: scale(1);
   will-change: transform;
 }
 
-/* Desktop: hover */
 .gallery-scroll img:hover{
   transform: scale(1.12);
   box-shadow: 0 18px 48px rgba(0,0,0,0.80);
   filter: brightness(1.05);
 }
 
-/* Mobile: tap/press (active) */
+/* mobile: tap/press */
 .gallery-thumb-btn:active img{
   transform: scale(1.12);
   box-shadow: 0 18px 48px rgba(0,0,0,0.80);
   filter: brightness(1.05);
 }
 
-/* Accessibilità: riduci animazioni */
 @media (prefers-reduced-motion: reduce){
   .gallery-scroll img{ transition: none; }
 }
