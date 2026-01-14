@@ -97,7 +97,6 @@
       </div>
       {% endfor %}
 
-      {# Facebook #}
       {% if ag.facebook %}
       {% set _fb_url = ag.facebook if ag.facebook.startswith('http') else 'https://facebook.com/' ~ ag.facebook %}
       <div class="contact-row">
@@ -107,7 +106,6 @@
       </div>
       {% endif %}
 
-      {# Instagram #}
       {% if ag.instagram %}
       {% set _ig_clean = ag.instagram|replace('@','') %}
       {% set _ig_url = ag.instagram if ag.instagram.startswith('http') else 'https://instagram.com/' ~ _ig_clean %}
@@ -118,7 +116,6 @@
       </div>
       {% endif %}
 
-      {# LinkedIn #}
       {% if ag.linkedin %}
       {% set _li_clean = ag.linkedin|replace('@','') %}
       {% set _li_url = ag.linkedin if ag.linkedin.startswith('http') else 'https://www.linkedin.com/in/' ~ _li_clean %}
@@ -129,7 +126,6 @@
       </div>
       {% endif %}
 
-      {# TikTok #}
       {% if ag.tiktok %}
       {% set _tt_clean = ag.tiktok|replace('@','') %}
       {% set _tt_url = ag.tiktok if ag.tiktok.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_clean %}
@@ -140,7 +136,6 @@
       </div>
       {% endif %}
 
-      {# Telegram #}
       {% if ag.telegram %}
       {% set _tg_clean = ag.telegram|replace('@','') %}
       {% set _tg_url = ag.telegram if ag.telegram.startswith('http') else 'https://t.me/' ~ _tg_clean %}
@@ -151,7 +146,6 @@
       </div>
       {% endif %}
 
-      {# PEC #}
       {% if ag.pec %}
       <div class="contact-row">
         <div class="icon">🏛️</div>
@@ -160,7 +154,6 @@
       </div>
       {% endif %}
 
-      {# PIVA #}
       {% if ag.piva %}
       <div class="contact-row">
         <div class="icon">🧾</div>
@@ -169,7 +162,6 @@
       </div>
       {% endif %}
 
-      {# SDI #}
       {% if ag.sdi %}
       <div class="contact-row">
         <div class="icon">🏷️</div>
@@ -178,7 +170,6 @@
       </div>
       {% endif %}
 
-      {# Indirizzi (già passati come lista) #}
       {% for a in addresses %}
       <div class="contact-row">
         <div class="icon">📍</div>
@@ -219,22 +210,27 @@
     {% endif %}
 
     {# =========================
-       GALLERIA FOTO + VIDEO
+       GALLERIE SEPARATE: FOTO + VIDEO
        ========================= #}
     {% set vids = (videos if videos is defined else []) %}
-    {% if gallery or vids %}
-    <section class="card-section">
-      <h2>Galleria</h2>
 
+    {% if gallery %}
+    <section class="card-section">
+      <h2>Galleria foto</h2>
       <div class="gallery-scroll">
-        {# FOTO #}
-        {% for img in (gallery if gallery else []) %}
+        {% for img in gallery %}
         <button type="button" class="gallery-thumb-btn" onclick="openMediaModal('{{ img }}','image')">
           <img src="{{ img }}" alt="Foto">
         </button>
         {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
-        {# VIDEO #}
+    {% if vids %}
+    <section class="card-section">
+      <h2>Galleria video</h2>
+      <div class="gallery-scroll">
         {% for v in vids %}
         <button type="button" class="gallery-thumb-btn is-video" onclick="openMediaModal('{{ v }}','video')">
           <div class="video-thumb">
@@ -244,16 +240,17 @@
         </button>
         {% endfor %}
       </div>
-
       <div class="gallery-hint">Suggerimento: swipe a sinistra/destra nel popup per cambiare.</div>
     </section>
     {% endif %}
 
     <div class="card-footer">Pay4You – Card digitale personale</div>
+
+    <div class="made-by">Realizzato da Giuseppe Di Lisio © 2026</div>
   </div>
 </div>
 
-<!-- MODAL MEDIA (foto/video) + frecce + miniature -->
+<!-- MODAL MEDIA -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box modal-gallery">
 
@@ -277,6 +274,7 @@
   const galleryImages = {{ (gallery if gallery else [])|tojson }};
   const galleryVideos = {{ (vids if vids else [])|tojson }};
 
+  // ✅ ora l’ordine nel popup è: prima foto poi video (come volevi)
   const mediaItems = [
     ...galleryImages.map(u => ({type:'image', url:u})),
     ...galleryVideos.map(u => ({type:'video', url:u}))
@@ -494,5 +492,13 @@
 
 /* hint */
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
+
+/* firma in basso */
+.made-by{
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(229,231,235,0.55);
+}
 </style>
 {% endblock %}
