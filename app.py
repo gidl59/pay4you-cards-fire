@@ -6,7 +6,7 @@ from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response
 )
-from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
@@ -26,6 +26,10 @@ DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+# ✅ LIMITI
+MAX_GALLERY_IMAGES = 30
+MAX_VIDEOS = 10
 
 
 class Agent(Base):
@@ -60,12 +64,29 @@ class Agent(Base):
 
     # gallery_urls = "url1|url2|..."
     gallery_urls = Column(Text, nullable=True)
+
+    # ✅ NUOVO: video_urls = "url1|url2|..."
+    video_urls = Column(Text, nullable=True)
+
     # pdf1_url = "nome1||url1|nome2||url2|..." (nuovo formato)
     # oppure "url1|url2|..." (vecchio formato)
     pdf1_url = Column(Text, nullable=True)
 
 
 Base.metadata.create_all(engine)
+
+
+# ✅ Micro-migrazione SQLite: aggiunge colonne mancanti se DB già esistente
+def ensure_sqlite_column(table: str, column: str, coltype: str):
+    with engine.connect() as conn:
+        rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
+        existing_cols = {r[1] for r in rows}  # r[1] = name
+        if column not in existing_cols:
+            conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
+            conn.commit()
+
+
+ensure_sqlite_column("agents", "video_urls", "TEXT")
 
 
 # ------------------ Helper ------------------
@@ -114,9 +135,7 @@ def parse_pdfs(raw: str):
 
     Supporta:
     - NUOVO FORMATO: "nome1||url1|nome2||url2|..."
-      (salvato da create_agent / update_agent)
     - VECCHIO FORMATO: "url1|url2|..."
-    Evita i duplicati tipo "Nome.pdf" + "abcdef1234.pdf".
     """
     pdfs = []
     if not raw:
@@ -131,7 +150,6 @@ def parse_pdfs(raw: str):
             continue
 
         if "||" in item:
-            # caso "nome||url" in un solo token (raro ma gestito)
             name, url = item.split("||", 1)
             name = (name or "Documento").strip()
             url = url.strip()
@@ -139,7 +157,6 @@ def parse_pdfs(raw: str):
                 pdfs.append({"name": name, "url": url})
             i += 1
         else:
-            # Possibile pattern: nome , "" , url  (deriva da split("|") su "nome||url")
             if i + 2 < len(tokens) and tokens[i + 1] == "":
                 name = item or "Documento"
                 url = tokens[i + 2].strip()
@@ -147,7 +164,6 @@ def parse_pdfs(raw: str):
                     pdfs.append({"name": name, "url": url})
                 i += 3
             else:
-                # Vecchio formato: solo URL
                 url = item
                 parsed = urllib.parse.urlparse(url)
                 filename = os.path.basename(parsed.path) or "Documento"
@@ -230,12 +246,14 @@ def create_agent():
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
+
     gallery_files = request.files.getlist("gallery")
+    video_files = request.files.getlist("videos")  # ✅ nuovi video
 
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
-    # PDF 1–12: NUOVO FORMATO "nome_originale||url"
+    # PDF 1–12: "nome_originale||url"
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -245,13 +263,21 @@ def create_agent():
                 pdf_entries.append(f"{f.filename}||{u}")
     pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
-    # GALLERIA fino a 20 immagini
+    # ✅ GALLERIA fino a 30 immagini
     gallery_urls = []
-    for f in gallery_files[:20]:
+    for f in gallery_files[:MAX_GALLERY_IMAGES]:
         if f and f.filename:
             u = upload_file(f, "gallery")
             if u:
                 gallery_urls.append(u)
+
+    # ✅ VIDEO fino a 10
+    video_urls = []
+    for f in video_files[:MAX_VIDEOS]:
+        if f and f.filename:
+            u = upload_file(f, "videos")
+            if u:
+                video_urls.append(u)
 
     ag = Agent(
         **data,
@@ -259,6 +285,7 @@ def create_agent():
         extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
         gallery_urls="|".join(gallery_urls) if gallery_urls else None,
+        video_urls="|".join(video_urls) if video_urls else None,
     )
 
     db.add(ag)
@@ -297,7 +324,9 @@ def update_agent(slug):
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
+
     gallery_files = request.files.getlist("gallery")
+    video_files = request.files.getlist("videos")  # ✅
 
     # Foto: solo se carichi un nuovo file
     if photo and photo.filename:
@@ -322,16 +351,27 @@ def update_agent(slug):
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
-    # Galleria: sostituisco solo se carichi nuove immagini
+    # ✅ Galleria: sostituisco solo se carichi nuove immagini
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
-        for f in gallery_files[:20]:
+        for f in gallery_files[:MAX_GALLERY_IMAGES]:
             if f and f.filename:
                 u = upload_file(f, "gallery")
                 if u:
                     gallery_urls.append(u)
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
+
+    # ✅ Video: sostituisco solo se carichi nuovi video
+    if video_files and any(v.filename for v in video_files):
+        video_urls = []
+        for f in video_files[:MAX_VIDEOS]:
+            if f and f.filename:
+                u = upload_file(f, "videos")
+                if u:
+                    video_urls.append(u)
+        if video_urls:
+            ag.video_urls = "|".join(video_urls)
 
     db.commit()
     return redirect(url_for("admin_home"))
@@ -357,12 +397,13 @@ def public_card(slug):
         abort(404)
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
+    videos = ag.video_urls.split("|") if ag.video_urls else []  # ✅
+
     emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
     websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
 
     pdfs = parse_pdfs(ag.pdf1_url or "")
-
     base = get_base_url()
 
     return render_template(
@@ -370,6 +411,7 @@ def public_card(slug):
         ag=ag,
         base_url=base,
         gallery=gallery,
+        videos=videos,   # ✅ PASSO I VIDEO AL TEMPLATE
         emails=emails,
         websites=websites,
         addresses=addresses,
@@ -447,4 +489,4 @@ def not_found(e):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
