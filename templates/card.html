@@ -97,146 +97,105 @@
       </div>
       {% endfor %}
 
-      {# =========================
-         SOCIAL / PEC / P.IVA / SDI / INDIRIZZI
-         ========================= #}
-
       {# Facebook #}
-      {% set _fb = (ag.facebook if ag.facebook is defined and ag.facebook else (ag.fb if ag.fb is defined and ag.fb else None)) %}
-      {% if _fb %}
-        {% set _fb_url = _fb if _fb.startswith('http') else 'https://facebook.com/' ~ _fb %}
-        <div class="contact-row">
-          <div class="icon">📘</div>
-          <div class="label">Facebook</div>
-          <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a></div>
-        </div>
-      {% endif %}
-
-      {# Instagram #}
-      {% set _ig = (ag.instagram if ag.instagram is defined and ag.instagram else (ag.ig if ag.ig is defined and ag.ig else None)) %}
-      {% if _ig %}
-        {% set _ig_url = _ig if _ig.startswith('http') else 'https://instagram.com/' ~ (_ig|replace('@','')) %}
-        <div class="contact-row">
-          <div class="icon">📸</div>
-          <div class="label">Instagram</div>
-          <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a></div>
-        </div>
-      {% endif %}
-
-      {# LinkedIn #}
-      {% set _li = (ag.linkedin if ag.linkedin is defined and ag.linkedin else
-                    (ag.linkedin_url if ag.linkedin_url is defined and ag.linkedin_url else
-                    (ag.li if ag.li is defined and ag.li else None))) %}
-      {% if _li %}
-        {% set _li_clean = _li|replace('@','') %}
-        {% set _li_url = _li_clean if _li_clean.startswith('http') else 'https://www.linkedin.com/in/' ~ _li_clean %}
-        <div class="contact-row">
-          <div class="icon">💼</div>
-          <div class="label">LinkedIn</div>
-          <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">Apri LinkedIn</a></div>
-        </div>
-      {% endif %}
-
-      {# TikTok #}
-      {% set _tt = (ag.tiktok if ag.tiktok is defined and ag.tiktok else (ag.tt if ag.tt is defined and ag.tt else None)) %}
-      {% if _tt %}
-        {% set _tt_user = _tt|replace('@','') %}
-        {% set _tt_url = _tt if _tt.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_user %}
-        <div class="contact-row">
-          <div class="icon">🎵</div>
-          <div class="label">TikTok</div>
-          <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a></div>
-        </div>
-      {% endif %}
-
-      {# Telegram #}
-      {% set _tg = (ag.telegram if ag.telegram is defined and ag.telegram else (ag.tg if ag.tg is defined and ag.tg else None)) %}
-      {% if _tg %}
-        {% set _tg_user = _tg|replace('@','') %}
-        {% set _tg_url = _tg if _tg.startswith('http') else 'https://t.me/' ~ _tg_user %}
-        <div class="contact-row">
-          <div class="icon">✈️</div>
-          <div class="label">Telegram</div>
-          <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a></div>
-        </div>
-      {% endif %}
-
-      {# PEC #}
-      {% set _pec = (ag.pec if ag.pec is defined and ag.pec else (ag.pec_email if ag.pec_email is defined and ag.pec_email else None)) %}
-      {% if _pec %}
+      {% if ag.facebook %}
+      {% set _fb_url = ag.facebook if ag.facebook.startswith('http') else 'https://facebook.com/' ~ ag.facebook %}
       <div class="contact-row">
-        <div class="icon">🏛️</div>
-        <div class="label">PEC</div>
-        <div class="value"><a href="mailto:{{ _pec }}">{{ _pec }}</a></div>
+        <div class="icon">📘</div>
+        <div class="label">Facebook</div>
+        <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a></div>
       </div>
       {% endif %}
 
-      {# P.IVA #}
-      {% set _piva = (ag.piva if ag.piva is defined and ag.piva else
-                      (ag.partita_iva if ag.partita_iva is defined and ag.partita_iva else
-                      (ag.vat if ag.vat is defined and ag.vat else None))) %}
-      {% if _piva %}
+      {# Instagram #}
+      {% if ag.instagram %}
+      {% set _ig_clean = ag.instagram|replace('@','') %}
+      {% set _ig_url = ag.instagram if ag.instagram.startswith('http') else 'https://instagram.com/' ~ _ig_clean %}
+      <div class="contact-row">
+        <div class="icon">📸</div>
+        <div class="label">Instagram</div>
+        <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a></div>
+      </div>
+      {% endif %}
+
+      {# LinkedIn #}
+      {% if ag.linkedin %}
+      {% set _li_clean = ag.linkedin|replace('@','') %}
+      {% set _li_url = ag.linkedin if ag.linkedin.startswith('http') else 'https://www.linkedin.com/in/' ~ _li_clean %}
+      <div class="contact-row">
+        <div class="icon">💼</div>
+        <div class="label">LinkedIn</div>
+        <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">Apri LinkedIn</a></div>
+      </div>
+      {% endif %}
+
+      {# TikTok #}
+      {% if ag.tiktok %}
+      {% set _tt_clean = ag.tiktok|replace('@','') %}
+      {% set _tt_url = ag.tiktok if ag.tiktok.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_clean %}
+      <div class="contact-row">
+        <div class="icon">🎵</div>
+        <div class="label">TikTok</div>
+        <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a></div>
+      </div>
+      {% endif %}
+
+      {# Telegram #}
+      {% if ag.telegram %}
+      {% set _tg_clean = ag.telegram|replace('@','') %}
+      {% set _tg_url = ag.telegram if ag.telegram.startswith('http') else 'https://t.me/' ~ _tg_clean %}
+      <div class="contact-row">
+        <div class="icon">✈️</div>
+        <div class="label">Telegram</div>
+        <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a></div>
+      </div>
+      {% endif %}
+
+      {# PEC #}
+      {% if ag.pec %}
+      <div class="contact-row">
+        <div class="icon">🏛️</div>
+        <div class="label">PEC</div>
+        <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
+      </div>
+      {% endif %}
+
+      {# PIVA #}
+      {% if ag.piva %}
       <div class="contact-row">
         <div class="icon">🧾</div>
         <div class="label">Partita IVA</div>
-        <div class="value">{{ _piva }}</div>
+        <div class="value">{{ ag.piva }}</div>
       </div>
       {% endif %}
 
       {# SDI #}
-      {% set _sdi = (ag.sdi if ag.sdi is defined and ag.sdi else (ag.codice_sdi if ag.codice_sdi is defined and ag.codice_sdi else None)) %}
-      {% if _sdi %}
+      {% if ag.sdi %}
       <div class="contact-row">
         <div class="icon">🏷️</div>
         <div class="label">Codice SDI</div>
-        <div class="value">{{ _sdi }}</div>
+        <div class="value">{{ ag.sdi }}</div>
       </div>
       {% endif %}
 
-      {# ===== INDIRIZZI ===== #}
-      {% set _addr_source = None %}
-      {% if addresses is defined and addresses %}
-        {% set _addr_source = addresses %}
-      {% else %}
-        {% set _addr_source =
-          (ag.indirizzi if ag.indirizzi is defined and ag.indirizzi else
-          (ag.addresses if ag.addresses is defined and ag.addresses else
-          (ag.address_list if ag.address_list is defined and ag.address_list else
-          (ag.indirizzo if ag.indirizzo is defined and ag.indirizzo else
-          (ag.address if ag.address is defined and ag.address else None))))) %}
-      {% endif %}
-
-      {% if _addr_source %}
-        {% if _addr_source is string %}
-          {% set _addr_lines = _addr_source.splitlines() %}
-        {% else %}
-          {% set _addr_lines = _addr_source %}
-        {% endif %}
-
-        {% for line in _addr_lines %}
-          {% if line and line|trim %}
-          <div class="contact-row">
-            <div class="icon">📍</div>
-            <div class="label">Indirizzo{% if _addr_lines|length > 1 %} {{ loop.index }}{% endif %}</div>
-            <div class="value">
-              <a href="https://www.google.com/maps?q={{ line|trim|urlencode }}"
-                 target="_blank" rel="noopener noreferrer">
-                {{ line|trim }}
-              </a>
-            </div>
-          </div>
-          {% endif %}
-        {% endfor %}
-      {% endif %}
+      {# Indirizzi (già passati come lista) #}
+      {% for a in addresses %}
+      <div class="contact-row">
+        <div class="icon">📍</div>
+        <div class="label">Indirizzo{% if addresses|length > 1 %} {{ loop.index }}{% endif %}</div>
+        <div class="value">
+          <a href="https://www.google.com/maps?q={{ a|trim|urlencode }}"
+             target="_blank" rel="noopener noreferrer">
+            {{ a }}
+          </a>
+        </div>
+      </div>
+      {% endfor %}
 
       <div class="contact-row">
         <div class="icon">💾</div>
         <div class="label">Salva contatto</div>
-        <div class="value">
-          <a href="{{ url_for('vcard', slug=ag.slug) }}">
-            Salva
-          </a>
-        </div>
+        <div class="value"><a href="{{ url_for('vcard', slug=ag.slug) }}">Salva</a></div>
       </div>
     </section>
 
@@ -244,12 +203,10 @@
     {% if pdfs %}
     <section class="card-section">
       <h2>Documenti</h2>
-
       <div class="pdf-list">
         {% for pdf in pdfs %}
         <div class="pdf-item">
           <div class="pdf-title">{{ pdf.name }}</div>
-
           <div class="pdf-actions">
             <a class="primary" href="{{ pdf.url }}" target="_blank" rel="noopener">Apri / Scarica</a>
             <a href="mailto:?subject={{ pdf.name }}&body=Ti invio questo documento:%0A{{ pdf.url }}">Invia Email</a>
@@ -264,9 +221,7 @@
     {# =========================
        GALLERIA FOTO + VIDEO
        ========================= #}
-
-    {% set vids = (videos if videos is defined else (ag.videos if ag.videos is defined else [])) %}
-
+    {% set vids = (videos if videos is defined else []) %}
     {% if gallery or vids %}
     <section class="card-section">
       <h2>Galleria</h2>
@@ -290,30 +245,25 @@
         {% endfor %}
       </div>
 
-      <div class="gallery-hint">Suggerimento: swipe a sinistra/destra nel popup per cambiare media.</div>
+      <div class="gallery-hint">Suggerimento: swipe a sinistra/destra nel popup per cambiare.</div>
     </section>
     {% endif %}
 
-    <!-- FOOTER -->
-    <div class="card-footer">
-      Pay4You – Card digitale personale
-    </div>
+    <div class="card-footer">Pay4You – Card digitale personale</div>
   </div>
 </div>
 
-<!-- MODAL MEDIA (FOTO/VIDEO) con frecce + miniature sotto -->
+<!-- MODAL MEDIA (foto/video) + frecce + miniature -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box modal-gallery">
 
     <button type="button" class="modal-nav-btn prev" onclick="prevMedia()" aria-label="Precedente">‹</button>
 
-    <!-- CONTENUTO: img oppure video -->
     <img id="qr-modal-img" src="" alt="Foto" style="display:none;">
     <video id="qr-modal-video" controls playsinline style="display:none;"></video>
 
     <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="Successivo">›</button>
 
-    <!-- Filmstrip miniature -->
     <div id="modal-filmstrip" class="modal-filmstrip"></div>
 
     <div class="modal-controls">
@@ -324,9 +274,9 @@
 </div>
 
 <script>
-  // ✅ Costruiamo una lista unica (foto + video) con tipo
   const galleryImages = {{ (gallery if gallery else [])|tojson }};
   const galleryVideos = {{ (vids if vids else [])|tojson }};
+
   const mediaItems = [
     ...galleryImages.map(u => ({type:'image', url:u})),
     ...galleryVideos.map(u => ({type:'video', url:u}))
@@ -378,7 +328,6 @@
       strip.appendChild(btn);
     });
 
-    // porta in vista la thumb attiva
     const active = strip.querySelector('.filmstrip-thumb.active');
     if (active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
   }
@@ -386,13 +335,10 @@
   function showCurrent(){
     const imgEl = document.getElementById('qr-modal-img');
     const vidEl = document.getElementById('qr-modal-video');
-    const modal = document.getElementById('qr-modal');
-    if (!modal) return;
 
     const it = mediaItems[currentIndex];
     if (!it) return;
 
-    // reset
     imgEl.style.display = "none";
     vidEl.style.display = "none";
     vidEl.pause();
@@ -405,7 +351,6 @@
     } else {
       vidEl.src = it.url;
       vidEl.style.display = "block";
-      // autoplay gentile (mobile potrebbe bloccarlo, ma resta ok)
       try { vidEl.play(); } catch(e){}
     }
 
@@ -440,7 +385,6 @@
   function nextMedia(){ if (currentIndex >= 0) showIndex(currentIndex + 1); }
   function prevMedia(){ if (currentIndex >= 0) showIndex(currentIndex - 1); }
 
-  // tastiera (desktop)
   document.addEventListener('keydown', (e) => {
     const modal = document.getElementById('qr-modal');
     if (!modal || modal.style.display !== 'flex') return;
@@ -449,14 +393,12 @@
     if (e.key === 'Escape') closeQrModal();
   });
 
-  // click fuori dal box = chiudi
   document.addEventListener('click', (e) => {
     const modal = document.getElementById('qr-modal');
     if (!modal || modal.style.display !== 'flex') return;
     if (e.target === modal) closeQrModal();
   });
 
-  // swipe mobile
   document.addEventListener('touchstart', (e) => {
     const modal = document.getElementById('qr-modal');
     if (!modal || modal.style.display !== 'flex') return;
@@ -467,11 +409,9 @@
     const modal = document.getElementById('qr-modal');
     if (!modal || modal.style.display !== 'flex') return;
     if (touchStartX === null) return;
-
     const endX = e.changedTouches[0].clientX;
     const delta = endX - touchStartX;
     touchStartX = null;
-
     if (Math.abs(delta) > 40) {
       if (delta < 0) nextMedia();
       else prevMedia();
@@ -480,216 +420,79 @@
 </script>
 
 <style>
-/* PDF */
-.pdf-item { background:#181716; border-radius:10px; padding:12px 14px; border:1px solid #444036; font-size:0.9rem; color:#fff; }
-.pdf-title { font-weight:700; font-size:1.02rem; color:#fff; margin-bottom:8px; }
-.pdf-actions { display:flex; flex-wrap:wrap; gap:8px; }
-.pdf-actions a { font-size:0.8rem; padding:6px 10px; border-radius:999px; border:1px solid #c99a2f; text-decoration:none; color:#fff; }
-.pdf-actions a.primary { background:#c99a2f; color:#111; }
-.pdf-actions a.primary:hover { background:#b78924; }
-
-/* bio più grande */
-.card-bio{ font-size:1.10rem; line-height:1.35; font-weight:600; }
-
-/* Galleria */
-.gallery-scroll{
-  margin-top: 8px;
-  display:flex;
-  gap:10px;
-  overflow-x:auto;
-  padding-bottom:4px;
-}
-.gallery-thumb-btn{
-  flex:0 0 auto;
-  border:none;
-  padding:0;
-  background:none;
-  cursor:pointer;
-}
-.gallery-scroll img{
-  width:185px;
-  height:185px;
-  object-fit:cover;
-  border-radius:18px;
-  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-  transform: scale(1);
-  will-change: transform;
-  border: 1px solid rgba(148,163,184,0.35);
-}
-.gallery-scroll img:hover{
-  transform: scale(1.12);
-  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
-  filter: brightness(1.05);
-}
-.gallery-thumb-btn:active img{
-  transform: scale(1.12);
-  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
-  filter: brightness(1.05);
-}
-
-/* Video thumb (anteprima) */
+/* video thumbs */
 .video-thumb{
-  width:185px;
-  height:185px;
+  width:185px; height:185px;
   border-radius:18px;
   overflow:hidden;
   position:relative;
   border: 1px solid rgba(148,163,184,0.35);
   background: rgba(2,6,23,0.35);
 }
-.video-thumb video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
+.video-thumb video{ width:100%; height:100%; object-fit:cover; display:block; }
 .video-play-badge{
-  position:absolute;
-  left:10px;
-  bottom:10px;
-  width:34px;
-  height:34px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  position:absolute; left:10px; bottom:10px;
+  width:34px; height:34px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
   background: rgba(2,6,23,0.65);
   border:1px solid rgba(148,163,184,0.45);
-  color:#fff;
-  font-weight:700;
+  color:#fff; font-weight:700;
 }
 
-/* Modal grande */
+/* modal grande */
 .modal-gallery{ position:relative; width:min(1100px, 96vw); max-width:1100px; }
-#qr-modal-img{
-  width:100%;
-  height:auto;
-  max-height:72vh;
-  object-fit:contain;
-  border-radius:14px;
-  display:block;
-}
-#qr-modal-video{
-  width:100%;
-  max-height:72vh;
-  border-radius:14px;
-  background:#000;
-}
+#qr-modal-img{ width:100%; max-height:72vh; object-fit:contain; border-radius:14px; }
+#qr-modal-video{ width:100%; max-height:72vh; border-radius:14px; background:#000; }
 
 /* frecce */
 .modal-nav-btn{
-  position:absolute;
-  top:50%;
-  transform: translateY(-50%);
-  width:48px;
-  height:48px;
-  border-radius:999px;
+  position:absolute; top:50%; transform: translateY(-50%);
+  width:48px; height:48px; border-radius:999px;
   border:1px solid rgba(148,163,184,0.5);
   background: rgba(2,6,23,0.65);
-  color:#fff;
-  font-size:28px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  backdrop-filter: blur(10px);
+  color:#fff; font-size:28px; cursor:pointer;
 }
 .modal-nav-btn.prev{ left:10px; }
 .modal-nav-btn.next{ right:10px; }
-.modal-nav-btn:hover{ background: rgba(2,6,23,0.82); }
 
-/* Filmstrip (miniature sotto) */
+/* filmstrip */
 .modal-filmstrip{
-  margin-top: 10px;
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  padding: 6px 4px;
+  margin-top:10px;
+  display:flex; gap:8px; overflow-x:auto;
+  padding:6px 4px;
 }
 .filmstrip-thumb{
-  border:none;
-  padding:0;
-  background:none;
-  cursor:pointer;
-  flex: 0 0 auto;
-  border-radius: 12px;
-  overflow:hidden;
-  outline:none;
-  position: relative;
+  border:none; padding:0; background:none; cursor:pointer;
+  flex:0 0 auto; border-radius:12px; overflow:hidden;
 }
 .filmstrip-thumb img{
-  width: 86px;
-  height: 60px;
-  object-fit: cover;
-  display:block;
-  border-radius: 12px;
+  width:86px; height:60px; object-fit:cover; display:block;
+  border-radius:12px;
   border:1px solid rgba(148,163,184,0.35);
-  opacity: 0.85;
+  opacity:0.85;
 }
 .filmstrip-thumb.active img{
-  opacity: 1;
+  opacity:1;
   border-color: rgba(250,204,21,0.8);
   box-shadow: 0 10px 24px rgba(0,0,0,0.65);
 }
-
 .filmstrip-video{
-  width: 86px;
-  height: 60px;
-  border-radius: 12px;
-  overflow:hidden;
-  position: relative;
+  width:86px; height:60px;
+  border-radius:12px; overflow:hidden; position:relative;
   border:1px solid rgba(148,163,184,0.35);
   background: rgba(2,6,23,0.35);
 }
-.filmstrip-video video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  opacity: 0.9;
-}
+.filmstrip-video video{ width:100%; height:100%; object-fit:cover; display:block; opacity:0.9; }
 .filmstrip-play{
-  position:absolute;
-  left:6px;
-  bottom:6px;
-  width:20px;
-  height:20px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  position:absolute; left:6px; bottom:6px;
+  width:20px; height:20px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
   background: rgba(2,6,23,0.65);
   border:1px solid rgba(148,163,184,0.45);
-  color:#fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-.filmstrip-thumb.active .filmstrip-video{
-  border-color: rgba(250,204,21,0.8);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.65);
+  color:#fff; font-size:11px; font-weight:700;
 }
 
-/* barra sotto */
-.modal-controls{ display:flex; align-items:center; justify-content:center; gap:12px; margin-top: 10px; }
-.modal-counter{ font-size:13px; color: rgba(229,231,235,0.85); }
-
-.gallery-hint{
-  margin-top: 10px;
-  font-size: 12px;
-  color: rgba(229,231,235,0.70);
-}
-
-/* mobile */
-@media (max-width: 640px){
-  .gallery-scroll img{ width:170px; height:170px; }
-  .video-thumb{ width:170px; height:170px; }
-  #qr-modal-img, #qr-modal-video{ max-height: 66vh; }
-  .modal-nav-btn{ width:42px; height:42px; font-size:24px; }
-}
-
-@media (prefers-reduced-motion: reduce){
-  .gallery-scroll img{ transition:none; }
-}
+/* hint */
+.gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
 </style>
-
 {% endblock %}
