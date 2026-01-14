@@ -234,7 +234,8 @@
         {% for v in vids %}
         <button type="button" class="gallery-thumb-btn is-video" onclick="openMediaModal('{{ v }}','video')">
           <div class="video-thumb">
-            <video src="{{ v }}" muted playsinline preload="metadata"></video>
+            <video class="thumb-video" src="{{ v }}" muted playsinline preload="metadata"></video>
+            <img class="thumb-video-img" alt="Anteprima video" />
             <span class="video-play-badge">▶</span>
           </div>
         </button>
@@ -245,23 +246,30 @@
     {% endif %}
 
     <div class="card-footer">Pay4You – Card digitale personale</div>
-
     <div class="made-by">Realizzato da Giuseppe Di Lisio © 2026</div>
   </div>
 </div>
 
 <!-- MODAL MEDIA -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box modal-gallery">
-
+  <div class="modal-box modal-gallery" id="modalBox">
     <button type="button" class="modal-nav-btn prev" onclick="prevMedia()" aria-label="Precedente">‹</button>
 
-    <img id="qr-modal-img" src="" alt="Foto" style="display:none;">
-    <video id="qr-modal-video" controls playsinline style="display:none;"></video>
+    <div class="modal-stage">
+      <img id="qr-modal-img" src="" alt="Foto" style="display:none;">
+      <video id="qr-modal-video" controls playsinline style="display:none;"></video>
+    </div>
 
     <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="Successivo">›</button>
 
-    <div id="modal-filmstrip" class="modal-filmstrip"></div>
+    <!-- filmstrip separato -->
+    <div class="modal-filmstrip-wrap">
+      <div class="filmstrip-title">Foto</div>
+      <div id="filmstrip-photos" class="modal-filmstrip"></div>
+
+      <div class="filmstrip-title" style="margin-top:10px;">Video</div>
+      <div id="filmstrip-videos" class="modal-filmstrip"></div>
+    </div>
 
     <div class="modal-controls">
       <div id="modal-counter" class="modal-counter"></div>
@@ -274,7 +282,7 @@
   const galleryImages = {{ (gallery if gallery else [])|tojson }};
   const galleryVideos = {{ (vids if vids else [])|tojson }};
 
-  // ✅ ora l’ordine nel popup è: prima foto poi video (come volevi)
+  // ordine nel popup: foto poi video
   const mediaItems = [
     ...galleryImages.map(u => ({type:'image', url:u})),
     ...galleryVideos.map(u => ({type:'video', url:u}))
@@ -289,59 +297,145 @@
     el.textContent = (currentIndex >= 0 && mediaItems.length) ? ((currentIndex+1) + " / " + mediaItems.length) : "";
   }
 
-  function renderFilmstrip(){
-    const strip = document.getElementById('modal-filmstrip');
-    if (!strip) return;
-    strip.innerHTML = "";
+  // ✅ genera una miniatura (frame) per un video e la mette in img
+  async function makeVideoThumb(videoEl, imgEl){
+    try{
+      videoEl.muted = true;
+      videoEl.playsInline = true;
 
-    mediaItems.forEach((it, idx) => {
+      // carica metadata
+      if (videoEl.readyState < 1){
+        await new Promise(res => videoEl.addEventListener('loadedmetadata', res, {once:true}));
+      }
+
+      // prova a posizionarsi a 0.1s (alcuni video a 0 fanno nero)
+      const t = Math.min(0.1, Math.max(0, (videoEl.duration || 1) - 0.2));
+      if (!isNaN(t)){
+        videoEl.currentTime = t;
+        await new Promise(res => videoEl.addEventListener('seeked', res, {once:true}));
+      }
+
+      // serve un frame pronto
+      if (videoEl.readyState < 2){
+        await new Promise(res => videoEl.addEventListener('loadeddata', res, {once:true}));
+      }
+
+      const canvas = document.createElement('canvas');
+      const w = videoEl.videoWidth || 300;
+      const h = videoEl.videoHeight || 300;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoEl, 0, 0, w, h);
+
+      imgEl.src = canvas.toDataURL('image/jpeg', 0.82);
+      imgEl.style.display = 'block';
+      videoEl.style.display = 'none';
+    } catch(e){
+      // se non riesce, lasciamo il video come fallback (a volte mostra comunque qualcosa)
+      imgEl.style.display = 'none';
+      videoEl.style.display = 'block';
+    }
+  }
+
+  // ✅ crea thumbs per i video nelle righe “Galleria video”
+  function buildInlineVideoThumbs(){
+    document.querySelectorAll('.video-thumb').forEach(box => {
+      const v = box.querySelector('video.thumb-video');
+      const img = box.querySelector('img.thumb-video-img');
+      if (!v || !img) return;
+      makeVideoThumb(v, img);
+    });
+  }
+
+  function renderFilmstrips(){
+    const stripPhotos = document.getElementById('filmstrip-photos');
+    const stripVideos = document.getElementById('filmstrip-videos');
+    if (!stripPhotos || !stripVideos) return;
+
+    stripPhotos.innerHTML = "";
+    stripVideos.innerHTML = "";
+
+    // FOTO
+    galleryImages.forEach((url) => {
+      const idx = mediaItems.findIndex(x => x.type==='image' && x.url===url);
+
       const btn = document.createElement('button');
       btn.type = "button";
       btn.className = "filmstrip-thumb" + (idx === currentIndex ? " active" : "");
       btn.onclick = () => showIndex(idx);
 
-      if (it.type === 'image'){
-        const img = document.createElement('img');
-        img.src = it.url;
-        img.alt = "thumb";
-        btn.appendChild(img);
-      } else {
-        const wrap = document.createElement('div');
-        wrap.className = "filmstrip-video";
-        const v = document.createElement('video');
-        v.src = it.url;
-        v.muted = true;
-        v.playsInline = true;
-        v.preload = "metadata";
-        wrap.appendChild(v);
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = "thumb foto";
+      btn.appendChild(img);
 
-        const badge = document.createElement('span');
-        badge.className = "filmstrip-play";
-        badge.textContent = "▶";
-        wrap.appendChild(badge);
-
-        btn.appendChild(wrap);
-      }
-
-      strip.appendChild(btn);
+      stripPhotos.appendChild(btn);
     });
 
-    const active = strip.querySelector('.filmstrip-thumb.active');
+    // VIDEO (miniatura generata da canvas)
+    galleryVideos.forEach((url) => {
+      const idx = mediaItems.findIndex(x => x.type==='video' && x.url===url);
+
+      const btn = document.createElement('button');
+      btn.type = "button";
+      btn.className = "filmstrip-thumb" + (idx === currentIndex ? " active" : "");
+      btn.onclick = () => showIndex(idx);
+
+      const wrap = document.createElement('div');
+      wrap.className = "filmstrip-video";
+
+      const v = document.createElement('video');
+      v.src = url;
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = "metadata";
+      v.style.display = "none"; // lo uso solo per generare il frame
+      wrap.appendChild(v);
+
+      const img = document.createElement('img');
+      img.alt = "thumb video";
+      img.style.display = "block";
+      wrap.appendChild(img);
+
+      const badge = document.createElement('span');
+      badge.className = "filmstrip-play";
+      badge.textContent = "▶";
+      wrap.appendChild(badge);
+
+      btn.appendChild(wrap);
+      stripVideos.appendChild(btn);
+
+      // genera la miniatura
+      makeVideoThumb(v, img);
+    });
+
+    // scroll sul thumb attivo (se esiste)
+    const active = document.querySelector('.filmstrip-thumb.active');
     if (active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
   }
 
   function showCurrent(){
     const imgEl = document.getElementById('qr-modal-img');
     const vidEl = document.getElementById('qr-modal-video');
+    const modalBox = document.getElementById('modalBox');
 
     const it = mediaItems[currentIndex];
     if (!it) return;
 
+    // reset
     imgEl.style.display = "none";
     vidEl.style.display = "none";
     vidEl.pause();
     vidEl.removeAttribute("src");
     vidEl.load();
+
+    // ✅ modal più “stretto” quando è video (così i verticali sembrano più grandi)
+    if (it.type === 'video'){
+      modalBox.classList.add('is-video');
+    } else {
+      modalBox.classList.remove('is-video');
+    }
 
     if (it.type === 'image'){
       imgEl.src = it.url;
@@ -353,7 +447,7 @@
     }
 
     updateCounter();
-    renderFilmstrip();
+    renderFilmstrips();
   }
 
   function openMediaModal(url, type){
@@ -371,8 +465,10 @@
     vidEl.load();
     currentIndex = -1;
     updateCounter();
-    const strip = document.getElementById('modal-filmstrip');
-    if (strip) strip.innerHTML = "";
+    const p = document.getElementById('filmstrip-photos');
+    const v = document.getElementById('filmstrip-videos');
+    if (p) p.innerHTML = "";
+    if (v) v.innerHTML = "";
   }
 
   function showIndex(i){
@@ -415,19 +511,47 @@
       else prevMedia();
     }
   }, {passive:true});
+
+  // al caricamento pagina: crea thumbs video nella riga video
+  document.addEventListener('DOMContentLoaded', buildInlineVideoThumbs);
 </script>
 
 <style>
-/* video thumbs */
+/* --------- thumbs (foto/video) uguali e più grandi --------- */
+.gallery-thumb-btn{
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+  width: 185px;
+  height: 185px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.gallery-thumb-btn img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* video thumbs: uso img generata */
 .video-thumb{
-  width:185px; height:185px;
-  border-radius:18px;
-  overflow:hidden;
-  position:relative;
-  border: 1px solid rgba(148,163,184,0.35);
+  width: 100%;
+  height: 100%;
+  position: relative;
   background: rgba(2,6,23,0.35);
 }
-.video-thumb video{ width:100%; height:100%; object-fit:cover; display:block; }
+.thumb-video{ display:none; } /* lo mostro solo come fallback se serve */
+.thumb-video-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
 .video-play-badge{
   position:absolute; left:10px; bottom:10px;
   width:34px; height:34px; border-radius:999px;
@@ -437,10 +561,44 @@
   color:#fff; font-weight:700;
 }
 
-/* modal grande */
-.modal-gallery{ position:relative; width:min(1100px, 96vw); max-width:1100px; }
-#qr-modal-img{ width:100%; max-height:72vh; object-fit:contain; border-radius:14px; }
-#qr-modal-video{ width:100%; max-height:72vh; border-radius:14px; background:#000; }
+/* --------- MODAL: video più grandi --------- */
+.modal-gallery{
+  position:relative;
+  width: min(1100px, 96vw);
+  max-width: 1100px;
+  padding: 10px 10px 12px;
+}
+.modal-gallery.is-video{
+  width: min(680px, 96vw);   /* ✅ stringo il modal per verticali */
+  max-width: 680px;
+}
+
+.modal-stage{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+}
+
+/* immagini */
+#qr-modal-img{
+  max-height: 86vh;
+  max-width: 96vw;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+/* video */
+#qr-modal-video{
+  max-height: 86vh;     /* ✅ più alto */
+  max-width: 96vw;
+  width: auto;          /* ✅ non forzo 100% */
+  height: auto;
+  border-radius: 14px;
+  background:#000;
+}
 
 /* frecce */
 .modal-nav-btn{
@@ -449,38 +607,59 @@
   border:1px solid rgba(148,163,184,0.5);
   background: rgba(2,6,23,0.65);
   color:#fff; font-size:28px; cursor:pointer;
+  z-index: 2;
 }
 .modal-nav-btn.prev{ left:10px; }
 .modal-nav-btn.next{ right:10px; }
 
-/* filmstrip */
-.modal-filmstrip{
-  margin-top:10px;
-  display:flex; gap:8px; overflow-x:auto;
-  padding:6px 4px;
+/* filmstrip separato */
+.modal-filmstrip-wrap{ margin-top: 10px; }
+.filmstrip-title{
+  font-size: 12px;
+  color: rgba(229,231,235,0.75);
+  margin: 2px 0 6px;
 }
+
+.modal-filmstrip{
+  display:flex; gap:8px; overflow-x:auto;
+  padding: 6px 4px;
+}
+
 .filmstrip-thumb{
   border:none; padding:0; background:none; cursor:pointer;
-  flex:0 0 auto; border-radius:12px; overflow:hidden;
+  flex:0 0 auto;
+  border-radius:12px;
+  overflow:hidden;
 }
+
 .filmstrip-thumb img{
   width:86px; height:60px; object-fit:cover; display:block;
   border-radius:12px;
   border:1px solid rgba(148,163,184,0.35);
   opacity:0.85;
 }
+
 .filmstrip-thumb.active img{
   opacity:1;
   border-color: rgba(250,204,21,0.8);
   box-shadow: 0 10px 24px rgba(0,0,0,0.65);
 }
+
 .filmstrip-video{
   width:86px; height:60px;
-  border-radius:12px; overflow:hidden; position:relative;
+  border-radius:12px; overflow:hidden;
+  position:relative;
   border:1px solid rgba(148,163,184,0.35);
   background: rgba(2,6,23,0.35);
 }
-.filmstrip-video video{ width:100%; height:100%; object-fit:cover; display:block; opacity:0.9; }
+
+.filmstrip-video img{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+  opacity: 0.92;
+}
+
 .filmstrip-play{
   position:absolute; left:6px; bottom:6px;
   width:20px; height:20px; border-radius:999px;
@@ -490,10 +669,8 @@
   color:#fff; font-size:11px; font-weight:700;
 }
 
-/* hint */
+/* hint + firma */
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
-
-/* firma in basso */
 .made-by{
   margin-top: 12px;
   text-align: center;
