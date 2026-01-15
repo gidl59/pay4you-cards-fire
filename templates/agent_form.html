@@ -24,9 +24,9 @@
       <input type="text" name="company" value="{{ agent.company if agent else '' }}">
 
       <label>Descrizione breve</label>
-      <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
+      <textarea name="bio" placeholder="Scrivi una descrizione...">{{ agent.bio if agent else '' }}</textarea>
 
-      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:10px 0;">
+      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:12px 0;">
 
       <label>Telefono mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
@@ -35,10 +35,10 @@
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
 
       <label>Email (separate da virgola)</label>
-      <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+      <input type="text" name="emails" value="{{ agent.emails if agent else '' }}" placeholder="es. info@..., commerciale@...">
 
-      <label>Siti web (separati da virgola — puoi scrivere anche “www…”)</label>
-      <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+      <label>Siti web (separati da virgola — scrivi anche www...)</label>
+      <input type="text" name="websites" value="{{ agent.websites if agent else '' }}" placeholder="es. https://..., www....">
 
       <label>WhatsApp (es. +39333...)</label>
       <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
@@ -70,15 +70,15 @@
       <label>Indirizzi (uno per riga)</label>
       <textarea name="addresses" placeholder="Via ...&#10;Via ...">{{ agent.addresses if agent else '' }}</textarea>
 
-      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:10px 0;">
+      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:12px 0;">
 
       <!-- FOTO AGENTE (CROP) -->
-      <label>Foto agente (con crop)</label>
+      <label>Foto agente (con ritaglio/crop)</label>
 
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <input type="file" name="photo" id="photoInput" accept="image/*">
 
-        <div style="width:86px;height:86px;border-radius:999px;overflow:hidden;border:1px solid rgba(148,163,184,0.45);background:rgba(2,6,23,0.35);display:flex;align-items:center;justify-content:center;">
+        <div style="width:90px;height:90px;border-radius:999px;overflow:hidden;border:1px solid rgba(148,163,184,0.45);background:rgba(2,6,23,0.35);display:flex;align-items:center;justify-content:center;">
           <img id="photoPreview"
                src="{{ agent.photo_url if agent and agent.photo_url else '' }}"
                alt="preview"
@@ -92,7 +92,7 @@
       <label>Logo (retro avatar)</label>
       <input type="file" name="extra_logo" accept="image/*">
 
-      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:10px 0;">
+      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:12px 0;">
 
       <!-- PDF -->
       <label>Documenti PDF (max 12)</label>
@@ -110,11 +110,15 @@
       </label>
       {% endif %}
 
-      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:10px 0;">
+      <hr style="border:0;border-top:1px solid rgba(148,163,184,0.25);margin:12px 0;">
 
-      <!-- GALLERIA -->
-      <label>Galleria (foto e video) - selezione multipla</label>
-      <input type="file" name="gallery" multiple accept="image/*,video/*">
+      <!-- ✅ GALLERIA FOTO -->
+      <label>Galleria foto (max 30) — selezione multipla</label>
+      <input type="file" name="gallery" multiple accept="image/*">
+
+      <!-- ✅ VIDEO -->
+      <label style="margin-top:10px;">Video (max 10) — selezione multipla</label>
+      <input type="file" name="videos" multiple accept="video/*">
 
       <div class="agent-form-buttons">
         <button type="submit">{% if agent %}Salva modifiche{% else %}Crea agente{% endif %}</button>
@@ -131,9 +135,11 @@
 <div id="cropModal" class="crop-modal" style="display:none;">
   <div class="crop-box">
     <div class="crop-title">Ritaglia la foto</div>
+
     <div class="crop-stage">
       <img id="cropImage" alt="crop">
     </div>
+
     <div class="crop-actions">
       <button type="button" class="crop-btn secondary" onclick="closeCrop()">Annulla</button>
       <button type="button" class="crop-btn primary" onclick="applyCrop()">Usa questa foto</button>
@@ -143,9 +149,11 @@
 
 <script>
   let cropper = null;
+
   const input = document.getElementById('photoInput');
   const modal = document.getElementById('cropModal');
   const cropImg = document.getElementById('cropImage');
+
   const preview = document.getElementById('photoPreview');
   const previewEmpty = document.getElementById('photoPreviewEmpty');
 
@@ -157,7 +165,6 @@
     cropImg.src = url;
     modal.style.display = 'flex';
 
-    // Attendi che l'immagine sia caricata prima di inizializzare Cropper
     cropImg.onload = () => {
       if (cropper) cropper.destroy();
       cropper = new Cropper(cropImg, {
@@ -183,13 +190,13 @@
     canvas.toBlob((blob) => {
       if (!blob) return;
 
-      // Crea un File finto per rimetterlo nell'input (così Flask lo riceve come "photo")
+      // sostituisco il file nell'input con quello croppato
       const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
       const dt = new DataTransfer();
       dt.items.add(file);
       input.files = dt.files;
 
-      // Preview
+      // preview
       preview.src = URL.createObjectURL(blob);
       preview.style.display = 'block';
       previewEmpty.style.display = 'none';
@@ -263,4 +270,5 @@
     border: 1px solid rgba(148,163,184,0.35);
   }
 </style>
+
 {% endblock %}
