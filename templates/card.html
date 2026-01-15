@@ -291,8 +291,6 @@
       <video id="qr-modal-video" controls playsinline style="display:none;"></video>
     </div>
 
-    <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="Successivo">›</button>
-
     <!-- filmstrip separato -->
     <div class="modal-filmstrip-wrap">
       <div class="filmstrip-title">Foto</div>
@@ -306,6 +304,8 @@
       <div id="modal-counter" class="modal-counter"></div>
       <button type="button" class="modal-close-btn" onclick="closeQrModal()">Chiudi</button>
     </div>
+
+    <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="Successivo">›</button>
   </div>
 </div>
 
@@ -472,11 +472,14 @@
     const idx = mediaItems.findIndex(x => x.url === url && x.type === type);
     currentIndex = (idx >= 0) ? idx : 0;
     document.getElementById('qr-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; /* ✅ blocca scroll dietro */
     showCurrent();
   }
 
   function closeQrModal(){
     document.getElementById('qr-modal').style.display = 'none';
+    document.body.style.overflow = '';       /* ✅ riabilita scroll */
+
     const vidEl = document.getElementById('qr-modal-video');
     vidEl.pause();
     vidEl.removeAttribute("src");
@@ -503,6 +506,12 @@
     if (e.target === modal) closeQrModal();
   });
 
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('qr-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+    if (e.key === 'Escape') closeQrModal();
+  });
+
   document.addEventListener('touchstart', (e) => {
     const modal = document.getElementById('qr-modal');
     if (!modal || modal.style.display !== 'flex') return;
@@ -526,6 +535,7 @@
 </script>
 
 <style>
+/* thumbs */
 .gallery-thumb-btn{
   border: none;
   padding: 0;
@@ -537,18 +547,15 @@
   border-radius: 18px;
   overflow: hidden;
 }
-
 .gallery-thumb-btn img{
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-
 .video-thumb{ width: 100%; height: 100%; position: relative; background: rgba(2,6,23,0.35); }
 .thumb-video{ display:none; }
 .thumb-video-img{ width:100%; height:100%; object-fit:cover; display:block; }
-
 .video-play-badge{
   position:absolute; left:10px; bottom:10px;
   width:34px; height:34px; border-radius:999px;
@@ -558,13 +565,52 @@
   color:#fff; font-weight:700;
 }
 
-.modal-gallery{ position:relative; width: min(1100px, 96vw); max-width: 1100px; padding: 10px 10px 12px; }
-.modal-gallery.is-video{ width: min(680px, 96vw); max-width: 680px; }
+/* ===== MODAL FIX (Chiudi sempre visibile) ===== */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 14px;
+}
 
-.modal-stage{ display:flex; justify-content:center; align-items:center; width:100%; }
+.modal-box.modal-gallery{
+  position: relative;
+  width: min(1100px, 96vw);
+  max-width: 1100px;
+
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  padding: 10px 10px 0;
+  background: #020617;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,0.7);
+}
+
+.modal-box.modal-gallery.is-video{
+  width: min(860px, 96vw);
+  max-width: 860px;
+}
+
+/* stage scrollabile */
+.modal-stage{
+  flex: 1;
+  min-height: 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding: 8px 6px 10px;
+  overflow: auto;
+}
 
 #qr-modal-img{
-  max-height: 86vh;
+  max-height: 74vh;
   max-width: 96vw;
   width: auto;
   height: auto;
@@ -573,45 +619,50 @@
 }
 
 #qr-modal-video{
-  max-height: 86vh;
+  max-height: 74vh;
   max-width: 96vw;
-  width: auto;
+  width: 100%;
   height: auto;
   border-radius: 14px;
   background:#000;
 }
 
+/* frecce */
 .modal-nav-btn{
-  position:absolute; top:50%; transform: translateY(-50%);
+  position:absolute;
+  top: 42%;
+  transform: translateY(-50%);
   width:48px; height:48px; border-radius:999px;
   border:1px solid rgba(148,163,184,0.5);
   background: rgba(2,6,23,0.65);
   color:#fff; font-size:28px; cursor:pointer;
-  z-index: 2;
+  z-index: 5;
 }
 .modal-nav-btn.prev{ left:10px; }
 .modal-nav-btn.next{ right:10px; }
 
-.modal-filmstrip-wrap{ margin-top: 10px; }
+/* filmstrip */
+.modal-filmstrip-wrap{
+  padding: 10px 6px 10px;
+  border-top: 1px solid rgba(148,163,184,0.14);
+  background: rgba(2,6,23,0.35);
+  max-height: 22vh;
+  overflow: auto;
+}
 .filmstrip-title{ font-size: 12px; color: rgba(229,231,235,0.75); margin: 2px 0 6px; }
-
 .modal-filmstrip{ display:flex; gap:8px; overflow-x:auto; padding: 6px 4px; }
-
 .filmstrip-thumb{ border:none; padding:0; background:none; cursor:pointer; flex:0 0 auto; border-radius:12px; overflow:hidden; }
-
 .filmstrip-thumb img{
   width:86px; height:60px; object-fit:cover; display:block;
   border-radius:12px;
   border:1px solid rgba(148,163,184,0.35);
   opacity:0.85;
 }
-
 .filmstrip-thumb.active img{
   opacity:1;
   border-color: rgba(250,204,21,0.8);
   box-shadow: 0 10px 24px rgba(0,0,0,0.65);
 }
-
 .filmstrip-video{
   width:86px; height:60px; border-radius:12px; overflow:hidden;
   position:relative;
@@ -626,6 +677,30 @@
   background: rgba(2,6,23,0.65);
   border:1px solid rgba(148,163,184,0.45);
   color:#fff; font-size:11px; font-weight:700;
+}
+
+/* controls sticky */
+.modal-controls{
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  background: rgba(2,6,23,0.92);
+  border-top: 1px solid rgba(148,163,184,0.22);
+}
+.modal-counter{ font-size: 12px; color: rgba(229,231,235,0.7); }
+.modal-close-btn{
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #facc15;
+  color: #111827;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
