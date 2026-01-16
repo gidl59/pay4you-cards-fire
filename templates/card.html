@@ -57,11 +57,29 @@
     <section class="card-section">
       <h2>Contatti</h2>
 
-      {% if ag.phone_mobile %}
+      {# ✅ MOBILI: se app.py passa "mobiles" (lista), uso quella. Altrimenti fallback su ag.phone_mobile #}
+      {% if mobiles is defined and mobiles and mobiles|length > 0 %}
+        {% for m in mobiles %}
+        <div class="contact-row">
+          <div class="icon">📱</div>
+          <div class="label">Chiama mobile{% if mobiles|length > 1 %} {{ loop.index }}{% endif %}</div>
+          <div class="value"><a href="tel:{{ m }}">{{ m }}</a></div>
+        </div>
+        {% endfor %}
+      {% elif ag.phone_mobile %}
+        <div class="contact-row">
+          <div class="icon">📱</div>
+          <div class="label">Chiama mobile</div>
+          <div class="value"><a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a></div>
+        </div>
+      {% endif %}
+
+      {# ✅ TELEFONO UFFICIO #}
+      {% if ag.phone_office %}
       <div class="contact-row">
-        <div class="icon">📱</div>
-        <div class="label">Chiama mobile</div>
-        <div class="value"><a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a></div>
+        <div class="icon">☎️</div>
+        <div class="label">Ufficio</div>
+        <div class="value"><a href="tel:{{{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
       </div>
       {% endif %}
 
@@ -472,13 +490,13 @@
     const idx = mediaItems.findIndex(x => x.url === url && x.type === type);
     currentIndex = (idx >= 0) ? idx : 0;
     document.getElementById('qr-modal').style.display = 'flex';
-    document.body.style.overflow = 'hidden'; /* ✅ blocca scroll dietro */
+    document.body.style.overflow = 'hidden';
     showCurrent();
   }
 
   function closeQrModal(){
     document.getElementById('qr-modal').style.display = 'none';
-    document.body.style.overflow = '';       /* ✅ riabilita scroll */
+    document.body.style.overflow = '';
 
     const vidEl = document.getElementById('qr-modal-video');
     vidEl.pause();
@@ -706,4 +724,5 @@
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
 .made-by{ margin-top: 12px; text-align: center; font-size: 12px; color: rgba(229,231,235,0.55); }
 </style>
+
 {% endblock %}
