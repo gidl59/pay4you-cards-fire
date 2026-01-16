@@ -31,6 +31,10 @@
       <label>Telefono mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
+      <!-- ✅ NUOVO: secondo numero mobile (opzionale) -->
+      <label>Telefono mobile 2 (opzionale)</label>
+      <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent and agent.phone_mobile2 else '' }}" placeholder="es. +39...">
+
       <label>Telefono ufficio</label>
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
 
