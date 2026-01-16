@@ -42,8 +42,10 @@ class Agent(Base):
     role = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
 
+    # ✅ phone_mobile può contenere 1 o 2 numeri separati da virgola
     phone_mobile = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
+
     emails = Column(String, nullable=True)
     websites = Column(String, nullable=True)
 
@@ -65,7 +67,7 @@ class Agent(Base):
     # gallery_urls = "url1|url2|..."
     gallery_urls = Column(Text, nullable=True)
 
-    # ✅ NUOVO: video_urls = "url1|url2|..."
+    # video_urls = "url1|url2|..."
     video_urls = Column(Text, nullable=True)
 
     # pdf1_url = "nome1||url1|nome2||url2|..." (nuovo formato)
@@ -124,6 +126,13 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 
+def parse_csv_list(raw: str):
+    """Split su virgola, ritorna lista pulita."""
+    if not raw:
+        return []
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
 def parse_pdfs(raw: str):
     """
     Converte la stringa pdf1_url in una lista di dict:
@@ -131,7 +140,6 @@ def parse_pdfs(raw: str):
       {"name": "Nome file.pdf", "url": "/static/pdf/xxx.pdf"},
       ...
     ]
-
     Supporta:
     - NUOVO FORMATO: "nome1||url1|nome2||url2|..."
     - VECCHIO FORMATO: "url1|url2|..."
@@ -170,6 +178,17 @@ def parse_pdfs(raw: str):
                 i += 1
 
     return pdfs
+
+
+def merge_mobiles(m1: str, m2: str):
+    m1 = (m1 or "").strip()
+    m2 = (m2 or "").strip()
+    nums = []
+    if m1:
+        nums.append(m1)
+    if m2 and m2 != m1:
+        nums.append(m2)
+    return ",".join(nums) if nums else ""
 
 
 # ------------------ ROUTES BASE ------------------
@@ -229,13 +248,19 @@ def create_agent():
 
     fields = [
         "slug", "name", "company", "role", "bio",
-        "phone_mobile", "phone_office",
+        "phone_office",
         "emails", "websites",
         "facebook", "instagram", "linkedin", "tiktok",
         "telegram", "whatsapp", "pec",
         "piva", "sdi", "addresses",
     ]
     data = {k: request.form.get(k, "").strip() for k in fields}
+
+    # ✅ 2 numeri mobili (salvati in phone_mobile con virgola)
+    phone_mobile = merge_mobiles(
+        request.form.get("phone_mobile", ""),
+        request.form.get("phone_mobile2", "")
+    )
 
     if not data["slug"] or not data["name"]:
         return "Slug e Nome sono obbligatori", 400
@@ -247,7 +272,7 @@ def create_agent():
     extra_logo = request.files.get("extra_logo")
 
     gallery_files = request.files.getlist("gallery")
-    video_files = request.files.getlist("videos")  # ✅ nuovi video
+    video_files = request.files.getlist("videos")  # ✅
 
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
@@ -280,6 +305,7 @@ def create_agent():
 
     ag = Agent(
         **data,
+        phone_mobile=phone_mobile,
         photo_url=photo_url,
         extra_logo_url=extra_logo_url,
         pdf1_url=pdf_joined,
@@ -313,7 +339,7 @@ def update_agent(slug):
 
     for k in [
         "slug", "name", "company", "role", "bio",
-        "phone_mobile", "phone_office",
+        "phone_office",
         "emails", "websites",
         "facebook", "instagram", "linkedin", "tiktok",
         "telegram", "whatsapp", "pec",
@@ -321,25 +347,25 @@ def update_agent(slug):
     ]:
         setattr(ag, k, request.form.get(k, "").strip())
 
-    # ✅ ELIMINA PDF (NUOVO)
-    # Se nel form c'è <input type="checkbox" name="delete_pdfs" value="1">
-    # allora cancelliamo tutti i pdf salvati
-    if request.form.get("delete_pdfs") == "1":
-        ag.pdf1_url = None
+    # ✅ salva 2 mobili in una sola colonna
+    ag.phone_mobile = merge_mobiles(
+        request.form.get("phone_mobile", ""),
+        request.form.get("phone_mobile2", "")
+    )
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
 
     gallery_files = request.files.getlist("gallery")
-    video_files = request.files.getlist("videos")  # ✅
+    video_files = request.files.getlist("videos")
 
-    # Foto: solo se carichi un nuovo file
+    # Foto
     if photo and photo.filename:
         u = upload_file(photo, "photos")
         if u:
             ag.photo_url = u
 
-    # Logo extra: solo se carichi un nuovo file
+    # Logo extra
     if extra_logo and extra_logo.filename:
         u = upload_file(extra_logo, "logos")
         if u:
@@ -356,7 +382,7 @@ def update_agent(slug):
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
-    # ✅ Galleria: sostituisco solo se carichi nuove immagini
+    # Galleria: sostituisco solo se carichi nuove immagini
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
         for f in gallery_files[:MAX_GALLERY_IMAGES]:
@@ -367,7 +393,7 @@ def update_agent(slug):
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # ✅ Video: sostituisco solo se carichi nuovi video
+    # Video: sostituisco solo se carichi nuovi video
     if video_files and any(v.filename for v in video_files):
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
@@ -402,10 +428,12 @@ def public_card(slug):
         abort(404)
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
-    videos = ag.video_urls.split("|") if ag.video_urls else []  # ✅
+    videos = ag.video_urls.split("|") if ag.video_urls else []
 
-    emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
+    mobiles = parse_csv_list(ag.phone_mobile or "")  # ✅ 1 o 2 numeri
+
+    emails = parse_csv_list(ag.emails or "")
+    websites = parse_csv_list(ag.websites or "")
     addresses = [a.strip() for a in (ag.addresses or "").split("\n") if a.strip()]
 
     pdfs = parse_pdfs(ag.pdf1_url or "")
@@ -416,7 +444,8 @@ def public_card(slug):
         ag=ag,
         base_url=base,
         gallery=gallery,
-        videos=videos,   # ✅ PASSO I VIDEO AL TEMPLATE
+        videos=videos,
+        mobiles=mobiles,     # ✅ passiamo la lista
         emails=emails,
         websites=websites,
         addresses=addresses,
@@ -450,12 +479,16 @@ def vcard(slug):
         lines.append(f"TITLE:{ag.role}")
     if ag.company:
         lines.append(f"ORG:{ag.company}")
-    if ag.phone_mobile:
-        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+
+    # ✅ mobili multipli
+    for m in parse_csv_list(ag.phone_mobile or ""):
+        lines.append(f"TEL;TYPE=CELL:{m}")
+
     if ag.phone_office:
         lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+
     if ag.emails:
-        for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
+        for e in parse_csv_list(ag.emails):
             lines.append(f"EMAIL;TYPE=WORK:{e}")
 
     base = get_base_url()
@@ -494,4 +527,4 @@ def not_found(e):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")))
