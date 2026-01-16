@@ -10,7 +10,7 @@
     <!-- HEADER LOGO -->
     <div class="card-header-row">
       <img
-        src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+        src="{% if ag.extra_logo_url %}{{ ag.extra_logo_url }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}"
         alt="Logo"
         class="card-logo-big"
       >
@@ -27,7 +27,7 @@
             </div>
             <div class="avatar-face avatar-back">
               <img
-                src="{{ ag.extra_logo_url if ag.extra_logo_url else url_for('static', filename='logo.png') }}"
+                src="{% if ag.extra_logo_url %}{{ ag.extra_logo_url }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}"
                 alt="Logo"
               >
             </div>
@@ -57,29 +57,27 @@
     <section class="card-section">
       <h2>Contatti</h2>
 
-      {# ✅ MOBILI: se app.py passa "mobiles" (lista), uso quella. Altrimenti fallback su ag.phone_mobile #}
-      {% if mobiles is defined and mobiles and mobiles|length > 0 %}
-        {% for m in mobiles %}
-        <div class="contact-row">
-          <div class="icon">📱</div>
-          <div class="label">Chiama mobile{% if mobiles|length > 1 %} {{ loop.index }}{% endif %}</div>
-          <div class="value"><a href="tel:{{ m }}">{{ m }}</a></div>
-        </div>
+      {# ✅ 1 o 2 (o più) numeri mobili: separati da virgola nel campo phone_mobile #}
+      {% if ag.phone_mobile %}
+        {% set _mob_list = ag.phone_mobile.split(',') %}
+        {% for m in _mob_list %}
+          {% set _m = m|trim %}
+          {% if _m %}
+          <div class="contact-row">
+            <div class="icon">📱</div>
+            <div class="label">Chiama mobile{% if _mob_list|length > 1 %} {{ loop.index }}{% endif %}</div>
+            <div class="value"><a href="tel:{{ _m }}">{{ _m }}</a></div>
+          </div>
+          {% endif %}
         {% endfor %}
-      {% elif ag.phone_mobile %}
-        <div class="contact-row">
-          <div class="icon">📱</div>
-          <div class="label">Chiama mobile</div>
-          <div class="value"><a href="tel:{{ ag.phone_mobile }}">{{ ag.phone_mobile }}</a></div>
-        </div>
       {% endif %}
 
-      {# ✅ TELEFONO UFFICIO #}
+      {# ✅ Ufficio (prima non lo mostravi) #}
       {% if ag.phone_office %}
       <div class="contact-row">
         <div class="icon">☎️</div>
-        <div class="label">Ufficio</div>
-        <div class="value"><a href="tel:{{{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
+        <div class="label">Telefono ufficio</div>
+        <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
       </div>
       {% endif %}
 
@@ -103,7 +101,7 @@
       </div>
       {% endfor %}
 
-      {# ✅ SITI: normalizza (se manca http/https aggiunge https://) #}
+      {# ✅ SITI: se manca http/https aggiunge https:// #}
       {% for site in websites %}
         {% set _site = site|trim %}
         {% if _site %}
@@ -112,66 +110,63 @@
           {% else %}
             {% set site_href = 'https://' ~ _site %}
           {% endif %}
-
           <div class="contact-row">
             <div class="icon">🌐</div>
             <div class="label">Sito internet</div>
             <div class="value">
-              <a href="{{ site_href }}" target="_blank" rel="noopener noreferrer">
-                {{ _site }}
-              </a>
+              <a href="{{ site_href }}" target="_blank" rel="noopener noreferrer">{{ _site }}</a>
             </div>
           </div>
         {% endif %}
       {% endfor %}
 
       {% if ag.facebook %}
-      {% set _fb_url = ag.facebook if ag.facebook.startswith('http') else 'https://facebook.com/' ~ ag.facebook %}
-      <div class="contact-row">
-        <div class="icon">📘</div>
-        <div class="label">Facebook</div>
-        <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a></div>
-      </div>
+        {% set _fb_url = ag.facebook if ag.facebook.startswith('http') else 'https://facebook.com/' ~ ag.facebook %}
+        <div class="contact-row">
+          <div class="icon">📘</div>
+          <div class="label">Facebook</div>
+          <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a></div>
+        </div>
       {% endif %}
 
       {% if ag.instagram %}
-      {% set _ig_clean = ag.instagram|replace('@','') %}
-      {% set _ig_url = ag.instagram if ag.instagram.startswith('http') else 'https://instagram.com/' ~ _ig_clean %}
-      <div class="contact-row">
-        <div class="icon">📸</div>
-        <div class="label">Instagram</div>
-        <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a></div>
-      </div>
+        {% set _ig_clean = ag.instagram|replace('@','') %}
+        {% set _ig_url = ag.instagram if ag.instagram.startswith('http') else 'https://instagram.com/' ~ _ig_clean %}
+        <div class="contact-row">
+          <div class="icon">📸</div>
+          <div class="label">Instagram</div>
+          <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a></div>
+        </div>
       {% endif %}
 
       {% if ag.linkedin %}
-      {% set _li_clean = ag.linkedin|replace('@','') %}
-      {% set _li_url = ag.linkedin if ag.linkedin.startswith('http') else 'https://www.linkedin.com/in/' ~ _li_clean %}
-      <div class="contact-row">
-        <div class="icon">💼</div>
-        <div class="label">LinkedIn</div>
-        <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">Apri LinkedIn</a></div>
-      </div>
+        {% set _li_clean = ag.linkedin|replace('@','') %}
+        {% set _li_url = ag.linkedin if ag.linkedin.startswith('http') else 'https://www.linkedin.com/in/' ~ _li_clean %}
+        <div class="contact-row">
+          <div class="icon">💼</div>
+          <div class="label">LinkedIn</div>
+          <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">Apri LinkedIn</a></div>
+        </div>
       {% endif %}
 
       {% if ag.tiktok %}
-      {% set _tt_clean = ag.tiktok|replace('@','') %}
-      {% set _tt_url = ag.tiktok if ag.tiktok.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_clean %}
-      <div class="contact-row">
-        <div class="icon">🎵</div>
-        <div class="label">TikTok</div>
-        <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a></div>
-      </div>
+        {% set _tt_clean = ag.tiktok|replace('@','') %}
+        {% set _tt_url = ag.tiktok if ag.tiktok.startswith('http') else 'https://www.tiktok.com/@' ~ _tt_clean %}
+        <div class="contact-row">
+          <div class="icon">🎵</div>
+          <div class="label">TikTok</div>
+          <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a></div>
+        </div>
       {% endif %}
 
       {% if ag.telegram %}
-      {% set _tg_clean = ag.telegram|replace('@','') %}
-      {% set _tg_url = ag.telegram if ag.telegram.startswith('http') else 'https://t.me/' ~ _tg_clean %}
-      <div class="contact-row">
-        <div class="icon">✈️</div>
-        <div class="label">Telegram</div>
-        <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a></div>
-      </div>
+        {% set _tg_clean = ag.telegram|replace('@','') %}
+        {% set _tg_url = ag.telegram if ag.telegram.startswith('http') else 'https://t.me/' ~ _tg_clean %}
+        <div class="contact-row">
+          <div class="icon">✈️</div>
+          <div class="label">Telegram</div>
+          <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a></div>
+        </div>
       {% endif %}
 
       {% if ag.pec %}
@@ -203,8 +198,7 @@
         <div class="icon">📍</div>
         <div class="label">Indirizzo{% if addresses|length > 1 %} {{ loop.index }}{% endif %}</div>
         <div class="value">
-          <a href="https://www.google.com/maps?q={{ a|trim|urlencode }}"
-             target="_blank" rel="noopener noreferrer">
+          <a href="https://www.google.com/maps?q={{ a|trim|urlencode }}" target="_blank" rel="noopener noreferrer">
             {{ a }}
           </a>
         </div>
@@ -225,7 +219,6 @@
 
       <div class="pdf-list">
         {% for pdf in pdfs %}
-          {# ✅ PDF: normalizza URL (assoluto se serve) #}
           {% set _u = (pdf.url or '')|trim %}
           {% if _u.startswith('http://') or _u.startswith('https://') %}
             {% set pdf_href = _u %}
@@ -237,20 +230,10 @@
 
           <div class="pdf-item">
             <div class="pdf-title">{{ pdf.name }}</div>
-
             <div class="pdf-actions">
-              <a class="primary" href="{{ pdf_href }}" target="_blank" rel="noopener">
-                Apri / Scarica
-              </a>
-
-              <a href="mailto:?subject={{ pdf.name }}&body=Ti invio questo documento:%0A{{ pdf_href }}">
-                Invia Email
-              </a>
-
-              <a href="https://wa.me/?text=Ti invio questo documento: {{ pdf_href }}"
-                 target="_blank" rel="noopener">
-                Invia WhatsApp
-              </a>
+              <a class="primary" href="{{ pdf_href }}" target="_blank" rel="noopener">Apri / Scarica</a>
+              <a href="mailto:?subject={{ pdf.name }}&body=Ti invio questo documento:%0A{{ pdf_href }}">Invia Email</a>
+              <a href="https://wa.me/?text=Ti invio questo documento: {{ pdf_href }}" target="_blank" rel="noopener">Invia WhatsApp</a>
             </div>
           </div>
         {% endfor %}
@@ -261,7 +244,7 @@
     {# =========================
        GALLERIE SEPARATE: FOTO + VIDEO
        ========================= #}
-    {% set vids = (videos if videos is defined else []) %}
+    {% set vids = videos if videos is defined else [] %}
 
     {% if gallery %}
     <section class="card-section">
@@ -309,7 +292,6 @@
       <video id="qr-modal-video" controls playsinline style="display:none;"></video>
     </div>
 
-    <!-- filmstrip separato -->
     <div class="modal-filmstrip-wrap">
       <div class="filmstrip-title">Foto</div>
       <div id="filmstrip-photos" class="modal-filmstrip"></div>
@@ -328,13 +310,12 @@
 </div>
 
 <script>
-  const galleryImages = {{ (gallery if gallery else [])|tojson }};
-  const galleryVideos = {{ (vids if vids else [])|tojson }};
+  const galleryImages = {{ (gallery if gallery else []) | tojson }};
+  const galleryVideos = {{ (vids if vids else []) | tojson }};
 
-  const mediaItems = [
-    ...galleryImages.map(u => ({type:'image', url:u})),
-    ...galleryVideos.map(u => ({type:'video', url:u}))
-  ];
+  const mediaItems = []
+    .concat(galleryImages.map(u => ({ type: 'image', url: u })))
+    .concat(galleryVideos.map(u => ({ type: 'video', url: u })));
 
   let currentIndex = -1;
   let touchStartX = null;
@@ -467,11 +448,8 @@
     vidEl.removeAttribute("src");
     vidEl.load();
 
-    if (it.type === 'video'){
-      modalBox.classList.add('is-video');
-    } else {
-      modalBox.classList.remove('is-video');
-    }
+    if (it.type === 'video') modalBox.classList.add('is-video');
+    else modalBox.classList.remove('is-video');
 
     if (it.type === 'image'){
       imgEl.src = it.url;
@@ -502,8 +480,10 @@
     vidEl.pause();
     vidEl.removeAttribute("src");
     vidEl.load();
+
     currentIndex = -1;
     updateCounter();
+
     const p = document.getElementById('filmstrip-photos');
     const v = document.getElementById('filmstrip-videos');
     if (p) p.innerHTML = "";
@@ -583,7 +563,7 @@
   color:#fff; font-weight:700;
 }
 
-/* ===== MODAL FIX (Chiudi sempre visibile) ===== */
+/* MODAL (Chiudi sempre visibile) */
 .modal-overlay{
   position: fixed;
   inset: 0;
@@ -594,7 +574,6 @@
   z-index: 9999;
   padding: 14px;
 }
-
 .modal-box.modal-gallery{
   position: relative;
   width: min(1100px, 96vw);
@@ -610,13 +589,10 @@
   border-radius: 18px;
   border: 1px solid rgba(148,163,184,0.7);
 }
-
 .modal-box.modal-gallery.is-video{
   width: min(860px, 96vw);
   max-width: 860px;
 }
-
-/* stage scrollabile */
 .modal-stage{
   flex: 1;
   min-height: 0;
@@ -626,7 +602,6 @@
   padding: 8px 6px 10px;
   overflow: auto;
 }
-
 #qr-modal-img{
   max-height: 74vh;
   max-width: 96vw;
@@ -635,7 +610,6 @@
   object-fit: contain;
   border-radius: 14px;
 }
-
 #qr-modal-video{
   max-height: 74vh;
   max-width: 96vw;
@@ -644,8 +618,6 @@
   border-radius: 14px;
   background:#000;
 }
-
-/* frecce */
 .modal-nav-btn{
   position:absolute;
   top: 42%;
@@ -659,7 +631,6 @@
 .modal-nav-btn.prev{ left:10px; }
 .modal-nav-btn.next{ right:10px; }
 
-/* filmstrip */
 .modal-filmstrip-wrap{
   padding: 10px 6px 10px;
   border-top: 1px solid rgba(148,163,184,0.14);
@@ -696,8 +667,6 @@
   border:1px solid rgba(148,163,184,0.45);
   color:#fff; font-size:11px; font-weight:700;
 }
-
-/* controls sticky */
 .modal-controls{
   position: sticky;
   bottom: 0;
@@ -720,7 +689,6 @@
   font-weight: 800;
   cursor: pointer;
 }
-
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
 .made-by{ margin-top: 12px; text-align: center; font-size: 12px; color: rgba(229,231,235,0.55); }
 </style>
