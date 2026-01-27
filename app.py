@@ -3,7 +3,8 @@ import uuid
 from io import BytesIO
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, send_file, session, abort, Response
+    url_for, send_file, session, abort, Response,
+    send_from_directory
 )
 from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -14,7 +15,7 @@ import urllib.parse  # per ricavare nome file da URL
 load_dotenv()
 
 # ===== ENV / CONFIG =====
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")  # ✅ la tua password attuale
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 
@@ -31,6 +32,9 @@ Base = declarative_base()
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 
+# ✅ Render persistent uploads
+PERSIST_UPLOADS_DIR = "/var/data/uploads"
+
 
 # ===== MODELS =====
 class Agent(Base):
@@ -43,7 +47,6 @@ class Agent(Base):
     role = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
 
-    # ✅ TELEFONI
     phone_mobile = Column(String, nullable=True)
     phone_mobile2 = Column(String, nullable=True)
     phone_office = Column(String, nullable=True)
@@ -66,30 +69,25 @@ class Agent(Base):
     photo_url = Column(String, nullable=True)
     extra_logo_url = Column(String, nullable=True)
 
-    gallery_urls = Column(Text, nullable=True)  # "url1|url2|..."
-    video_urls = Column(Text, nullable=True)    # "url1|url2|..."
-    pdf1_url = Column(Text, nullable=True)      # "nome||url|nome||url|..."
+    gallery_urls = Column(Text, nullable=True)
+    video_urls = Column(Text, nullable=True)
+    pdf1_url = Column(Text, nullable=True)
 
 
 class User(Base):
-    """
-    Utenti per login.
-    - admin: username=admin, password=ADMIN_PASSWORD (creato automaticamente)
-    - client: username=slug, password=generata, agent_slug=slug
-    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)          # (per ora in chiaro; poi hash se vuoi)
-    role = Column(String, nullable=False, default="client")  # "admin" | "client"
-    agent_slug = Column(String, nullable=True)         # es. "barrossi"
+    password = Column(String, nullable=False)                  # per ora in chiaro
+    role = Column(String, nullable=False, default="client")    # admin | client
+    agent_slug = Column(String, nullable=True)                 # slug associato
 
 
 Base.metadata.create_all(engine)
 
 
-# ===== MICRO-MIGRAZIONI (solo agents) =====
+# ===== MICRO-MIGRAZIONI agents =====
 def ensure_sqlite_column(table: str, column: str, coltype: str):
     with engine.connect() as conn:
         rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
@@ -131,21 +129,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+def generate_password(length=10):
+    return uuid.uuid4().hex[:length]
 
-def upload_file(file_storage, folder="uploads"):
-    """Salva il file in static/<folder> e restituisce l'URL relativo."""
-    if not file_storage or not file_storage.filename:
-        return None
+def ensure_admin_user():
+    db = SessionLocal()
+    admin = db.query(User).filter_by(username="admin").first()
+    if not admin:
+        db.add(User(username="admin", password=ADMIN_PASSWORD, role="admin", agent_slug=None))
+        db.commit()
 
-    ext = os.path.splitext(file_storage.filename or "")[1].lower()
-    uploads_folder = os.path.join(app.static_folder, folder)
-    os.makedirs(uploads_folder, exist_ok=True)
-
-    filename = f"{uuid.uuid4().hex}{ext}"
-    fullpath = os.path.join(uploads_folder, filename)
-    file_storage.save(fullpath)
-
-    return url_for("static", filename=f"{folder}/{filename}", _external=False)
+ensure_admin_user()
 
 
 def get_base_url():
@@ -154,12 +148,33 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 
+def upload_file(file_storage, folder="uploads"):
+    """
+    ✅ Salva i file su disco persistente Render: /var/data/uploads/<folder>/...
+    e restituisce un URL servito da /uploads/<folder>/<filename>
+    """
+    if not file_storage or not file_storage.filename:
+        return None
+
+    ext = os.path.splitext(file_storage.filename or "")[1].lower()
+
+    uploads_folder = os.path.join(PERSIST_UPLOADS_DIR, folder)
+    os.makedirs(uploads_folder, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}{ext}"
+    fullpath = os.path.join(uploads_folder, filename)
+    file_storage.save(fullpath)
+
+    return f"/uploads/{folder}/{filename}"
+
+
+@app.get("/uploads/<path:subpath>")
+def serve_uploads(subpath):
+    # subpath es: "photos/abc.jpg"
+    return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
+
+
 def parse_pdfs(raw: str):
-    """
-    Supporta:
-    - NUOVO FORMATO: "nome1||url1|nome2||url2|..."
-    - VECCHIO FORMATO: "url1|url2|..."
-    """
     pdfs = []
     if not raw:
         return pdfs
@@ -187,22 +202,6 @@ def parse_pdfs(raw: str):
             i += 1
 
     return pdfs
-
-
-def generate_password(length=10):
-    return uuid.uuid4().hex[:length]
-
-
-def ensure_admin_user():
-    """Crea l'utente admin in DB se non esiste (password = ADMIN_PASSWORD)."""
-    db = SessionLocal()
-    admin = db.query(User).filter_by(username="admin").first()
-    if not admin:
-        db.add(User(username="admin", password=ADMIN_PASSWORD, role="admin", agent_slug=None))
-        db.commit()
-
-
-ensure_admin_user()
 
 
 # ------------------ ROUTES BASE ------------------
@@ -241,7 +240,6 @@ def login_post():
         session["agent_slug"] = None
         return redirect(url_for("admin_home"))
 
-    # ✅ client: cerca in DB
     db = SessionLocal()
     u = db.query(User).filter_by(username=username, password=password).first()
     if not u:
@@ -314,13 +312,13 @@ def admin_credentials(slug):
 
         <div class="row">
           <div style="min-width:90px;">Username</div>
-          <code id="u">{u.username}</code>
+          <code>{u.username}</code>
           <button onclick="copyText('{u.username}')">Copia</button>
         </div>
 
         <div class="row">
           <div style="min-width:90px;">Password</div>
-          <code id="p">{u.password}</code>
+          <code>{u.password}</code>
           <button onclick="copyText('{u.password}')">Copia</button>
         </div>
 
@@ -384,7 +382,6 @@ def create_agent():
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
-    # PDF 1–12: "nome_originale||url"
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -394,7 +391,6 @@ def create_agent():
                 pdf_entries.append(f"{f.filename}||{u}")
     pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
-    # GALLERIA fino a 30 immagini
     gallery_urls = []
     for f in gallery_files[:MAX_GALLERY_IMAGES]:
         if f and f.filename:
@@ -402,7 +398,6 @@ def create_agent():
             if u:
                 gallery_urls.append(u)
 
-    # VIDEO fino a 10
     video_urls = []
     for f in video_files[:MAX_VIDEOS]:
         if f and f.filename:
@@ -422,10 +417,10 @@ def create_agent():
     db.add(ag)
     db.commit()
 
-    # ✅ crea utente cliente (username = slug) se non esiste
+    # crea utente cliente (username = slug)
     slug = data["slug"]
-    existing_user = db.query(User).filter_by(username=slug).first()
-    if not existing_user:
+    u = db.query(User).filter_by(username=slug).first()
+    if not u:
         pw = generate_password()
         db.add(User(username=slug, password=pw, role="client", agent_slug=slug))
         db.commit()
@@ -439,7 +434,6 @@ def create_agent():
         <p><b>Password:</b> {pw}</p>
         <p><a href="{url_for('admin_home')}">⬅ Torna alla lista</a></p>
         """
-
     return redirect(url_for("admin_home"))
 
 
@@ -462,6 +456,7 @@ def update_agent(slug):
     if not ag:
         abort(404)
 
+    # admin può aggiornare anche slug (se vuoi bloccarlo anche per admin dimmelo)
     for k in [
         "slug", "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -477,7 +472,6 @@ def update_agent(slug):
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
-
     gallery_files = request.files.getlist("gallery")
     video_files = request.files.getlist("videos")
 
@@ -571,7 +565,7 @@ def me_edit_post():
     if not ag:
         abort(404)
 
-    # Aggiorna campi testo (come admin, ma solo per il proprio slug)
+    # ✅ CLIENTE: NON tocchiamo lo slug (bloccato)
     for k in [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -582,7 +576,6 @@ def me_edit_post():
     ]:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # Upload (se vuoi limitare dopo, lo facciamo)
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
