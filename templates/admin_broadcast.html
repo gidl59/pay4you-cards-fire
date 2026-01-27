@@ -1,1 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Invia promo | {{ agent.slug }}{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:18px;">
+  <div style="background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:16px;">
+    <h1 style="margin:0 0 6px 0;">Invia promo WhatsApp</h1>
+    <div style="opacity:.85;margin-bottom:10px;">
+      Attività: <b>{{ agent.name }}</b> ({{ agent.slug }}) — iscritti attivi: <b>{{ subs_count }}</b>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin:10px 0;">
+          {% for cat, msg in messages %}
+            <div style="padding:10px;border-radius:12px;margin-bottom:8px;
+                        background:{% if cat=='ok' %}#064e3b{% else %}#7f1d1d{% endif %};
+                        border:1px solid #1f2937;">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('admin_broadcast_post', slug=agent.slug) }}">
+      <label style="display:block;margin-bottom:6px;">Messaggio da inviare</label>
+      <textarea name="message" rows="5" style="width:100%;border-radius:12px;padding:10px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;" placeholder="Es: Oggi -10% su tutti i prodotti fino alle 20:00"></textarea>
+
+      <p style="font-size:12px;opacity:.8;margin-top:8px;">
+        Nota: inviare messaggi “proattivi” può richiedere template WhatsApp (dipende dalla finestra di 24h). Se serve, lo aggiungiamo dopo.
+      </p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <button type="submit" style="background:#2563eb;color:#fff;border:0;padding:10px 12px;border-radius:12px;cursor:pointer;">
+          Invia a tutti gli iscritti
+        </button>
+        <a href="{{ url_for('admin_home') }}" style="background:#334155;color:#fff;text-decoration:none;padding:10px 12px;border-radius:12px;">
+          Torna
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
 
