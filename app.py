@@ -81,7 +81,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)          # (per ora in chiaro; poi si può hashare)
+    password = Column(String, nullable=False)          # (per ora in chiaro; poi hash se vuoi)
     role = Column(String, nullable=False, default="client")  # "admin" | "client"
     agent_slug = Column(String, nullable=True)         # es. "barrossi"
 
@@ -89,7 +89,7 @@ class User(Base):
 Base.metadata.create_all(engine)
 
 
-# ===== MICRO-MIGRAZIONI (solo per agents) =====
+# ===== MICRO-MIGRAZIONI (solo agents) =====
 def ensure_sqlite_column(table: str, column: str, coltype: str):
     with engine.connect() as conn:
         rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
@@ -180,7 +180,6 @@ def parse_pdfs(raw: str):
                 pdfs.append({"name": name, "url": url})
             i += 1
         else:
-            # compat vecchio formato
             url = item
             parsed = urllib.parse.urlparse(url)
             filename = os.path.basename(parsed.path) or "Documento"
@@ -188,6 +187,10 @@ def parse_pdfs(raw: str):
             i += 1
 
     return pdfs
+
+
+def generate_password(length=10):
+    return uuid.uuid4().hex[:length]
 
 
 def ensure_admin_user():
@@ -200,10 +203,6 @@ def ensure_admin_user():
 
 
 ensure_admin_user()
-
-
-def generate_password(length=10):
-    return uuid.uuid4().hex[:length]
 
 
 # ------------------ ROUTES BASE ------------------
@@ -272,14 +271,10 @@ def admin_home():
     return render_template("admin_list.html", agents=agents)
 
 
-# ------------------ CREDENZIALI CLIENTE (RESET) ------------------
+# ------------------ CREDENZIALI CLIENTE (RESET + COPIA) ------------------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials(slug):
-    """
-    Genera o resetta la password del cliente (username=slug).
-    Mostra a video username + nuova password.
-    """
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
@@ -294,13 +289,61 @@ def admin_credentials(slug):
 
     db.commit()
 
-    # Pagina semplice con credenziali (così non devi toccare template)
     return f"""
-    <h2>Credenziali Cliente</h2>
-    <p><b>Card:</b> {slug}</p>
-    <p><b>Username:</b> {u.username}</p>
-    <p><b>Password:</b> {u.password}</p>
-    <p><a href="{url_for('admin_home')}">⬅ Torna alla lista</a></p>
+    <!doctype html>
+    <html lang="it">
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <title>Credenziali - {slug}</title>
+      <style>
+        body{{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;padding:24px}}
+        .box{{max-width:560px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
+        h2{{margin:0 0 12px 0}}
+        .row{{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}}
+        code{{background:#111827;padding:8px 10px;border-radius:10px;border:1px solid #1f2937}}
+        button,a{{background:#2563eb;color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none}}
+        button.secondary,a.secondary{{background:#334155}}
+        .small{{color:#94a3b8;font-size:12px;margin-top:10px}}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h2>Credenziali cliente</h2>
+        <div class="small">Card: <b>{slug}</b></div>
+
+        <div class="row">
+          <div style="min-width:90px;">Username</div>
+          <code id="u">{u.username}</code>
+          <button onclick="copyText('{u.username}')">Copia</button>
+        </div>
+
+        <div class="row">
+          <div style="min-width:90px;">Password</div>
+          <code id="p">{u.password}</code>
+          <button onclick="copyText('{u.password}')">Copia</button>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <a class="secondary" href="/login" target="_blank">Apri login</a>
+          <a class="secondary" href="/{slug}" target="_blank">Apri card</a>
+          <a href="{url_for('admin_home')}">⬅ Torna alla lista</a>
+        </div>
+
+        <p class="small">Nota: cliccando “Credenziali” rigeneri la password (reset).</p>
+      </div>
+
+      <script>
+        function copyText(t){{
+          if(navigator.clipboard) {{
+            navigator.clipboard.writeText(t).then(()=>alert("Copiato: " + t));
+          }} else {{
+            window.prompt("Copia:", t);
+          }}
+        }}
+      </script>
+    </body>
+    </html>
     """
 
 
@@ -379,7 +422,7 @@ def create_agent():
     db.add(ag)
     db.commit()
 
-    # ✅ crea utente cliente (username = slug)
+    # ✅ crea utente cliente (username = slug) se non esiste
     slug = data["slug"]
     existing_user = db.query(User).filter_by(username=slug).first()
     if not existing_user:
@@ -491,7 +534,6 @@ def delete_agent(slug):
     if ag:
         db.delete(ag)
         db.commit()
-    # opzionale: potresti anche eliminare user associato, ma per ora lasciamo semplice
     return redirect(url_for("admin_home"))
 
 
@@ -500,7 +542,6 @@ def delete_agent(slug):
 @login_required
 def me_edit():
     if is_admin():
-        # admin può comunque usare il pannello admin
         return redirect(url_for("admin_home"))
 
     slug = current_client_slug()
@@ -530,7 +571,7 @@ def me_edit_post():
     if not ag:
         abort(404)
 
-    # ✅ aggiorno gli stessi campi dell'admin (ma solo per il proprio slug)
+    # Aggiorna campi testo (come admin, ma solo per il proprio slug)
     for k in [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -541,7 +582,7 @@ def me_edit_post():
     ]:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # ✅ client: può caricare foto/logo/gallery/video/pdf (se vuoi puoi limitarlo dopo)
+    # Upload (se vuoi limitare dopo, lo facciamo)
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
@@ -557,7 +598,6 @@ def me_edit_post():
         if u:
             ag.extra_logo_url = u
 
-    # PDF: sostituisce solo se carica nuovi pdf
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -568,7 +608,6 @@ def me_edit_post():
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
-    # Gallery
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
         for f in gallery_files[:MAX_GALLERY_IMAGES]:
@@ -579,7 +618,6 @@ def me_edit_post():
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # Videos
     if video_files and any(v.filename for v in video_files):
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
