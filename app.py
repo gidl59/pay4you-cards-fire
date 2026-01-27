@@ -1,16 +1,30 @@
 import os
+import re
 import uuid
+import json
+from datetime import datetime
 from io import BytesIO
+from urllib.parse import quote
+
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response,
-    send_from_directory
+    send_from_directory, flash
 )
-from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Text,
+    text as sa_text
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 import qrcode
-import urllib.parse  # per ricavare nome file da URL
+import urllib.parse
+
+# ---- optional requests (better) ----
+try:
+    import requests
+except Exception:
+    requests = None
 
 load_dotenv()
 
@@ -18,6 +32,15 @@ load_dotenv()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
+
+# WhatsApp Cloud API
+WA_VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "verify_token_change_me")
+WA_TOKEN = os.getenv("WA_TOKEN", "")  # permanent access token
+WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "")  # phone number id
+WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
+
+# Upload persistenti (Render Disk su /var/data)
+PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -31,9 +54,6 @@ Base = declarative_base()
 # ✅ LIMITI
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-
-# ✅ Render persistent uploads
-PERSIST_UPLOADS_DIR = "/var/data/uploads"
 
 
 # ===== MODELS =====
@@ -75,13 +95,35 @@ class Agent(Base):
 
 
 class User(Base):
+    """
+    Utenti per login:
+    - admin: username=admin, password=ADMIN_PASSWORD (creato automaticamente)
+    - client: username=slug, password=generata, agent_slug=slug
+    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)                  # per ora in chiaro
     role = Column(String, nullable=False, default="client")    # admin | client
-    agent_slug = Column(String, nullable=True)                 # slug associato
+    agent_slug = Column(String, nullable=True)
+
+
+class Subscriber(Base):
+    """
+    Iscritti WhatsApp per singola attività (merchant_slug).
+    wa_id = numero utente senza + (es: 39333...)
+    status = active | stopped
+    """
+    __tablename__ = "subscribers"
+
+    id = Column(Integer, primary_key=True)
+    wa_id = Column(String, nullable=False)            # es "393333..."
+    merchant_slug = Column(String, nullable=False)    # es "bar-jonni"
+    status = Column(String, nullable=False, default="active")  # active/stopped
+    created_at = Column(String, nullable=True)
+    updated_at = Column(String, nullable=True)
+    last_text = Column(Text, nullable=True)
 
 
 Base.metadata.create_all(engine)
@@ -99,9 +141,17 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
 
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
+# Subscribers columns (in caso DB già creato tempo fa)
+ensure_sqlite_column("subscribers", "last_text", "TEXT")
+ensure_sqlite_column("subscribers", "updated_at", "TEXT")
+ensure_sqlite_column("subscribers", "created_at", "TEXT")
+ensure_sqlite_column("subscribers", "status", "TEXT")
 
 
 # ===== HELPERS =====
+def now_iso():
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
 def is_logged_in() -> bool:
     return bool(session.get("username"))
 
@@ -157,7 +207,6 @@ def upload_file(file_storage, folder="uploads"):
         return None
 
     ext = os.path.splitext(file_storage.filename or "")[1].lower()
-
     uploads_folder = os.path.join(PERSIST_UPLOADS_DIR, folder)
     os.makedirs(uploads_folder, exist_ok=True)
 
@@ -170,7 +219,6 @@ def upload_file(file_storage, folder="uploads"):
 
 @app.get("/uploads/<path:subpath>")
 def serve_uploads(subpath):
-    # subpath es: "photos/abc.jpg"
     return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
 
 
@@ -204,6 +252,104 @@ def parse_pdfs(raw: str):
     return pdfs
 
 
+def slugify(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = s.replace("+", " ")
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    s = re.sub(r"\s+", "-", s).strip("-")
+    return s
+
+
+def extract_merchant_from_optin(text_body: str) -> str:
+    """
+    Accetta:
+      "ISCRIVIMI bar jonni + accetto ricevere promo"
+      "iscrivimi BAR-JONNI"
+    Ritorna uno slug tipo "bar-jonni"
+    """
+    t = (text_body or "").strip()
+    t_up = t.upper()
+    if "ISCRIVIMI" not in t_up:
+        return ""
+
+    # prendo tutto dopo ISCRIVIMI
+    after = re.split(r"\bISCRIVIMI\b", t, flags=re.IGNORECASE, maxsplit=1)[-1].strip()
+
+    # taglio a "+" se esiste
+    if "+" in after:
+        after = after.split("+", 1)[0].strip()
+
+    # se l'utente scrive anche "ACCETTO..." senza "+", taglio lì
+    after = re.split(r"\bACCETTO\b", after, flags=re.IGNORECASE, maxsplit=1)[0].strip()
+
+    return slugify(after)
+
+
+def find_agent_slug_best_effort(db, guess_slug: str) -> str:
+    """
+    Se guess_slug corrisponde a uno slug esistente → ok.
+    Se no, prova match sul nome agente slugificato.
+    """
+    if not guess_slug:
+        return ""
+
+    ag = db.query(Agent).filter_by(slug=guess_slug).first()
+    if ag:
+        return ag.slug
+
+    # match su nome slugificato
+    agents = db.query(Agent).all()
+    for a in agents:
+        if slugify(a.name) == guess_slug:
+            return a.slug
+        if slugify(a.company or "") == guess_slug:
+            return a.slug
+
+    return ""
+
+
+# ===== WhatsApp Cloud API helpers =====
+def wa_api_url(path: str) -> str:
+    return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
+
+def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
+    """
+    Invia messaggio di testo (può fallire fuori finestra 24h, dipende dalle regole/template).
+    """
+    if not WA_TOKEN or not WA_PHONE_NUMBER_ID:
+        return False, "WA_TOKEN o WA_PHONE_NUMBER_ID mancanti"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_wa_id,
+        "type": "text",
+        "text": {"body": body}
+    }
+
+    try:
+        if requests:
+            r = requests.post(
+                wa_api_url(f"{WA_PHONE_NUMBER_ID}/messages"),
+                headers={"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"},
+                data=json.dumps(payload),
+                timeout=20
+            )
+            ok = r.status_code >= 200 and r.status_code < 300
+            return ok, r.text
+        else:
+            import urllib.request
+            req = urllib.request.Request(
+                wa_api_url(f"{WA_PHONE_NUMBER_ID}/messages"),
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return True, resp.read().decode("utf-8")
+    except Exception as e:
+        return False, str(e)
+
+
 # ------------------ ROUTES BASE ------------------
 @app.get("/")
 def home():
@@ -233,7 +379,7 @@ def login_post():
     if not username or not password:
         return render_template("login.html", error="Inserisci username e password", next="")
 
-    # ✅ admin: username=admin + password = ADMIN_PASSWORD
+    # admin
     if username == "admin" and password == ADMIN_PASSWORD:
         session["username"] = "admin"
         session["role"] = "admin"
@@ -345,6 +491,47 @@ def admin_credentials(slug):
     """
 
 
+# ------------------ ADMIN BROADCAST (INVIO PROMO) ------------------
+@app.get("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+    subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
+    return render_template("admin_broadcast.html", agent=ag, subs_count=subs_count)
+
+
+@app.post("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast_post(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    message = (request.form.get("message") or "").strip()
+    if not message:
+        flash("Scrivi un messaggio", "error")
+        subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
+        return render_template("admin_broadcast.html", agent=ag, subs_count=subs_count)
+
+    subs = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").all()
+
+    sent = 0
+    failed = 0
+    for s in subs:
+        ok, _resp = wa_send_text(s.wa_id, message)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    flash(f"Inviati: {sent} — Errori: {failed}.", "ok")
+    return redirect(url_for("admin_broadcast", slug=slug))
+
+
 # ------------------ NUOVO AGENTE ------------------
 @app.get("/admin/new")
 @admin_required
@@ -375,13 +562,13 @@ def create_agent():
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
-
     gallery_files = request.files.getlist("gallery")
     video_files = request.files.getlist("videos")
 
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
+    # PDF 1–12
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -391,6 +578,7 @@ def create_agent():
                 pdf_entries.append(f"{f.filename}||{u}")
     pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
+    # gallery
     gallery_urls = []
     for f in gallery_files[:MAX_GALLERY_IMAGES]:
         if f and f.filename:
@@ -398,6 +586,7 @@ def create_agent():
             if u:
                 gallery_urls.append(u)
 
+    # videos
     video_urls = []
     for f in video_files[:MAX_VIDEOS]:
         if f and f.filename:
@@ -434,6 +623,7 @@ def create_agent():
         <p><b>Password:</b> {pw}</p>
         <p><a href="{url_for('admin_home')}">⬅ Torna alla lista</a></p>
         """
+
     return redirect(url_for("admin_home"))
 
 
@@ -456,7 +646,6 @@ def update_agent(slug):
     if not ag:
         abort(404)
 
-    # admin può aggiornare anche slug (se vuoi bloccarlo anche per admin dimmelo)
     for k in [
         "slug", "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -565,7 +754,7 @@ def me_edit_post():
     if not ag:
         abort(404)
 
-    # ✅ CLIENTE: NON tocchiamo lo slug (bloccato)
+    # ✅ CLIENTE: NON tocchiamo lo slug
     for k in [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -651,6 +840,10 @@ def public_card(slug):
         if m2:
             mobiles.append(m2)
 
+    # ✅ link opt-in WhatsApp (messaggio con consenso)
+    optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
+    wa_optin_link = f"https://wa.me/393333375321?text={quote(optin_text)}"
+
     return render_template(
         "card.html",
         ag=ag,
@@ -662,6 +855,7 @@ def public_card(slug):
         addresses=addresses,
         pdfs=pdfs,
         mobiles=mobiles,
+        wa_optin_link=wa_optin_link,
     )
 
 
@@ -730,6 +924,102 @@ def qr(slug):
     img.save(bio, format="PNG")
     bio.seek(0)
     return send_file(bio, mimetype="image/png")
+
+
+# ------------------ WhatsApp Webhook ------------------
+@app.get("/wa/webhook")
+def wa_webhook_verify():
+    """
+    Verifica webhook Meta:
+      GET /wa/webhook?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
+    """
+    mode = request.args.get("hub.mode", "")
+    token = request.args.get("hub.verify_token", "")
+    challenge = request.args.get("hub.challenge", "")
+
+    if mode == "subscribe" and token == WA_VERIFY_TOKEN:
+        return Response(challenge, status=200, mimetype="text/plain")
+    return Response("forbidden", status=403, mimetype="text/plain")
+
+
+@app.post("/wa/webhook")
+def wa_webhook_receive():
+    """
+    Riceve messaggi WhatsApp.
+    Cerca:
+      entry[].changes[].value.messages[] con:
+        from (wa_id) e text.body
+    """
+    data = request.get_json(silent=True) or {}
+
+    try:
+        entry = data.get("entry", []) or []
+        for e in entry:
+            changes = (e.get("changes", []) or [])
+            for c in changes:
+                value = (c.get("value", {}) or {})
+                messages = (value.get("messages", []) or [])
+                for m in messages:
+                    wa_id = (m.get("from") or "").strip()  # numero senza +
+                    text_obj = m.get("text") or {}
+                    body = (text_obj.get("body") or "").strip()
+
+                    if not wa_id or not body:
+                        continue
+
+                    db = SessionLocal()
+
+                    # STOP
+                    if re.search(r"\bSTOP\b", body, flags=re.IGNORECASE):
+                        # disiscrivo su tutte le attività dove era attivo
+                        subs = db.query(Subscriber).filter_by(wa_id=wa_id, status="active").all()
+                        for s in subs:
+                            s.status = "stopped"
+                            s.updated_at = now_iso()
+                            s.last_text = body
+                        db.commit()
+
+                        wa_send_text(wa_id, "✅ Ok, iscrizione disattivata. Se vuoi riattivare: scrivi ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO.")
+                        continue
+
+                    # ISCRIVIMI
+                    if re.search(r"\bISCRIVIMI\b", body, flags=re.IGNORECASE):
+                        guess = extract_merchant_from_optin(body)
+                        merchant_slug = find_agent_slug_best_effort(db, guess)
+
+                        if not merchant_slug:
+                            wa_send_text(wa_id, "⚠️ Non ho capito quale attività. Scrivi: ISCRIVIMI NOME-ATTIVITÀ + ACCETTO RICEVERE PROMO")
+                            continue
+
+                        # salvo/aggiorno subscriber
+                        sub = db.query(Subscriber).filter_by(wa_id=wa_id, merchant_slug=merchant_slug).first()
+                        if not sub:
+                            sub = Subscriber(
+                                wa_id=wa_id,
+                                merchant_slug=merchant_slug,
+                                status="active",
+                                created_at=now_iso(),
+                                updated_at=now_iso(),
+                                last_text=body
+                            )
+                            db.add(sub)
+                        else:
+                            sub.status = "active"
+                            sub.updated_at = now_iso()
+                            sub.last_text = body
+                        db.commit()
+
+                        wa_send_text(wa_id, f"✅ Iscrizione confermata per {merchant_slug}. Per annullare: scrivi STOP.")
+                        continue
+
+                    # altri messaggi: risposta base
+                    wa_send_text(wa_id, "Ciao! Per iscriverti alle novità scrivi: ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO. Per annullare: STOP.")
+
+    except Exception:
+        # non bloccare: rispondiamo comunque 200 a Meta
+        pass
+
+    return "ok", 200
 
 
 # ------------------ ERRORI ------------------
