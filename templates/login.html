@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Login Admin{% endblock %}
+{% block title %}Login{% endblock %}
 
 {% block content %}
 <div class="login-wrapper">
   <div class="login-card">
-    <h1 class="login-title">Accesso area admin</h1>
+    <h1 class="login-title">Accesso</h1>
 
     {% if error %}
       <p style="color:#fecaca; font-size:13px; margin-bottom:8px;">
@@ -16,14 +16,37 @@
     <form method="post" action="{{ url_for('login_post') }}">
       <input type="hidden" name="next" value="{{ next }}">
 
+      <label for="username" style="font-size:13px; display:block; margin-bottom:4px;">
+        Username
+      </label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        placeholder="es. barrossi"
+        required
+        autocomplete="username"
+      >
+
+      <div style="height:10px;"></div>
+
       <label for="password" style="font-size:13px; display:block; margin-bottom:4px;">
         Password
       </label>
-
-      <input type="password" id="password" name="password" required>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+        autocomplete="current-password"
+      >
 
       <button type="submit" style="margin-top:8px;">Entra</button>
     </form>
+
+    <p style="margin-top:10px; font-size:12px; color:#cbd5e1;">
+      Se non hai le credenziali, contatta Pay4You.
+    </p>
   </div>
 </div>
 {% endblock %}
