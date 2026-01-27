@@ -20,7 +20,6 @@
       {% endif %}
     </h1>
 
-    {# ===== ACTION FORM ===== #}
     {% if session.get("role") == "admin" %}
       {% if agent %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
@@ -33,15 +32,14 @@
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
-      {# ===== SLUG: ADMIN visibile, CLIENTE nascosto ===== #}
       {% if session.get("role") == "admin" %}
-        <label>Slug (es. barrossi)</label>
+        <label>Slug (es. bar-jonni)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
       {% else %}
         <input type="hidden" name="slug" value="{{ agent.slug if agent else '' }}">
       {% endif %}
 
-      <label>Nome e Cognome / Nome attività</label>
+      <label>Nome / Attività</label>
       <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
 
       <label>Azienda</label>
@@ -66,10 +64,10 @@
       <label>Telefono ufficio</label>
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
 
-      <label>Email (più email separate da virgola)</label>
+      <label>Email (separate da virgola)</label>
       <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
 
-      <label>Siti web (più siti separati da virgola)</label>
+      <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
       <label>WhatsApp (link o numero)</label>
@@ -110,7 +108,7 @@
 
       <h3 style="margin:0 0 10px 0;">Media</h3>
 
-      <label>Foto profilo (immagine)</label>
+      <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
       {% if agent and agent.photo_url %}
         <div style="font-size:12px; opacity:.8; margin-top:6px;">
@@ -118,7 +116,7 @@
         </div>
       {% endif %}
 
-      <label>Logo extra (immagine)</label>
+      <label>Logo extra</label>
       <input type="file" name="extra_logo" accept="image/*">
       {% if agent and agent.extra_logo_url %}
         <div style="font-size:12px; opacity:.8; margin-top:6px;">
