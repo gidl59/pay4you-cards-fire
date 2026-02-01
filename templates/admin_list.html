@@ -9,6 +9,10 @@
 
     <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
 
+    <div style="margin:10px 0 14px 0; font-size:12px; opacity:.75;">
+      Nota: il <b>piano</b> (basic/pro) lo imposti dalla pagina <b>Modifica</b> dell’agente.
+    </div>
+
     {% if agents %}
     <table class="admin-table">
       <thead>
@@ -41,12 +45,17 @@
           </td>
 
           <td class="admin-actions">
-
             <a href="{{ url_for('public_card', slug=a.slug) }}" target="_blank">Card</a>
             <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
 
-            <!-- Credenziali: lo lasciamo sempre, decidi tu quando usarlo -->
-            <a href="{{ url_for('admin_credentials', slug=a.slug) }}">Credenziali</a>
+            <!-- ✅ Credenziali SOLO per piano PRO -->
+            {% if plan == 'pro' %}
+              <a href="{{ url_for('admin_credentials', slug=a.slug) }}">Credenziali</a>
+            {% else %}
+              <span style="opacity:.55; font-weight:700; cursor:not-allowed;">
+                Credenziali (solo PRO)
+              </span>
+            {% endif %}
 
             <!-- ✅ Invia promo SOLO per piano PRO -->
             {% if plan == 'pro' %}
