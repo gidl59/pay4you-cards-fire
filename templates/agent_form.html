@@ -65,12 +65,19 @@
           <option value="pro" {% if plan == 'pro' %}selected{% endif %}>Pro (WhatsApp promo + funzioni avanzate)</option>
         </select>
 
+        {% if plan != "pro" %}
+          <p style="margin-top:8px; font-size:12px; opacity:.85;">
+            ⚠️ Con <b>Basic</b> le funzioni PRO (promo WhatsApp, opt-in, broadcast) sono disattivate.
+          </p>
+        {% else %}
+          <p style="margin-top:8px; font-size:12px; opacity:.85;">
+            ✅ Con <b>Pro</b> abiliti opt-in WhatsApp + invio promo dall’admin (se hai configurato Meta).
+          </p>
+        {% endif %}
+
         <p style="margin-top:8px; font-size:12px; opacity:.8;">
           Suggerimento: lascia <b>Basic</b> per chi non ha pagato. Metti <b>Pro</b> solo ai clienti abilitati.
         </p>
-      {% else %}
-        {# per i clienti non mostriamo il piano; in app.py poi blocchiamo anche l’update lato server #}
-        <input type="hidden" name="plan" value="{{ plan }}">
       {% endif %}
 
       <hr style="margin:16px 0; opacity:.2;">
@@ -92,7 +99,11 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
-      {# ✅ WhatsApp SOLO per admin o per schede PRO #}
+      {# ✅ WhatsApp:
+         - ADMIN: lo vede sempre (così può prepararlo)
+         - CLIENTE: lo vede SOLO se piano PRO
+         - Se BASIC e cliente: NON inviamo proprio il campo (niente hidden)
+      #}
       {% if session.get("role") == "admin" or plan == "pro" %}
         <label>WhatsApp (link o numero)</label>
         <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
@@ -101,8 +112,6 @@
             Nota: per mostrare WhatsApp anche al cliente, imposta il piano su <b>Pro</b>.
           </p>
         {% endif %}
-      {% else %}
-        <input type="hidden" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
       {% endif %}
 
       <label>PEC</label>
