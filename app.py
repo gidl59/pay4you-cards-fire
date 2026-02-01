@@ -47,13 +47,6 @@ WA_OPTIN_PHONE = os.getenv("WA_OPTIN_PHONE", "393508725353").strip().replace("+"
 # Upload persistenti (Render Disk su /var/data)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
-# ✅ SMTP (per invio email credenziali)
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "").strip()
-SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
-
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
@@ -295,13 +288,54 @@ def slugify(s: str) -> str:
     return s
 
 
-def extract_merchant_from_optin(text_body: str) -> str:
+# ✅ VALIDAZIONE NUMERO WHATSAPP (FORTE)
+def normalize_wa_id_strict(raw: str):
     """
     Accetta:
-      "ISCRIVIMI bar jonni + accetto ricevere promo"
-      "iscrivimi BAR-JONNI"
-    Ritorna uno slug tipo "bar-jonni"
+      - "393401112233"
+      - "+39 340 111 2233"
+      - "3401112233"  -> diventa "393401112233"
+
+    Ritorna (wa_id, error) dove:
+      - wa_id è stringa solo numeri, formato E.164 senza + (es: "39...")
+      - error è "" se ok, altrimenti messaggio
     """
+    t = (raw or "").strip()
+    if not t:
+        return "", ""  # vuoto = ok (non obbligatorio)
+
+    # pulizia base
+    t = t.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if t.startswith("+"):
+        t = t[1:]
+    if t.startswith("00"):
+        t = t[2:]
+
+    # deve essere solo numeri
+    if not t.isdigit():
+        return "", "Numero WhatsApp non valido: usa solo numeri (es: 393401112233)."
+
+    # Italia: se 10 cifre e inizia con 3 -> aggiungo 39
+    if len(t) == 10 and t.startswith("3"):
+        t = "39" + t
+
+    # ora deve iniziare con prefisso paese (qui pretendiamo 39*)
+    # se vuoi accettare altri paesi, dimmelo e lo allarghiamo.
+    if not t.startswith("39"):
+        return "", "Numero WhatsApp non valido: usa formato italiano con prefisso 39 (es: 393401112233)."
+
+    # lunghezza plausibile per IT: 12 cifre (39 + 10)
+    if len(t) != 12:
+        return "", "Numero WhatsApp non valido: per Italia deve essere 12 cifre (39 + 10). Esempio: 393401112233."
+
+    # ulteriore check: dopo 39, mobile tipico inizia con 3
+    if not t[2:].startswith("3"):
+        return "", "Numero WhatsApp non valido: sembra non essere un cellulare (deve iniziare con 3 dopo 39)."
+
+    return t, ""
+
+
+def extract_merchant_from_optin(text_body: str) -> str:
     t = (text_body or "").strip()
     t_up = t.upper()
     if "ISCRIVIMI" not in t_up:
@@ -318,10 +352,6 @@ def extract_merchant_from_optin(text_body: str) -> str:
 
 
 def find_agent_slug_best_effort(db, guess_slug: str) -> str:
-    """
-    Se guess_slug corrisponde a uno slug esistente → ok.
-    Se no, prova match sul nome agente slugificato.
-    """
     if not guess_slug:
         return ""
 
@@ -349,22 +379,16 @@ def is_pro_agent(ag) -> bool:
 
 
 def sanitize_fields_for_plan(ag):
-    """
-    IMPORTANTISSIMO:
-    - Non cancelliamo dati dal DB automaticamente.
-    """
     return
 
 
 # ===== LINGUA =====
 def pick_lang_from_request() -> str:
-    # 1) querystring ?lang=
     q = (request.args.get("lang") or "").strip().lower()
     if q:
         q = q.split("-", 1)[0]
         return q if q in SUPPORTED_LANGS else "it"
 
-    # 2) header Accept-Language
     al = (request.headers.get("Accept-Language") or "").lower()
     if al:
         first = al.split(",", 1)[0].strip().split("-", 1)[0]
@@ -376,15 +400,8 @@ def pick_lang_from_request() -> str:
 
 # ===== MULTI-PROFILI (JSON) =====
 def parse_profiles_json(raw: str):
-    """
-    Ritorna una lista di profili normalizzati:
-    [
-      {"key":"p1","label":"...","photo_url":"...","logo_url":"...","name":"...","role":"...","company":"...","bio":"..."}
-    ]
-    """
     if not raw:
         return []
-
     try:
         data = json.loads(raw)
         if not isinstance(data, list):
@@ -427,10 +444,6 @@ def select_profile(profiles, requested_key: str):
 
 
 def agent_to_view(ag: Agent):
-    """
-    Crea una copia "view" (SimpleNamespace) dell'agente,
-    così possiamo fare override senza modificare l'oggetto SQLAlchemy.
-    """
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -464,18 +477,13 @@ def agent_to_view(ag: Agent):
 
 
 def apply_profile_to_view(view, profile: dict):
-    """
-    Override SOLO per: foto/logo + eventuali testi.
-    """
     if not profile:
         return view
 
     if profile.get("photo_url"):
         view.photo_url = profile["photo_url"]
-
     if profile.get("logo_url"):
         view.extra_logo_url = profile["logo_url"]
-
     if profile.get("name"):
         view.name = profile["name"]
     if profile.get("role"):
@@ -527,75 +535,6 @@ def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
         return False, str(e)
 
 
-# ===== EMAIL SMTP helpers =====
-def send_email_smtp(to_email: str, subject: str, body: str) -> (bool, str):
-    """
-    Invia email semplice via SMTP.
-    Richiede: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
-    """
-    to_email = (to_email or "").strip()
-    if not to_email:
-        return False, "Email vuota"
-
-    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS or not SMTP_FROM:
-        return False, "SMTP non configurato (ENV mancanti)"
-
-    try:
-        import smtplib
-        from email.message import EmailMessage
-
-        msg = EmailMessage()
-        msg["From"] = SMTP_FROM
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.set_content(body)
-
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
-            s.ehlo()
-            try:
-                s.starttls()
-            except Exception:
-                pass
-            s.login(SMTP_USER, SMTP_PASS)
-            s.send_message(msg)
-
-        return True, "ok"
-    except Exception as e:
-        return False, str(e)
-
-
-def normalize_wa_id(raw: str) -> str:
-    """
-    Accetta:
-      "+39 340 111 2233"
-      "3401112233"
-      "393401112233"
-    Ritorna "393401112233" (solo numeri).
-    Se non riesce → "".
-    """
-    t = (raw or "").strip()
-    if not t:
-        return ""
-
-    t = t.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    t = t.replace("+", "")
-
-    # se inizia con 00 -> togli
-    if t.startswith("00"):
-        t = t[2:]
-
-    # se è italiano senza prefisso e lungo 10 -> aggiungi 39
-    if t.isdigit() and len(t) == 10 and t.startswith("3"):
-        t = "39" + t
-
-    if not t.isdigit():
-        return ""
-    if len(t) < 8:
-        return ""
-
-    return t
-
-
 def build_credentials_message(slug: str, username: str, password: str) -> str:
     base = get_base_url()
     login_url = f"{base}/login"
@@ -611,40 +550,21 @@ def build_credentials_message(slug: str, username: str, password: str) -> str:
     return msg
 
 
-def send_credentials_to_client(ag: Agent, user_obj: User, wa_raw: str = "", email_raw: str = ""):
+def send_credentials_to_client_wa_only(ag: Agent, user_obj: User, wa_raw: str = ""):
     """
-    Invia credenziali via WhatsApp e/o Email.
-    - Se wa_raw è vuoto: prova agent.phone_mobile
-    - Se email_raw è vuoto: prova prima email in agent.emails
+    Solo WhatsApp (SMTP lo facciamo domani).
+    - Se wa_raw vuoto: prova agent.phone_mobile
     """
-    results = {"wa": None, "email": None}
+    wa_target, err = normalize_wa_id_strict(wa_raw or (getattr(ag, "phone_mobile", "") or ""))
+    if err:
+        return {"wa": (False, err)}
 
-    # WhatsApp
-    wa_target = normalize_wa_id(wa_raw) or normalize_wa_id(getattr(ag, "phone_mobile", "") or "")
-    if wa_target:
-        body = build_credentials_message(ag.slug, user_obj.username, user_obj.password)
-        ok, resp = wa_send_text(wa_target, body)
-        results["wa"] = (ok, resp)
-    else:
-        results["wa"] = (False, "numero WhatsApp non presente")
+    if not wa_target:
+        return {"wa": (False, "numero WhatsApp non presente")}
 
-    # Email
-    email_target = (email_raw or "").strip()
-    if not email_target:
-        # prende la prima email dall'agente
-        emails = [e.strip() for e in (getattr(ag, "emails", "") or "").split(",") if e.strip()]
-        if emails:
-            email_target = emails[0]
-
-    if email_target:
-        subject = "Credenziali Pay4You Card"
-        body = build_credentials_message(ag.slug, user_obj.username, user_obj.password)
-        ok, resp = send_email_smtp(email_target, subject, body)
-        results["email"] = (ok, resp)
-    else:
-        results["email"] = (False, "email non presente")
-
-    return results
+    body = build_credentials_message(ag.slug, user_obj.username, user_obj.password)
+    ok, resp = wa_send_text(wa_target, body)
+    return {"wa": (ok, resp)}
 
 
 # ------------------ ROUTES BASE ------------------
@@ -676,7 +596,6 @@ def login_post():
     if not username or not password:
         return render_template("login.html", error="Inserisci username e password", next="")
 
-    # admin
     if username == "admin" and password == ADMIN_PASSWORD:
         session["username"] = "admin"
         session["role"] = "admin"
@@ -714,7 +633,7 @@ def admin_home():
     return render_template("admin_list.html", agents=agents)
 
 
-# ✅ CREAZIONE RAPIDA PRO + INVIO CREDENZIALI
+# ✅ CREAZIONE RAPIDA PRO + INVIO (WHATSAPP)
 @app.post("/admin/quick-pro")
 @admin_required
 def admin_quick_pro_create():
@@ -722,8 +641,8 @@ def admin_quick_pro_create():
 
     slug = slugify(request.form.get("slug", ""))
     name = (request.form.get("name") or "").strip()
-    wa = (request.form.get("wa") or "").strip()
-    email = (request.form.get("email") or "").strip()
+    wa_raw = (request.form.get("wa") or "").strip()
+    email_raw = (request.form.get("email") or "").strip()  # domani lo useremo per SMTP
 
     if not slug:
         flash("Slug obbligatorio", "error")
@@ -736,17 +655,22 @@ def admin_quick_pro_create():
     if not name:
         name = slug
 
-    # ✅ crea agente PRO minimale
+    # ✅ valida WA subito (se compilato)
+    wa_norm, wa_err = normalize_wa_id_strict(wa_raw)
+    if wa_err:
+        flash(wa_err, "error")
+        return redirect(url_for("admin_home"))
+
     ag = Agent(
         slug=slug,
         name=name,
         company=None,
         role=None,
         bio=None,
-        phone_mobile=wa or None,   # salvo qui così poi posso inviare e ritrovarlo
+        phone_mobile=wa_norm or None,   # salvo normalizzato
         phone_mobile2=None,
         phone_office=None,
-        emails=email or None,
+        emails=email_raw or None,
         websites=None,
         facebook=None,
         instagram=None,
@@ -772,35 +696,31 @@ def admin_quick_pro_create():
     db.add(ag)
     db.commit()
 
-    # ✅ crea utente (username=slug) + password
     pw = generate_password()
     u = User(username=slug, password=pw, role="client", agent_slug=slug)
     db.add(u)
     db.commit()
 
-    # ✅ invia credenziali
-    results = send_credentials_to_client(ag, u, wa_raw=wa, email_raw=email)
+    # ✅ invio WA (solo se numero presente)
+    results = send_credentials_to_client_wa_only(ag, u, wa_raw=wa_norm)
 
     wa_ok, wa_resp = results.get("wa") or (False, "")
-    em_ok, em_resp = results.get("email") or (False, "")
 
-    info = []
-    info.append("Cliente PRO creato ✅")
+    info = ["Cliente PRO creato ✅"]
     if wa_ok:
         info.append("WhatsApp inviato ✅")
     else:
         info.append(f"WhatsApp non inviato ({wa_resp})")
 
-    if em_ok:
-        info.append("Email inviata ✅")
-    else:
-        info.append(f"Email non inviata ({em_resp})")
+    # email domani
+    if email_raw:
+        info.append("Email: domani (SMTP)")
 
-    flash(" — ".join(info), "ok")
+    flash(" — ".join(info), "ok" if wa_ok else "error")
     return redirect(url_for("admin_home"))
 
 
-# ✅ REINVIO CREDENZIALI (rigenera password e invia)
+# ✅ REINVIO CREDENZIALI (rigenera password e invia WhatsApp)
 @app.post("/admin/<slug>/send-credentials")
 @admin_required
 def admin_send_credentials(slug):
@@ -815,7 +735,6 @@ def admin_send_credentials(slug):
 
     u = db.query(User).filter_by(username=slug).first()
     if not u:
-        # se per qualche motivo manca user, lo creo
         u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
         db.add(u)
     else:
@@ -823,27 +742,18 @@ def admin_send_credentials(slug):
 
     db.commit()
 
-    results = send_credentials_to_client(ag, u)
-
+    results = send_credentials_to_client_wa_only(ag, u)
     wa_ok, wa_resp = results.get("wa") or (False, "")
-    em_ok, em_resp = results.get("email") or (False, "")
 
-    info = []
     if wa_ok:
-        info.append("WhatsApp inviato ✅")
+        flash("WhatsApp inviato ✅", "ok")
     else:
-        info.append(f"WhatsApp non inviato ({wa_resp})")
+        flash(f"WhatsApp non inviato ({wa_resp})", "error")
 
-    if em_ok:
-        info.append("Email inviata ✅")
-    else:
-        info.append(f"Email non inviata ({em_resp})")
-
-    flash(" — ".join(info), "ok" if (wa_ok or em_ok) else "error")
     return redirect(url_for("admin_home"))
 
 
-# ✅ EXPORT JSON (backup “salvo in file json”)
+# ✅ EXPORT JSON
 @app.get("/admin/export_agents.json")
 @admin_required
 def admin_export_agents_json():
@@ -889,7 +799,7 @@ def admin_export_agents_json():
     return resp
 
 
-# ------------------ CREDENZIALI CLIENTE (RESET + COPIA) ------------------
+# ------------------ CREDENZIALI (RESET + COPIA) ------------------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials(slug):
@@ -898,7 +808,6 @@ def admin_credentials(slug):
     if not ag:
         abort(404)
 
-    # ✅ solo PRO genera credenziali (paywall)
     if not is_pro_agent(ag):
         return "Funzione disponibile solo per piano PRO.", 403
 
@@ -953,7 +862,7 @@ def admin_credentials(slug):
         </div>
 
         <form method="post" action="/admin/{slug}/send-credentials" style="margin-top:14px;">
-          <button type="submit">📨 Rigenera e invia credenziali</button>
+          <button type="submit">📨 Rigenera e invia credenziali (WhatsApp)</button>
         </form>
 
         <p class="small">Nota: aprendo questa pagina rigeneri la password (reset).</p>
@@ -1046,7 +955,6 @@ def create_agent():
     data = {k: (request.form.get(k, "") or "").strip() for k in fields}
     data["plan"] = normalize_plan(data.get("plan", "basic"))
 
-    # ✅ valida JSON profili (se inserito)
     if data.get("profiles_json"):
         try:
             _tmp = json.loads(data["profiles_json"])
@@ -1069,7 +977,6 @@ def create_agent():
     photo_url = upload_file(photo, "photos") if photo and photo.filename else None
     extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
 
-    # PDF 1–12
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
@@ -1079,7 +986,6 @@ def create_agent():
                 pdf_entries.append(f"{f.filename}||{u}")
     pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
-    # gallery
     gallery_urls = []
     for f in gallery_files[:MAX_GALLERY_IMAGES]:
         if f and f.filename:
@@ -1087,7 +993,6 @@ def create_agent():
             if u:
                 gallery_urls.append(u)
 
-    # videos
     video_urls = []
     for f in video_files[:MAX_VIDEOS]:
         if f and f.filename:
@@ -1109,7 +1014,6 @@ def create_agent():
     db.add(ag)
     db.commit()
 
-    # crea utente cliente (username = slug)
     slug = data["slug"]
     u = db.query(User).filter_by(username=slug).first()
     if not u:
@@ -1237,7 +1141,7 @@ def delete_agent(slug):
     return redirect(url_for("admin_home"))
 
 
-# ------------------ AREA CLIENTE: MODIFICA SOLO LA PROPRIA CARD ------------------
+# ------------------ AREA CLIENTE ------------------
 @app.get("/me/edit")
 @login_required
 def me_edit():
@@ -1351,15 +1255,12 @@ def public_card(slug):
 
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
 
-    # ✅ lingua
     lang = pick_lang_from_request()
 
-    # ✅ multi-profili
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    p_key = (request.args.get("p") or "").strip()  # <-- questa è la chiave che userà il template
+    p_key = (request.args.get("p") or "").strip()
     active_profile = select_profile(profiles, p_key)
 
-    # ✅ copia “view” e override (NON tocca oggetto DB)
     ag_view = agent_to_view(ag)
     if active_profile:
         ag_view = apply_profile_to_view(ag_view, active_profile)
@@ -1382,18 +1283,14 @@ def public_card(slug):
         if m2:
             mobiles.append(m2)
 
-    # ✅ link opt-in WhatsApp SOLO per piano PRO
     wa_optin_link = ""
     if ag.plan == "pro":
         optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
         wa_optin_link = f"https://wa.me/{WA_OPTIN_PHONE}?text={quote(optin_text)}"
 
-    # ✅ URL “NFC direct” (profilo se presente) + mantiene lingua se vuoi
     nfc_direct_url = f"{base}/{ag.slug}"
     if p_key:
         nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(p_key)}"
-        # se vuoi includere lang anche su NFC direct:
-        # nfc_direct_url += f"&lang={urllib.parse.quote(lang)}"
 
     return render_template(
         "card.html",
@@ -1407,14 +1304,10 @@ def public_card(slug):
         pdfs=pdfs,
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
-
-        # ✅ MULTI-LINGUA
         lang=lang,
-
-        # ✅ MULTI-PROFILI per schermata scelta
         profiles=profiles,
         active_profile=active_profile,
-        p_key=p_key,                 # <-- fondamentale per la “scelta profilo”
+        p_key=p_key,
         nfc_direct_url=nfc_direct_url,
     )
 
@@ -1478,8 +1371,6 @@ def vcard(slug):
 @app.get("/<slug>/qr.png")
 def qr(slug):
     base = get_base_url()
-
-    # ✅ se passi ?p=p1 il QR punta al profilo (NFC direct)
     p = (request.args.get("p") or "").strip()
     if p:
         url = f"{base}/{slug}?p={urllib.parse.quote(p)}"
