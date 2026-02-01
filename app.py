@@ -170,14 +170,18 @@ ensure_default_plan_basic()
 def now_iso():
     return datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
+
 def is_logged_in() -> bool:
     return bool(session.get("username"))
+
 
 def is_admin() -> bool:
     return session.get("role") == "admin"
 
+
 def current_client_slug():
     return session.get("agent_slug")
+
 
 def admin_required(f):
     from functools import wraps
@@ -188,6 +192,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -197,8 +202,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+
 def generate_password(length=10):
     return uuid.uuid4().hex[:length]
+
 
 def ensure_admin_user():
     db = SessionLocal()
@@ -206,6 +213,7 @@ def ensure_admin_user():
     if not admin:
         db.add(User(username="admin", password=ADMIN_PASSWORD, role="admin", agent_slug=None))
         db.commit()
+
 
 ensure_admin_user()
 
@@ -340,9 +348,31 @@ def sanitize_fields_for_plan(ag):
     return
 
 
+# ✅✅✅ LINGUA AUTOMATICA (da smartphone/browser) + override ?lang=en
+SUPPORTED_LANGS = ("it", "en", "es", "fr", "de")
+
+def pick_lang_from_request() -> str:
+    # 1) override manuale
+    q = (request.args.get("lang") or "").strip().lower()
+    if q in SUPPORTED_LANGS:
+        return q
+
+    # 2) Accept-Language header del browser (iPhone/Android)
+    header = (request.headers.get("Accept-Language") or "").lower()
+    parts = [p.strip() for p in header.split(",") if p.strip()]
+    for p in parts:
+        code = p.split(";")[0].strip()      # es: en-us
+        base = code.split("-")[0].strip()   # es: en
+        if base in SUPPORTED_LANGS:
+            return base
+
+    return "it"
+
+
 # ===== WhatsApp Cloud API helpers =====
 def wa_api_url(path: str) -> str:
     return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
+
 
 def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
     """
@@ -829,7 +859,7 @@ def me_edit_post():
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # ✅ NON tocchiamo plan e NON tocchiamo whatsapp se BASIC
+    # ✅ NON tocchiamo plan
     ag.plan = current_plan
 
     photo = request.files.get("photo")
@@ -927,6 +957,7 @@ def public_card(slug):
         pdfs=pdfs,
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
+        lang=pick_lang_from_request(),   # ✅✅✅ PASSO CHIAVE
     )
 
 
