@@ -2,6 +2,177 @@
 {% block title %}{{ ag.name }}{% endblock %}
 
 {% block content %}
+
+{# =========================
+   i18n: lingua automatica
+   ========================= #}
+{% set lang = (lang if lang else 'it')|lower %}
+
+{% set I18N = {
+  'it': {
+    'contacts':'Contatti',
+    'call_mobile':'Chiama mobile',
+    'office_phone':'Telefono ufficio',
+    'whatsapp':'WhatsApp',
+    'write_whatsapp':'Scrivi su WhatsApp',
+    'email':'Email',
+    'website':'Sito internet',
+    'open_facebook':'Apri Facebook',
+    'open_instagram':'Apri Instagram',
+    'open_linkedin':'Apri LinkedIn',
+    'open_tiktok':'Apri TikTok',
+    'open_telegram':'Apri Telegram',
+    'pec':'PEC',
+    'vat':'Partita IVA',
+    'sdi':'Codice SDI',
+    'address':'Indirizzo',
+    'save_contact':'Salva contatto',
+    'save':'Salva',
+    'documents':'Documenti',
+    'open_download':'Apri / Scarica',
+    'send_email':'Invia Email',
+    'send_whatsapp':'Invia WhatsApp',
+    'photo_gallery':'Galleria foto',
+    'video_gallery':'Galleria video',
+    'hint_swipe':'Suggerimento: swipe a sinistra/destra nel popup per cambiare.',
+    'close':'Chiudi',
+    'previous':'Precedente',
+    'next':'Successivo',
+    'footer':'Pay4You – Card digitale personale',
+    'made_by':'Realizzato da Giuseppe Di Lisio © 2026'
+  },
+  'en': {
+    'contacts':'Contacts',
+    'call_mobile':'Call mobile',
+    'office_phone':'Office phone',
+    'whatsapp':'WhatsApp',
+    'write_whatsapp':'Chat on WhatsApp',
+    'email':'Email',
+    'website':'Website',
+    'open_facebook':'Open Facebook',
+    'open_instagram':'Open Instagram',
+    'open_linkedin':'Open LinkedIn',
+    'open_tiktok':'Open TikTok',
+    'open_telegram':'Open Telegram',
+    'pec':'Certified email (PEC)',
+    'vat':'VAT number',
+    'sdi':'SDI code',
+    'address':'Address',
+    'save_contact':'Save contact',
+    'save':'Save',
+    'documents':'Documents',
+    'open_download':'Open / Download',
+    'send_email':'Send Email',
+    'send_whatsapp':'Send WhatsApp',
+    'photo_gallery':'Photo gallery',
+    'video_gallery':'Video gallery',
+    'hint_swipe':'Tip: swipe left/right in the popup to change.',
+    'close':'Close',
+    'previous':'Previous',
+    'next':'Next',
+    'footer':'Pay4You – Personal digital card',
+    'made_by':'Made by Giuseppe Di Lisio © 2026'
+  },
+  'es': {
+    'contacts':'Contactos',
+    'call_mobile':'Llamar móvil',
+    'office_phone':'Teléfono oficina',
+    'whatsapp':'WhatsApp',
+    'write_whatsapp':'Escribir por WhatsApp',
+    'email':'Email',
+    'website':'Sitio web',
+    'open_facebook':'Abrir Facebook',
+    'open_instagram':'Abrir Instagram',
+    'open_linkedin':'Abrir LinkedIn',
+    'open_tiktok':'Abrir TikTok',
+    'open_telegram':'Abrir Telegram',
+    'pec':'Correo certificado (PEC)',
+    'vat':'NIF/VAT',
+    'sdi':'Código SDI',
+    'address':'Dirección',
+    'save_contact':'Guardar contacto',
+    'save':'Guardar',
+    'documents':'Documentos',
+    'open_download':'Abrir / Descargar',
+    'send_email':'Enviar email',
+    'send_whatsapp':'Enviar WhatsApp',
+    'photo_gallery':'Galería de fotos',
+    'video_gallery':'Galería de vídeos',
+    'hint_swipe':'Consejo: desliza izquierda/derecha en el popup.',
+    'close':'Cerrar',
+    'previous':'Anterior',
+    'next':'Siguiente',
+    'footer':'Pay4You – Tarjeta digital personal',
+    'made_by':'Hecho por Giuseppe Di Lisio © 2026'
+  },
+  'fr': {
+    'contacts':'Contacts',
+    'call_mobile':'Appeler mobile',
+    'office_phone':'Téléphone bureau',
+    'whatsapp':'WhatsApp',
+    'write_whatsapp':'Écrire sur WhatsApp',
+    'email':'Email',
+    'website':'Site web',
+    'open_facebook':'Ouvrir Facebook',
+    'open_instagram':'Ouvrir Instagram',
+    'open_linkedin':'Ouvrir LinkedIn',
+    'open_tiktok':'Ouvrir TikTok',
+    'open_telegram':'Ouvrir Telegram',
+    'pec':'Email certifié (PEC)',
+    'vat':'TVA',
+    'sdi':'Code SDI',
+    'address':'Adresse',
+    'save_contact':'Enregistrer contact',
+    'save':'Enregistrer',
+    'documents':'Documents',
+    'open_download':'Ouvrir / Télécharger',
+    'send_email':'Envoyer Email',
+    'send_whatsapp':'Envoyer WhatsApp',
+    'photo_gallery':'Galerie photos',
+    'video_gallery':'Galerie vidéos',
+    'hint_swipe':'Astuce : balayez gauche/droite dans la popup.',
+    'close':'Fermer',
+    'previous':'Précédent',
+    'next':'Suivant',
+    'footer':'Pay4You – Carte digitale personnelle',
+    'made_by':'Réalisé par Giuseppe Di Lisio © 2026'
+  },
+  'de': {
+    'contacts':'Kontakte',
+    'call_mobile':'Mobil anrufen',
+    'office_phone':'Bürotelefon',
+    'whatsapp':'WhatsApp',
+    'write_whatsapp':'Auf WhatsApp schreiben',
+    'email':'E-Mail',
+    'website':'Website',
+    'open_facebook':'Facebook öffnen',
+    'open_instagram':'Instagram öffnen',
+    'open_linkedin':'LinkedIn öffnen',
+    'open_tiktok':'TikTok öffnen',
+    'open_telegram':'Telegram öffnen',
+    'pec':'Zertifizierte E-Mail (PEC)',
+    'vat':'USt-IdNr.',
+    'sdi':'SDI-Code',
+    'address':'Adresse',
+    'save_contact':'Kontakt speichern',
+    'save':'Speichern',
+    'documents':'Dokumente',
+    'open_download':'Öffnen / Download',
+    'send_email':'E-Mail senden',
+    'send_whatsapp':'WhatsApp senden',
+    'photo_gallery':'Fotogalerie',
+    'video_gallery':'Videogalerie',
+    'hint_swipe':'Tipp: im Popup links/rechts wischen.',
+    'close':'Schließen',
+    'previous':'Zurück',
+    'next':'Weiter',
+    'footer':'Pay4You – Persönliche digitale Karte',
+    'made_by':'Erstellt von Giuseppe Di Lisio © 2026'
+  }
+} %}
+
+{% set t = I18N.get(lang, I18N['it']) %}
+
 <div class="card-fullscreen">
   <div class="card-glass-bg"></div>
 
@@ -55,9 +226,9 @@
 
     <!-- CONTATTI -->
     <section class="card-section">
-      <h2>Contatti</h2>
+      <h2>{{ t.contacts }}</h2>
 
-      {# ✅ 1 o 2 (o più) numeri mobili: separati da virgola nel campo phone_mobile #}
+      {# ✅ 1 o più numeri mobili: separati da virgola nel campo phone_mobile #}
       {% if ag.phone_mobile %}
         {% set _mob_list = ag.phone_mobile.split(',') %}
         {% for m in _mob_list %}
@@ -65,18 +236,18 @@
           {% if _m %}
           <div class="contact-row">
             <div class="icon">📱</div>
-            <div class="label">Chiama mobile{% if _mob_list|length > 1 %} {{ loop.index }}{% endif %}</div>
+            <div class="label">{{ t.call_mobile }}{% if _mob_list|length > 1 %} {{ loop.index }}{% endif %}</div>
             <div class="value"><a href="tel:{{ _m }}">{{ _m }}</a></div>
           </div>
           {% endif %}
         {% endfor %}
       {% endif %}
 
-      {# ✅ Ufficio (prima non lo mostravi) #}
+      {# ✅ Ufficio #}
       {% if ag.phone_office %}
       <div class="contact-row">
         <div class="icon">☎️</div>
-        <div class="label">Telefono ufficio</div>
+        <div class="label">{{ t.office_phone }}</div>
         <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
       </div>
       {% endif %}
@@ -84,10 +255,10 @@
       {% if ag.whatsapp %}
       <div class="contact-row">
         <div class="icon">🟢</div>
-        <div class="label">WhatsApp</div>
+        <div class="label">{{ t.whatsapp }}</div>
         <div class="value">
           <a href="https://wa.me/{{ ag.whatsapp|replace(' ', '')|replace('+', '') }}" target="_blank" rel="noopener noreferrer">
-            Scrivi su WhatsApp
+            {{ t.write_whatsapp }}
           </a>
         </div>
       </div>
@@ -96,7 +267,7 @@
       {% for email in emails %}
       <div class="contact-row">
         <div class="icon">📧</div>
-        <div class="label">Email</div>
+        <div class="label">{{ t.email }}</div>
         <div class="value"><a href="mailto:{{ email }}">{{ email }}</a></div>
       </div>
       {% endfor %}
@@ -112,7 +283,7 @@
           {% endif %}
           <div class="contact-row">
             <div class="icon">🌐</div>
-            <div class="label">Sito internet</div>
+            <div class="label">{{ t.website }}</div>
             <div class="value">
               <a href="{{ site_href }}" target="_blank" rel="noopener noreferrer">{{ _site }}</a>
             </div>
@@ -125,7 +296,7 @@
         <div class="contact-row">
           <div class="icon">📘</div>
           <div class="label">Facebook</div>
-          <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">Apri Facebook</a></div>
+          <div class="value"><a href="{{ _fb_url }}" target="_blank" rel="noopener noreferrer">{{ t.open_facebook }}</a></div>
         </div>
       {% endif %}
 
@@ -135,7 +306,7 @@
         <div class="contact-row">
           <div class="icon">📸</div>
           <div class="label">Instagram</div>
-          <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">Apri Instagram</a></div>
+          <div class="value"><a href="{{ _ig_url }}" target="_blank" rel="noopener noreferrer">{{ t.open_instagram }}</a></div>
         </div>
       {% endif %}
 
@@ -145,7 +316,7 @@
         <div class="contact-row">
           <div class="icon">💼</div>
           <div class="label">LinkedIn</div>
-          <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">Apri LinkedIn</a></div>
+          <div class="value"><a href="{{ _li_url }}" target="_blank" rel="noopener noreferrer">{{ t.open_linkedin }}</a></div>
         </div>
       {% endif %}
 
@@ -155,7 +326,7 @@
         <div class="contact-row">
           <div class="icon">🎵</div>
           <div class="label">TikTok</div>
-          <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">Apri TikTok</a></div>
+          <div class="value"><a href="{{ _tt_url }}" target="_blank" rel="noopener noreferrer">{{ t.open_tiktok }}</a></div>
         </div>
       {% endif %}
 
@@ -165,14 +336,14 @@
         <div class="contact-row">
           <div class="icon">✈️</div>
           <div class="label">Telegram</div>
-          <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">Apri Telegram</a></div>
+          <div class="value"><a href="{{ _tg_url }}" target="_blank" rel="noopener noreferrer">{{ t.open_telegram }}</a></div>
         </div>
       {% endif %}
 
       {% if ag.pec %}
       <div class="contact-row">
         <div class="icon">🏛️</div>
-        <div class="label">PEC</div>
+        <div class="label">{{ t.pec }}</div>
         <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
       </div>
       {% endif %}
@@ -180,7 +351,7 @@
       {% if ag.piva %}
       <div class="contact-row">
         <div class="icon">🧾</div>
-        <div class="label">Partita IVA</div>
+        <div class="label">{{ t.vat }}</div>
         <div class="value">{{ ag.piva }}</div>
       </div>
       {% endif %}
@@ -188,7 +359,7 @@
       {% if ag.sdi %}
       <div class="contact-row">
         <div class="icon">🏷️</div>
-        <div class="label">Codice SDI</div>
+        <div class="label">{{ t.sdi }}</div>
         <div class="value">{{ ag.sdi }}</div>
       </div>
       {% endif %}
@@ -196,7 +367,7 @@
       {% for a in addresses %}
       <div class="contact-row">
         <div class="icon">📍</div>
-        <div class="label">Indirizzo{% if addresses|length > 1 %} {{ loop.index }}{% endif %}</div>
+        <div class="label">{{ t.address }}{% if addresses|length > 1 %} {{ loop.index }}{% endif %}</div>
         <div class="value">
           <a href="https://www.google.com/maps?q={{ a|trim|urlencode }}" target="_blank" rel="noopener noreferrer">
             {{ a }}
@@ -207,15 +378,15 @@
 
       <div class="contact-row">
         <div class="icon">💾</div>
-        <div class="label">Salva contatto</div>
-        <div class="value"><a href="{{ url_for('vcard', slug=ag.slug) }}">Salva</a></div>
+        <div class="label">{{ t.save_contact }}</div>
+        <div class="value"><a href="{{ url_for('vcard', slug=ag.slug) }}">{{ t.save }}</a></div>
       </div>
     </section>
 
     <!-- DOCUMENTI PDF -->
     {% if pdfs %}
     <section class="card-section">
-      <h2>Documenti</h2>
+      <h2>{{ t.documents }}</h2>
 
       <div class="pdf-list">
         {% for pdf in pdfs %}
@@ -231,9 +402,9 @@
           <div class="pdf-item">
             <div class="pdf-title">{{ pdf.name }}</div>
             <div class="pdf-actions">
-              <a class="primary" href="{{ pdf_href }}" target="_blank" rel="noopener">Apri / Scarica</a>
-              <a href="mailto:?subject={{ pdf.name }}&body=Ti invio questo documento:%0A{{ pdf_href }}">Invia Email</a>
-              <a href="https://wa.me/?text=Ti invio questo documento: {{ pdf_href }}" target="_blank" rel="noopener">Invia WhatsApp</a>
+              <a class="primary" href="{{ pdf_href }}" target="_blank" rel="noopener">{{ t.open_download }}</a>
+              <a href="mailto:?subject={{ pdf.name }}&body=Here%20is%20the%20document:%0A{{ pdf_href }}">{{ t.send_email }}</a>
+              <a href="https://wa.me/?text=Here%20is%20the%20document:%20{{ pdf_href }}" target="_blank" rel="noopener">{{ t.send_whatsapp }}</a>
             </div>
           </div>
         {% endfor %}
@@ -248,7 +419,7 @@
 
     {% if gallery %}
     <section class="card-section">
-      <h2>Galleria foto</h2>
+      <h2>{{ t.photo_gallery }}</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
         <button type="button" class="gallery-thumb-btn" onclick="openMediaModal('{{ img }}','image')">
@@ -261,7 +432,7 @@
 
     {% if vids %}
     <section class="card-section">
-      <h2>Galleria video</h2>
+      <h2>{{ t.video_gallery }}</h2>
       <div class="gallery-scroll">
         {% for v in vids %}
         <button type="button" class="gallery-thumb-btn is-video" onclick="openMediaModal('{{ v }}','video')">
@@ -273,19 +444,19 @@
         </button>
         {% endfor %}
       </div>
-      <div class="gallery-hint">Suggerimento: swipe a sinistra/destra nel popup per cambiare.</div>
+      <div class="gallery-hint">{{ t.hint_swipe }}</div>
     </section>
     {% endif %}
 
-    <div class="card-footer">Pay4You – Card digitale personale</div>
-    <div class="made-by">Realizzato da Giuseppe Di Lisio © 2026</div>
+    <div class="card-footer">{{ t.footer }}</div>
+    <div class="made-by">{{ t.made_by }}</div>
   </div>
 </div>
 
 <!-- MODAL MEDIA -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box modal-gallery" id="modalBox">
-    <button type="button" class="modal-nav-btn prev" onclick="prevMedia()" aria-label="Precedente">‹</button>
+    <button type="button" class="modal-nav-btn prev" onclick="prevMedia()" aria-label="{{ t.previous }}">‹</button>
 
     <div class="modal-stage">
       <img id="qr-modal-img" src="" alt="Foto" style="display:none;">
@@ -302,10 +473,10 @@
 
     <div class="modal-controls">
       <div id="modal-counter" class="modal-counter"></div>
-      <button type="button" class="modal-close-btn" onclick="closeQrModal()">Chiudi</button>
+      <button type="button" class="modal-close-btn" onclick="closeQrModal()">{{ t.close }}</button>
     </div>
 
-    <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="Successivo">›</button>
+    <button type="button" class="modal-nav-btn next" onclick="nextMedia()" aria-label="{{ t.next }}">›</button>
   </div>
 </div>
 
