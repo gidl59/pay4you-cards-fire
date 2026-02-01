@@ -30,6 +30,9 @@
       {% set form_action = url_for('me_edit_post') %}
     {% endif %}
 
+    {# Piano: default basic se non presente #}
+    {% set plan = (agent.plan if agent and agent.plan else 'basic')|lower %}
+
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
       {% if session.get("role") == "admin" %}
@@ -51,6 +54,25 @@
       <label>Bio / Descrizione</label>
       <textarea name="bio" rows="4">{{ agent.bio if agent else '' }}</textarea>
 
+      {% if session.get("role") == "admin" %}
+        <hr style="margin:16px 0; opacity:.2;">
+
+        <h3 style="margin:0 0 10px 0;">Piano</h3>
+
+        <label>Piano scheda</label>
+        <select name="plan" style="padding:10px 12px; border-radius:10px; width:100%; max-width:520px;">
+          <option value="basic" {% if plan != 'pro' %}selected{% endif %}>Basic (solo card)</option>
+          <option value="pro" {% if plan == 'pro' %}selected{% endif %}>Pro (WhatsApp promo + funzioni avanzate)</option>
+        </select>
+
+        <p style="margin-top:8px; font-size:12px; opacity:.8;">
+          Suggerimento: lascia <b>Basic</b> per chi non ha pagato. Metti <b>Pro</b> solo ai clienti abilitati.
+        </p>
+      {% else %}
+        {# per i clienti non mostriamo il piano; in app.py poi blocchiamo anche l’update lato server #}
+        <input type="hidden" name="plan" value="{{ plan }}">
+      {% endif %}
+
       <hr style="margin:16px 0; opacity:.2;">
 
       <h3 style="margin:0 0 10px 0;">Contatti</h3>
@@ -70,8 +92,18 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
-      <label>WhatsApp (link o numero)</label>
-      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+      {# ✅ WhatsApp SOLO per admin o per schede PRO #}
+      {% if session.get("role") == "admin" or plan == "pro" %}
+        <label>WhatsApp (link o numero)</label>
+        <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+        {% if plan != "pro" and session.get("role") == "admin" %}
+          <p style="margin-top:6px; font-size:12px; opacity:.75;">
+            Nota: per mostrare WhatsApp anche al cliente, imposta il piano su <b>Pro</b>.
+          </p>
+        {% endif %}
+      {% else %}
+        <input type="hidden" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+      {% endif %}
 
       <label>PEC</label>
       <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
