@@ -1,101 +1,298 @@
-{% extends "base.html" %}
+<!doctype html>
+<html lang="{{ lang or 'it' }}">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ ag.name }} | Pay4You Card</title>
 
-{% block title %}{{ ag.name }} | Pay4You{% endblock %}
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f172a;
+      --border:#1f2937;
+      --ink:#e5e7eb;
+      --muted:#94a3b8;
+      --cyan:#7dd3e6;
+      --gold:#c99a2f;
+      --shadow: 0 18px 40px rgba(0,0,0,.45);
+      --btn:#111827;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:980px;margin:0 auto;padding:18px}
+    .topbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    .brand{font-weight:950;letter-spacing:.02em;color:#fff}
+    .lang{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .lang a{
+      padding:6px 10px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.20);border-radius:999px;font-weight:800;
+      font-size:12px;color:var(--muted)
+    }
+    .lang a.active{border-color:rgba(125,211,230,.60);color:#fff;background:rgba(125,211,230,.10)}
+    .hero{
+      background:linear-gradient(180deg, rgba(125,211,230,.10), transparent 60%);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .hero-grid{display:grid;grid-template-columns: 120px 1fr;gap:14px;align-items:center}
+    @media(max-width:560px){.hero-grid{grid-template-columns:1fr}}
+    .avatar{
+      width:120px;height:120px;border-radius:18px;overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);background:#000
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    h1{font-size:26px;line-height:1.1;margin-bottom:6px}
+    .sub{color:var(--muted);font-weight:800;margin-bottom:8px}
+    .bio{color:#d7dee8;margin-top:10px;white-space:pre-wrap}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .chip{
+      border:1px solid rgba(125,211,230,.25);
+      background:rgba(125,211,230,.08);
+      padding:6px 10px;border-radius:999px;font-size:12px;font-weight:850;color:#eaf7fb
+    }
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:10px 14px;border-radius:12px;font-weight:900;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.22);
+    }
+    .btn.primary{border-color:rgba(201,154,47,.55);background:rgba(201,154,47,.14);color:#fff}
+    .btn.cyan{border-color:rgba(125,211,230,.55);background:rgba(125,211,230,.10)}
+    .btn:hover{filter:brightness(1.05)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:rgba(15,23,42,.85);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;padding:14px;
+      box-shadow:0 10px 24px rgba(0,0,0,.25);
+    }
+    .card h2{font-size:16px;margin-bottom:10px;color:#fff}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+    .label{min-width:92px;color:var(--muted);font-weight:850;font-size:13px}
+    .val a{color:#fff;font-weight:900;text-decoration:underline;text-decoration-color:rgba(125,211,230,.35)}
+    .mini{color:var(--muted);font-size:13px;margin-top:6px}
+    .list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .item{
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+      padding:10px;border-radius:12px;
+      display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap
+    }
+    .item a{font-weight:900}
+    .gallery{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;margin-top:10px
+    }
+    @media(max-width:760px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .gimg{
+      border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);
+      background:#000
+    }
+    .gimg img{width:100%;height:160px;object-fit:cover;display:block}
+    .videos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+    @media(max-width:760px){.videos{grid-template-columns:1fr}}
+    video{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:#000}
+    .foot{margin:18px 0 10px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
 
-{% block content %}
-<div style="max-width:980px;margin:0 auto;padding:18px;">
-  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-    <div style="flex:1;min-width:280px;background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:16px;">
-      <div style="display:flex;gap:14px;align-items:center;">
-        {% if ag.photo_url %}
-          <img src="{{ ag.photo_url }}" alt="foto" style="width:78px;height:78px;border-radius:14px;object-fit:cover;border:1px solid #1f2937;">
-        {% endif %}
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <div class="brand">Pay4You Card</div>
+
+      <!-- switch lingua (opzionale ma utile) -->
+      <div class="lang">
+        {% for code in supported_langs %}
+          <a href="?lang={{ code }}" class="{% if code == lang %}active{% endif %}">{{ code|upper }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="avatar">
+          {% if ag.photo_url %}
+            <img src="{{ ag.photo_url }}" alt="{{ ag.name }}" onerror="this.style.display='none'">
+          {% else %}
+            <img src="https://dummyimage.com/240x240/0b1220/94a3b8&text=Pay4You" alt="Pay4You">
+          {% endif %}
+        </div>
+
         <div>
-          <div style="font-size:22px;font-weight:700;color:#e5e7eb;">{{ ag.name }}</div>
-          {% if ag.company %}<div style="opacity:.85;margin-top:2px;">{{ ag.company }}</div>{% endif %}
-          {% if ag.role %}<div style="opacity:.75;margin-top:2px;">{{ ag.role }}</div>{% endif %}
+          <h1>{{ ag.name }}</h1>
+
+          <div class="sub">
+            {% if ag_role %}{{ ag_role }}{% endif %}
+            {% if ag_role and ag_company %} • {% endif %}
+            {% if ag_company %}{{ ag_company }}{% endif %}
+          </div>
+
+          {% if ag_bio %}
+            <div class="bio">{{ ag_bio }}</div>
+          {% endif %}
+
+          <div class="chips">
+            <span class="chip">NFC</span>
+            <span class="chip">QR</span>
+            <span class="chip">Multi-lingua</span>
+          </div>
+
+          <div class="actions">
+            <!-- vCard download -->
+            <a class="btn primary" href="/{{ ag.slug }}.vcf">📇 {{ ui.save_contact }}</a>
+
+            <!-- WhatsApp diretto (se presente in campo whatsapp, altrimenti usa opt-in) -->
+            {% if ag.whatsapp %}
+              <a class="btn cyan" href="https://wa.me/{{ ag.whatsapp|replace('+','')|replace(' ','') }}" target="_blank" rel="noopener">
+                💬 {{ ui.open_whatsapp }}
+              </a>
+            {% else %}
+              <a class="btn cyan" href="{{ wa_optin_link }}" target="_blank" rel="noopener">
+                💬 {{ ui.open_whatsapp }}
+              </a>
+            {% endif %}
+
+            <!-- QR -->
+            <a class="btn" href="/{{ ag.slug }}/qr.png" target="_blank" rel="noopener">🔳 QR</a>
+          </div>
+
+          <div class="mini">
+            Lingua rilevata: <b>{{ lang|upper }}</b>
+            {% if base_url %} • URL: <b>{{ base_url }}/{{ ag.slug }}</b>{% endif %}
+          </div>
         </div>
       </div>
+    </section>
 
-      {% if ag.bio %}
-        <p style="margin-top:12px;opacity:.9;line-height:1.5;">{{ ag.bio }}</p>
+    <div class="grid">
+
+      <!-- CONTATTI -->
+      <section class="card">
+        <h2>{{ ui.contacts }}</h2>
+
+        {% if mobiles and mobiles|length > 0 %}
+          {% for m in mobiles %}
+            <div class="row">
+              <div class="label">Tel</div>
+              <div class="val"><a href="tel:{{ m }}">{{ m }}</a></div>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if emails and emails|length > 0 %}
+          {% for e in emails %}
+            <div class="row">
+              <div class="label">Email</div>
+              <div class="val"><a href="mailto:{{ e }}">{{ e }}</a></div>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if websites and websites|length > 0 %}
+          {% for w in websites %}
+            <div class="row">
+              <div class="label">Web</div>
+              <div class="val"><a href="{{ w }}" target="_blank" rel="noopener">{{ w }}</a></div>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if addresses and addresses|length > 0 %}
+          <div class="row" style="align-items:flex-start;">
+            <div class="label">Indirizzo</div>
+            <div class="val">
+              {% for a in addresses %}
+                <div style="margin-bottom:6px;">{{ a }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram %}
+          <div class="mini" style="margin-top:10px;">Social</div>
+          <div class="list">
+            {% if ag.facebook %}<div class="item"><span>Facebook</span><a href="{{ ag.facebook }}" target="_blank" rel="noopener">Apri</a></div>{% endif %}
+            {% if ag.instagram %}<div class="item"><span>Instagram</span><a href="{{ ag.instagram }}" target="_blank" rel="noopener">Apri</a></div>{% endif %}
+            {% if ag.linkedin %}<div class="item"><span>LinkedIn</span><a href="{{ ag.linkedin }}" target="_blank" rel="noopener">Apri</a></div>{% endif %}
+            {% if ag.tiktok %}<div class="item"><span>TikTok</span><a href="{{ ag.tiktok }}" target="_blank" rel="noopener">Apri</a></div>{% endif %}
+            {% if ag.telegram %}<div class="item"><span>Telegram</span><a href="{{ ag.telegram }}" target="_blank" rel="noopener">Apri</a></div>{% endif %}
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- DOCUMENTI -->
+      <section class="card">
+        <h2>{{ ui.documents }}</h2>
+
+        {% if pdfs and pdfs|length > 0 %}
+          <div class="list">
+            {% for p in pdfs %}
+              <div class="item">
+                <span>{{ p.name }}</span>
+                <a href="{{ p.url }}" target="_blank" rel="noopener">Apri</a>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="mini">Nessun documento.</div>
+        {% endif %}
+
+        {% if ag.piva or ag.sdi or ag.pec %}
+          <div class="mini" style="margin-top:12px;">Dati aziendali</div>
+          <div class="list">
+            {% if ag.piva %}<div class="item"><span>P.IVA</span><b>{{ ag.piva }}</b></div>{% endif %}
+            {% if ag.sdi %}<div class="item"><span>SDI</span><b>{{ ag.sdi }}</b></div>{% endif %}
+            {% if ag.pec %}<div class="item"><span>PEC</span><b>{{ ag.pec }}</b></div>{% endif %}
+          </div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <!-- GALLERIA -->
+    <section class="card" style="margin-top:14px;">
+      <h2>{{ ui.gallery }}</h2>
+      {% if gallery and gallery|length > 0 %}
+        <div class="gallery">
+          {% for u in gallery %}
+            <a class="gimg" href="{{ u }}" target="_blank" rel="noopener">
+              <img src="{{ u }}" alt="img" onerror="this.style.display='none'">
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="mini">Nessuna immagine.</div>
       {% endif %}
+    </section>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-        <a href="{{ url_for('vcard', slug=ag.slug) }}"
-           style="background:#2563eb;color:#fff;text-decoration:none;padding:10px 12px;border-radius:12px;">
-          Salva contatto
-        </a>
+    <!-- VIDEO -->
+    <section class="card" style="margin-top:14px;">
+      <h2>{{ ui.videos }}</h2>
+      {% if videos and videos|length > 0 %}
+        <div class="videos">
+          {% for v in videos %}
+            <video controls preload="metadata">
+              <source src="{{ v }}" type="video/mp4">
+              Il tuo browser non supporta il video.
+            </video>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="mini">Nessun video.</div>
+      {% endif %}
+    </section>
 
-        <a href="{{ wa_optin_link }}" target="_blank" rel="noopener"
-           style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 12px;border-radius:12px;">
-          🟢 Ricevi promo su WhatsApp
-        </a>
-      </div>
-
-      <div style="font-size:12px;opacity:.8;margin-top:8px;">
-        Premendo “Invia” su WhatsApp autorizzi la ricezione di aggiornamenti. Per annullare: scrivi <b>STOP</b>.
-      </div>
-
-      <hr style="margin:14px 0;opacity:.2;">
-
-      <div style="display:grid;grid-template-columns:1fr;gap:8px;">
-        {% for m in mobiles %}
-          <div>📞 <a href="tel:{{ m }}" style="color:#93c5fd;">{{ m }}</a></div>
-        {% endfor %}
-
-        {% for e in emails %}
-          <div>✉️ <a href="mailto:{{ e }}" style="color:#93c5fd;">{{ e }}</a></div>
-        {% endfor %}
-
-        {% for w in websites %}
-          <div>🌐 <a href="{{ w }}" target="_blank" rel="noopener" style="color:#93c5fd;">{{ w }}</a></div>
-        {% endfor %}
-      </div>
+    <div class="foot">
+      © {{ (now()|default(None)) }} Pay4You — Card dinamica • Multi-lingua automatica
     </div>
 
-    <div style="width:320px;max-width:100%;background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;">
-      <div style="font-weight:700;margin-bottom:10px;">QR</div>
-      <img src="{{ url_for('qr', slug=ag.slug) }}" alt="qr" style="width:100%;border-radius:14px;border:1px solid #1f2937;">
-      <div style="font-size:12px;opacity:.75;margin-top:8px;">
-        Link: <a href="{{ base_url }}/{{ ag.slug }}" style="color:#93c5fd;">{{ base_url }}/{{ ag.slug }}</a>
-      </div>
-    </div>
   </div>
-
-  {% if pdfs and pdfs|length > 0 %}
-    <div style="margin-top:18px;background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:16px;">
-      <div style="font-weight:700;margin-bottom:10px;">Documenti</div>
-      <ul style="margin:0;padding-left:18px;">
-        {% for p in pdfs %}
-          <li><a href="{{ p.url }}" target="_blank" rel="noopener" style="color:#93c5fd;">{{ p.name }}</a></li>
-        {% endfor %}
-      </ul>
-    </div>
-  {% endif %}
-
-  {% if gallery and gallery|length > 0 %}
-    <div style="margin-top:18px;background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:16px;">
-      <div style="font-weight:700;margin-bottom:10px;">Galleria</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
-        {% for g in gallery %}
-          <a href="{{ g }}" target="_blank" rel="noopener">
-            <img src="{{ g }}" alt="img" style="width:100%;height:120px;object-fit:cover;border-radius:12px;border:1px solid #1f2937;">
-          </a>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-
-  {% if videos and videos|length > 0 %}
-    <div style="margin-top:18px;background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:16px;">
-      <div style="font-weight:700;margin-bottom:10px;">Video</div>
-      <div style="display:grid;grid-template-columns:1fr;gap:12px;">
-        {% for v in videos %}
-          <video src="{{ v }}" controls style="width:100%;border-radius:12px;border:1px solid #1f2937;"></video>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-</div>
-{% endblock %}
+</body>
+</html>
