@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import quote
+from types import SimpleNamespace
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -38,6 +39,10 @@ WA_VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "verify_token_change_me")
 WA_TOKEN = os.getenv("WA_TOKEN", "")  # permanent access token
 WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "")  # phone number id
 WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
+
+# ✅ Numero per link OPT-IN (WhatsApp web "wa.me/<numero>?text=...")
+# Default: Pay4You +39 350 872 5353 -> "393508725353"
+WA_OPTIN_PHONE = os.getenv("WA_OPTIN_PHONE", "393508725353").strip().replace("+", "").replace(" ", "")
 
 # Upload persistenti (Render Disk su /var/data)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
@@ -99,11 +104,6 @@ class Agent(Base):
     plan = Column(String, nullable=True)  # "basic" | "pro"
 
     # ✅ Multi-profile JSON (testo JSON)
-    # Struttura consigliata:
-    # [
-    #   {"key":"p1","label":"Profilo 1","photo_url":"...","logo_url":"...","name":"...","role":"...","company":"...","bio":"..."},
-    #   {"key":"p2","label":"Profilo 2", ...}
-    # ]
     profiles_json = Column(Text, nullable=True)
 
 
@@ -142,7 +142,7 @@ class Subscriber(Base):
 Base.metadata.create_all(engine)
 
 
-# ===== MICRO-MIGRAZIONI agents =====
+# ===== MICRO-MIGRAZIONI =====
 def ensure_sqlite_column(table: str, column: str, coltype: str):
     with engine.connect() as conn:
         rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
@@ -157,7 +157,6 @@ ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "plan", "TEXT")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 
-# Subscribers columns (in caso DB già creato tempo fa)
 ensure_sqlite_column("subscribers", "last_text", "TEXT")
 ensure_sqlite_column("subscribers", "updated_at", "TEXT")
 ensure_sqlite_column("subscribers", "created_at", "TEXT")
@@ -346,7 +345,6 @@ def sanitize_fields_for_plan(ag):
     """
     IMPORTANTISSIMO:
     - Non cancelliamo dati dal DB automaticamente.
-    - Qui eventualmente in futuro puliamo SOLO campi che vuoi davvero eliminare.
     """
     return
 
@@ -396,7 +394,6 @@ def parse_profiles_json(raw: str):
         if not key:
             key = f"p{i+1}"
 
-        # Evita key “strane”
         key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
 
         out.append({
@@ -414,10 +411,6 @@ def parse_profiles_json(raw: str):
 
 
 def select_profile(profiles, requested_key: str):
-    """
-    Se requested_key matcha → quel profilo.
-    Se no → None.
-    """
     if not requested_key:
         return None
     for p in profiles:
@@ -426,33 +419,66 @@ def select_profile(profiles, requested_key: str):
     return None
 
 
-def apply_profile_to_agent(ag, profile: dict):
+def agent_to_view(ag: Agent):
     """
-    Applica override SOLO per: logo/foto + eventuali testi.
-    (Contatti rimangono quelli dell'agente, come volevi tu: 1 biglietto per profilo ma contatti coerenti)
+    Crea una copia "view" (SimpleNamespace) dell'agente,
+    così possiamo fare override senza modificare l'oggetto SQLAlchemy.
+    """
+    return SimpleNamespace(
+        id=ag.id,
+        slug=ag.slug,
+        name=ag.name,
+        company=ag.company,
+        role=ag.role,
+        bio=ag.bio,
+        phone_mobile=ag.phone_mobile,
+        phone_mobile2=ag.phone_mobile2,
+        phone_office=ag.phone_office,
+        emails=ag.emails,
+        websites=ag.websites,
+        facebook=ag.facebook,
+        instagram=ag.instagram,
+        linkedin=ag.linkedin,
+        tiktok=ag.tiktok,
+        telegram=ag.telegram,
+        whatsapp=ag.whatsapp,
+        pec=ag.pec,
+        piva=ag.piva,
+        sdi=ag.sdi,
+        addresses=ag.addresses,
+        photo_url=ag.photo_url,
+        extra_logo_url=ag.extra_logo_url,
+        gallery_urls=ag.gallery_urls,
+        video_urls=ag.video_urls,
+        pdf1_url=ag.pdf1_url,
+        plan=ag.plan,
+        profiles_json=getattr(ag, "profiles_json", None),
+    )
+
+
+def apply_profile_to_view(view, profile: dict):
+    """
+    Override SOLO per: foto/logo + eventuali testi.
     """
     if not profile:
-        return ag
+        return view
 
-    # Override immagine profilo
     if profile.get("photo_url"):
-        ag.photo_url = profile["photo_url"]
+        view.photo_url = profile["photo_url"]
 
-    # Override logo
     if profile.get("logo_url"):
-        ag.extra_logo_url = profile["logo_url"]
+        view.extra_logo_url = profile["logo_url"]
 
-    # Override testi se presenti
     if profile.get("name"):
-        ag.name = profile["name"]
+        view.name = profile["name"]
     if profile.get("role"):
-        ag.role = profile["role"]
+        view.role = profile["role"]
     if profile.get("company"):
-        ag.company = profile["company"]
+        view.company = profile["company"]
     if profile.get("bio"):
-        ag.bio = profile["bio"]
+        view.bio = profile["bio"]
 
-    return ag
+    return view
 
 
 # ===== WhatsApp Cloud API helpers =====
@@ -460,9 +486,6 @@ def wa_api_url(path: str) -> str:
     return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
 
 def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
-    """
-    Invia messaggio di testo.
-    """
     if not WA_TOKEN or not WA_PHONE_NUMBER_ID:
         return False, "WA_TOKEN o WA_PHONE_NUMBER_ID mancanti"
 
@@ -562,6 +585,52 @@ def admin_home():
     for a in agents:
         a.plan = normalize_plan(getattr(a, "plan", "basic"))
     return render_template("admin_list.html", agents=agents)
+
+
+# ✅ EXPORT JSON (backup “salvo in file json”)
+@app.get("/admin/export_agents.json")
+@admin_required
+def admin_export_agents_json():
+    db = SessionLocal()
+    agents = db.query(Agent).order_by(Agent.id).all()
+
+    payload = []
+    for a in agents:
+        payload.append({
+            "id": a.id,
+            "slug": a.slug,
+            "name": a.name,
+            "company": a.company,
+            "role": a.role,
+            "bio": a.bio,
+            "phone_mobile": a.phone_mobile,
+            "phone_mobile2": a.phone_mobile2,
+            "phone_office": a.phone_office,
+            "emails": a.emails,
+            "websites": a.websites,
+            "facebook": a.facebook,
+            "instagram": a.instagram,
+            "linkedin": a.linkedin,
+            "tiktok": a.tiktok,
+            "telegram": a.telegram,
+            "whatsapp": a.whatsapp,
+            "pec": a.pec,
+            "piva": a.piva,
+            "sdi": a.sdi,
+            "addresses": a.addresses,
+            "photo_url": a.photo_url,
+            "extra_logo_url": a.extra_logo_url,
+            "gallery_urls": a.gallery_urls,
+            "video_urls": a.video_urls,
+            "pdf1_url": a.pdf1_url,
+            "plan": normalize_plan(getattr(a, "plan", "basic")),
+            "profiles_json": a.profiles_json,
+        })
+
+    content = json.dumps(payload, ensure_ascii=False, indent=2)
+    resp = Response(content, mimetype="application/json; charset=utf-8")
+    resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
+    return resp
 
 
 # ------------------ CREDENZIALI CLIENTE (RESET + COPIA) ------------------
@@ -945,7 +1014,6 @@ def me_edit_post():
 
     current_plan = normalize_plan(getattr(ag, "plan", "basic"))
 
-    # ✅ campi sempre modificabili dal cliente
     allowed_fields = [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -954,17 +1022,14 @@ def me_edit_post():
         "telegram",
         "pec",
         "piva", "sdi", "addresses",
-        # (profiles_json lo gestiamo SOLO da admin per ora: evita casino)
     ]
 
-    # ✅ WhatsApp modificabile SOLO se PRO
     if current_plan == "pro":
         allowed_fields.append("whatsapp")
 
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # ✅ NON tocchiamo plan e NON tocchiamo whatsapp se BASIC
     ag.plan = current_plan
 
     photo = request.files.get("photo")
@@ -1031,17 +1096,16 @@ def public_card(slug):
 
     # ✅ multi-profili
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    requested_profile_key = (request.args.get("p") or "").strip()
-    active_profile = select_profile(profiles, requested_profile_key)
+    p_key = (request.args.get("p") or "").strip()  # <-- questa è la chiave che userà il template
+    active_profile = select_profile(profiles, p_key)
 
-    # Se l'utente passa ?p= e non esiste, ignoriamo (non errore)
-    # Applichiamo override immagine/logo + testi
-    ag_view = ag
+    # ✅ copia “view” e override (NON tocca oggetto DB)
+    ag_view = agent_to_view(ag)
     if active_profile:
-        ag_view = apply_profile_to_agent(ag_view, active_profile)
+        ag_view = apply_profile_to_view(ag_view, active_profile)
 
-    gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
-    videos = ag.video_urls.split("|") if ag.video_urls else []
+    gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
+    videos = (ag.video_urls.split("|") if ag.video_urls else [])
 
     emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
     websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
@@ -1062,13 +1126,14 @@ def public_card(slug):
     wa_optin_link = ""
     if ag.plan == "pro":
         optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
-        wa_optin_link = f"https://wa.me/393333375321?text={quote(optin_text)}"
+        wa_optin_link = f"https://wa.me/{WA_OPTIN_PHONE}?text={quote(optin_text)}"
 
-    # ✅ Costruisci URL “NFC direct” (profilo se presente)
-    # Questo ti serve per scrivere su tag NFC (p=p1 ecc.)
+    # ✅ URL “NFC direct” (profilo se presente) + mantiene lingua se vuoi
     nfc_direct_url = f"{base}/{ag.slug}"
-    if active_profile and active_profile.get("key"):
-        nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(active_profile['key'])}"
+    if p_key:
+        nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(p_key)}"
+        # se vuoi includere lang anche su NFC direct:
+        # nfc_direct_url += f"&lang={urllib.parse.quote(lang)}"
 
     return render_template(
         "card.html",
@@ -1082,10 +1147,14 @@ def public_card(slug):
         pdfs=pdfs,
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
-        # nuove variabili utili al template (poi le useremo quando facciamo la UI profili)
+
+        # ✅ MULTI-LINGUA
         lang=lang,
+
+        # ✅ MULTI-PROFILI per schermata scelta
         profiles=profiles,
         active_profile=active_profile,
+        p_key=p_key,                 # <-- fondamentale per la “scelta profilo”
         nfc_direct_url=nfc_direct_url,
     )
 
