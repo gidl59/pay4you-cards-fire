@@ -30,8 +30,20 @@
       {% set form_action = url_for('me_edit_post') %}
     {% endif %}
 
-    {# Piano: default basic se non presente #}
-    {% set plan = (agent.plan if agent and agent.plan else 'basic')|lower %}
+    {# Piano: default:
+       - se esiste agent: usa agent.plan
+       - se nuovo agente (admin): default PRO (così fai “solo slug”)
+       - altrimenti: basic
+    #}
+    {% if agent and agent.plan %}
+      {% set plan = (agent.plan)|lower %}
+    {% else %}
+      {% if session.get("role") == "admin" and not agent %}
+        {% set plan = "pro" %}
+      {% else %}
+        {% set plan = "basic" %}
+      {% endif %}
+    {% endif %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
@@ -43,7 +55,16 @@
       {% endif %}
 
       <label>Nome / Attività</label>
-      <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+
+      {# ✅ SOLO SLUG: quando admin crea un nuovo agente, il Nome non è obbligatorio #}
+      {% if session.get("role") == "admin" and not agent %}
+        <input type="text" name="name" value="" placeholder="(opzionale) Se lasci vuoto, lo genero dallo slug">
+        <p style="margin-top:6px; font-size:12px; opacity:.8; line-height:1.4;">
+          ✅ Per creare velocemente: inserisci <b>solo lo slug</b> e salva. Il nome verrà generato automaticamente (es. <code>bar-jonni</code> → <code>Bar Jonni</code>).
+        </p>
+      {% else %}
+        <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+      {% endif %}
 
       <label>Azienda</label>
       <input type="text" name="company" value="{{ agent.company if agent else '' }}">
