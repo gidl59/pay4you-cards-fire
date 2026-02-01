@@ -144,8 +144,6 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
 
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
-
-# ✅ piano (basic/pro)
 ensure_sqlite_column("agents", "plan", "TEXT")
 
 # Subscribers columns (in caso DB già creato tempo fa)
@@ -317,7 +315,6 @@ def find_agent_slug_best_effort(db, guess_slug: str) -> str:
     if ag:
         return ag.slug
 
-    # match su nome slugificato
     agents = db.query(Agent).all()
     for a in agents:
         if slugify(a.name) == guess_slug:
@@ -331,6 +328,22 @@ def find_agent_slug_best_effort(db, guess_slug: str) -> str:
 def normalize_plan(p: str) -> str:
     p = (p or "").strip().lower()
     return p if p in ("basic", "pro") else "basic"
+
+
+def is_pro_agent(ag) -> bool:
+    return normalize_plan(getattr(ag, "plan", "basic")) == "pro"
+
+
+def sanitize_fields_for_plan(ag):
+    """
+    Se NON PRO: ripulisce campi legati a WhatsApp promo,
+    così non restano dati "sporchi" nel DB.
+    (Puoi aggiungere qui altri campi premium in futuro.)
+    """
+    if not is_pro_agent(ag):
+        # se vuoi che WhatsApp "normale" resti comunque, togli questa riga.
+        # Ma visto che vuoi nasconderlo ai BASIC, lo azzeriamo.
+        ag.whatsapp = ""
 
 
 # ===== WhatsApp Cloud API helpers =====
@@ -359,7 +372,7 @@ def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
                 data=json.dumps(payload),
                 timeout=20
             )
-            ok = r.status_code >= 200 and r.status_code < 300
+            ok = 200 <= r.status_code < 300
             return ok, r.text
         else:
             import urllib.request
@@ -437,7 +450,6 @@ def logout():
 def admin_home():
     db = SessionLocal()
     agents = db.query(Agent).order_by(Agent.name).all()
-    # sicurezza: normalizzo plan quando leggo
     for a in agents:
         a.plan = normalize_plan(getattr(a, "plan", "basic"))
     return render_template("admin_list.html", agents=agents)
@@ -451,6 +463,11 @@ def admin_credentials(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+
+    # ✅ OPZIONE SICURA: solo PRO genera credenziali
+    # Se vuoi lasciarlo per tutti, COMMENTA le 2 righe qui sotto.
+    if not is_pro_agent(ag):
+        return "Funzione disponibile solo per piano PRO.", 403
 
     u = db.query(User).filter_by(username=slug).first()
     if not u:
@@ -528,8 +545,7 @@ def admin_broadcast(slug):
     if not ag:
         abort(404)
 
-    # ✅ SOLO PRO può usare broadcast (per sicurezza lato backend)
-    if normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+    if not is_pro_agent(ag):
         return "Funzione disponibile solo per piano PRO.", 403
 
     subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
@@ -544,8 +560,7 @@ def admin_broadcast_post(slug):
     if not ag:
         abort(404)
 
-    # ✅ SOLO PRO può inviare
-    if normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+    if not is_pro_agent(ag):
         return "Funzione disponibile solo per piano PRO.", 403
 
     message = (request.form.get("message") or "").strip()
@@ -588,10 +603,9 @@ def create_agent():
         "facebook", "instagram", "linkedin", "tiktok",
         "telegram", "whatsapp", "pec",
         "piva", "sdi", "addresses",
-        "plan",  # ✅
+        "plan",
     ]
     data = {k: (request.form.get(k, "") or "").strip() for k in fields}
-
     data["plan"] = normalize_plan(data.get("plan", "basic"))
 
     if not data["slug"] or not data["name"]:
@@ -643,6 +657,9 @@ def create_agent():
         video_urls="|".join(video_urls) if video_urls else None,
     )
 
+    # ✅ pulizia campi in base al piano
+    sanitize_fields_for_plan(ag)
+
     db.add(ag)
     db.commit()
 
@@ -675,7 +692,6 @@ def edit_agent(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
-    # sicurezza: se manca plan -> basic
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
     return render_template("agent_form.html", agent=ag)
 
@@ -700,6 +716,9 @@ def update_agent(slug):
 
     # ✅ solo admin può cambiare piano
     ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
+
+    # ✅ se BASIC, pulisco campi premium
+    sanitize_fields_for_plan(ag)
 
     if request.form.get("delete_pdfs") == "1":
         ag.pdf1_url = None
@@ -781,9 +800,7 @@ def me_edit():
     if not ag:
         abort(404)
 
-    # normalizzo plan (serve ai template per mostrare/nascondere)
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-
     return render_template("agent_form.html", agent=ag)
 
 
@@ -802,16 +819,28 @@ def me_edit_post():
     if not ag:
         abort(404)
 
-    # ✅ CLIENTE: NON tocchiamo lo slug e NON tocchiamo plan
-    for k in [
+    current_plan = normalize_plan(getattr(ag, "plan", "basic"))
+
+    # ✅ CLIENTE: NON tocchiamo lo slug e NON tocchiamo plan.
+    # ✅ BLOCCO: se BASIC non permetto di salvare WhatsApp (lo ignoro).
+    allowed_fields = [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
         "emails", "websites",
         "facebook", "instagram", "linkedin", "tiktok",
-        "telegram", "whatsapp", "pec",
+        "telegram",
+        "pec",
         "piva", "sdi", "addresses",
-    ]:
+    ]
+    if current_plan == "pro":
+        allowed_fields.append("whatsapp")
+
+    for k in allowed_fields:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
+
+    # se BASIC: pulisco comunque
+    ag.plan = current_plan
+    sanitize_fields_for_plan(ag)
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
@@ -870,7 +899,6 @@ def public_card(slug):
     if not ag:
         abort(404)
 
-    # sicurezza: plan sempre valorizzato
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
 
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
@@ -1024,7 +1052,6 @@ def wa_webhook_receive():
 
                     # STOP
                     if re.search(r"\bSTOP\b", body, flags=re.IGNORECASE):
-                        # disiscrivo su tutte le attività dove era attivo
                         subs = db.query(Subscriber).filter_by(wa_id=wa_id, status="active").all()
                         for s in subs:
                             s.status = "stopped"
@@ -1046,11 +1073,10 @@ def wa_webhook_receive():
 
                         # ✅ sicurezza: promo solo se l'attività è PRO
                         ag = db.query(Agent).filter_by(slug=merchant_slug).first()
-                        if not ag or normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+                        if not ag or not is_pro_agent(ag):
                             wa_send_text(wa_id, "⚠️ Questo servizio non è attivo per questa card.")
                             continue
 
-                        # salvo/aggiorno subscriber
                         sub = db.query(Subscriber).filter_by(wa_id=wa_id, merchant_slug=merchant_slug).first()
                         if not sub:
                             sub = Subscriber(
@@ -1071,11 +1097,9 @@ def wa_webhook_receive():
                         wa_send_text(wa_id, f"✅ Iscrizione confermata per {merchant_slug}. Per annullare: scrivi STOP.")
                         continue
 
-                    # altri messaggi: risposta base
                     wa_send_text(wa_id, "Ciao! Per iscriverti alle novità scrivi: ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO. Per annullare: STOP.")
 
     except Exception:
-        # non bloccare: rispondiamo comunque 200 a Meta
         pass
 
     return "ok", 200
