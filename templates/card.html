@@ -71,7 +71,9 @@
     'footer': 'Pay4You – Card digitale personale',
     'made_by': 'Realizzato da Giuseppe Di Lisio © 2026',
     'photo': 'Foto',
-    'video': 'Video'
+    'video': 'Video',
+    'choose_profile': 'Scegli profilo',
+    'choose_profile_sub': 'Seleziona quale biglietto vuoi aprire.'
   },
   'en': {
     'contacts': 'Contacts',
@@ -108,7 +110,9 @@
     'footer': 'Pay4You – Personal digital card',
     'made_by': 'Made by Giuseppe Di Lisio © 2026',
     'photo': 'Photos',
-    'video': 'Videos'
+    'video': 'Videos',
+    'choose_profile': 'Choose a profile',
+    'choose_profile_sub': 'Select which card you want to open.'
   },
   'es': {
     'contacts': 'Contactos',
@@ -145,7 +149,9 @@
     'footer': 'Pay4You – Tarjeta digital personal',
     'made_by': 'Hecho por Giuseppe Di Lisio © 2026',
     'photo': 'Fotos',
-    'video': 'Vídeos'
+    'video': 'Vídeos',
+    'choose_profile': 'Elige un perfil',
+    'choose_profile_sub': 'Selecciona qué tarjeta quieres abrir.'
   },
   'fr': {
     'contacts': 'Contacts',
@@ -182,7 +188,9 @@
     'footer': 'Pay4You – Carte digitale personnelle',
     'made_by': 'Réalisé par Giuseppe Di Lisio © 2026',
     'photo': 'Photos',
-    'video': 'Vidéos'
+    'video': 'Vidéos',
+    'choose_profile': 'Choisir un profil',
+    'choose_profile_sub': 'Sélectionnez la carte à ouvrir.'
   },
   'de': {
     'contacts': 'Kontakte',
@@ -219,11 +227,176 @@
     'footer': 'Pay4You – Persönliche digitale Karte',
     'made_by': 'Erstellt von Giuseppe Di Lisio © 2026',
     'photo': 'Fotos',
-    'video': 'Videos'
+    'video': 'Videos',
+    'choose_profile': 'Profil auswählen',
+    'choose_profile_sub': 'Wähle welche Karte du öffnen willst.'
   }
 } %}
 
 {% set t = T[L] if L in T else T['it'] %}
+
+{# =========================
+   MULTI-PROFILE
+   - profiles = lista profili (passata da app.py)
+   - selected_profile = profilo scelto (passato da app.py) oppure None
+   - p_key = chiave selezionata (es. p1/p2) (passata da app.py) oppure ""
+   ========================= #}
+{% set has_profiles = (profiles is defined and profiles and profiles|length > 0) %}
+{% set needs_choice = (has_profiles and (not p_key)) %}
+
+{# =========================
+   SCHERMATA SCELTA PROFILO (solo se serve)
+   - Se l'utente apre /slug (QR standard) e ci sono profili -> sceglie
+   - Se apre /slug?p=p1 (NFC direct) -> NON mostra scelta
+   ========================= #}
+{% if needs_choice %}
+  <div class="choose-wrap">
+    <div class="choose-card">
+      <div class="choose-logo">
+        <img
+          src="{% if ag.extra_logo_url %}{{ ag.extra_logo_url }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}"
+          alt="Logo"
+        >
+      </div>
+
+      <h1 class="choose-title">{{ t.choose_profile }}</h1>
+      <div class="choose-sub">{{ t.choose_profile_sub }}</div>
+
+      <div class="choose-list">
+        {% for pr in profiles %}
+          {% set label = (pr.label if pr.label else pr.key) %}
+          <a class="choose-btn"
+             href="{{ url_for('public_card', slug=ag.slug) }}?p={{ pr.key }}&lang={{ L }}">
+            <div class="choose-left">
+              <div class="choose-badge">{{ pr.key|upper }}</div>
+              <div class="choose-text">
+                <div class="choose-label">{{ label }}</div>
+                {% if pr.company %}
+                  <div class="choose-mini">{{ pr.company }}</div>
+                {% elif pr.role %}
+                  <div class="choose-mini">{{ pr.role }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="choose-arrow">›</div>
+          </a>
+        {% endfor %}
+      </div>
+
+      <div class="choose-footer">{{ t.footer }}</div>
+    </div>
+  </div>
+
+  <style>
+    .choose-wrap{
+      min-height: 100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      background: radial-gradient(1200px 600px at 50% -10%, rgba(34,211,238,0.16), transparent),
+                  radial-gradient(800px 500px at 20% 20%, rgba(250,204,21,0.10), transparent),
+                  #020617;
+      color: #e5e7eb;
+    }
+    .choose-card{
+      width: min(560px, 96vw);
+      background: rgba(2,6,23,0.70);
+      border: 1px solid rgba(148,163,184,0.30);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 18px 70px rgba(0,0,0,0.55);
+      backdrop-filter: blur(10px);
+    }
+    .choose-logo{
+      display:flex;
+      justify-content:center;
+      margin: 6px 0 10px;
+    }
+    .choose-logo img{
+      height: 44px;
+      max-width: 220px;
+      object-fit: contain;
+      opacity: 0.95;
+    }
+    .choose-title{
+      text-align:center;
+      margin: 4px 0 4px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+    .choose-sub{
+      text-align:center;
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: rgba(229,231,235,0.74);
+      line-height: 1.35;
+    }
+    .choose-list{ display:flex; flex-direction:column; gap:10px; margin-top: 10px; }
+    .choose-btn{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      text-decoration:none;
+      color: #e5e7eb;
+      background: rgba(15,23,42,0.70);
+      border: 1px solid rgba(148,163,184,0.22);
+      transition: transform .08s ease, border-color .12s ease, background .12s ease;
+    }
+    .choose-btn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(250,204,21,0.55);
+      background: rgba(15,23,42,0.85);
+    }
+    .choose-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+    .choose-badge{
+      width: 46px;
+      height: 34px;
+      border-radius: 999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      background: rgba(250,204,21,0.18);
+      border: 1px solid rgba(250,204,21,0.35);
+      color: #facc15;
+      letter-spacing: .6px;
+      flex: 0 0 auto;
+    }
+    .choose-text{ min-width:0; }
+    .choose-label{
+      font-weight: 900;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .choose-mini{
+      margin-top:2px;
+      font-size: 12px;
+      color: rgba(229,231,235,0.66);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .choose-arrow{ font-size: 22px; opacity: 0.8; }
+    .choose-footer{
+      text-align:center;
+      margin-top: 14px;
+      font-size: 12px;
+      color: rgba(229,231,235,0.55);
+    }
+  </style>
+{% else %}
+
+{# =========================
+   DA QUI IN GIÙ: CARD NORMALE (quella che già avevi)
+   - se selected_profile esiste, ag è già "sovrascritto" da app.py
+   ========================= #}
 
 <div class="card-fullscreen">
   <div class="card-glass-bg"></div>
@@ -909,5 +1082,7 @@
 .gallery-hint{ margin-top:10px; font-size:12px; color: rgba(229,231,235,0.70); }
 .made-by{ margin-top: 12px; text-align: center; font-size: 12px; color: rgba(229,231,235,0.55); }
 </style>
+
+{% endif %}
 
 {% endblock %}
