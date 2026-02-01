@@ -17,25 +17,45 @@
           <th>Nome</th>
           <th>Azienda</th>
           <th>Mobile</th>
+          <th>Piano</th>
           <th>Azioni</th>
         </tr>
       </thead>
       <tbody>
         {% for a in agents %}
+        {% set plan = (a.plan or 'basic')|lower %}
         <tr>
           <td>{{ a.slug }}</td>
-          <td>{{ a.name }}</td>
+          <td>
+            {{ a.name }}
+            {% if plan == 'pro' %}
+              <span style="margin-left:8px; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:800; background:#16a34a; color:white;">
+                PRO
+              </span>
+            {% endif %}
+          </td>
           <td>{{ a.company or "" }}</td>
           <td>{{ a.phone_mobile or "" }}</td>
+          <td style="font-weight:800;">
+            {% if plan == 'pro' %}pro{% else %}basic{% endif %}
+          </td>
+
           <td class="admin-actions">
 
             <a href="{{ url_for('public_card', slug=a.slug) }}" target="_blank">Card</a>
             <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
 
+            <!-- Credenziali: lo lasciamo sempre, decidi tu quando usarlo -->
             <a href="{{ url_for('admin_credentials', slug=a.slug) }}">Credenziali</a>
 
-            <!-- ✅ nuovo: invio promo -->
-            <a href="{{ url_for('admin_broadcast', slug=a.slug) }}">Invia promo</a>
+            <!-- ✅ Invia promo SOLO per piano PRO -->
+            {% if plan == 'pro' %}
+              <a href="{{ url_for('admin_broadcast', slug=a.slug) }}">Invia promo</a>
+            {% else %}
+              <span style="opacity:.55; font-weight:700; cursor:not-allowed;">
+                Invia promo (solo PRO)
+              </span>
+            {% endif %}
 
             <a href="{{ url_for('vcard', slug=a.slug) }}">VCF</a>
             <a href="{{ url_for('qr', slug=a.slug) }}" target="_blank">QR</a>
