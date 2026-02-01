@@ -93,6 +93,9 @@ class Agent(Base):
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
+    # ✅ Piano (basic/pro). Basic = solo card, Pro = WhatsApp promo + broadcast ecc.
+    plan = Column(String, nullable=True)  # "basic" | "pro"
+
 
 class User(Base):
     """
@@ -141,11 +144,28 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
 
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
+
+# ✅ piano (basic/pro)
+ensure_sqlite_column("agents", "plan", "TEXT")
+
 # Subscribers columns (in caso DB già creato tempo fa)
 ensure_sqlite_column("subscribers", "last_text", "TEXT")
 ensure_sqlite_column("subscribers", "updated_at", "TEXT")
 ensure_sqlite_column("subscribers", "created_at", "TEXT")
 ensure_sqlite_column("subscribers", "status", "TEXT")
+
+
+def ensure_default_plan_basic():
+    """
+    Imposta plan='basic' dove mancante/vuoto.
+    (Così di default NON appare WhatsApp promo)
+    """
+    with engine.connect() as conn:
+        conn.execute(sa_text("UPDATE agents SET plan='basic' WHERE plan IS NULL OR TRIM(plan)=''"))
+        conn.commit()
+
+
+ensure_default_plan_basic()
 
 
 # ===== HELPERS =====
@@ -308,6 +328,11 @@ def find_agent_slug_best_effort(db, guess_slug: str) -> str:
     return ""
 
 
+def normalize_plan(p: str) -> str:
+    p = (p or "").strip().lower()
+    return p if p in ("basic", "pro") else "basic"
+
+
 # ===== WhatsApp Cloud API helpers =====
 def wa_api_url(path: str) -> str:
     return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
@@ -412,6 +437,9 @@ def logout():
 def admin_home():
     db = SessionLocal()
     agents = db.query(Agent).order_by(Agent.name).all()
+    # sicurezza: normalizzo plan quando leggo
+    for a in agents:
+        a.plan = normalize_plan(getattr(a, "plan", "basic"))
     return render_template("admin_list.html", agents=agents)
 
 
@@ -499,6 +527,11 @@ def admin_broadcast(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+
+    # ✅ SOLO PRO può usare broadcast (per sicurezza lato backend)
+    if normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+        return "Funzione disponibile solo per piano PRO.", 403
+
     subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
     return render_template("admin_broadcast.html", agent=ag, subs_count=subs_count)
 
@@ -510,6 +543,10 @@ def admin_broadcast_post(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+
+    # ✅ SOLO PRO può inviare
+    if normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+        return "Funzione disponibile solo per piano PRO.", 403
 
     message = (request.form.get("message") or "").strip()
     if not message:
@@ -551,8 +588,11 @@ def create_agent():
         "facebook", "instagram", "linkedin", "tiktok",
         "telegram", "whatsapp", "pec",
         "piva", "sdi", "addresses",
+        "plan",  # ✅
     ]
     data = {k: (request.form.get(k, "") or "").strip() for k in fields}
+
+    data["plan"] = normalize_plan(data.get("plan", "basic"))
 
     if not data["slug"] or not data["name"]:
         return "Slug e Nome sono obbligatori", 400
@@ -635,6 +675,8 @@ def edit_agent(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+    # sicurezza: se manca plan -> basic
+    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
     return render_template("agent_form.html", agent=ag)
 
 
@@ -655,6 +697,9 @@ def update_agent(slug):
         "piva", "sdi", "addresses",
     ]:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
+
+    # ✅ solo admin può cambiare piano
+    ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
 
     if request.form.get("delete_pdfs") == "1":
         ag.pdf1_url = None
@@ -736,6 +781,9 @@ def me_edit():
     if not ag:
         abort(404)
 
+    # normalizzo plan (serve ai template per mostrare/nascondere)
+    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
+
     return render_template("agent_form.html", agent=ag)
 
 
@@ -754,7 +802,7 @@ def me_edit_post():
     if not ag:
         abort(404)
 
-    # ✅ CLIENTE: NON tocchiamo lo slug
+    # ✅ CLIENTE: NON tocchiamo lo slug e NON tocchiamo plan
     for k in [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -822,6 +870,9 @@ def public_card(slug):
     if not ag:
         abort(404)
 
+    # sicurezza: plan sempre valorizzato
+    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
+
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
     videos = ag.video_urls.split("|") if ag.video_urls else []
 
@@ -840,9 +891,11 @@ def public_card(slug):
         if m2:
             mobiles.append(m2)
 
-    # ✅ link opt-in WhatsApp (messaggio con consenso)
-    optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
-    wa_optin_link = f"https://wa.me/393333375321?text={quote(optin_text)}"
+    # ✅ link opt-in WhatsApp SOLO per piano PRO
+    wa_optin_link = ""
+    if ag.plan == "pro":
+        optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
+        wa_optin_link = f"https://wa.me/393333375321?text={quote(optin_text)}"
 
     return render_template(
         "card.html",
@@ -989,6 +1042,12 @@ def wa_webhook_receive():
 
                         if not merchant_slug:
                             wa_send_text(wa_id, "⚠️ Non ho capito quale attività. Scrivi: ISCRIVIMI NOME-ATTIVITÀ + ACCETTO RICEVERE PROMO")
+                            continue
+
+                        # ✅ sicurezza: promo solo se l'attività è PRO
+                        ag = db.query(Agent).filter_by(slug=merchant_slug).first()
+                        if not ag or normalize_plan(getattr(ag, "plan", "basic")) != "pro":
+                            wa_send_text(wa_id, "⚠️ Questo servizio non è attivo per questa card.")
                             continue
 
                         # salvo/aggiorno subscriber
