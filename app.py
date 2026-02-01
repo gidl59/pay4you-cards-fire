@@ -42,9 +42,6 @@ WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
 # Upload persistenti (Render Disk su /var/data)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
-# ✅ default per NFC direct (usato nel template admin_list.html)
-DEFAULT_DIRECT_PROFILE = os.getenv("DEFAULT_DIRECT_PROFILE", "p1").strip() or "p1"
-
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
@@ -57,6 +54,8 @@ Base = declarative_base()
 # ✅ LIMITI
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
+
+SUPPORTED_LANGS = ("it", "en", "es", "fr", "de")
 
 
 # ===== MODELS =====
@@ -98,6 +97,14 @@ class Agent(Base):
 
     # ✅ Piano (basic/pro). Basic = solo card, Pro = WhatsApp promo + broadcast ecc.
     plan = Column(String, nullable=True)  # "basic" | "pro"
+
+    # ✅ Multi-profile JSON (testo JSON)
+    # Struttura consigliata:
+    # [
+    #   {"key":"p1","label":"Profilo 1","photo_url":"...","logo_url":"...","name":"...","role":"...","company":"...","bio":"..."},
+    #   {"key":"p2","label":"Profilo 2", ...}
+    # ]
+    profiles_json = Column(Text, nullable=True)
 
 
 class User(Base):
@@ -148,6 +155,7 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "plan", "TEXT")
+ensure_sqlite_column("agents", "profiles_json", "TEXT")
 
 # Subscribers columns (in caso DB già creato tempo fa)
 ensure_sqlite_column("subscribers", "last_text", "TEXT")
@@ -341,6 +349,110 @@ def sanitize_fields_for_plan(ag):
     - Qui eventualmente in futuro puliamo SOLO campi che vuoi davvero eliminare.
     """
     return
+
+
+# ===== LINGUA =====
+def pick_lang_from_request() -> str:
+    # 1) querystring ?lang=
+    q = (request.args.get("lang") or "").strip().lower()
+    if q:
+        q = q.split("-", 1)[0]
+        return q if q in SUPPORTED_LANGS else "it"
+
+    # 2) header Accept-Language
+    al = (request.headers.get("Accept-Language") or "").lower()
+    if al:
+        first = al.split(",", 1)[0].strip().split("-", 1)[0]
+        if first in SUPPORTED_LANGS:
+            return first
+
+    return "it"
+
+
+# ===== MULTI-PROFILI (JSON) =====
+def parse_profiles_json(raw: str):
+    """
+    Ritorna una lista di profili normalizzati:
+    [
+      {"key":"p1","label":"...","photo_url":"...","logo_url":"...","name":"...","role":"...","company":"...","bio":"..."}
+    ]
+    """
+    if not raw:
+        return []
+
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return []
+    except Exception:
+        return []
+
+    out = []
+    for i, p in enumerate(data):
+        if not isinstance(p, dict):
+            continue
+
+        key = (p.get("key") or "").strip()
+        if not key:
+            key = f"p{i+1}"
+
+        # Evita key “strane”
+        key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
+
+        out.append({
+            "key": key,
+            "label": (p.get("label") or p.get("name") or f"Profilo {i+1}").strip(),
+            "photo_url": (p.get("photo_url") or "").strip(),
+            "logo_url": (p.get("logo_url") or p.get("extra_logo_url") or "").strip(),
+            "name": (p.get("name") or "").strip(),
+            "role": (p.get("role") or "").strip(),
+            "company": (p.get("company") or "").strip(),
+            "bio": (p.get("bio") or "").strip(),
+        })
+
+    return out
+
+
+def select_profile(profiles, requested_key: str):
+    """
+    Se requested_key matcha → quel profilo.
+    Se no → None.
+    """
+    if not requested_key:
+        return None
+    for p in profiles:
+        if p.get("key") == requested_key:
+            return p
+    return None
+
+
+def apply_profile_to_agent(ag, profile: dict):
+    """
+    Applica override SOLO per: logo/foto + eventuali testi.
+    (Contatti rimangono quelli dell'agente, come volevi tu: 1 biglietto per profilo ma contatti coerenti)
+    """
+    if not profile:
+        return ag
+
+    # Override immagine profilo
+    if profile.get("photo_url"):
+        ag.photo_url = profile["photo_url"]
+
+    # Override logo
+    if profile.get("logo_url"):
+        ag.extra_logo_url = profile["logo_url"]
+
+    # Override testi se presenti
+    if profile.get("name"):
+        ag.name = profile["name"]
+    if profile.get("role"):
+        ag.role = profile["role"]
+    if profile.get("company"):
+        ag.company = profile["company"]
+    if profile.get("bio"):
+        ag.bio = profile["bio"]
+
+    return ag
 
 
 # ===== WhatsApp Cloud API helpers =====
@@ -600,9 +712,19 @@ def create_agent():
         "telegram", "whatsapp", "pec",
         "piva", "sdi", "addresses",
         "plan",
+        "profiles_json",
     ]
     data = {k: (request.form.get(k, "") or "").strip() for k in fields}
     data["plan"] = normalize_plan(data.get("plan", "basic"))
+
+    # ✅ valida JSON profili (se inserito)
+    if data.get("profiles_json"):
+        try:
+            _tmp = json.loads(data["profiles_json"])
+            if not isinstance(_tmp, list):
+                data["profiles_json"] = ""
+        except Exception:
+            data["profiles_json"] = ""
 
     if not data["slug"] or not data["name"]:
         return "Slug e Nome sono obbligatori", 400
@@ -706,8 +828,17 @@ def update_agent(slug):
         "facebook", "instagram", "linkedin", "tiktok",
         "telegram", "whatsapp", "pec",
         "piva", "sdi", "addresses",
+        "profiles_json",
     ]:
-        setattr(ag, k, (request.form.get(k, "") or "").strip())
+        val = (request.form.get(k, "") or "").strip()
+        if k == "profiles_json" and val:
+            try:
+                _tmp = json.loads(val)
+                if not isinstance(_tmp, list):
+                    val = ""
+            except Exception:
+                val = ""
+        setattr(ag, k, val)
 
     ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
 
@@ -814,6 +945,7 @@ def me_edit_post():
 
     current_plan = normalize_plan(getattr(ag, "plan", "basic"))
 
+    # ✅ campi sempre modificabili dal cliente
     allowed_fields = [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -822,6 +954,7 @@ def me_edit_post():
         "telegram",
         "pec",
         "piva", "sdi", "addresses",
+        # (profiles_json lo gestiamo SOLO da admin per ora: evita casino)
     ]
 
     # ✅ WhatsApp modificabile SOLO se PRO
@@ -831,7 +964,7 @@ def me_edit_post():
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # ✅ NON tocchiamo plan
+    # ✅ NON tocchiamo plan e NON tocchiamo whatsapp se BASIC
     ag.plan = current_plan
 
     photo = request.files.get("photo")
@@ -893,6 +1026,20 @@ def public_card(slug):
 
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
 
+    # ✅ lingua
+    lang = pick_lang_from_request()
+
+    # ✅ multi-profili
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    requested_profile_key = (request.args.get("p") or "").strip()
+    active_profile = select_profile(profiles, requested_profile_key)
+
+    # Se l'utente passa ?p= e non esiste, ignoriamo (non errore)
+    # Applichiamo override immagine/logo + testi
+    ag_view = ag
+    if active_profile:
+        ag_view = apply_profile_to_agent(ag_view, active_profile)
+
     gallery = ag.gallery_urls.split("|") if ag.gallery_urls else []
     videos = ag.video_urls.split("|") if ag.video_urls else []
 
@@ -911,14 +1058,21 @@ def public_card(slug):
         if m2:
             mobiles.append(m2)
 
+    # ✅ link opt-in WhatsApp SOLO per piano PRO
     wa_optin_link = ""
     if ag.plan == "pro":
         optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
         wa_optin_link = f"https://wa.me/393333375321?text={quote(optin_text)}"
 
+    # ✅ Costruisci URL “NFC direct” (profilo se presente)
+    # Questo ti serve per scrivere su tag NFC (p=p1 ecc.)
+    nfc_direct_url = f"{base}/{ag.slug}"
+    if active_profile and active_profile.get("key"):
+        nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(active_profile['key'])}"
+
     return render_template(
         "card.html",
-        ag=ag,
+        ag=ag_view,
         base_url=base,
         gallery=gallery,
         videos=videos,
@@ -928,6 +1082,11 @@ def public_card(slug):
         pdfs=pdfs,
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
+        # nuove variabili utili al template (poi le useremo quando facciamo la UI profili)
+        lang=lang,
+        profiles=profiles,
+        active_profile=active_profile,
+        nfc_direct_url=nfc_direct_url,
     )
 
 
@@ -991,18 +1150,12 @@ def vcard(slug):
 def qr(slug):
     base = get_base_url()
 
-    # ✅ parametri opzionali (servono per QR "direct")
+    # ✅ se passi ?p=p1 il QR punta al profilo (NFC direct)
     p = (request.args.get("p") or "").strip()
-    view = (request.args.get("view") or "").strip()
-
-    url = f"{base}/{slug}"
-    qs = []
     if p:
-        qs.append("p=" + urllib.parse.quote(p))
-    if view:
-        qs.append("view=" + urllib.parse.quote(view))
-    if qs:
-        url += "?" + "&".join(qs)
+        url = f"{base}/{slug}?p={urllib.parse.quote(p)}"
+    else:
+        url = f"{base}/{slug}"
 
     img = qrcode.make(url)
     bio = BytesIO()
