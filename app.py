@@ -290,14 +290,11 @@ def extract_merchant_from_optin(text_body: str) -> str:
     if "ISCRIVIMI" not in t_up:
         return ""
 
-    # prendo tutto dopo ISCRIVIMI
     after = re.split(r"\bISCRIVIMI\b", t, flags=re.IGNORECASE, maxsplit=1)[-1].strip()
 
-    # taglio a "+" se esiste
     if "+" in after:
         after = after.split("+", 1)[0].strip()
 
-    # se l'utente scrive anche "ACCETTO..." senza "+", taglio lì
     after = re.split(r"\bACCETTO\b", after, flags=re.IGNORECASE, maxsplit=1)[0].strip()
 
     return slugify(after)
@@ -336,14 +333,11 @@ def is_pro_agent(ag) -> bool:
 
 def sanitize_fields_for_plan(ag):
     """
-    Se NON PRO: ripulisce campi legati a WhatsApp promo,
-    così non restano dati "sporchi" nel DB.
-    (Puoi aggiungere qui altri campi premium in futuro.)
+    IMPORTANTISSIMO:
+    - Non cancelliamo dati dal DB automaticamente.
+    - Qui eventualmente in futuro puliamo SOLO campi che vuoi davvero eliminare.
     """
-    if not is_pro_agent(ag):
-        # se vuoi che WhatsApp "normale" resti comunque, togli questa riga.
-        # Ma visto che vuoi nasconderlo ai BASIC, lo azzeriamo.
-        ag.whatsapp = ""
+    return
 
 
 # ===== WhatsApp Cloud API helpers =====
@@ -352,7 +346,7 @@ def wa_api_url(path: str) -> str:
 
 def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
     """
-    Invia messaggio di testo (può fallire fuori finestra 24h, dipende dalle regole/template).
+    Invia messaggio di testo.
     """
     if not WA_TOKEN or not WA_PHONE_NUMBER_ID:
         return False, "WA_TOKEN o WA_PHONE_NUMBER_ID mancanti"
@@ -464,8 +458,7 @@ def admin_credentials(slug):
     if not ag:
         abort(404)
 
-    # ✅ OPZIONE SICURA: solo PRO genera credenziali
-    # Se vuoi lasciarlo per tutti, COMMENTA le 2 righe qui sotto.
+    # ✅ solo PRO genera credenziali (paywall)
     if not is_pro_agent(ag):
         return "Funzione disponibile solo per piano PRO.", 403
 
@@ -657,7 +650,6 @@ def create_agent():
         video_urls="|".join(video_urls) if video_urls else None,
     )
 
-    # ✅ pulizia campi in base al piano
     sanitize_fields_for_plan(ag)
 
     db.add(ag)
@@ -714,10 +706,8 @@ def update_agent(slug):
     ]:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # ✅ solo admin può cambiare piano
     ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
 
-    # ✅ se BASIC, pulisco campi premium
     sanitize_fields_for_plan(ag)
 
     if request.form.get("delete_pdfs") == "1":
@@ -821,8 +811,7 @@ def me_edit_post():
 
     current_plan = normalize_plan(getattr(ag, "plan", "basic"))
 
-    # ✅ CLIENTE: NON tocchiamo lo slug e NON tocchiamo plan.
-    # ✅ BLOCCO: se BASIC non permetto di salvare WhatsApp (lo ignoro).
+    # ✅ campi sempre modificabili dal cliente
     allowed_fields = [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office",
@@ -832,15 +821,16 @@ def me_edit_post():
         "pec",
         "piva", "sdi", "addresses",
     ]
+
+    # ✅ WhatsApp modificabile SOLO se PRO
     if current_plan == "pro":
         allowed_fields.append("whatsapp")
 
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-    # se BASIC: pulisco comunque
+    # ✅ NON tocchiamo plan e NON tocchiamo whatsapp se BASIC
     ag.plan = current_plan
-    sanitize_fields_for_plan(ag)
 
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
@@ -1010,10 +1000,6 @@ def qr(slug):
 # ------------------ WhatsApp Webhook ------------------
 @app.get("/wa/webhook")
 def wa_webhook_verify():
-    """
-    Verifica webhook Meta:
-      GET /wa/webhook?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
-    """
     mode = request.args.get("hub.mode", "")
     token = request.args.get("hub.verify_token", "")
     challenge = request.args.get("hub.challenge", "")
@@ -1025,12 +1011,6 @@ def wa_webhook_verify():
 
 @app.post("/wa/webhook")
 def wa_webhook_receive():
-    """
-    Riceve messaggi WhatsApp.
-    Cerca:
-      entry[].changes[].value.messages[] con:
-        from (wa_id) e text.body
-    """
     data = request.get_json(silent=True) or {}
 
     try:
@@ -1041,7 +1021,7 @@ def wa_webhook_receive():
                 value = (c.get("value", {}) or {})
                 messages = (value.get("messages", []) or [])
                 for m in messages:
-                    wa_id = (m.get("from") or "").strip()  # numero senza +
+                    wa_id = (m.get("from") or "").strip()
                     text_obj = m.get("text") or {}
                     body = (text_obj.get("body") or "").strip()
 
@@ -1050,7 +1030,6 @@ def wa_webhook_receive():
 
                     db = SessionLocal()
 
-                    # STOP
                     if re.search(r"\bSTOP\b", body, flags=re.IGNORECASE):
                         subs = db.query(Subscriber).filter_by(wa_id=wa_id, status="active").all()
                         for s in subs:
@@ -1062,7 +1041,6 @@ def wa_webhook_receive():
                         wa_send_text(wa_id, "✅ Ok, iscrizione disattivata. Se vuoi riattivare: scrivi ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO.")
                         continue
 
-                    # ISCRIVIMI
                     if re.search(r"\bISCRIVIMI\b", body, flags=re.IGNORECASE):
                         guess = extract_merchant_from_optin(body)
                         merchant_slug = find_agent_slug_best_effort(db, guess)
@@ -1071,7 +1049,6 @@ def wa_webhook_receive():
                             wa_send_text(wa_id, "⚠️ Non ho capito quale attività. Scrivi: ISCRIVIMI NOME-ATTIVITÀ + ACCETTO RICEVERE PROMO")
                             continue
 
-                        # ✅ sicurezza: promo solo se l'attività è PRO
                         ag = db.query(Agent).filter_by(slug=merchant_slug).first()
                         if not ag or not is_pro_agent(ag):
                             wa_send_text(wa_id, "⚠️ Questo servizio non è attivo per questa card.")
