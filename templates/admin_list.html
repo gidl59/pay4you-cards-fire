@@ -11,6 +11,8 @@
 
     <div style="margin:10px 0 14px 0; font-size:12px; opacity:.75;">
       Nota: il <b>piano</b> (basic/pro) lo imposti dalla pagina <b>Modifica</b> dell’agente.
+      <br>
+      QR: <b>standard</b> apre la card (se ci sono profili li mostra). NFC: <b>direct</b> apre un profilo specifico.
     </div>
 
     {% if agents %}
@@ -67,11 +69,19 @@
             {% endif %}
 
             <a href="{{ url_for('vcard', slug=a.slug) }}">VCF</a>
+
+            <!-- ✅ QR standard -->
             <a href="{{ url_for('qr', slug=a.slug) }}" target="_blank">QR</a>
 
+            <!-- ✅ QR direct (profilo 1) -->
+            <a href="{{ url_for('qr', slug=a.slug, p='p1') }}" target="_blank" title="QR che apre direttamente il profilo 1">
+              QR Direct
+            </a>
+
+            <!-- ✅ NFC direct (profilo 1) -->
             <button type="button"
                     class="btn-nfc"
-                    onclick="copyNfc('{{ url_for('public_card', slug=a.slug, _external=True) }}')">
+                    onclick="copyNfc('{{ url_for('public_card', slug=a.slug, _external=True) }}?p=p1')">
               NFC
             </button>
 
@@ -95,7 +105,7 @@
   function copyNfc(url) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(function () {
-        alert("Link NFC copiato negli appunti:\n" + url);
+        alert("Link NFC (direct) copiato negli appunti:\n" + url);
       }).catch(function () {
         alert("Impossibile copiare automaticamente.\nCopia manualmente questo link:\n" + url);
       });
