@@ -2,9 +2,35 @@
 {% block title %}{{ ag.name }}{% endblock %}
 
 {% block content %}
+
 {# =========================
-   MULTI-LINGUA
-   - lang arriva da app.py (pick_lang_from_request)
+   AUTO-DETECT LINGUA (client-side)
+   - Se nell'URL non c'è ?lang=xx, legge lingua telefono e ricarica
+   - Supportate: it/en/es/fr/de
+   ========================= #}
+<script>
+(function () {
+  try {
+    const supported = ['it','en','es','fr','de'];
+    const url = new URL(window.location.href);
+    const hasLang = url.searchParams.has('lang');
+
+    if (!hasLang) {
+      const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'it';
+      let l = (nav || 'it').toLowerCase().split('-')[0];
+      if (!supported.includes(l)) l = 'it';
+
+      url.searchParams.set('lang', l);
+      // Mantiene eventuali altri parametri (es. ?p=p1)
+      window.location.replace(url.toString());
+    }
+  } catch(e) {}
+})();
+</script>
+
+{# =========================
+   MULTI-LINGUA (server-side)
+   - lang arriva da app.py oppure da ?lang=
    - fallback: it
    ========================= #}
 {% set L = (lang if lang else 'it')|lower %}
@@ -254,7 +280,6 @@
     <section class="card-section">
       <h2>{{ t.contacts }}</h2>
 
-      {# ✅ 1 o 2 (o più) numeri mobili: separati da virgola nel campo phone_mobile #}
       {% if ag.phone_mobile %}
         {% set _mob_list = ag.phone_mobile.split(',') %}
         {% for m in _mob_list %}
@@ -297,7 +322,6 @@
       </div>
       {% endfor %}
 
-      {# ✅ SITI: se manca http/https aggiunge https:// #}
       {% for site in websites %}
         {% set _site = site|trim %}
         {% if _site %}
@@ -437,9 +461,6 @@
     </section>
     {% endif %}
 
-    {# =========================
-       GALLERIE SEPARATE: FOTO + VIDEO
-       ========================= #}
     {% set vids = videos if videos is defined else [] %}
 
     {% if gallery %}
