@@ -78,6 +78,91 @@
         <p style="margin-top:8px; font-size:12px; opacity:.8;">
           Suggerimento: lascia <b>Basic</b> per chi non ha pagato. Metti <b>Pro</b> solo ai clienti abilitati.
         </p>
+
+        <hr style="margin:16px 0; opacity:.2;">
+
+        <h3 style="margin:0 0 10px 0;">Multi-profile (opzionale)</h3>
+
+        <p style="margin:0 0 10px 0; font-size:12px; opacity:.85; line-height:1.4;">
+          Qui puoi creare <b>più profili</b> (logo/foto e testi diversi) dentro la stessa card.
+          <br>
+          - QR <b>standard</b>: <code>/{{ agent.slug if agent else 'slug' }}</code>
+          <br>
+          - NFC “direct” (profilo): <code>/{{ agent.slug if agent else 'slug' }}?p=p1</code> oppure <code>?p=p2</code>
+          <br>
+          - QR profilo (opzionale): <code>/{{ agent.slug if agent else 'slug' }}/qr.png?p=p1</code>
+        </p>
+
+        <label>Profili (JSON) — facoltativo</label>
+        <textarea id="profiles_json" name="profiles_json" rows="10"
+                  style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;"
+                  placeholder='[
+  {
+    "key": "p1",
+    "label": "Profilo Business",
+    "photo_url": "/uploads/photos/xxx.jpg",
+    "logo_url": "/uploads/logos/yyy.png",
+    "name": "Nome visualizzato",
+    "role": "Ruolo",
+    "company": "Azienda",
+    "bio": "Descrizione"
+  }
+]'>{{ agent.profiles_json if agent and agent.profiles_json else '' }}</textarea>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+          <button type="button" onclick="fillProfilesExample()"
+                  style="background:#334155; color:white; border:none; padding:10px 12px; border-radius:10px; cursor:pointer;">
+            Incolla esempio 2 profili
+          </button>
+
+          <button type="button" onclick="clearProfiles()"
+                  style="background:#111827; color:white; border:1px solid rgba(148,163,184,0.35); padding:10px 12px; border-radius:10px; cursor:pointer;">
+            Svuota
+          </button>
+        </div>
+
+        <p style="margin-top:10px; font-size:12px; opacity:.8; line-height:1.4;">
+          ✅ Se lasci vuoto, la card resta <b>mono-profilo</b> (come oggi).<br>
+          Consiglio: usa <b>p1</b> per profilo biglietto da visita e <b>p2</b> per profilo “promo”.
+        </p>
+
+        <script>
+          function fillProfilesExample(){
+            const el = document.getElementById('profiles_json');
+            if(!el) return;
+
+            const example = [
+              {
+                key: "p1",
+                label: "Profilo Business",
+                photo_url: "/uploads/photos/INSERISCI_FOTO_1.jpg",
+                logo_url: "/uploads/logos/INSERISCI_LOGO_1.png",
+                name: "{{ agent.name if agent else 'Nome Business' }}",
+                role: "{{ agent.role if agent else 'Ruolo' }}",
+                company: "{{ agent.company if agent else 'Azienda' }}",
+                bio: "Profilo principale (biglietto da visita)."
+              },
+              {
+                key: "p2",
+                label: "Profilo Promo",
+                photo_url: "/uploads/photos/INSERISCI_FOTO_2.jpg",
+                logo_url: "/uploads/logos/INSERISCI_LOGO_2.png",
+                name: "Promo {{ agent.name if agent else '' }}",
+                role: "Offerte & Promozioni",
+                company: "{{ agent.company if agent else 'Azienda' }}",
+                bio: "Profilo promozionale (es. menu, offerte, eventi)."
+              }
+            ];
+
+            el.value = JSON.stringify(example, null, 2);
+            alert("Esempio inserito ✅\nOra cambia photo_url e logo_url con quelli veri.");
+          }
+
+          function clearProfiles(){
+            const el = document.getElementById('profiles_json');
+            if(el) el.value = "";
+          }
+        </script>
       {% endif %}
 
       <hr style="margin:16px 0; opacity:.2;">
@@ -102,7 +187,6 @@
       {# ✅ WhatsApp:
          - ADMIN: lo vede sempre (così può prepararlo)
          - CLIENTE: lo vede SOLO se piano PRO
-         - Se BASIC e cliente: NON inviamo proprio il campo (niente hidden)
       #}
       {% if session.get("role") == "admin" or plan == "pro" %}
         <label>WhatsApp (link o numero)</label>
