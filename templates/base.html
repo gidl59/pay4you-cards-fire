@@ -1,53 +1,825 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <title>{% block title %}Pay4You Cards{% endblock %}</title>
+/* ================================
+   PAY4YOU LUXURY CARD STYLE
+   ================================ */
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Importantissimo per P.IVA/IBAN: evita che il browser li trasformi in link telefono -->
-  <meta name="format-detection" content="telephone=no">
+/* RESET & GLOBAL */
+* {
+  box-sizing: border-box;
+}
 
-  <!-- Il tuo CSS principale -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Oxygen, sans-serif;
+  color: #f9fafb;
+  background: radial-gradient(circle at top, #1f2937, #020617 55%, #000 100%);
+  -webkit-font-smoothing: antialiased;
+}
 
-  <!-- (opzionale) favicon se ce l'hai -->
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+a {
+  text-decoration: none;
+  color: inherit;
+}
 
-  <!-- Libreria per il crop della foto profilo -->
-  <link rel="stylesheet"
-        href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
-  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
-</head>
-<body>
-  <div class="app-shell">
+/* LAYOUT GENERALE PAGINE */
+.page-main {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  justify-content: center;
+  padding: 18px 10px 28px;
+}
 
-    {% if session.get('role') == 'admin' %}
-    <header class="app-header">
-      <div class="app-header-left">
-        <span class="app-logo-text">Pay4You – Card digitale</span>
-      </div>
-      <div class="app-header-right">
-        <a href="{{ url_for('admin_home') }}" class="header-link">Agenti</a>
-        <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
-      </div>
-    </header>
-    {% endif %}
+/* HEADER / NAV */
+.site-header {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-    {# ✅ Flash messages (ok/error) #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap">
-          {% for category, msg in messages %}
-            <div class="flash {{ category }}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+.site-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-    <main class="app-main">
-      {% block content %}{% endblock %}
-    </main>
-  </div>
-</body>
-</html>
+.site-header-logo {
+  height: 32px;
+}
+
+.site-header-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.site-header-links a {
+  font-size: 14px;
+  margin-left: 10px;
+  color: #facc15;
+}
+
+/* =============================
+   CARD PUBBLICA FULLSCREEN
+   ============================= */
+
+.card-fullscreen {
+  position: relative;
+  width: 100%;
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+/* SFONDO BLUR */
+.card-glass-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(248,250,252,0.20), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(250,204,21,0.18), transparent 55%);
+  filter: blur(38px);
+  opacity: 0.88;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* CARD PRINCIPALE */
+.card-outer {
+  backdrop-filter: blur(20px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.94), rgba(15,23,42,0.84));
+  border-radius: 26px;
+  border: 1px solid rgba(148,163,184,0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.80);
+  padding: 22px 18px 28px;
+}
+
+/* HEADER CARD – LOGO CHE GIRA */
+.card-header-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.card-logo-big {
+  height: 100px;
+  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.45));
+  transform-origin: center center;
+  animation: logo-spin 10s linear infinite;
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* BLOCCO BUSINESS (FOTO + DATI) */
+.business-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 4px 18px;
+  border-bottom: 1px solid rgba(148,163,184,0.30);
+}
+
+.card-profile-photo-wrapper {
+  flex-shrink: 0;
+}
+
+/* FOTO AGENTE CLASSICA (fallback) */
+.card-profile-photo {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 999px;
+  border: 3px solid rgba(248,250,252,0.95);
+  box-shadow:
+    0 0 0 4px rgba(15,23,42,0.85),
+    0 0 16px 6px rgba(250,204,21,0.35),
+    0 22px 45px rgba(0,0,0,0.8);
+}
+
+/* FOTO AGENTE – ROTAZIONE FRONTE/RETRO CON LOGO */
+.avatar-flip {
+  width: 160px;
+  height: 160px;
+  perspective: 800px;
+  border-radius: 999px;
+}
+
+.avatar-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: avatar-rotate 7s linear infinite;
+}
+
+.avatar-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border: 3px solid rgba(248,250,252,0.95);
+  box-shadow:
+    0 0 0 4px rgba(15,23,42,0.85),
+    0 0 22px 8px rgba(250,204,21,0.40),
+    0 26px 55px rgba(0,0,0,0.85);
+}
+
+.avatar-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* 🎯 LOGO RETRO RIDOTTO –20% totale */
+.avatar-back {
+  transform: rotateY(180deg);
+  background: radial-gradient(circle at 30% 0%, #0f172a, #020617 70%);
+}
+
+.avatar-back img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes avatar-rotate {
+  0%   { transform: rotateY(0deg); }
+  35%  { transform: rotateY(0deg); }
+  50%  { transform: rotateY(180deg); }
+  85%  { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* BLOCCO NOMI / RUOLI */
+.card-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-name {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card-role-main {
+  font-size: 15px;
+  color: #e5e7eb;
+}
+
+.card-role-sub {
+  font-size: 14px;
+  color: #facc15;
+  font-weight: 500;
+}
+
+.card-bio {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+/* SEZIONI CARD (CONTATTI, INDIRIZZI, ECC.) */
+.card-section {
+  margin-top: 13px;
+  padding: 15px 10px 10px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+  border: 1px solid rgba(51,65,85,0.9);
+}
+
+.card-section h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+/* RIGHE CONTATTI */
+.contact-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(15,23,42,0.85);
+  font-size: 14px;
+}
+
+.contact-row:last-child {
+  border-bottom: none;
+}
+
+.contact-row .icon {
+  width: 26px;
+  text-align: center;
+}
+
+.contact-row .label {
+  flex: 1;
+  color: #9ca3af;
+}
+
+.contact-row .value {
+  font-weight: 500;
+}
+
+.contact-row:hover {
+  background: radial-gradient(circle at 0 0, rgba(148,163,184,0.26), transparent 55%);
+}
+
+/* WHATSAPP */
+.whatsapp-row .value {
+  color: #22c55e;
+}
+
+/* SOCIAL */
+.social-row .value {
+  color: #60a5fa;
+}
+
+/* INDIRIZZI */
+.address-row {
+  padding: 5px 2px;
+  font-size: 14px;
+}
+
+.address-value {
+  color: #e5e7eb;
+}
+
+/* DOCUMENTI – PILL */
+.pdf-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pdf-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.96);
+  border: 1px solid rgba(148,163,184,0.6);
+}
+
+.pdf-item span.pdf-icon {
+  font-size: 14px;
+}
+
+.pdf-item:hover {
+  background: rgba(52,211,153,0.9);
+}
+
+/* GALLERIA FOTO – QUADRATA */
+.gallery-scroll {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.gallery-scroll a,
+.gallery-thumb-btn {
+  flex: 0 0 auto;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.gallery-scroll img {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,0.5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.gallery-scroll img:hover {
+  transform: scale(1.06);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+}
+
+/* FOOTER */
+.card-footer {
+  margin-top: 18px;
+  padding-top: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* =============================
+   MODAL QR / GALLERIA
+   ============================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* ✅ MODAL PIÙ GRANDE */
+.modal-box {
+  background: #020617;
+  border-radius: 18px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(148,163,184,0.7);
+  text-align: center;
+
+  width: min(1000px, 94vw);
+  max-width: 1000px;
+}
+
+/* ✅ IMMAGINE NEL MODAL: GRANDISSIMA */
+#qr-modal-img{
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+.modal-box h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.modal-close-btn {
+  margin-top: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #facc15;
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Bottone link stile testo (per QR, ecc.) */
+.link-button {
+  border: none;
+  padding: 0;
+  background: none;
+  color: #60a5fa;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* =============================
+   AREA ADMIN
+   ============================= */
+
+.admin-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* card admin con scroll orizzontale se serve */
+.admin-card {
+  backdrop-filter: blur(18px) saturate(130%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+  border-radius: 24px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 22px 55px rgba(0,0,0,0.85);
+  padding: 18px 20px 24px;
+  overflow-x: auto;
+}
+
+.admin-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.admin-new-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #facc15;
+}
+
+/* Tabella agenti */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 6px;
+}
+
+.admin-table thead tr {
+  border-bottom: 1px solid rgba(75,85,99,0.9);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(30,41,59,0.9);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,42,0.9);
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.admin-table td {
+  color: #e5e7eb;
+}
+
+/* Colonna azioni */
+.admin-actions {
+  white-space: nowrap;
+}
+
+.admin-actions a,
+.admin-actions button {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+/* link azioni */
+.admin-actions a {
+  color: #93c5fd;
+}
+
+/* Pulsante elimina */
+.admin-actions form {
+  display: inline;
+}
+
+.admin-actions button {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,113,113,0.8);
+  background: rgba(127,29,29,0.9);
+  color: #fee2e2;
+  cursor: pointer;
+}
+
+/* FORM AGENTE */
+.agent-form-wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agent-form-title {
+  font-size: 24px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-form label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.agent-form input[type="text"],
+.agent-form input[type="email"],
+.agent-form input[type="tel"],
+.agent-form textarea,
+.agent-form input[type="file"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  font-size: 13px;
+}
+
+.agent-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.agent-form-buttons {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.agent-form button,
+.agent-form a.btn-secondary {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.agent-form button[type="submit"] {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+}
+
+.agent-form a.btn-secondary {
+  display: inline-block;
+  background: rgba(31,41,55,0.95);
+  color: #e5e7eb;
+}
+
+/* LOGIN */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.login-card {
+  backdrop-filter: blur(18px) saturate(135%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+  border-radius: 22px;
+  border: 1px solid rgba(75,85,99,0.9);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
+  padding: 20px 18px 22px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 640px) {
+  .card-outer {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 16px 12px 20px;
+  }
+
+  .business-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card-name-block {
+    align-items: center;
+  }
+
+  .card-name {
+    font-size: 22px;
+  }
+
+  .card-logo-big {
+    height: 90px;
+  }
+
+  .admin-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* ✅ su mobile leggermente più piccole (opzionale) */
+  .gallery-scroll img{
+    width: 170px;
+    height: 170px;
+  }
+
+  #qr-modal-img{
+    max-height: 72vh;
+  }
+}
+
+/* =========================================================
+   ✅ OVERRIDE GALLERIA (sempre in fondo)
+   ========================================================= */
+
+/* ✅ thumbnails più grandi + zoom */
+.gallery-scroll img{
+  width: 185px;   /* prima 160 */
+  height: 185px;  /* prima 160 */
+  border-radius: 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  transform: scale(1);
+  will-change: transform;
+}
+
+.gallery-scroll img:hover{
+  transform: scale(1.12);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
+  filter: brightness(1.05);
+}
+
+/* mobile: tap/press */
+.gallery-thumb-btn:active img{
+  transform: scale(1.12);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.80);
+  filter: brightness(1.05);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .gallery-scroll img{ transition: none; }
+}
+
+/* =============================
+   ✅ APP SHELL + HEADER (admin)
+   ============================= */
+
+.app-shell{
+  min-height: 100vh;
+}
+
+.app-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  height: 56px;
+  padding: 10px 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  backdrop-filter: blur(18px) saturate(130%);
+  background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(15,23,42,0.82));
+  border-bottom: 1px solid rgba(75,85,99,0.65);
+}
+
+.app-header-left{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-logo-text{
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #e5e7eb;
+}
+
+.app-header-right{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-link{
+  font-size: 13px;
+  font-weight: 650;
+  padding: 6px 10px;
+  border-radius: 999px;
+
+  color: #facc15;
+  border: 1px solid rgba(250,204,21,0.35);
+  background: rgba(15,23,42,0.55);
+
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.header-link:hover{
+  transform: translateY(-1px);
+  border-color: rgba(250,204,21,0.55);
+  background: rgba(250,204,21,0.10);
+}
+
+@media (max-width: 640px){
+  .app-header{
+    padding: 10px 12px;
+  }
+  .header-link{
+    padding: 6px 9px;
+  }
+}
+
+/* =============================
+   ✅ FLASH (messaggi)
+   ============================= */
+
+.flash-wrap{
+  width: 100%;
+  max-width: 1100px;
+  margin: 12px auto 0;
+  padding: 0 14px;
+}
+
+.flash{
+  padding: 10px 12px;
+  border-radius: 14px;
+  margin: 8px 0;
+  font-size: 13px;
+
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(2,6,23,0.55);
+  color: #e5e7eb;
+
+  box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+}
+
+.flash.ok{
+  border-color: rgba(34,197,94,0.35);
+  background: rgba(34,197,94,0.10);
+}
+
+.flash.error{
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.10);
+}
