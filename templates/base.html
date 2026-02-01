@@ -18,10 +18,34 @@
   <link rel="stylesheet"
         href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
   <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+
+  <style>
+    /* Flash messages (mini stile, puoi spostarlo in style.css) */
+    .flash-wrap{ max-width:1100px; margin: 12px auto 0; padding: 0 14px; }
+    .flash{
+      padding: 10px 12px;
+      border-radius: 12px;
+      margin: 8px 0;
+      font-size: 13px;
+      border: 1px solid rgba(148,163,184,0.25);
+      background: rgba(2,6,23,0.55);
+      color: #e5e7eb;
+    }
+    .flash.ok{
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.12);
+    }
+    .flash.error{
+      border-color: rgba(239,68,68,0.35);
+      background: rgba(239,68,68,0.10);
+    }
+  </style>
 </head>
+
 <body>
   <div class="app-shell">
-    {% if session.get('admin') %}
+
+    {% if session.get("role") == "admin" %}
     <header class="app-header">
       <div class="app-header-left">
         <span class="app-logo-text">Pay4You – Card digitale</span>
@@ -32,6 +56,17 @@
       </div>
     </header>
     {% endif %}
+
+    <!-- ✅ FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-wrap">
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
 
     <main class="app-main">
       {% block content %}{% endblock %}
