@@ -2,6 +2,8 @@ import os
 import re
 import uuid
 import json
+import smtplib
+from email.mime.text import MIMEText
 from datetime import datetime
 from io import BytesIO
 from urllib.parse import quote
@@ -44,8 +46,15 @@ WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
 # Default: Pay4You +39 350 872 5353 -> "393508725353"
 WA_OPTIN_PHONE = os.getenv("WA_OPTIN_PHONE", "393508725353").strip().replace("+", "").replace(" ", "")
 
-# Upload persistenti (Render Disk su /var/data)
+# Upload persistenti (Render Disk su /var/data/uploads)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
+
+# ===== SMTP (per invio email credenziali) =====
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "noreply@localhost").strip()
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -369,12 +378,6 @@ def pick_lang_from_request() -> str:
 
 # ===== MULTI-PROFILI (JSON) =====
 def parse_profiles_json(raw: str):
-    """
-    Ritorna una lista di profili normalizzati:
-    [
-      {"key":"p1","label":"...","photo_url":"...","logo_url":"...","name":"...","role":"...","company":"...","bio":"..."}
-    ]
-    """
     if not raw:
         return []
 
@@ -457,15 +460,11 @@ def agent_to_view(ag: Agent):
 
 
 def apply_profile_to_view(view, profile: dict):
-    """
-    Override SOLO per: foto/logo + eventuali testi.
-    """
     if not profile:
         return view
 
     if profile.get("photo_url"):
         view.photo_url = profile["photo_url"]
-
     if profile.get("logo_url"):
         view.extra_logo_url = profile["logo_url"]
 
@@ -518,6 +517,111 @@ def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
                 return True, resp.read().decode("utf-8")
     except Exception as e:
         return False, str(e)
+
+
+def normalize_wa_id(raw: str) -> str:
+    """
+    Accetta:
+    - +39 350...
+    - 39350...
+    - https://wa.me/39350...
+    - wa.me/39350...
+    Ritorna solo cifre.
+    """
+    if not raw:
+        return ""
+    s = (raw or "").strip().replace(" ", "")
+    s = s.replace("https://wa.me/", "").replace("http://wa.me/", "").replace("wa.me/", "")
+    s = s.replace("+", "")
+    if s.startswith("00"):
+        s = s[2:]
+    s = re.sub(r"[^0-9]", "", s)
+    return s
+
+
+# ===== SMTP helper =====
+def smtp_send_email(to_email: str, subject: str, body: str) -> (bool, str):
+    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS:
+        return False, "SMTP non configurato (SMTP_HOST/SMTP_USER/SMTP_PASS)"
+    try:
+        msg = MIMEText(body, "plain", "utf-8")
+        msg["Subject"] = subject
+        msg["From"] = SMTP_FROM
+        msg["To"] = to_email
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
+            s.ehlo()
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        return True, "ok"
+    except Exception as e:
+        return False, str(e)
+
+
+# ===== Credenziali: crea/rigenera/invia =====
+def upsert_client_user(db, slug: str, reset_password: bool) -> User:
+    u = db.query(User).filter_by(username=slug).first()
+    if not u:
+        u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
+        db.add(u)
+        db.commit()
+        return u
+    if reset_password:
+        u.password = generate_password()
+        db.commit()
+    return u
+
+
+def build_credentials_message(ag: Agent, username: str, password: str, base: str) -> str:
+    login_url = f"{base}/login"
+    card_url = f"{base}/{ag.slug}"
+    msg = (
+        f"✅ Credenziali Pay4You Card\n\n"
+        f"Login: {login_url}\n"
+        f"Username: {username}\n"
+        f"Password: {password}\n\n"
+        f"Link card: {card_url}\n"
+    )
+    return msg
+
+
+def send_credentials(db, ag: Agent, u: User) -> dict:
+    """
+    Invia credenziali:
+    - WhatsApp -> ag.whatsapp (se presente)
+    - Email -> ag.emails (lista separata da virgola)
+    Ritorna risultati.
+    """
+    base = get_base_url()
+    message = build_credentials_message(ag, u.username, u.password, base)
+
+    results = {"wa": None, "email": []}
+
+    # WhatsApp
+    wa_to = normalize_wa_id(getattr(ag, "whatsapp", "") or "")
+    if wa_to:
+        ok, resp = wa_send_text(wa_to, message)
+        results["wa"] = {"to": wa_to, "ok": ok, "resp": resp}
+    else:
+        results["wa"] = {"to": "", "ok": False, "resp": "WhatsApp mancante nella scheda (campo whatsapp)"}
+
+    # Email
+    emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
+    if not emails:
+        results["email"].append({"to": "", "ok": False, "resp": "Email mancante nella scheda (campo emails)"})
+    else:
+        for em in emails:
+            ok, resp = smtp_send_email(em, "Credenziali Pay4You Card", message)
+            results["email"].append({"to": em, "ok": ok, "resp": resp})
+
+    return results
+
+
+def pretty_name_from_slug(slug: str) -> str:
+    s = (slug or "").strip().replace("-", " ")
+    s = " ".join([w.capitalize() for w in s.split() if w.strip()])
+    return s or slug
 
 
 # ------------------ ROUTES BASE ------------------
@@ -633,7 +737,7 @@ def admin_export_agents_json():
     return resp
 
 
-# ------------------ CREDENZIALI CLIENTE (RESET + COPIA) ------------------
+# ------------------ CREDENZIALI CLIENTE (RESET + INVIO) ------------------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials(slug):
@@ -642,18 +746,19 @@ def admin_credentials(slug):
     if not ag:
         abort(404)
 
-    # ✅ solo PRO genera credenziali (paywall)
     if not is_pro_agent(ag):
         return "Funzione disponibile solo per piano PRO.", 403
 
-    u = db.query(User).filter_by(username=slug).first()
-    if not u:
-        u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
-        db.add(u)
-    else:
-        u.password = generate_password()
+    # rigenera sempre password quando apri questa pagina (come facevi tu)
+    u = upsert_client_user(db, slug, reset_password=True)
 
-    db.commit()
+    base = get_base_url()
+    login_url = f"{base}/login"
+    card_url = f"{base}/{slug}"
+
+    # pre-visualizza destinatari
+    wa_to = normalize_wa_id(getattr(ag, "whatsapp", "") or "")
+    emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
 
     return f"""
     <!doctype html>
@@ -664,19 +769,24 @@ def admin_credentials(slug):
       <title>Credenziali - {slug}</title>
       <style>
         body{{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;padding:24px}}
-        .box{{max-width:560px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
+        .box{{max-width:640px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
         h2{{margin:0 0 12px 0}}
         .row{{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}}
         code{{background:#111827;padding:8px 10px;border-radius:10px;border:1px solid #1f2937}}
         button,a{{background:#2563eb;color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none}}
         button.secondary,a.secondary{{background:#334155}}
-        .small{{color:#94a3b8;font-size:12px;margin-top:10px}}
+        button.warn{{background:#f59e0b;color:#111827;font-weight:700}}
+        .small{{color:#94a3b8;font-size:12px;margin-top:10px;line-height:1.4}}
+        .hint{{color:#cbd5e1;font-size:13px;margin:12px 0 0}}
+        .pill{{display:inline-block;padding:6px 10px;border-radius:999px;background:#111827;border:1px solid #1f2937;font-size:12px;color:#e5e7eb}}
+        .grid{{display:grid;grid-template-columns:1fr;gap:10px}}
+        @media(min-width:680px){{.grid{{grid-template-columns:1fr 1fr;}}}}
       </style>
     </head>
     <body>
       <div class="box">
         <h2>Credenziali cliente</h2>
-        <div class="small">Card: <b>{slug}</b></div>
+        <div class="small">Card: <b>{slug}</b> — Piano: <b>PRO</b></div>
 
         <div class="row">
           <div style="min-width:90px;">Username</div>
@@ -690,13 +800,40 @@ def admin_credentials(slug):
           <button onclick="copyText('{u.password}')">Copia</button>
         </div>
 
+        <div class="row">
+          <div style="min-width:90px;">Login</div>
+          <code>{login_url}</code>
+          <button onclick="copyText('{login_url}')">Copia</button>
+        </div>
+
+        <div class="row">
+          <div style="min-width:90px;">Card</div>
+          <code>{card_url}</code>
+          <button onclick="copyText('{card_url}')">Copia</button>
+        </div>
+
+        <div class="hint">Invio rapido</div>
+        <div class="grid">
+          <form method="post" action="/admin/{slug}/credentials/send" style="margin:0;">
+            <input type="hidden" name="channel" value="wa">
+            <button type="submit" class="warn" style="width:100%;">📲 Invia su WhatsApp</button>
+            <div class="small">Destinatario WhatsApp: <span class="pill">{wa_to if wa_to else "mancante"}</span></div>
+          </form>
+
+          <form method="post" action="/admin/{slug}/credentials/send" style="margin:0;">
+            <input type="hidden" name="channel" value="email">
+            <button type="submit" class="warn" style="width:100%;">✉️ Invia via Email</button>
+            <div class="small">Email: <span class="pill">{(", ".join(emails)) if emails else "mancante"}</span></div>
+          </form>
+        </div>
+
         <div class="row" style="margin-top:14px;">
           <a class="secondary" href="/login" target="_blank">Apri login</a>
           <a class="secondary" href="/{slug}" target="_blank">Apri card</a>
           <a href="{url_for('admin_home')}">⬅ Torna alla lista</a>
         </div>
 
-        <p class="small">Nota: cliccando “Credenziali” rigeneri la password (reset).</p>
+        <p class="small">Nota: aprendo questa pagina la password viene rigenerata (reset).</p>
       </div>
 
       <script>
@@ -711,6 +848,46 @@ def admin_credentials(slug):
     </body>
     </html>
     """
+
+
+@app.post("/admin/<slug>/credentials/send")
+@admin_required
+def admin_credentials_send(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_pro_agent(ag):
+        return "Funzione disponibile solo per piano PRO.", 403
+
+    channel = (request.form.get("channel") or "").strip().lower()
+    u = db.query(User).filter_by(username=slug).first()
+    if not u:
+        # se manca, la creiamo senza cambiare password a caso qui (ma la creiamo)
+        u = upsert_client_user(db, slug, reset_password=True)
+
+    results = send_credentials(db, ag, u)
+
+    # risposta semplice
+    if channel == "wa":
+        r = results.get("wa") or {}
+        ok = r.get("ok")
+        if ok:
+            return f"✅ WhatsApp inviato a {r.get('to')}. <br><a href='/admin/{slug}/credentials'>⬅ Torna indietro</a>"
+        return f"❌ WhatsApp NON inviato. Motivo: {r.get('resp')} <br><a href='/admin/{slug}/credentials'>⬅ Torna indietro</a>"
+
+    if channel == "email":
+        lines = []
+        for item in results.get("email", []):
+            if item.get("ok"):
+                lines.append(f"✅ Email inviata a {item.get('to')}")
+            else:
+                lines.append(f"❌ Email NON inviata a {item.get('to') or '(mancante)'} — {item.get('resp')}")
+        return "<br>".join(lines) + f"<br><br><a href='/admin/{slug}/credentials'>⬅ Torna indietro</a>"
+
+    # default: invia tutto
+    return f"{results} <br><a href='/admin/{slug}/credentials'>⬅ Torna indietro</a>"
 
 
 # ------------------ ADMIN BROADCAST (INVIO PROMO) ------------------
@@ -795,8 +972,12 @@ def create_agent():
         except Exception:
             data["profiles_json"] = ""
 
-    if not data["slug"] or not data["name"]:
-        return "Slug e Nome sono obbligatori", 400
+    # ✅ qui cambia: SLUG obbligatorio, NAME se vuoto lo genero
+    if not data["slug"]:
+        return "Slug è obbligatorio", 400
+
+    if not data.get("name"):
+        data["name"] = pretty_name_from_slug(data["slug"])
 
     if db.query(Agent).filter_by(slug=data["slug"]).first():
         return "Slug già esistente", 400
@@ -849,23 +1030,23 @@ def create_agent():
     db.add(ag)
     db.commit()
 
-    # crea utente cliente (username = slug)
-    slug = data["slug"]
-    u = db.query(User).filter_by(username=slug).first()
-    if not u:
-        pw = generate_password()
-        db.add(User(username=slug, password=pw, role="client", agent_slug=slug))
-        db.commit()
-        return f"""
-        <h2>Cliente creato ✅</h2>
-        <p><b>Card:</b> {slug}</p>
-        <p><b>URL card:</b> <a href="/{slug}">/{slug}</a></p>
-        <hr>
-        <p><b>Login:</b> <a href="/login">/login</a></p>
-        <p><b>Username:</b> {slug}</p>
-        <p><b>Password:</b> {pw}</p>
-        <p><a href="{url_for('admin_home')}">⬅ Torna alla lista</a></p>
-        """
+    # ✅ crea SEMPRE user client (così esiste)
+    slug = ag.slug
+    u = upsert_client_user(db, slug, reset_password=False)
+
+    # ✅ se PRO: rigenera password e prova invio automatico
+    if is_pro_agent(ag):
+        u = upsert_client_user(db, slug, reset_password=True)
+        results = send_credentials(db, ag, u)
+
+        # feedback “gentile”
+        wa_ok = bool(results.get("wa", {}).get("ok"))
+        email_ok_any = any(x.get("ok") for x in results.get("email", []))
+
+        if wa_ok or email_ok_any:
+            flash("✅ PRO attivato: credenziali generate e invio avviato.", "ok")
+        else:
+            flash("⚠️ PRO attivato: credenziali generate, ma invio non riuscito (manca WhatsApp/Email o SMTP).", "error")
 
     return redirect(url_for("admin_home"))
 
@@ -889,6 +1070,8 @@ def update_agent(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
+
+    prev_plan = normalize_plan(getattr(ag, "plan", "basic"))
 
     for k in [
         "slug", "name", "company", "role", "bio",
@@ -922,23 +1105,23 @@ def update_agent(slug):
     video_files = request.files.getlist("videos")
 
     if photo and photo.filename:
-        u = upload_file(photo, "photos")
-        if u:
-            ag.photo_url = u
+        ufile = upload_file(photo, "photos")
+        if ufile:
+            ag.photo_url = ufile
 
     if extra_logo and extra_logo.filename:
-        u = upload_file(extra_logo, "logos")
-        if u:
-            ag.extra_logo_url = u
+        ufile = upload_file(extra_logo, "logos")
+        if ufile:
+            ag.extra_logo_url = ufile
 
     if request.form.get("delete_pdfs") != "1":
         pdf_entries = []
         for i in range(1, 13):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
-                u = upload_file(f, "pdf")
-                if u:
-                    pdf_entries.append(f"{f.filename}||{u}")
+                ufile = upload_file(f, "pdf")
+                if ufile:
+                    pdf_entries.append(f"{f.filename}||{ufile}")
         if pdf_entries:
             ag.pdf1_url = "|".join(pdf_entries)
 
@@ -946,9 +1129,9 @@ def update_agent(slug):
         gallery_urls = []
         for f in gallery_files[:MAX_GALLERY_IMAGES]:
             if f and f.filename:
-                u = upload_file(f, "gallery")
-                if u:
-                    gallery_urls.append(u)
+                ufile = upload_file(f, "gallery")
+                if ufile:
+                    gallery_urls.append(ufile)
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
@@ -956,13 +1139,20 @@ def update_agent(slug):
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
             if f and f.filename:
-                u = upload_file(f, "videos")
-                if u:
-                    video_urls.append(u)
+                ufile = upload_file(f, "videos")
+                if ufile:
+                    video_urls.append(ufile)
         if video_urls:
             ag.video_urls = "|".join(video_urls)
 
     db.commit()
+
+    # ✅ se passa da BASIC -> PRO, preparo credenziali (non invio automatico qui per non spammare)
+    new_plan = normalize_plan(getattr(ag, "plan", "basic"))
+    if prev_plan != "pro" and new_plan == "pro":
+        upsert_client_user(db, ag.slug, reset_password=False)
+        flash("✅ Piano PRO attivato. Ora puoi aprire 'Credenziali' per generare/inviare.", "ok")
+
     return redirect(url_for("admin_home"))
 
 
@@ -1038,22 +1228,22 @@ def me_edit_post():
     video_files = request.files.getlist("videos")
 
     if photo and photo.filename:
-        u = upload_file(photo, "photos")
-        if u:
-            ag.photo_url = u
+        ufile = upload_file(photo, "photos")
+        if ufile:
+            ag.photo_url = ufile
 
     if extra_logo and extra_logo.filename:
-        u = upload_file(extra_logo, "logos")
-        if u:
-            ag.extra_logo_url = u
+        ufile = upload_file(extra_logo, "logos")
+        if ufile:
+            ag.extra_logo_url = ufile
 
     pdf_entries = []
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            u = upload_file(f, "pdf")
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
+            ufile = upload_file(f, "pdf")
+            if ufile:
+                pdf_entries.append(f"{f.filename}||{ufile}")
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
@@ -1061,9 +1251,9 @@ def me_edit_post():
         gallery_urls = []
         for f in gallery_files[:MAX_GALLERY_IMAGES]:
             if f and f.filename:
-                u = upload_file(f, "gallery")
-                if u:
-                    gallery_urls.append(u)
+                ufile = upload_file(f, "gallery")
+                if ufile:
+                    gallery_urls.append(ufile)
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
@@ -1071,9 +1261,9 @@ def me_edit_post():
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
             if f and f.filename:
-                u = upload_file(f, "videos")
-                if u:
-                    video_urls.append(u)
+                ufile = upload_file(f, "videos")
+                if ufile:
+                    video_urls.append(ufile)
         if video_urls:
             ag.video_urls = "|".join(video_urls)
 
@@ -1096,7 +1286,7 @@ def public_card(slug):
 
     # ✅ multi-profili
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    p_key = (request.args.get("p") or "").strip()  # <-- questa è la chiave che userà il template
+    p_key = (request.args.get("p") or "").strip()
     active_profile = select_profile(profiles, p_key)
 
     # ✅ copia “view” e override (NON tocca oggetto DB)
@@ -1128,12 +1318,10 @@ def public_card(slug):
         optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
         wa_optin_link = f"https://wa.me/{WA_OPTIN_PHONE}?text={quote(optin_text)}"
 
-    # ✅ URL “NFC direct” (profilo se presente) + mantiene lingua se vuoi
+    # ✅ URL “NFC direct” (profilo se presente)
     nfc_direct_url = f"{base}/{ag.slug}"
     if p_key:
         nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(p_key)}"
-        # se vuoi includere lang anche su NFC direct:
-        # nfc_direct_url += f"&lang={urllib.parse.quote(lang)}"
 
     return render_template(
         "card.html",
@@ -1147,14 +1335,10 @@ def public_card(slug):
         pdfs=pdfs,
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
-
-        # ✅ MULTI-LINGUA
         lang=lang,
-
-        # ✅ MULTI-PROFILI per schermata scelta
         profiles=profiles,
         active_profile=active_profile,
-        p_key=p_key,                 # <-- fondamentale per la “scelta profilo”
+        p_key=p_key,
         nfc_direct_url=nfc_direct_url,
     )
 
@@ -1218,8 +1402,6 @@ def vcard(slug):
 @app.get("/<slug>/qr.png")
 def qr(slug):
     base = get_base_url()
-
-    # ✅ se passi ?p=p1 il QR punta al profilo (NFC direct)
     p = (request.args.get("p") or "").strip()
     if p:
         url = f"{base}/{slug}?p={urllib.parse.quote(p)}"
