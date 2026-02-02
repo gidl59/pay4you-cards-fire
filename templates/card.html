@@ -4,34 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ ag.name }} | Pay4You Card</title>
-
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-  <!-- sfondo blur -->
   <div class="card-glass-bg"></div>
 
   <div class="page-main">
     <div class="card-fullscreen">
       <div class="card-outer">
 
-        <!-- header row: LOGO in alto a sinistra (solo se caricato) -->
+        <!-- ✅ LOGO IN ALTO A SINISTRA (solo se caricato) -->
         <div class="card-header-row">
           {% if ag.extra_logo_url %}
             <img class="card-logo-top-left" src="{{ ag.extra_logo_url }}" alt="Logo">
           {% endif %}
-
-          <!-- (lingue: lascio come sono nel tuo progetto, NON tocco nulla)
-               Se tu non vuoi bottoni, non inserirli qui.
-               Se li hai già in template, lasciali dove stanno. -->
         </div>
 
-        <!-- blocco foto + dati (nome e azienda DEVONO stare sotto la foto, non in alto) -->
+        <!-- BLOCCO FOTO + DATI -->
         <div class="business-card">
+
+          <!-- ✅ FOTO con LOGO che gira dietro -->
           <div class="card-profile-photo-wrapper">
-            {% if ag.extra_logo_url %}
-              <!-- avatar flip con retro logo -->
+            <div class="avatar-stack">
+              {% if ag.extra_logo_url %}
+                <div class="logo-orbit">
+                  <img src="{{ ag.extra_logo_url }}" alt="Logo">
+                </div>
+              {% endif %}
+
               <div class="avatar-flip">
                 <div class="avatar-inner">
                   <div class="avatar-face avatar-front">
@@ -42,25 +43,23 @@
                     {% endif %}
                   </div>
                   <div class="avatar-face avatar-back">
-                    <img src="{{ ag.extra_logo_url }}" alt="Logo">
+                    {% if ag.extra_logo_url %}
+                      <img src="{{ ag.extra_logo_url }}" alt="Logo">
+                    {% else %}
+                      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+                    {% endif %}
                   </div>
                 </div>
               </div>
-            {% else %}
-              <!-- fallback foto classica -->
-              {% if ag.photo_url %}
-                <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="Foto profilo">
-              {% else %}
-                <img class="card-profile-photo" src="{{ url_for('static', filename='logo.png') }}" alt="Foto profilo">
-              {% endif %}
-            {% endif %}
+            </div>
           </div>
 
-          <div class="card-name-block">
+          <!-- ✅ TESTI PIÙ GRANDI -->
+          <div class="card-name-block big-text">
             <h1 class="card-name">{{ ag.name }}</h1>
 
             {% if ag.company %}
-              <div class="card-role-sub">{{ ag.company }}</div>
+              <div class="card-company">{{ ag.company }}</div>
             {% endif %}
 
             {% if ag.role %}
@@ -71,10 +70,11 @@
               <div class="card-bio">{{ ag.bio }}</div>
             {% endif %}
 
-            <!-- ✅ tasto multi-utente (Profilo 1/2) sulla card pubblica -->
+            <!-- ✅ Multi-utente visibile sulla card pubblica -->
             {% if profiles and profiles|length > 0 %}
               <div class="profile-switch">
-                <a class="profile-pill {% if not p_key %}active{% endif %}" href="/{{ ag.slug }}{% if request.args.get('lang') %}?lang={{ request.args.get('lang') }}{% endif %}">
+                <a class="profile-pill {% if not p_key %}active{% endif %}"
+                   href="/{{ ag.slug }}{% if request.args.get('lang') %}?lang={{ request.args.get('lang') }}{% endif %}">
                   Profilo 1
                 </a>
 
@@ -149,10 +149,8 @@
           {% endif %}
         </div>
 
-        <!-- SOCIAL: mostra solo nome cliccabile -->
-        {% set has_social =
-          ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram
-        %}
+        <!-- SOCIAL -->
+        {% set has_social = ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram %}
         {% if has_social %}
           <div class="card-section">
             <h2>Social</h2>
@@ -199,47 +197,31 @@
           </div>
         {% endif %}
 
-        <!-- ✅ BOX AZIONI sotto i social (come volevi) -->
+        <!-- ✅ BOX AZIONI sotto social -->
         <div class="card-section actions-box">
           <h2>Azioni</h2>
           <div class="actions-row">
             <a class="action-btn" href="/{{ ag.slug }}.vcf">Salva contatto</a>
-            <button class="action-btn secondary" type="button" onclick="openQrModal('/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}{% endif %}{% if request.args.get('lang') %}{% if p_key %}&{% else %}?{% endif %}lang={{ request.args.get('lang') }}{% endif %}')">
+            <button class="action-btn secondary" type="button"
+              onclick="openMediaModal('/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}{% endif %}{% if request.args.get('lang') %}{% if p_key %}&{% else %}?{% endif %}lang={{ request.args.get('lang') }}{% endif %}', 'image')">
               Scansiona QR
             </button>
           </div>
-          <div class="actions-hint">
-            Consiglio: salva il contatto e poi condividi la card ai tuoi clienti.
-          </div>
         </div>
 
-        <!-- AZIENDA / FISCALE -->
+        <!-- DATI -->
         {% if ag.piva or ag.sdi or ag.pec or addresses|length > 0 %}
           <div class="card-section">
             <h2>Dati</h2>
 
             {% if ag.piva %}
-              <div class="contact-row">
-                <div class="icon">🏷️</div>
-                <div class="label">P.IVA</div>
-                <div class="value">{{ ag.piva }}</div>
-              </div>
+              <div class="contact-row"><div class="icon">🏷️</div><div class="label">P.IVA</div><div class="value">{{ ag.piva }}</div></div>
             {% endif %}
-
             {% if ag.sdi %}
-              <div class="contact-row">
-                <div class="icon">🧾</div>
-                <div class="label">SDI</div>
-                <div class="value">{{ ag.sdi }}</div>
-              </div>
+              <div class="contact-row"><div class="icon">🧾</div><div class="label">SDI</div><div class="value">{{ ag.sdi }}</div></div>
             {% endif %}
-
             {% if ag.pec %}
-              <div class="contact-row">
-                <div class="icon">📩</div>
-                <div class="label">PEC</div>
-                <div class="value">{{ ag.pec }}</div>
-              </div>
+              <div class="contact-row"><div class="icon">📩</div><div class="label">PEC</div><div class="value">{{ ag.pec }}</div></div>
             {% endif %}
 
             {% if addresses and addresses|length > 0 %}
@@ -254,13 +236,13 @@
           </div>
         {% endif %}
 
-        <!-- GALLERIA -->
+        <!-- FOTO -->
         {% if gallery and gallery|length > 0 %}
           <div class="card-section">
             <h2>Foto</h2>
             <div class="gallery-scroll">
               {% for img in gallery %}
-                <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ img }}', 'image')">
+                <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ img }}','image')">
                   <img src="{{ img }}" alt="Foto {{ loop.index }}">
                 </button>
               {% endfor %}
@@ -268,13 +250,13 @@
           </div>
         {% endif %}
 
-        <!-- VIDEO (✅ piccoli come galleria) -->
+        <!-- VIDEO piccoli -->
         {% if videos and videos|length > 0 %}
           <div class="card-section">
             <h2>Video</h2>
             <div class="gallery-scroll">
               {% for v in videos %}
-                <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ v }}', 'video')">
+                <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ v }}','video')">
                   <div class="video-thumb">
                     <span class="video-play">▶</span>
                     <video class="video-mini" muted playsinline preload="metadata">
@@ -287,48 +269,53 @@
           </div>
         {% endif %}
 
-        <!-- PDF -->
+        <!-- ✅ PDF con CHIUDI (modal viewer) -->
         {% if pdfs and pdfs|length > 0 %}
           <div class="card-section">
             <h2>Documenti</h2>
             <div class="pdf-list">
               {% for p in pdfs %}
-                <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
+                <button class="pdf-item" type="button" onclick="openPdfModal('{{ p.url }}')">
                   <span class="pdf-icon">📄</span> <span>{{ p.name }}</span>
-                </a>
+                </button>
               {% endfor %}
             </div>
           </div>
         {% endif %}
 
+        <!-- ✅ FOOTER richiesto -->
         <div class="card-footer">
-          © {{ (ag.company or ag.name) }}
+          Realizzato © Pay4You da Giuseppe Di Lisio — 2026
         </div>
 
       </div>
     </div>
   </div>
 
-  <!-- MODAL (QR / IMMAGINI / VIDEO) con ✅ CHIUDI SEMPRE SOPRA -->
+  <!-- MODAL MEDIA -->
   <div id="media-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-media">
-      <button class="modal-x" type="button" onclick="closeMediaModal()">✕</button>
+      <button class="modal-x" type="button" onclick="closeAllModals()">✕</button>
 
       <img id="modal-img" src="" alt="media" style="display:none;">
       <video id="modal-video" controls playsinline style="display:none;">
         <source id="modal-video-src" src="">
       </video>
 
-      <button class="modal-close-btn" type="button" onclick="closeMediaModal()">Chiudi</button>
+      <button class="modal-close-btn" type="button" onclick="closeAllModals()">Chiudi</button>
     </div>
   </div>
 
-  <!-- QR modal (usa lo stesso media-modal) -->
-  <script>
-    function openQrModal(src){
-      openMediaModal(src, 'image');
-    }
+  <!-- ✅ PDF MODAL -->
+  <div id="pdf-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box modal-pdf">
+      <button class="modal-x" type="button" onclick="closeAllModals()">✕</button>
+      <iframe id="pdf-frame" src="" title="PDF" class="pdf-frame"></iframe>
+      <button class="modal-close-btn" type="button" onclick="closeAllModals()">Chiudi</button>
+    </div>
+  </div>
 
+  <script>
     function openMediaModal(src, type){
       const modal = document.getElementById('media-modal');
       const img = document.getElementById('modal-img');
@@ -351,11 +338,23 @@
       modal.style.display = 'flex';
     }
 
-    function closeMediaModal(){
-      const modal = document.getElementById('media-modal');
+    function openPdfModal(url){
+      const modal = document.getElementById('pdf-modal');
+      const frame = document.getElementById('pdf-frame');
+      frame.src = url;
+      modal.style.display = 'flex';
+    }
+
+    function closeAllModals(){
+      const m1 = document.getElementById('media-modal');
+      const m2 = document.getElementById('pdf-modal');
       const vid = document.getElementById('modal-video');
+      const frame = document.getElementById('pdf-frame');
+
       try { vid.pause(); } catch(e){}
-      modal.style.display = 'none';
+      frame.src = "";
+      m1.style.display = 'none';
+      m2.style.display = 'none';
     }
   </script>
 
