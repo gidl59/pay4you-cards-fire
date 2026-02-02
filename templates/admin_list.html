@@ -5,11 +5,11 @@
 <div class="page-main">
   <div class="admin-wrapper">
     <div class="admin-card">
-      <h1 class="admin-title">Agenti</h1>
+      <h1 class="admin-title">Admin – Lista Card</h1>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-        <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
-        <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">⬇ Export JSON</a>
+        <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+        <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
       </div>
 
       <table class="admin-table">
@@ -25,12 +25,11 @@
           {% for a in agents %}
           <tr>
             <td>{{ a.name }}</td>
-            <td><code>{{ a.slug }}</code></td>
-            <td>{{ a.plan if a.plan else 'basic' }}</td>
+            <td>{{ a.slug }}</td>
+            <td>{{ a.plan }}</td>
             <td class="admin-actions">
-              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
+              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri</a>
               <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-              <a href="{{ url_for('admin_credentials', slug=a.slug) }}">🔑 Credenziali</a>
               <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare {{ a.slug }}?');">
                 <button type="submit">Elimina</button>
               </form>
