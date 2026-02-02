@@ -4,25 +4,9 @@
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
-
-    {% set editing_profile2 = (agent and agent.__editing_profile2__) %}
-
     <h1 class="agent-form-title">
-      {% if session.get('role') == 'admin' %}
-        {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
-      {% else %}
-        {% if editing_profile2 %}Profilo 2{% else %}Profilo 1{% endif %}
-      {% endif %}
+      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuova card{% endif %}
     </h1>
-
-    {% if session.get('role') != 'admin' and agent %}
-      <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="header-link" href="{{ url_for('me_edit') }}">Profilo 1</a>
-        <a class="header-link" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (Profilo 2)</a>
-      </div>
-    {% endif %}
 
     {% if session.get('role') == 'admin' %}
       {% if agent %}
@@ -31,11 +15,7 @@
         {% set form_action = url_for('create_agent') %}
       {% endif %}
     {% else %}
-      {% if editing_profile2 %}
-        {% set form_action = url_for('me_profile2_post') %}
-      {% else %}
-        {% set form_action = url_for('me_edit_post') %}
-      {% endif %}
+      {% set form_action = url_for('me_edit_post') %}
     {% endif %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
@@ -43,7 +23,6 @@
       {% if session.get('role') == 'admin' %}
         <label>Slug (univoco)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
-
         <label>Piano</label>
         <select name="plan" style="width:100%; padding:7px 8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background: rgba(15,23,42,0.96); color:#f9fafb; font-size:13px;">
           {% set p = (agent.plan if agent and agent.plan else 'basic') %}
@@ -51,7 +30,7 @@
           <option value="pro" {% if p=='pro' %}selected{% endif %}>pro</option>
         </select>
       {% else %}
-        <div style="font-size:12px; opacity:.75; margin-bottom:10px;">
+        <div style="font-size:12px; opacity:.75; margin-bottom:6px;">
           Slug: <b>{{ agent.slug }}</b>
         </div>
       {% endif %}
@@ -68,34 +47,9 @@
       <label>Bio / Descrizione</label>
       <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
-      <details style="margin-top:10px; border:1px solid rgba(148,163,184,0.18); border-radius:12px; padding:10px; background:rgba(15,23,42,0.5);">
-        <summary style="cursor:pointer; font-weight:700;">Versione inglese (opzionale)</summary>
-
-        <div style="height:8px;"></div>
-
-        <label>Nome (EN)</label>
-        <input type="text" name="name_en" value="{{ agent.name_en if agent else '' }}">
-
-        <label>Azienda (EN)</label>
-        <input type="text" name="company_en" value="{{ agent.company_en if agent else '' }}">
-
-        <label>Ruolo (EN)</label>
-        <input type="text" name="role_en" value="{{ agent.role_en if agent else '' }}">
-
-        <label>Bio (EN)</label>
-        <textarea name="bio_en">{{ agent.bio_en if agent else '' }}</textarea>
-
-        <label>Indirizzi (EN) (uno per riga)</label>
-        <textarea name="addresses_en">{{ agent.addresses_en if agent else '' }}</textarea>
-
-        <div style="font-size:12px; opacity:.8; margin-top:6px;">
-          Se il telefono è impostato in inglese, la card mostrerà questi testi (se compilati). Altrimenti usa l’italiano.
-        </div>
-      </details>
-
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Cellulare</label>
+      <label>Cellulare (contatto)</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
       <label>Cellulare 2</label>
@@ -110,7 +64,7 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
-      <label>WhatsApp (numero o link)</label>
+      <label>WhatsApp (numero o +39...)</label>
       <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
 
       <label>PEC</label>
@@ -127,36 +81,36 @@
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Facebook</label>
+      <label>Facebook (link)</label>
       <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
 
-      <label>Instagram</label>
+      <label>Instagram (link)</label>
       <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
 
-      <label>LinkedIn</label>
+      <label>LinkedIn (link)</label>
       <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
 
-      <label>TikTok</label>
+      <label>TikTok (link)</label>
       <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
 
-      <label>Telegram</label>
+      <label>Telegram (link)</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Foto profilo (max 5MB)</label>
+      <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo (max 3MB)</label>
-      <input type="file" name="extra_logo" accept="image/*">
+      <label>Logo (mostrato in alto a sinistra sulla card, solo se caricato)</label>
+      <input type="file" name="logo" accept="image/*">
 
-      <label>Galleria (max 30 immagini, 5MB ciascuna)</label>
+      <label>Galleria (max 30 immagini, max 8MB ciascuna)</label>
       <input type="file" name="gallery" accept="image/*" multiple>
 
-      <label>Video (max 10, 60MB ciascuno)</label>
+      <label>Video (max 10, max 60MB ciascuno)</label>
       <input type="file" name="videos" accept="video/*" multiple>
 
-      <label>PDF (fino a 12, 12MB ciascuno)</label>
+      <label>PDF (fino a 12, max 15MB ciascuno)</label>
       <input type="file" name="pdf1" accept="application/pdf">
       <input type="file" name="pdf2" accept="application/pdf">
       <input type="file" name="pdf3" accept="application/pdf">
@@ -170,10 +124,38 @@
       <input type="file" name="pdf11" accept="application/pdf">
       <input type="file" name="pdf12" accept="application/pdf">
 
-      {% if session.get('role') == 'admin' %}
-        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo (solo admin)</label>
-        <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
-      {% endif %}
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:14px 0;">
+
+      <!-- ===================== TRADUZIONI PROFILO 1 ===================== -->
+      {% set tr = i18n_data if i18n_data else {} %}
+
+      <h3 style="margin:0 0 8px; font-size:15px;">Traduzioni (profilo 1) — opzionale</h3>
+      <div style="font-size:12px; opacity:.8; margin-bottom:10px;">
+        Se un cliente apre la card con telefono in francese/inglese/spagnolo/tedesco, verranno mostrati questi testi (se compilati).
+        Se lasci vuoto, resta italiano.
+      </div>
+
+      {% for L, title in [('en','English'),('fr','Français'),('es','Español'),('de','Deutsch')] %}
+        {% set trL = tr.get(L, {}) %}
+        <div style="border:1px solid rgba(148,163,184,0.15); border-radius:14px; padding:10px; margin-bottom:10px;">
+          <div style="font-weight:650; margin-bottom:8px;">{{ title }}</div>
+
+          <label>Nome ({{ L }})</label>
+          <input type="text" name="name_{{L}}" value="{{ trL.get('name','') }}">
+
+          <label>Azienda ({{ L }})</label>
+          <input type="text" name="company_{{L}}" value="{{ trL.get('company','') }}">
+
+          <label>Ruolo ({{ L }})</label>
+          <input type="text" name="role_{{L}}" value="{{ trL.get('role','') }}">
+
+          <label>Bio ({{ L }})</label>
+          <textarea name="bio_{{L}}">{{ trL.get('bio','') }}</textarea>
+
+          <label>Indirizzi ({{ L }})</label>
+          <textarea name="addresses_{{L}}">{{ trL.get('addresses','') }}</textarea>
+        </div>
+      {% endfor %}
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
