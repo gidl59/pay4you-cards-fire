@@ -1,1 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Profilo 2{% endblock %}
 
+{% block content %}
+<div class="page-main">
+  <div class="admin-card" style="max-width:720px; width:100%;">
+    <h1 class="admin-title">Profilo 2 (uguale al profilo 1)</h1>
+
+    <div style="font-size:12px; opacity:.8; margin-bottom:12px;">
+      Qui compili il <b>Profilo 2</b> in modo semplice. Poi lo condividi con:
+      <br>
+      <b>NFC direct:</b> /{{ agent.slug }}?p=p2
+    </div>
+
+    {% if error %}
+      <div class="flash error">{{ error }}</div>
+    {% endif %}
+    {% if ok %}
+      <div class="flash ok">{{ ok }}</div>
+    {% endif %}
+
+    <form class="agent-form" method="post" enctype="multipart/form-data" action="{{ url_for('me_profile2_post') }}">
+
+      <label>Nome visualizzato (profilo 2)</label>
+      <input type="text" name="name" value="{{ p2.name or '' }}" placeholder="Es. Bar Jonni – Promo" required>
+
+      <label>Ruolo / Titolo</label>
+      <input type="text" name="role" value="{{ p2.role or '' }}" placeholder="Es. Offerte del giorno">
+
+      <label>Azienda</label>
+      <input type="text" name="company" value="{{ p2.company or '' }}" placeholder="Es. Bar Jonni">
+
+      <label>Descrizione</label>
+      <textarea name="bio" placeholder="Es. Promo, eventi, offerte...">{{ p2.bio or '' }}</textarea>
+
+      <label>Foto profilo (profilo 2)</label>
+      <input type="file" name="photo" accept="image/*">
+      {% if p2.photo_url %}
+        <div style="margin-top:6px; font-size:12px; opacity:.85;">
+          Attuale: <a class="link-button" href="{{ p2.photo_url }}" target="_blank">Apri foto</a>
+        </div>
+      {% endif %}
+
+      <label>Logo (profilo 2)</label>
+      <input type="file" name="logo" accept="image/*">
+      {% if p2.logo_url %}
+        <div style="margin-top:6px; font-size:12px; opacity:.85;">
+          Attuale: <a class="link-button" href="{{ p2.logo_url }}" target="_blank">Apri logo</a>
+        </div>
+      {% endif %}
+
+      <div class="agent-form-buttons" style="margin-top:14px;">
+        <button type="submit">Salva Profilo 2</button>
+        <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna a Modifica</a>
+      </div>
+
+      <div style="margin-top:12px; font-size:12px; opacity:.8;">
+        Suggerimento: usa <b>Profilo 1</b> come biglietto “Business” e <b>Profilo 2</b> come “Promo”.
+      </div>
+    </form>
+
+    <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:18px 0;">
+
+    <form method="post" action="{{ url_for('me_profile2_clear') }}" onsubmit="return confirm('Vuoi eliminare il Profilo 2?');">
+      <button type="submit" style="background:rgba(127,29,29,0.9); border:1px solid rgba(248,113,113,0.8); color:#fee2e2; padding:8px 12px; border-radius:999px; cursor:pointer;">
+        Elimina Profilo 2
+      </button>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
