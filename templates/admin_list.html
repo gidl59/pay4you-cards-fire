@@ -1,45 +1,42 @@
 {% extends "base.html" %}
-{% block title %}Admin | Pay4You{% endblock %}
+{% block title %}Admin – Lista Card{% endblock %}
 
 {% block content %}
 <div class="page-main">
   <div class="admin-wrapper">
-    <div class="admin-card">
-      <h1 class="admin-title">Admin – Lista Card</h1>
+    <h1 class="admin-title">Admin – Lista Card</h1>
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-        <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
-        <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
-      </div>
-
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Slug</th>
-            <th>Piano</th>
-            <th class="admin-actions">Azioni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for a in agents %}
-          <tr>
-            <td>{{ a.name }}</td>
-            <td>{{ a.slug }}</td>
-            <td>{{ a.plan }}</td>
-            <td class="admin-actions">
-              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri</a>
-              <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare {{ a.slug }}?');">
-                <button type="submit">Elimina</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
+    <div class="admin-top-actions">
+      <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
     </div>
+
+    <div class="admin-list">
+      {% for a in agents %}
+        <div class="admin-card">
+          <div class="admin-card-head">
+            <div class="admin-card-title">
+              <b>{{ a.name }}</b>
+              <div class="admin-card-sub">Slug: <code>{{ a.slug }}</code> — Piano: <b>{{ a.plan }}</b></div>
+            </div>
+
+            <div class="admin-card-links">
+              <a class="mini-btn" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri</a>
+              <a class="mini-btn" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+
+              <!-- ✅ export “per riga”: scarica JSON completo ma da qui -->
+              <a class="mini-btn" href="{{ url_for('admin_export_agents_json') }}">Export JSON</a>
+            </div>
+          </div>
+
+          <div class="admin-card-actions">
+            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare questa card?');">
+              <button type="submit" class="mini-btn danger">Elimina</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
   </div>
 </div>
 {% endblock %}
