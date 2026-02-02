@@ -684,6 +684,182 @@ def admin_home():
     for a in agents:
         a.plan = normalize_plan(getattr(a, "plan", "basic"))
     return render_template("admin_list.html", agents=agents)
+    # ✅ EXPORT JSON
+@app.get("/admin/export_agents.json")
+@admin_required
+def admin_export_agents_json():
+    db = SessionLocal()
+    agents = db.query(Agent).order_by(Agent.id).all()
+
+    payload = []
+    for a in agents:
+        payload.append({
+            "id": a.id,
+            "slug": a.slug,
+            "name": a.name,
+            "company": a.company,
+            "role": a.role,
+            "bio": a.bio,
+            "phone_mobile": a.phone_mobile,
+            "phone_mobile2": a.phone_mobile2,
+            "phone_office": a.phone_office,
+            "emails": a.emails,
+            "websites": a.websites,
+            "facebook": a.facebook,
+            "instagram": a.instagram,
+            "linkedin": a.linkedin,
+            "tiktok": a.tiktok,
+            "telegram": a.telegram,
+            "whatsapp": a.whatsapp,
+            "pec": a.pec,
+            "piva": a.piva,
+            "sdi": a.sdi,
+            "addresses": a.addresses,
+            "photo_url": a.photo_url,
+            "extra_logo_url": a.extra_logo_url,
+            "gallery_urls": a.gallery_urls,
+            "video_urls": a.video_urls,
+            "pdf1_url": a.pdf1_url,
+            "plan": normalize_plan(getattr(a, "plan", "basic")),
+            "profiles_json": a.profiles_json,
+        })
+
+    content = json.dumps(payload, ensure_ascii=False, indent=2)
+    resp = Response(content, mimetype="application/json; charset=utf-8")
+    resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
+    return resp
+
+
+# ------------------ CREDENZIALI (RESET + COPIA) ------------------
+@app.get("/admin/<slug>/credentials")
+@admin_required
+def admin_credentials(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_pro_agent(ag):
+        return "Funzione disponibile solo per piano PRO.", 403
+
+    u = db.query(User).filter_by(username=slug).first()
+    if not u:
+        u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
+        db.add(u)
+    else:
+        u.password = generate_password()
+
+    db.commit()
+
+    return f"""
+    <!doctype html>
+    <html lang="it">
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <title>Credenziali - {slug}</title>
+      <style>
+        body{{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;padding:24px}}
+        .box{{max-width:560px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
+        h2{{margin:0 0 12px 0}}
+        .row{{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}}
+        code{{background:#111827;padding:8px 10px;border-radius:10px;border:1px solid #1f2937}}
+        button,a{{background:#2563eb;color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none}}
+        button.secondary,a.secondary{{background:#334155}}
+        .small{{color:#94a3b8;font-size:12px;margin-top:10px}}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h2>Credenziali cliente</h2>
+        <div class="small">Card: <b>{slug}</b></div>
+
+        <div class="row">
+          <div style="min-width:90px;">Username</div>
+          <code>{u.username}</code>
+          <button onclick="copyText('{u.username}')">Copia</button>
+        </div>
+
+        <div class="row">
+          <div style="min-width:90px;">Password</div>
+          <code>{u.password}</code>
+          <button onclick="copyText('{u.password}')">Copia</button>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <a class="secondary" href="/login" target="_blank">Apri login</a>
+          <a class="secondary" href="/{slug}" target="_blank">Apri card</a>
+          <a class="secondary" href="{url_for('admin_home')}">⬅ Torna alla lista</a>
+        </div>
+
+        <form method="post" action="/admin/{slug}/send-credentials" style="margin-top:14px;">
+          <button type="submit">📨 Rigenera e invia credenziali (WhatsApp)</button>
+        </form>
+
+        <p class="small">Nota: aprendo questa pagina rigeneri la password (reset).</p>
+      </div>
+
+      <script>
+        function copyText(t){{
+          if(navigator.clipboard) {{
+            navigator.clipboard.writeText(t).then(()=>alert("Copiato: " + t));
+          }} else {{
+            window.prompt("Copia:", t);
+          }}
+        }}
+      </script>
+    </body>
+    </html>
+    """
+
+
+# ------------------ ADMIN BROADCAST (INVIO PROMO) ------------------
+@app.get("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_pro_agent(ag):
+        return "Funzione disponibile solo per piano PRO.", 403
+
+    subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
+    return render_template("admin_broadcast.html", agent=ag, subs_count=subs_count)
+
+
+@app.post("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast_post(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_pro_agent(ag):
+        return "Funzione disponibile solo per piano PRO.", 403
+
+    message = (request.form.get("message") or "").strip()
+    if not message:
+        flash("Scrivi un messaggio", "error")
+        subs_count = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").count()
+        return render_template("admin_broadcast.html", agent=ag, subs_count=subs_count)
+
+    subs = db.query(Subscriber).filter_by(merchant_slug=slug, status="active").all()
+
+    sent = 0
+    failed = 0
+    for s in subs:
+        ok, _resp = wa_send_text(s.wa_id, message)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    flash(f"Inviati: {sent} — Errori: {failed}.", "ok")
+    return redirect(url_for("admin_broadcast", slug=slug))
+
 
 
 # ✅ CREAZIONE RAPIDA PRO + INVIO (WHATSAPP)
