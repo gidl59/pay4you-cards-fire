@@ -56,13 +56,6 @@
         </div>
       {% endif %}
 
-      {% if editing_profile2 %}
-        <label>Label IT (nome profilo)</label>
-        <input type="text" name="label_it" value="Profilo 2">
-        <label>Label EN (profile name)</label>
-        <input type="text" name="label_en" value="Profile 2">
-      {% endif %}
-
       <label>Nome</label>
       <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
 
@@ -74,6 +67,31 @@
 
       <label>Bio / Descrizione</label>
       <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
+
+      <details style="margin-top:10px; border:1px solid rgba(148,163,184,0.18); border-radius:12px; padding:10px; background:rgba(15,23,42,0.5);">
+        <summary style="cursor:pointer; font-weight:700;">Versione inglese (opzionale)</summary>
+
+        <div style="height:8px;"></div>
+
+        <label>Nome (EN)</label>
+        <input type="text" name="name_en" value="{{ agent.name_en if agent else '' }}">
+
+        <label>Azienda (EN)</label>
+        <input type="text" name="company_en" value="{{ agent.company_en if agent else '' }}">
+
+        <label>Ruolo (EN)</label>
+        <input type="text" name="role_en" value="{{ agent.role_en if agent else '' }}">
+
+        <label>Bio (EN)</label>
+        <textarea name="bio_en">{{ agent.bio_en if agent else '' }}</textarea>
+
+        <label>Indirizzi (EN) (uno per riga)</label>
+        <textarea name="addresses_en">{{ agent.addresses_en if agent else '' }}</textarea>
+
+        <div style="font-size:12px; opacity:.8; margin-top:6px;">
+          Se il telefono è impostato in inglese, la card mostrerà questi testi (se compilati). Altrimenti usa l’italiano.
+        </div>
+      </details>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
@@ -92,7 +110,7 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
-      <label>WhatsApp (link o numero)</label>
+      <label>WhatsApp (numero o link)</label>
       <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
 
       <label>PEC</label>
@@ -126,19 +144,19 @@
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Foto profilo</label>
+      <label>Foto profilo (max 5MB)</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo extra</label>
+      <label>Logo (max 3MB)</label>
       <input type="file" name="extra_logo" accept="image/*">
 
-      <label>Galleria (max 30 immagini)</label>
+      <label>Galleria (max 30 immagini, 5MB ciascuna)</label>
       <input type="file" name="gallery" accept="image/*" multiple>
 
-      <label>Video (max 10)</label>
+      <label>Video (max 10, 60MB ciascuno)</label>
       <input type="file" name="videos" accept="video/*" multiple>
 
-      <label>PDF (fino a 12)</label>
+      <label>PDF (fino a 12, 12MB ciascuno)</label>
       <input type="file" name="pdf1" accept="application/pdf">
       <input type="file" name="pdf2" accept="application/pdf">
       <input type="file" name="pdf3" accept="application/pdf">
@@ -153,7 +171,7 @@
       <input type="file" name="pdf12" accept="application/pdf">
 
       {% if session.get('role') == 'admin' %}
-        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
+        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo (solo admin)</label>
         <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
       {% endif %}
 
