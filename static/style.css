@@ -883,3 +883,132 @@ a {
   border-radius: 14px;
   background:#000;
 }
+/* ===== PATCH 02/02/2026 (logo orbit + pdf modal + testi grandi + admin cards) ===== */
+
+.card-logo-top-left{
+  height: 64px;
+  width: auto;
+  filter: drop-shadow(0 6px 14px rgba(250,204,21,0.45));
+}
+
+.avatar-stack{
+  position: relative;
+  width: 170px;
+  height: 170px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* logo che gira dietro la foto */
+.logo-orbit{
+  position:absolute;
+  inset: -14px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 0;
+  pointer-events:none;
+  animation: orbit-spin 8s linear infinite;
+}
+.logo-orbit img{
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgba(250,204,21,0.55));
+}
+
+.avatar-flip{
+  position: relative;
+  z-index: 2;
+}
+
+/* testi più grandi */
+.big-text .card-name{
+  font-size: 28px;
+  line-height: 1.15;
+}
+.big-text .card-company{
+  font-size: 18px;
+  font-weight: 750;
+  opacity: .92;
+  margin-top: 6px;
+}
+.big-text .card-role-main{
+  font-size: 16px;
+  opacity: .9;
+  margin-top: 6px;
+}
+.big-text .card-bio{
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: .88;
+  margin-top: 10px;
+}
+
+/* PDF modal */
+.modal-pdf{
+  position: relative;
+  max-width: 980px;
+  width: min(980px, 96vw);
+}
+.pdf-frame{
+  width: 100%;
+  height: min(78vh, 820px);
+  border: 0;
+  border-radius: 14px;
+  background: #0b1220;
+}
+
+/* admin cards layout */
+.admin-wrapper{ max-width: 1050px; margin: 0 auto; }
+.admin-title{ margin: 0 0 14px 0; }
+.admin-top-actions{ margin-bottom: 14px; }
+
+.admin-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.admin-card{
+  background: rgba(15,23,42,0.70);
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 16px;
+  padding: 14px;
+}
+.admin-card-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.admin-card-sub{ font-size: 12px; opacity: .8; margin-top: 4px; }
+.admin-card-links{ display:flex; gap:8px; flex-wrap:wrap; }
+.admin-card-actions{ margin-top: 12px; display:flex; gap:8px; }
+
+.mini-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(2,6,23,0.35);
+  color:#e5e7eb;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration:none;
+  cursor:pointer;
+}
+.mini-btn:hover{ border-color: rgba(250,204,21,0.45); }
+.mini-btn.danger{
+  border-color: rgba(239,68,68,0.35);
+  color: rgba(239,68,68,0.95);
+}
+
+@keyframes orbit-spin{
+  from{ transform: rotate(0deg); }
+  to{ transform: rotate(360deg); }
+}
