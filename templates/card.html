@@ -7,99 +7,106 @@
 
   <div class="card-outer">
 
-    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        {% if profiles and profiles|length > 0 %}
-          <div style="font-size:12px; opacity:.85;">
-            {{ t.profile }}:
-          </div>
-
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <a class="header-link"
-               href="/{{ ag.slug }}?lang={{ lang }}"
-               style="text-decoration:none;">
-              {{ t.profile_1 }}
-            </a>
-
-            {# profilo 2 esiste se in lista c'è key=p2 #}
-            {% set has_p2 = false %}
-            {% for p in profiles %}
-              {% if p.key == 'p2' %}
-                {% set has_p2 = true %}
-              {% endif %}
-            {% endfor %}
-
-            {% if has_p2 %}
-              <a class="header-link"
-                 href="/{{ ag.slug }}?p=p2&lang={{ lang }}"
-                 style="text-decoration:none;">
-                {{ t.profile_2 }}
-              </a>
-            {% endif %}
-          </div>
+    <!-- HEADER -->
+    <div class="card-header-row" style="justify-content:space-between; align-items:center; gap:12px;">
+      <div>
+        {# ✅ NIENTE LOGO PAY4YOU DI DEFAULT: mostra solo se caricato #}
+        {% if ag.extra_logo_url %}
+          <img src="{{ ag.extra_logo_url }}" alt="Logo" class="card-logo-big" style="height:72px; animation:none;">
         {% endif %}
       </div>
 
-      <div style="display:flex; align-items:center; gap:8px;">
-        <div style="font-size:12px; opacity:.85;">{{ t.language }}:</div>
-        <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=it{% else %}?lang=it{% endif %}">IT</a>
-        <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=en{% else %}?lang=en{% endif %}">EN</a>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        {# ✅ Switch lingua (solo card pubblica) #}
+        <a class="pdf-item" href="?lang=it{% if p_key %}&p={{ p_key }}{% endif %}{% if request.args.get('owner')=='1' %}&owner=1{% endif %}">IT</a>
+        <a class="pdf-item" href="?lang=en{% if p_key %}&p={{ p_key }}{% endif %}{% if request.args.get('owner')=='1' %}&owner=1{% endif %}">EN</a>
+
+        {# ✅ Se hai profili #}
+        {% if profiles and profiles|length > 0 %}
+          <a class="pdf-item" href="/{{ ag.slug }}{% if request.args.get('owner')=='1' %}?owner=1{% endif %}">{{ t['profile_main'] }}</a>
+          {% for pr in profiles %}
+            <a class="pdf-item" href="/{{ ag.slug }}?p={{ pr.key }}{% if request.args.get('owner')=='1' %}&owner=1{% endif %}">
+              {{ pr.label }}
+            </a>
+          {% endfor %}
+        {% endif %}
       </div>
     </div>
 
-    <div style="height:14px;"></div>
-
+    <!-- BLOCCO BUSINESS -->
     <div class="business-card">
+
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
-          <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="foto">
+          <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="{{ ag.name }}">
         {% else %}
-          <div class="card-profile-photo" style="display:flex; align-items:center; justify-content:center;">
-            <span style="font-weight:700; opacity:.7;">NO FOTO</span>
+          <div class="card-profile-photo" style="display:flex; align-items:center; justify-content:center; font-weight:800; color:#0b1220; background:rgba(250,204,21,0.85);">
+            {{ t['no_photo'] }}
           </div>
         {% endif %}
       </div>
 
       <div class="card-name-block">
         <h1 class="card-name">{{ ag.name }}</h1>
-        {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
-        {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
-        {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
 
-        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-          <a class="header-link" href="/{{ ag.slug }}.vcf">{{
-            t.save_contact
-          }}</a>
+        {% if ag.role %}
+          <div class="card-role-main">{{ ag.role }}</div>
+        {% endif %}
 
-          <button class="header-link" type="button" onclick="openQr()">{{ t.scan_qr }}</button>
+        {% if ag.company %}
+          <div class="card-role-sub">{{ ag.company }}</div>
+        {% endif %}
 
-          <button class="header-link" type="button" onclick="copyNfc()">{{ t.nfc_link }}</button>
-        </div>
-
-        <div style="margin-top:8px; font-size:12px; opacity:.8;">
-          {{ t.nfc_link }}: <span style="font-family:ui-monospace,monospace;">{{ nfc_direct_url }}</span>
-        </div>
+        {% if ag.bio %}
+          <div class="card-bio">{{ ag.bio }}</div>
+        {% endif %}
       </div>
     </div>
 
+    <!-- ✅ CONTATTI (WhatsApp + Telefono ufficio + ecc.) -->
     <div class="card-section">
-      <h2>Contatti</h2>
+      <h2>{{ t['contacts'] }}</h2>
 
-      {% if mobiles %}
+      {% if mobiles and mobiles|length > 0 %}
         {% for m in mobiles %}
           <div class="contact-row whatsapp-row">
             <div class="icon">📱</div>
-            <div class="label">Tel</div>
-            <div class="value"><a href="tel:+{{ m }}">{{ m }}</a></div>
+            <div class="label">{{ t['mobile'] }}</div>
+            <div class="value">
+              <a href="tel:+{{ m|replace(' ','')|replace('-','') }}">{{ m }}</a>
+            </div>
           </div>
         {% endfor %}
       {% endif %}
 
-      {% if emails %}
+      {% if ag.phone_office %}
+        <div class="contact-row">
+          <div class="icon">☎️</div>
+          <div class="label">{{ t['office_phone'] }}</div>
+          <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
+        </div>
+      {% endif %}
+
+      {# ✅ WhatsApp “importantissimo” #}
+      {% if ag.whatsapp %}
+        <div class="contact-row whatsapp-row" style="border:1px solid rgba(34,197,94,0.35); border-radius:12px; margin-top:8px; padding:10px 8px;">
+          <div class="icon">💬</div>
+          <div class="label" style="color:#bbf7d0;">WhatsApp</div>
+          <div class="value">
+            {% if ag.whatsapp.startswith('http') %}
+              <a href="{{ ag.whatsapp }}" target="_blank" rel="noopener">{{ t['open_whatsapp'] }}</a>
+            {% else %}
+              <a href="https://wa.me/{{ ag.whatsapp|replace('+','')|replace(' ','') }}" target="_blank" rel="noopener">{{ t['open_whatsapp'] }}</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if emails and emails|length > 0 %}
         {% for e in emails %}
           <div class="contact-row">
             <div class="icon">✉️</div>
-            <div class="label">Email</div>
+            <div class="label">{{ t['email'] }}</div>
             <div class="value"><a href="mailto:{{ e }}">{{ e }}</a></div>
           </div>
         {% endfor %}
@@ -107,140 +114,240 @@
 
       {% if ag.pec %}
         <div class="contact-row">
-          <div class="icon">📨</div>
+          <div class="icon">📩</div>
           <div class="label">PEC</div>
-          <div class="value">{{ ag.pec }}</div>
+          <div class="value"><a href="mailto:{{ ag.pec }}">{{ ag.pec }}</a></div>
         </div>
       {% endif %}
 
-      {% if websites %}
+      {% if websites and websites|length > 0 %}
         {% for w in websites %}
-          <div class="contact-row social-row">
+          <div class="contact-row">
             <div class="icon">🌐</div>
-            <div class="label">Sito</div>
-            <div class="value"><a href="{{ w }}" target="_blank" rel="noopener">{{ w }}</a></div>
+            <div class="label">{{ t['website'] }}</div>
+            <div class="value"><a href="{{ w if w.startswith('http') else 'https://' ~ w }}" target="_blank" rel="noopener">{{ t['open_site'] }}</a></div>
           </div>
         {% endfor %}
       {% endif %}
     </div>
 
-    {% if addresses and addresses|length > 0 %}
-      <div class="card-section">
-        <h2>Indirizzo</h2>
-        {% for a in addresses %}
-          <div class="address-row">
-            <div class="address-value">{{ a }}</div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
+    <!-- ✅ SOCIAL: niente link lunghi -->
     <div class="card-section">
-      <h2>Social</h2>
+      <h2>{{ t['social'] }}</h2>
 
       {% set socials = [
-        ("Facebook", ag.facebook),
-        ("Instagram", ag.instagram),
-        ("LinkedIn", ag.linkedin),
-        ("TikTok", ag.tiktok),
-        ("Telegram", ag.telegram)
+        ('Facebook', ag.facebook),
+        ('Instagram', ag.instagram),
+        ('LinkedIn', ag.linkedin),
+        ('TikTok', ag.tiktok),
+        ('Telegram', ag.telegram)
       ] %}
-      {% for label, val in socials %}
-        {% if val %}
+
+      {% for label, url in socials %}
+        {% if url %}
           <div class="contact-row social-row">
             <div class="icon">🔗</div>
             <div class="label">{{ label }}</div>
-            <div class="value"><a href="{{ val }}" target="_blank" rel="noopener">{{ val }}</a></div>
+            <div class="value">
+              <a href="{{ url }}" target="_blank" rel="noopener">{{ t['open'] }}</a>
+            </div>
           </div>
         {% endif %}
       {% endfor %}
     </div>
 
+    <!-- ✅ BOX AZIONI RAPIDE (DOPO I SOCIAL) -->
+    <div class="card-section" style="border-color: rgba(96,165,250,0.28);">
+      <h2>{{ t['quick_actions'] }}</h2>
+
+      <div class="contact-row">
+        <div class="icon">✅</div>
+        <div class="label">{{ t['save_contact'] }}</div>
+        <div class="value">
+          <a href="/{{ ag.slug }}.vcf{% if p_key %}?p={{ p_key }}{% endif %}">{{ t['download'] }}</a>
+        </div>
+      </div>
+
+      <div class="contact-row">
+        <div class="icon">📷</div>
+        <div class="label">{{ t['scan_qr'] }}</div>
+        <div class="value">
+          <button class="link-button" type="button" onclick="openQrModal()">{{ t['open'] }}</button>
+        </div>
+      </div>
+
+      <div class="contact-row">
+        <div class="icon">📎</div>
+        <div class="label">{{ t['nfc_direct_link'] }}</div>
+        <div class="value">
+          <button class="link-button" type="button" onclick="copyText('{{ nfc_direct_url }}')">{{ t['copy'] }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ BUSINESS DATI (PIVA + SDI + INDIRIZZI) -->
+    {% if ag.piva or ag.sdi or addresses %}
+      <div class="card-section">
+        <h2>{{ t['business_data'] }}</h2>
+
+        {% if ag.piva %}
+          <div class="contact-row">
+            <div class="icon">🧾</div>
+            <div class="label">P.IVA</div>
+            <div class="value">{{ ag.piva }}</div>
+          </div>
+        {% endif %}
+
+        {% if ag.sdi %}
+          <div class="contact-row">
+            <div class="icon">🏷️</div>
+            <div class="label">SDI</div>
+            <div class="value">{{ ag.sdi }}</div>
+          </div>
+        {% endif %}
+
+        {% if addresses and addresses|length > 0 %}
+          <div class="address-row" style="margin-top:6px;">
+            <div style="font-size:13px; color:#9ca3af; margin-bottom:6px;">{{ t['addresses'] }}</div>
+            {% for a in addresses %}
+              <div class="address-value">📍 {{ a }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- ✅ PDF -->
     {% if pdfs and pdfs|length > 0 %}
       <div class="card-section">
-        <h2>Documenti</h2>
+        <h2>{{ t['documents'] }}</h2>
         <div class="pdf-list">
           {% for p in pdfs %}
             <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
-              <span class="pdf-icon">📄</span>
-              <span>{{ p.name }}</span>
+              <span class="pdf-icon">📄</span> {{ p.name }}
             </a>
           {% endfor %}
         </div>
       </div>
     {% endif %}
 
+    <!-- ✅ GALLERIA -->
     {% if gallery and gallery|length > 0 %}
       <div class="card-section">
-        <h2>Foto</h2>
+        <h2>{{ t['gallery'] }}</h2>
         <div class="gallery-scroll">
           {% for g in gallery %}
-            <a href="{{ g }}" target="_blank" rel="noopener">
-              <img src="{{ g }}" alt="foto">
-            </a>
+            <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ g }}', 'image')">
+              <img src="{{ g }}" alt="Gallery">
+            </button>
           {% endfor %}
         </div>
       </div>
     {% endif %}
 
+    <!-- ✅ VIDEO -->
     {% if videos and videos|length > 0 %}
       <div class="card-section">
-        <h2>Video</h2>
-        <div style="display:grid; gap:10px;">
+        <h2>{{ t['videos'] }}</h2>
+        <div class="gallery-scroll">
           {% for v in videos %}
-            <video controls preload="metadata" style="width:100%; border-radius:16px; border:1px solid rgba(148,163,184,0.35);">
-              <source src="{{ v }}" type="video/mp4">
-            </video>
+            <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ v }}', 'video')">
+              <img src="/static/video-thumb.png" alt="Video" onerror="this.style.display='none'">
+              <div style="position:relative; margin-top:-26px; margin-left:10px; font-weight:900; color:#facc15;">▶</div>
+            </button>
           {% endfor %}
         </div>
       </div>
     {% endif %}
 
-    {% if wa_optin_link %}
-      <div class="card-section">
-        <h2>Promo WhatsApp</h2>
-        <div style="font-size:13px; opacity:.9; margin-bottom:10px;">
-          Per ricevere le promozioni su WhatsApp, premi qui e invia il messaggio automatico.
+    {# ✅ BOX PROMO: solo per clienti finali.
+       Se tu apri la card dal pannello useremo ?owner=1 e lo nascondiamo #}
+    {% if wa_optin_link and request.args.get('owner') != '1' %}
+      <div class="card-section" style="border-color: rgba(34,197,94,0.25);">
+        <h2>{{ t['promos'] }}</h2>
+        <div class="contact-row whatsapp-row" style="border-bottom:none;">
+          <div class="icon">✅</div>
+          <div class="label">{{ t['subscribe_promos'] }}</div>
+          <div class="value">
+            <a href="{{ wa_optin_link }}" target="_blank" rel="noopener">{{ t['open_whatsapp'] }}</a>
+          </div>
         </div>
-        <a class="header-link" href="{{ wa_optin_link }}" target="_blank" rel="noopener">✅ Iscrivimi su WhatsApp</a>
+        <div style="margin-top:8px; font-size:12px; color:#9ca3af;">
+          {{ t['unsubscribe_hint'] }}
+        </div>
       </div>
     {% endif %}
 
     <div class="card-footer">
-      © Pay4You
+      {{ t['footer_note'] }}
     </div>
+
   </div>
 </div>
 
-<!-- MODAL QR -->
-<div id="qrModal" class="modal-overlay" style="display:none;">
+<!-- ✅ MODAL QR + MEDIA (CHIUDI SEMPRE SOPRA) -->
+<div id="modalOverlay" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <h2>{{ t.scan_qr }}</h2>
+    <div style="position:sticky; top:0; background:#020617; padding:6px 0 10px; z-index:10; display:flex; justify-content:space-between; align-items:center;">
+      <h2 id="modalTitle" style="margin:0;">{{ t['preview'] }}</h2>
+      <button class="modal-close-btn" type="button" onclick="closeModal()">{{ t['close'] }}</button>
+    </div>
 
-    <img id="qrImg"
-         src="/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}"
-         alt="QR"
-         style="width:100%; height:auto; max-height:70vh; object-fit:contain; border-radius:14px;">
-
-    <button class="modal-close-btn" type="button" onclick="closeQr()">{{ t.close }}</button>
+    <img id="qr-modal-img" src="" alt="Preview" style="display:none;">
+    <video id="qr-modal-video" controls style="display:none; width:100%; max-height:78vh; border-radius:14px; background:#000;"></video>
   </div>
 </div>
 
 <script>
-  function openQr(){
-    document.getElementById('qrModal').style.display = 'flex';
-  }
-  function closeQr(){
-    document.getElementById('qrModal').style.display = 'none';
+  function openQrModal(){
+    const img = document.getElementById('qr-modal-img');
+    const vid = document.getElementById('qr-modal-video');
+    img.style.display = 'block';
+    vid.style.display = 'none';
+    vid.pause();
+    document.getElementById('modalTitle').textContent = "{{ t['qr_code'] }}";
+    img.src = "/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}{% endif %}";
+    document.getElementById('modalOverlay').style.display = 'flex';
   }
 
-  function copyNfc(){
-    const t = "{{ nfc_direct_url }}";
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(t).then(()=>alert("Copiato: " + t));
+  function openMediaModal(url, kind){
+    const img = document.getElementById('qr-modal-img');
+    const vid = document.getElementById('qr-modal-video');
+    if(kind === 'video'){
+      img.style.display = 'none';
+      vid.style.display = 'block';
+      document.getElementById('modalTitle').textContent = "{{ t['video'] }}";
+      vid.src = url;
+      vid.load();
+      vid.play().catch(()=>{});
     }else{
-      window.prompt("Copia link:", t);
+      vid.pause();
+      vid.style.display = 'none';
+      img.style.display = 'block';
+      document.getElementById('modalTitle').textContent = "{{ t['image'] }}";
+      img.src = url;
+    }
+    document.getElementById('modalOverlay').style.display = 'flex';
+  }
+
+  function closeModal(){
+    const overlay = document.getElementById('modalOverlay');
+    const vid = document.getElementById('qr-modal-video');
+    try{ vid.pause(); }catch(e){}
+    overlay.style.display = 'none';
+  }
+
+  function copyText(t){
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(t).then(()=>alert("{{ t['copied'] }}: " + t));
+    }else{
+      window.prompt("{{ t['copy'] }}:", t);
     }
   }
+
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+  document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'modalOverlay') closeModal();
+  });
 </script>
 {% endblock %}
