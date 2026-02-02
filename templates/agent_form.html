@@ -5,15 +5,22 @@
 <div class="page-main">
   <div class="agent-form-wrapper">
 
+    {% set editing_profile2 = (agent and agent.__editing_profile2__) %}
+
     <h1 class="agent-form-title">
-      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
+      {% if session.get('role') == 'admin' %}
+        {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
+      {% else %}
+        {% if editing_profile2 %}Profilo 2{% else %}Profilo 1{% endif %}
+      {% endif %}
     </h1>
 
     {% if session.get('role') != 'admin' and agent %}
       <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Gestisci Profilo 2</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2&lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        <a class="header-link" href="/{{ agent.slug }}?lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Card principale</a>
+        <a class="header-link" href="{{ url_for('me_edit') }}">Profilo 1</a>
+        <a class="header-link" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card</a>
+        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (Profilo 2)</a>
       </div>
     {% endif %}
 
@@ -24,7 +31,11 @@
         {% set form_action = url_for('create_agent') %}
       {% endif %}
     {% else %}
-      {% set form_action = url_for('me_edit_post') %}
+      {% if editing_profile2 %}
+        {% set form_action = url_for('me_profile2_post') %}
+      {% else %}
+        {% set form_action = url_for('me_edit_post') %}
+      {% endif %}
     {% endif %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
@@ -40,11 +51,16 @@
           <option value="pro" {% if p=='pro' %}selected{% endif %}>pro</option>
         </select>
       {% else %}
-        {% if agent %}
-          <div style="font-size:12px; opacity:.75; margin-bottom:6px;">
-            Slug: <b>{{ agent.slug }}</b>
-          </div>
-        {% endif %}
+        <div style="font-size:12px; opacity:.75; margin-bottom:10px;">
+          Slug: <b>{{ agent.slug }}</b>
+        </div>
+      {% endif %}
+
+      {% if editing_profile2 %}
+        <label>Label IT (nome profilo)</label>
+        <input type="text" name="label_it" value="Profilo 2">
+        <label>Label EN (profile name)</label>
+        <input type="text" name="label_en" value="Profile 2">
       {% endif %}
 
       <label>Nome</label>
@@ -61,10 +77,10 @@
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Telefono mobile (WhatsApp / Cell)</label>
+      <label>Cellulare</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
-      <label>Telefono mobile 2</label>
+      <label>Cellulare 2</label>
       <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
 
       <label>Telefono ufficio</label>
@@ -76,10 +92,13 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
+      <label>WhatsApp (link o numero)</label>
+      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+
       <label>PEC</label>
       <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
 
-      <label>P.IVA</label>
+      <label>Partita IVA</label>
       <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
 
       <label>SDI</label>
@@ -105,15 +124,12 @@
       <label>Telegram</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
-      <label>WhatsApp (link o numero)</label>
-      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
-
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo extra (visibile in alto se caricato)</label>
+      <label>Logo extra</label>
       <input type="file" name="extra_logo" accept="image/*">
 
       <label>Galleria (max 30 immagini)</label>
@@ -135,6 +151,11 @@
       <input type="file" name="pdf10" accept="application/pdf">
       <input type="file" name="pdf11" accept="application/pdf">
       <input type="file" name="pdf12" accept="application/pdf">
+
+      {% if session.get('role') == 'admin' %}
+        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
+        <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
+      {% endif %}
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
