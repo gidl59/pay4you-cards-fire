@@ -1034,7 +1034,6 @@ def public_card(slug):
         mobiles=mobiles,
         wa_link=wa_link,
         qr_url=qr_url,
-        lang_links=lang_links,
     )
 
 
