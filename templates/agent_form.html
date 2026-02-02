@@ -1,194 +1,50 @@
 {% extends "base.html" %}
-
-{% block title %}
-  {% if agent %}Modifica scheda{% else %}Nuova scheda{% endif %}
-{% endblock %}
+{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-main">
-  <div class="agent-form-wrapper">
+  <div class="admin-card" style="max-width:900px; width:100%;">
 
-    <h1 class="agent-form-title">
-      {% if agent %}
-        {% if session.get("role") == "admin" %}
-          Modifica agente: {{ agent.name }}
-        {% else %}
-          Modifica la tua card
-        {% endif %}
-      {% else %}
-        Nuovo agente
-      {% endif %}
+    <h1 class="admin-title">
+      {% if agent %}Modifica: {{ agent.slug }}{% else %}Nuovo agente{% endif %}
     </h1>
 
-    {% if session.get("role") == "admin" %}
-      {% if agent %}
-        {% set form_action = url_for('update_agent', slug=agent.slug) %}
-      {% else %}
-        {% set form_action = url_for('create_agent') %}
-      {% endif %}
-    {% else %}
-      {% set form_action = url_for('me_edit_post') %}
-    {% endif %}
+    <form class="agent-form" method="post" enctype="multipart/form-data">
 
-    {# Piano: default:
-       - se esiste agent: usa agent.plan
-       - se nuovo agente (admin): default PRO (così fai “solo slug”)
-       - altrimenti: basic
-    #}
-    {% if agent and agent.plan %}
-      {% set plan = (agent.plan)|lower %}
-    {% else %}
-      {% if session.get("role") == "admin" and not agent %}
-        {% set plan = "pro" %}
-      {% else %}
-        {% set plan = "basic" %}
-      {% endif %}
-    {% endif %}
-
-    <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
-
-      {% if session.get("role") == "admin" %}
-        <label>Slug (es. bar-jonni)</label>
-        <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
-      {% else %}
-        <input type="hidden" name="slug" value="{{ agent.slug if agent else '' }}">
+      {% if session.get('role') == 'admin' %}
+        <label>Slug (solo admin)</label>
+        <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" {% if agent %}readonly{% endif %} required>
       {% endif %}
 
-      <label>Nome / Attività</label>
+      <h3 style="margin:10px 0 6px;">Italiano (principale)</h3>
 
-      {# ✅ SOLO SLUG: quando admin crea un nuovo agente, il Nome non è obbligatorio #}
-      {% if session.get("role") == "admin" and not agent %}
-        <input type="text" name="name" value="" placeholder="(opzionale) Se lasci vuoto, lo genero dallo slug">
-        <p style="margin-top:6px; font-size:12px; opacity:.8; line-height:1.4;">
-          ✅ Per creare velocemente: inserisci <b>solo lo slug</b> e salva. Il nome verrà generato automaticamente (es. <code>bar-jonni</code> → <code>Bar Jonni</code>).
-        </p>
-      {% else %}
-        <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
-      {% endif %}
+      <label>Nome (IT)</label>
+      <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
 
-      <label>Azienda</label>
-      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
-
-      <label>Ruolo</label>
+      <label>Ruolo (IT)</label>
       <input type="text" name="role" value="{{ agent.role if agent else '' }}">
 
-      <label>Bio / Descrizione</label>
-      <textarea name="bio" rows="4">{{ agent.bio if agent else '' }}</textarea>
+      <label>Azienda (IT)</label>
+      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
 
-      {% if session.get("role") == "admin" %}
-        <hr style="margin:16px 0; opacity:.2;">
+      <label>Bio (IT)</label>
+      <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
-        <h3 style="margin:0 0 10px 0;">Piano</h3>
+      <h3 style="margin:14px 0 6px;">English (optional)</h3>
 
-        <label>Piano scheda</label>
-        <select name="plan" style="padding:10px 12px; border-radius:10px; width:100%; max-width:520px;">
-          <option value="basic" {% if plan != 'pro' %}selected{% endif %}>Basic (solo card)</option>
-          <option value="pro" {% if plan == 'pro' %}selected{% endif %}>Pro (WhatsApp promo + funzioni avanzate)</option>
-        </select>
+      <label>Name (EN)</label>
+      <input type="text" name="name_en" value="{{ agent.name_en if agent else '' }}">
 
-        {% if plan != "pro" %}
-          <p style="margin-top:8px; font-size:12px; opacity:.85;">
-            ⚠️ Con <b>Basic</b> le funzioni PRO (promo WhatsApp, opt-in, broadcast) sono disattivate.
-          </p>
-        {% else %}
-          <p style="margin-top:8px; font-size:12px; opacity:.85;">
-            ✅ Con <b>Pro</b> abiliti opt-in WhatsApp + invio promo dall’admin (se hai configurato Meta).
-          </p>
-        {% endif %}
+      <label>Role (EN)</label>
+      <input type="text" name="role_en" value="{{ agent.role_en if agent else '' }}">
 
-        <p style="margin-top:8px; font-size:12px; opacity:.8;">
-          Suggerimento: lascia <b>Basic</b> per chi non ha pagato. Metti <b>Pro</b> solo ai clienti abilitati.
-        </p>
+      <label>Company (EN)</label>
+      <input type="text" name="company_en" value="{{ agent.company_en if agent else '' }}">
 
-        <hr style="margin:16px 0; opacity:.2;">
+      <label>Bio (EN)</label>
+      <textarea name="bio_en">{{ agent.bio_en if agent else '' }}</textarea>
 
-        <h3 style="margin:0 0 10px 0;">Multi-profile (opzionale)</h3>
-
-        <p style="margin:0 0 10px 0; font-size:12px; opacity:.85; line-height:1.4;">
-          Qui puoi creare <b>più profili</b> (logo/foto e testi diversi) dentro la stessa card.
-          <br>
-          - QR <b>standard</b>: <code>/{{ agent.slug if agent else 'slug' }}</code>
-          <br>
-          - NFC “direct” (profilo): <code>/{{ agent.slug if agent else 'slug' }}?p=p1</code> oppure <code>?p=p2</code>
-          <br>
-          - QR profilo (opzionale): <code>/{{ agent.slug if agent else 'slug' }}/qr.png?p=p1</code>
-        </p>
-
-        <label>Profili (JSON) — facoltativo</label>
-        <textarea id="profiles_json" name="profiles_json" rows="10"
-                  style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px;"
-                  placeholder='[
-  {
-    "key": "p1",
-    "label": "Profilo Business",
-    "photo_url": "/uploads/photos/xxx.jpg",
-    "logo_url": "/uploads/logos/yyy.png",
-    "name": "Nome visualizzato",
-    "role": "Ruolo",
-    "company": "Azienda",
-    "bio": "Descrizione"
-  }
-]'>{{ agent.profiles_json if agent and agent.profiles_json else '' }}</textarea>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-          <button type="button" onclick="fillProfilesExample()"
-                  style="background:#334155; color:white; border:none; padding:10px 12px; border-radius:10px; cursor:pointer;">
-            Incolla esempio 2 profili
-          </button>
-
-          <button type="button" onclick="clearProfiles()"
-                  style="background:#111827; color:white; border:1px solid rgba(148,163,184,0.35); padding:10px 12px; border-radius:10px; cursor:pointer;">
-            Svuota
-          </button>
-        </div>
-
-        <p style="margin-top:10px; font-size:12px; opacity:.8; line-height:1.4;">
-          ✅ Se lasci vuoto, la card resta <b>mono-profilo</b> (come oggi).<br>
-          Consiglio: usa <b>p1</b> per profilo biglietto da visita e <b>p2</b> per profilo “promo”.
-        </p>
-
-        <script>
-          function fillProfilesExample(){
-            const el = document.getElementById('profiles_json');
-            if(!el) return;
-
-            const example = [
-              {
-                key: "p1",
-                label: "Profilo Business",
-                photo_url: "/uploads/photos/INSERISCI_FOTO_1.jpg",
-                logo_url: "/uploads/logos/INSERISCI_LOGO_1.png",
-                name: "{{ agent.name if agent else 'Nome Business' }}",
-                role: "{{ agent.role if agent else 'Ruolo' }}",
-                company: "{{ agent.company if agent else 'Azienda' }}",
-                bio: "Profilo principale (biglietto da visita)."
-              },
-              {
-                key: "p2",
-                label: "Profilo Promo",
-                photo_url: "/uploads/photos/INSERISCI_FOTO_2.jpg",
-                logo_url: "/uploads/logos/INSERISCI_LOGO_2.png",
-                name: "Promo {{ agent.name if agent else '' }}",
-                role: "Offerte & Promozioni",
-                company: "{{ agent.company if agent else 'Azienda' }}",
-                bio: "Profilo promozionale (es. menu, offerte, eventi)."
-              }
-            ];
-
-            el.value = JSON.stringify(example, null, 2);
-            alert("Esempio inserito ✅\nOra cambia photo_url e logo_url con quelli veri.");
-          }
-
-          function clearProfiles(){
-            const el = document.getElementById('profiles_json');
-            if(el) el.value = "";
-          }
-        </script>
-      {% endif %}
-
-      <hr style="margin:16px 0; opacity:.2;">
-
-      <h3 style="margin:0 0 10px 0;">Contatti</h3>
+      <h3 style="margin:14px 0 6px;">Contatti</h3>
 
       <label>Mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
@@ -196,44 +52,14 @@
       <label>Mobile 2</label>
       <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
 
-      <label>Telefono ufficio</label>
+      <label>Ufficio</label>
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
 
       <label>Email (separate da virgola)</label>
       <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
 
-      <label>Siti web (separati da virgola)</label>
+      <label>Siti web (separati da virgola, includi https://)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
-
-      {# ✅ WhatsApp:
-         - ADMIN: lo vede sempre (così può prepararlo)
-         - CLIENTE: lo vede SOLO se piano PRO
-      #}
-      {% if session.get("role") == "admin" or plan == "pro" %}
-        <label>WhatsApp (link o numero)</label>
-        <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
-        {% if plan != "pro" and session.get("role") == "admin" %}
-          <p style="margin-top:6px; font-size:12px; opacity:.75;">
-            Nota: per mostrare WhatsApp anche al cliente, imposta il piano su <b>Pro</b>.
-          </p>
-        {% endif %}
-      {% endif %}
-
-      <label>PEC</label>
-      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
-
-      <label>Partita IVA</label>
-      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
-
-      <label>SDI</label>
-      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
-
-      <label>Indirizzi (uno per riga)</label>
-      <textarea name="addresses" rows="4">{{ agent.addresses if agent else '' }}</textarea>
-
-      <hr style="margin:16px 0; opacity:.2;">
-
-      <h3 style="margin:0 0 10px 0;">Social</h3>
 
       <label>Facebook</label>
       <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
@@ -250,70 +76,76 @@
       <label>Telegram</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
-      <hr style="margin:16px 0; opacity:.2;">
+      {% if session.get('role') == 'admin' or agent.plan == 'pro' %}
+        <label>WhatsApp (solo PRO)</label>
+        <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+      {% endif %}
 
-      <h3 style="margin:0 0 10px 0;">Media</h3>
+      <label>PEC</label>
+      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+
+      <h3 style="margin:14px 0 6px;">Dati fiscali / indirizzi</h3>
+
+      <label>P.IVA</label>
+      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+
+      <label>SDI</label>
+      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+
+      <label>Indirizzi (uno per riga)</label>
+      <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
+
+      <h3 style="margin:14px 0 6px;">Media</h3>
 
       <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
-      {% if agent and agent.photo_url %}
-        <div style="font-size:12px; opacity:.8; margin-top:6px;">
-          Attuale: <a href="{{ agent.photo_url }}" target="_blank">{{ agent.photo_url }}</a>
-        </div>
-      {% endif %}
 
       <label>Logo extra</label>
       <input type="file" name="extra_logo" accept="image/*">
-      {% if agent and agent.extra_logo_url %}
-        <div style="font-size:12px; opacity:.8; margin-top:6px;">
-          Attuale: <a href="{{ agent.extra_logo_url }}" target="_blank">{{ agent.extra_logo_url }}</a>
+
+      <label>Galleria foto (multi)</label>
+      <input type="file" name="gallery" accept="image/*" multiple>
+
+      <label>Video (multi)</label>
+      <input type="file" name="videos" accept="video/*" multiple>
+
+      <h3 style="margin:14px 0 6px;">PDF (max 12)</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        {% for i in range(1,13) %}
+          <div>
+            <label>PDF {{ i }}</label>
+            <input type="file" name="pdf{{ i }}" accept="application/pdf">
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if session.get('role') == 'admin' %}
+        <div style="margin-top:12px;">
+          <label><input type="checkbox" name="delete_pdfs" value="1"> Elimina tutti i PDF esistenti</label>
         </div>
       {% endif %}
 
-      <label>Galleria (fino a 30 immagini)</label>
-      <input type="file" name="gallery" accept="image/*" multiple>
+      {% if session.get('role') == 'admin' %}
+        <h3 style="margin:14px 0 6px;">Piano</h3>
+        <label>Plan</label>
+        <select name="plan">
+          <option value="basic" {% if agent and agent.plan=='basic' %}selected{% endif %}>basic</option>
+          <option value="pro" {% if agent and agent.plan=='pro' %}selected{% endif %}>pro</option>
+        </select>
 
-      <label>Video (fino a 10)</label>
-      <input type="file" name="videos" accept="video/*" multiple>
-
-      <hr style="margin:16px 0; opacity:.2;">
-
-      <h3 style="margin:0 0 10px 0;">PDF (fino a 12)</h3>
-
-      {% if session.get("role") == "admin" and agent and agent.pdf1_url %}
-        <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-          <input type="checkbox" name="delete_pdfs" value="1">
-          Elimina tutti i PDF attuali
-        </label>
+        <h3 style="margin:14px 0 6px;">Multi-profile JSON (opzionale)</h3>
+        <textarea name="profiles_json" placeholder='[{"key":"p1",...}]'>{{ agent.profiles_json if agent else '' }}</textarea>
       {% endif %}
 
-      {% for i in range(1,13) %}
-        <label>PDF {{ i }}</label>
-        <input type="file" name="pdf{{ i }}" accept="application/pdf">
-      {% endfor %}
-
-      <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+      <div class="agent-form-buttons" style="margin-top:16px;">
         <button type="submit">Salva</button>
-
-        {% if session.get("role") == "admin" %}
-          <a href="{{ url_for('admin_home') }}" style="text-decoration:none; padding:10px 12px; border-radius:10px; background:#334155; color:white;">
-            Annulla
-          </a>
-        {% else %}
-          <a href="{{ url_for('public_card', slug=agent.slug) }}" target="_blank"
-             style="text-decoration:none; padding:10px 12px; border-radius:10px; background:#334155; color:white;">
-            Vedi card
-          </a>
+        {% if session.get('role') == 'admin' %}
+          <a class="btn-secondary" href="{{ url_for('admin_home') }}">Torna lista</a>
         {% endif %}
       </div>
 
-      {% if session.get("role") != "admin" %}
-        <p style="margin-top:10px; font-size:12px; opacity:.8;">
-          Nota: lo <b>slug</b> è bloccato per mantenere validi QR/NFC.
-        </p>
-      {% endif %}
-
     </form>
+
   </div>
 </div>
 {% endblock %}
