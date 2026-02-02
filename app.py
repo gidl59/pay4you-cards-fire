@@ -62,6 +62,125 @@ MAX_VIDEOS = 10
 
 SUPPORTED_LANGS = ("it", "en", "es", "fr", "de")
 
+# ===== TRADUZIONI (card pubblica) =====
+TRANSLATIONS = {
+    "it": {
+        "language": "Lingua",
+        "multi_profile": "Multi-profile (opzionale)",
+        "choose_profile": "Scegli quale profilo aprire. Per NFC usa il link “direct”.",
+        "open_main": "Apri profilo principale",
+        "direct_profile": "Profilo direct",
+        "contacts": "Contatti",
+        "mobile": "Mobile",
+        "office": "Ufficio",
+        "email": "Email",
+        "website": "Sito",
+        "business": "Dati business",
+        "addresses": "Indirizzi",
+        "gallery": "Galleria",
+        "videos": "Video",
+        "documents": "Documenti",
+        "video_not_supported": "Il tuo browser non supporta il video.",
+        "promos": "Promo WhatsApp",
+        "promos_desc": "Puoi iscriverti per ricevere offerte e novità su WhatsApp. (Puoi disdire quando vuoi con STOP.)",
+        "subscribe_whatsapp": "Iscriviti su WhatsApp",
+        "stop_note": "Per annullare: scrivi STOP su WhatsApp.",
+        "updated_always": "Profilo sempre aggiornabile",
+    },
+    "en": {
+        "language": "Language",
+        "multi_profile": "Multi-profile (optional)",
+        "choose_profile": "Choose which profile to open. For NFC use the direct link.",
+        "open_main": "Open main profile",
+        "direct_profile": "Direct profile",
+        "contacts": "Contacts",
+        "mobile": "Mobile",
+        "office": "Office",
+        "email": "Email",
+        "website": "Website",
+        "business": "Business details",
+        "addresses": "Addresses",
+        "gallery": "Gallery",
+        "videos": "Videos",
+        "documents": "Documents",
+        "video_not_supported": "Your browser does not support video.",
+        "promos": "WhatsApp promos",
+        "promos_desc": "Subscribe to receive offers and updates on WhatsApp. (You can stop anytime with STOP.)",
+        "subscribe_whatsapp": "Subscribe on WhatsApp",
+        "stop_note": "To stop: send STOP on WhatsApp.",
+        "updated_always": "Always updatable profile",
+    },
+    "es": {
+        "language": "Idioma",
+        "multi_profile": "Multi-perfil (opcional)",
+        "choose_profile": "Elige qué perfil abrir. Para NFC usa el enlace directo.",
+        "open_main": "Abrir perfil principal",
+        "direct_profile": "Perfil directo",
+        "contacts": "Contactos",
+        "mobile": "Móvil",
+        "office": "Oficina",
+        "email": "Email",
+        "website": "Sitio web",
+        "business": "Datos de negocio",
+        "addresses": "Direcciones",
+        "gallery": "Galería",
+        "videos": "Videos",
+        "documents": "Documentos",
+        "video_not_supported": "Tu navegador no soporta video.",
+        "promos": "Promos WhatsApp",
+        "promos_desc": "Suscríbete para recibir ofertas y novedades en WhatsApp. (Puedes cancelar con STOP.)",
+        "subscribe_whatsapp": "Suscribirse en WhatsApp",
+        "stop_note": "Para cancelar: envía STOP por WhatsApp.",
+        "updated_always": "Perfil siempre actualizable",
+    },
+    "fr": {
+        "language": "Langue",
+        "multi_profile": "Multi-profil (optionnel)",
+        "choose_profile": "Choisis le profil à ouvrir. Pour NFC utilise le lien direct.",
+        "open_main": "Ouvrir le profil principal",
+        "direct_profile": "Profil direct",
+        "contacts": "Contacts",
+        "mobile": "Mobile",
+        "office": "Bureau",
+        "email": "Email",
+        "website": "Site web",
+        "business": "Détails entreprise",
+        "addresses": "Adresses",
+        "gallery": "Galerie",
+        "videos": "Vidéos",
+        "documents": "Documents",
+        "video_not_supported": "Votre navigateur ne prend pas en charge la vidéo.",
+        "promos": "Promos WhatsApp",
+        "promos_desc": "Abonne-toi pour recevoir offres et nouveautés sur WhatsApp. (STOP pour se désabonner.)",
+        "subscribe_whatsapp": "S'abonner sur WhatsApp",
+        "stop_note": "Pour arrêter : envoie STOP sur WhatsApp.",
+        "updated_always": "Profil toujours modifiable",
+    },
+    "de": {
+        "language": "Sprache",
+        "multi_profile": "Multi-Profil (optional)",
+        "choose_profile": "Wähle, welches Profil geöffnet werden soll. Für NFC nutze den Direct-Link.",
+        "open_main": "Hauptprofil öffnen",
+        "direct_profile": "Direct-Profil",
+        "contacts": "Kontakte",
+        "mobile": "Mobil",
+        "office": "Büro",
+        "email": "E-Mail",
+        "website": "Website",
+        "business": "Business-Daten",
+        "addresses": "Adressen",
+        "gallery": "Galerie",
+        "videos": "Videos",
+        "documents": "Dokumente",
+        "video_not_supported": "Dein Browser unterstützt kein Video.",
+        "promos": "WhatsApp-Promos",
+        "promos_desc": "Abonniere Angebote und Neuigkeiten per WhatsApp. (STOP zum Abmelden.)",
+        "subscribe_whatsapp": "Auf WhatsApp abonnieren",
+        "stop_note": "Zum Abmelden: STOP per WhatsApp senden.",
+        "updated_always": "Profil jederzeit aktualisierbar",
+    },
+}
+
 
 # ===== MODELS =====
 class Agent(Base):
@@ -100,19 +219,14 @@ class Agent(Base):
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    # ✅ Piano (basic/pro). Basic = solo card, Pro = WhatsApp promo + broadcast ecc.
+    # ✅ Piano (basic/pro)
     plan = Column(String, nullable=True)  # "basic" | "pro"
 
-    # ✅ Multi-profile JSON (testo JSON)
+    # ✅ Multi-profile JSON
     profiles_json = Column(Text, nullable=True)
 
 
 class User(Base):
-    """
-    Utenti per login:
-    - admin: username=admin, password=ADMIN_PASSWORD (creato automaticamente)
-    - client: username=slug, password=generata, agent_slug=slug
-    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
@@ -123,16 +237,11 @@ class User(Base):
 
 
 class Subscriber(Base):
-    """
-    Iscritti WhatsApp per singola attività (merchant_slug).
-    wa_id = numero utente senza + (es: 39333...)
-    status = active | stopped
-    """
     __tablename__ = "subscribers"
 
     id = Column(Integer, primary_key=True)
-    wa_id = Column(String, nullable=False)            # es "393333..."
-    merchant_slug = Column(String, nullable=False)    # es "bar-jonni"
+    wa_id = Column(String, nullable=False)
+    merchant_slug = Column(String, nullable=False)
     status = Column(String, nullable=False, default="active")  # active/stopped
     created_at = Column(String, nullable=True)
     updated_at = Column(String, nullable=True)
@@ -164,10 +273,6 @@ ensure_sqlite_column("subscribers", "status", "TEXT")
 
 
 def ensure_default_plan_basic():
-    """
-    Imposta plan='basic' dove mancante/vuoto.
-    (Così di default NON appare WhatsApp promo)
-    """
     with engine.connect() as conn:
         conn.execute(sa_text("UPDATE agents SET plan='basic' WHERE plan IS NULL OR TRIM(plan)=''"))
         conn.commit()
@@ -227,10 +332,6 @@ def get_base_url():
 
 
 def upload_file(file_storage, folder="uploads"):
-    """
-    ✅ Salva i file su disco persistente Render: /var/data/uploads/<folder>/...
-    e restituisce un URL servito da /uploads/<folder>/<filename>
-    """
     if not file_storage or not file_storage.filename:
         return None
 
@@ -288,47 +389,29 @@ def slugify(s: str) -> str:
     return s
 
 
-# ✅ VALIDAZIONE NUMERO WHATSAPP (FORTE)
 def normalize_wa_id_strict(raw: str):
-    """
-    Accetta:
-      - "393401112233"
-      - "+39 340 111 2233"
-      - "3401112233"  -> diventa "393401112233"
-
-    Ritorna (wa_id, error) dove:
-      - wa_id è stringa solo numeri, formato E.164 senza + (es: "39...")
-      - error è "" se ok, altrimenti messaggio
-    """
     t = (raw or "").strip()
     if not t:
-        return "", ""  # vuoto = ok (non obbligatorio)
+        return "", ""
 
-    # pulizia base
     t = t.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
     if t.startswith("+"):
         t = t[1:]
     if t.startswith("00"):
         t = t[2:]
 
-    # deve essere solo numeri
     if not t.isdigit():
         return "", "Numero WhatsApp non valido: usa solo numeri (es: 393401112233)."
 
-    # Italia: se 10 cifre e inizia con 3 -> aggiungo 39
     if len(t) == 10 and t.startswith("3"):
         t = "39" + t
 
-    # ora deve iniziare con prefisso paese (qui pretendiamo 39*)
-    # se vuoi accettare altri paesi, dimmelo e lo allarghiamo.
     if not t.startswith("39"):
         return "", "Numero WhatsApp non valido: usa formato italiano con prefisso 39 (es: 393401112233)."
 
-    # lunghezza plausibile per IT: 12 cifre (39 + 10)
     if len(t) != 12:
         return "", "Numero WhatsApp non valido: per Italia deve essere 12 cifre (39 + 10). Esempio: 393401112233."
 
-    # ulteriore check: dopo 39, mobile tipico inizia con 3
     if not t[2:].startswith("3"):
         return "", "Numero WhatsApp non valido: sembra non essere un cellulare (deve iniziare con 3 dopo 39)."
 
@@ -342,12 +425,10 @@ def extract_merchant_from_optin(text_body: str) -> str:
         return ""
 
     after = re.split(r"\bISCRIVIMI\b", t, flags=re.IGNORECASE, maxsplit=1)[-1].strip()
-
     if "+" in after:
         after = after.split("+", 1)[0].strip()
 
     after = re.split(r"\bACCETTO\b", after, flags=re.IGNORECASE, maxsplit=1)[0].strip()
-
     return slugify(after)
 
 
@@ -398,6 +479,15 @@ def pick_lang_from_request() -> str:
     return "it"
 
 
+def t(key: str, lang: str = "it") -> str:
+    lang = (lang or "it").split("-", 1)[0].lower()
+    if lang not in SUPPORTED_LANGS:
+        lang = "it"
+    return (TRANSLATIONS.get(lang, {}).get(key)
+            or TRANSLATIONS["it"].get(key)
+            or key)
+
+
 # ===== MULTI-PROFILI (JSON) =====
 def parse_profiles_json(raw: str):
     if not raw:
@@ -441,6 +531,33 @@ def select_profile(profiles, requested_key: str):
         if p.get("key") == requested_key:
             return p
     return None
+
+
+def upsert_profile(raw_json: str, profile: dict):
+    """Inserisce/aggiorna un profilo (es. key='p2') dentro profiles_json."""
+    arr = parse_profiles_json(raw_json or "")
+    key = profile.get("key")
+    if not key:
+        return raw_json or ""
+
+    found = False
+    for i, p in enumerate(arr):
+        if p.get("key") == key:
+            arr[i] = profile
+            found = True
+            break
+    if not found:
+        arr.append(profile)
+
+    return json.dumps(arr, ensure_ascii=False, indent=2)
+
+
+def delete_profile_key(raw_json: str, key: str):
+    arr = parse_profiles_json(raw_json or "")
+    arr = [p for p in arr if p.get("key") != key]
+    if not arr:
+        return ""
+    return json.dumps(arr, ensure_ascii=False, indent=2)
 
 
 def agent_to_view(ag: Agent):
@@ -551,10 +668,6 @@ def build_credentials_message(slug: str, username: str, password: str) -> str:
 
 
 def send_credentials_to_client_wa_only(ag: Agent, user_obj: User, wa_raw: str = ""):
-    """
-    Solo WhatsApp (SMTP lo facciamo domani).
-    - Se wa_raw vuoto: prova agent.phone_mobile
-    """
     wa_target, err = normalize_wa_id_strict(wa_raw or (getattr(ag, "phone_mobile", "") or ""))
     if err:
         return {"wa": (False, err)}
@@ -642,7 +755,7 @@ def admin_quick_pro_create():
     slug = slugify(request.form.get("slug", ""))
     name = (request.form.get("name") or "").strip()
     wa_raw = (request.form.get("wa") or "").strip()
-    email_raw = (request.form.get("email") or "").strip()  # domani lo useremo per SMTP
+    email_raw = (request.form.get("email") or "").strip()  # domani SMTP
 
     if not slug:
         flash("Slug obbligatorio", "error")
@@ -655,7 +768,6 @@ def admin_quick_pro_create():
     if not name:
         name = slug
 
-    # ✅ valida WA subito (se compilato)
     wa_norm, wa_err = normalize_wa_id_strict(wa_raw)
     if wa_err:
         flash(wa_err, "error")
@@ -667,7 +779,7 @@ def admin_quick_pro_create():
         company=None,
         role=None,
         bio=None,
-        phone_mobile=wa_norm or None,   # salvo normalizzato
+        phone_mobile=wa_norm or None,
         phone_mobile2=None,
         phone_office=None,
         emails=email_raw or None,
@@ -701,9 +813,7 @@ def admin_quick_pro_create():
     db.add(u)
     db.commit()
 
-    # ✅ invio WA (solo se numero presente)
     results = send_credentials_to_client_wa_only(ag, u, wa_raw=wa_norm)
-
     wa_ok, wa_resp = results.get("wa") or (False, "")
 
     info = ["Cliente PRO creato ✅"]
@@ -712,7 +822,6 @@ def admin_quick_pro_create():
     else:
         info.append(f"WhatsApp non inviato ({wa_resp})")
 
-    # email domani
     if email_raw:
         info.append("Email: domani (SMTP)")
 
@@ -720,7 +829,6 @@ def admin_quick_pro_create():
     return redirect(url_for("admin_home"))
 
 
-# ✅ REINVIO CREDENZIALI (rigenera password e invia WhatsApp)
 @app.post("/admin/<slug>/send-credentials")
 @admin_required
 def admin_send_credentials(slug):
@@ -753,7 +861,6 @@ def admin_send_credentials(slug):
     return redirect(url_for("admin_home"))
 
 
-# ✅ EXPORT JSON
 @app.get("/admin/export_agents.json")
 @admin_required
 def admin_export_agents_json():
@@ -799,7 +906,6 @@ def admin_export_agents_json():
     return resp
 
 
-# ------------------ CREDENZIALI (RESET + COPIA) ------------------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials(slug):
@@ -882,7 +988,6 @@ def admin_credentials(slug):
     """
 
 
-# ------------------ ADMIN BROADCAST (INVIO PROMO) ------------------
 @app.get("/admin/<slug>/broadcast")
 @admin_required
 def admin_broadcast(slug):
@@ -1245,6 +1350,113 @@ def me_edit_post():
     return redirect(url_for("me_edit"))
 
 
+# ✅ PROFILO 2 SEMPLICE (dietro le quinte salva p2 nel JSON)
+@app.get("/me/profile2")
+@login_required
+def me_profile2():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    p2 = select_profile(profiles, "p2") or {
+        "key": "p2",
+        "label": "Profilo 2",
+        "photo_url": "",
+        "logo_url": "",
+        "name": "",
+        "role": "",
+        "company": "",
+        "bio": "",
+    }
+
+    return render_template("profile2_form.html", agent=ag, p2=p2, error=None, ok=None)
+
+
+@app.post("/me/profile2")
+@login_required
+def me_profile2_post():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    name = (request.form.get("name") or "").strip()
+    role = (request.form.get("role") or "").strip()
+    company = (request.form.get("company") or "").strip()
+    bio = (request.form.get("bio") or "").strip()
+
+    if not name:
+        profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+        p2 = select_profile(profiles, "p2") or {"key": "p2"}
+        return render_template("profile2_form.html", agent=ag, p2=p2, error="Il nome è obbligatorio.", ok=None)
+
+    photo = request.files.get("photo")
+    logo = request.files.get("logo")
+
+    photo_url = None
+    logo_url = None
+    if photo and photo.filename:
+        photo_url = upload_file(photo, "photos")
+    if logo and logo.filename:
+        logo_url = upload_file(logo, "logos")
+
+    # Carico p2 attuale per non perdere foto/logo se non ricaricati
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    current_p2 = select_profile(profiles, "p2") or {}
+
+    p2_profile = {
+        "key": "p2",
+        "label": "Profilo 2",
+        "photo_url": photo_url or (current_p2.get("photo_url") or ""),
+        "logo_url": logo_url or (current_p2.get("logo_url") or ""),
+        "name": name,
+        "role": role,
+        "company": company,
+        "bio": bio,
+    }
+
+    ag.profiles_json = upsert_profile(getattr(ag, "profiles_json", "") or "", p2_profile)
+    db.commit()
+
+    return redirect(url_for("me_profile2"))
+
+
+@app.post("/me/profile2/clear")
+@login_required
+def me_profile2_clear():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    ag.profiles_json = delete_profile_key(getattr(ag, "profiles_json", "") or "", "p2")
+    db.commit()
+    return redirect(url_for("me_profile2"))
+
+
 # ------------------ CARD PUBBLICA ------------------
 @app.get("/<slug>")
 def public_card(slug):
@@ -1254,7 +1466,6 @@ def public_card(slug):
         abort(404)
 
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-
     lang = pick_lang_from_request()
 
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
@@ -1309,6 +1520,7 @@ def public_card(slug):
         active_profile=active_profile,
         p_key=p_key,
         nfc_direct_url=nfc_direct_url,
+        t=lambda k: t(k, lang),
     )
 
 
