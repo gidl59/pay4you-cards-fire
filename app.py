@@ -19,11 +19,6 @@ from dotenv import load_dotenv
 import qrcode
 import urllib.parse
 
-try:
-    import requests
-except Exception:
-    requests = None
-
 load_dotenv()
 
 # ===== ENV / CONFIG =====
@@ -31,17 +26,15 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 
-# WhatsApp Cloud API (poi lo rifiniamo)
 WA_VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "verify_token_change_me")
-WA_TOKEN = os.getenv("WA_TOKEN", "")
-WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "")
-WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
 
 WA_OPTIN_PHONE = os.getenv("WA_OPTIN_PHONE", "393508725353").strip().replace("+", "").replace(" ", "")
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
+
+# limite totale richiesta (multipart) – lascia così
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200MB
 
 DB_URL = "sqlite:////var/data/data.db"
@@ -54,12 +47,21 @@ MAX_VIDEOS = 10
 
 SUPPORTED_LANGS = ("it", "en")
 
-# ===== TRADUZIONI (IT/EN) =====
+# ===== LIMITI FILE (per non bloccare tutto) =====
+MAX_PHOTO_MB = 5
+MAX_LOGO_MB = 3
+MAX_GALLERY_IMAGE_MB = 5
+MAX_VIDEO_MB = 60
+MAX_PDF_MB = 12
+
+def mb_to_bytes(mb: int) -> int:
+    return int(mb) * 1024 * 1024
+
+# ===== TRADUZIONI (solo testi fissi UI) =====
 I18N = {
     "it": {
         "save_contact": "Salva contatto",
         "scan_qr": "Scansiona QR",
-        "direct_nfc": "Link NFC diretto",
         "actions": "Azioni",
         "contacts": "Contatti",
         "addresses": "Indirizzi",
@@ -82,17 +84,12 @@ I18N = {
         "linkedin": "LinkedIn",
         "tiktok": "TikTok",
         "telegram": "Telegram",
-        "subscribe_title": "Promozioni su WhatsApp",
-        "subscribe_desc": "Se sei un cliente, puoi iscriverti alle promozioni inviando il messaggio su WhatsApp.",
-        "subscribe_btn": "Iscriviti (clienti)",
         "profile": "Profilo",
         "profile2": "Profilo 2",
-        "lang": "Lingua",
     },
     "en": {
         "save_contact": "Save contact",
         "scan_qr": "Scan QR",
-        "direct_nfc": "Direct NFC link",
         "actions": "Actions",
         "contacts": "Contacts",
         "addresses": "Addresses",
@@ -115,12 +112,8 @@ I18N = {
         "linkedin": "LinkedIn",
         "tiktok": "TikTok",
         "telegram": "Telegram",
-        "subscribe_title": "WhatsApp Promotions",
-        "subscribe_desc": "If you are a customer, you can subscribe by sending the message on WhatsApp.",
-        "subscribe_btn": "Subscribe (customers)",
         "profile": "Profile",
         "profile2": "Profile 2",
-        "lang": "Language",
     }
 }
 
@@ -138,10 +131,16 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
-
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
+
+    # versioni EN (opzionali)
+    name_en = Column(String, nullable=True)
+    company_en = Column(String, nullable=True)
+    role_en = Column(String, nullable=True)
+    bio_en = Column(Text, nullable=True)
+    addresses_en = Column(Text, nullable=True)
 
     phone_mobile = Column(String, nullable=True)
     phone_mobile2 = Column(String, nullable=True)
@@ -163,7 +162,7 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    extra_logo_url = Column(String, nullable=True)
+    extra_logo_url = Column(String, nullable=True)  # (lo chiamiamo “Logo” nel form)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
@@ -177,26 +176,15 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)  # (per ora semplice)
-    role = Column(String, nullable=False, default="client")  # admin|client
+    password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="client")
     agent_slug = Column(String, nullable=True)
-
-
-class Subscriber(Base):
-    __tablename__ = "subscribers"
-    id = Column(Integer, primary_key=True)
-    wa_id = Column(String, nullable=False)
-    merchant_slug = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="active")
-    created_at = Column(String, nullable=True)
-    updated_at = Column(String, nullable=True)
-    last_text = Column(Text, nullable=True)
 
 
 Base.metadata.create_all(engine)
 
 
-# ===== MICRO-MIGRAZIONI (safe) =====
+# ===== MICRO-MIGRAZIONI SQLITE (safe) + default plan =====
 def ensure_sqlite_column(table: str, column: str, coltype: str):
     with engine.connect() as conn:
         rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
@@ -211,11 +199,11 @@ ensure_sqlite_column("agents", "plan", "TEXT")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 
-ensure_sqlite_column("subscribers", "status", "TEXT")
-ensure_sqlite_column("subscribers", "created_at", "TEXT")
-ensure_sqlite_column("subscribers", "updated_at", "TEXT")
-ensure_sqlite_column("subscribers", "last_text", "TEXT")
-
+ensure_sqlite_column("agents", "name_en", "TEXT")
+ensure_sqlite_column("agents", "company_en", "TEXT")
+ensure_sqlite_column("agents", "role_en", "TEXT")
+ensure_sqlite_column("agents", "bio_en", "TEXT")
+ensure_sqlite_column("agents", "addresses_en", "TEXT")
 
 def ensure_default_plan_basic():
     with engine.connect() as conn:
@@ -226,9 +214,6 @@ ensure_default_plan_basic()
 
 
 # ===== HELPERS =====
-def now_iso():
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
-
 def generate_password(length=10):
     return uuid.uuid4().hex[:length]
 
@@ -270,9 +255,6 @@ def normalize_plan(p: str) -> str:
     p = (p or "").strip().lower()
     return p if p in ("basic", "pro") else "basic"
 
-def is_pro_agent(ag) -> bool:
-    return normalize_plan(getattr(ag, "plan", "basic")) == "pro"
-
 def ensure_admin_user():
     db = SessionLocal()
     try:
@@ -290,15 +272,31 @@ def get_base_url():
         return BASE_URL
     return request.url_root.strip().rstrip("/")
 
-def upload_file(file_storage, folder="uploads"):
+def file_size_bytes(fs) -> int:
+    try:
+        pos = fs.stream.tell()
+        fs.stream.seek(0, os.SEEK_END)
+        size = fs.stream.tell()
+        fs.stream.seek(pos, os.SEEK_SET)
+        return int(size)
+    except Exception:
+        return 0
+
+def upload_file(file_storage, folder="uploads", max_bytes=0):
     if not file_storage or not file_storage.filename:
         return None
+
+    if max_bytes and file_size_bytes(file_storage) > max_bytes:
+        raise ValueError("File troppo grande")
+
     ext = os.path.splitext(file_storage.filename or "")[1].lower()
     uploads_folder = os.path.join(PERSIST_UPLOADS_DIR, folder)
     os.makedirs(uploads_folder, exist_ok=True)
+
     filename = f"{uuid.uuid4().hex}{ext}"
     fullpath = os.path.join(uploads_folder, filename)
     file_storage.save(fullpath)
+
     return f"/uploads/{folder}/{filename}"
 
 @app.get("/uploads/<path:subpath>")
@@ -327,8 +325,6 @@ def parse_pdfs(raw: str):
             pdfs.append({"name": filename, "url": url})
     return pdfs
 
-
-# ===== LINGUA (AUTO) =====
 def pick_lang_from_request() -> str:
     q = (request.args.get("lang") or "").strip().lower()
     if q:
@@ -341,6 +337,34 @@ def pick_lang_from_request() -> str:
         if first in SUPPORTED_LANGS:
             return first
     return "it"
+
+def normalize_url(u: str) -> str:
+    u = (u or "").strip()
+    if not u:
+        return ""
+    # se è già http/https -> ok
+    if u.startswith("http://") or u.startswith("https://"):
+        return u
+    # se è www. -> aggiungi https
+    if u.startswith("www."):
+        return "https://" + u
+    # se sembra dominio -> aggiungi https
+    if "." in u and " " not in u and "/" not in u:
+        return "https://" + u
+    # fallback
+    return u
+
+def normalize_whatsapp(w: str) -> str:
+    w = (w or "").strip()
+    if not w:
+        return ""
+    if w.startswith("http://") or w.startswith("https://"):
+        return w
+    # numero?
+    digits = re.sub(r"\D+", "", w)
+    if digits:
+        return f"https://wa.me/{digits}"
+    return ""
 
 
 # ===== MULTI-PROFILI =====
@@ -424,6 +448,12 @@ def agent_to_view(ag: Agent):
         role=ag.role,
         bio=ag.bio,
 
+        name_en=getattr(ag, "name_en", None),
+        company_en=getattr(ag, "company_en", None),
+        role_en=getattr(ag, "role_en", None),
+        bio_en=getattr(ag, "bio_en", None),
+        addresses_en=getattr(ag, "addresses_en", None),
+
         phone_mobile=ag.phone_mobile,
         phone_mobile2=ag.phone_mobile2,
         phone_office=ag.phone_office,
@@ -490,36 +520,6 @@ def apply_profile_to_view(view, profile: dict):
     set_if("whatsapp")
 
     return view
-
-
-# ===== WhatsApp send (solo testo base) =====
-def wa_api_url(path: str) -> str:
-    return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
-
-def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
-    if not WA_TOKEN or not WA_PHONE_NUMBER_ID:
-        return False, "WA_TOKEN o WA_PHONE_NUMBER_ID mancanti"
-
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to_wa_id,
-        "type": "text",
-        "text": {"body": body}
-    }
-
-    try:
-        if requests:
-            r = requests.post(
-                wa_api_url(f"{WA_PHONE_NUMBER_ID}/messages"),
-                headers={"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"},
-                data=json.dumps(payload),
-                timeout=20
-            )
-            ok = 200 <= r.status_code < 300
-            return ok, r.text
-        return False, "requests non disponibile"
-    except Exception as e:
-        return False, str(e)
 
 
 # =========================
@@ -590,131 +590,6 @@ def admin_home():
     finally:
         db.close()
 
-# -------- ADMIN EXPORT JSON --------
-@app.get("/admin/export_agents.json")
-@admin_required
-def admin_export_agents_json():
-    db = SessionLocal()
-    try:
-        agents = db.query(Agent).order_by(Agent.id).all()
-        payload = []
-        for a in agents:
-            payload.append({
-                "id": a.id,
-                "slug": a.slug,
-                "name": a.name,
-                "company": a.company,
-                "role": a.role,
-                "bio": a.bio,
-                "phone_mobile": a.phone_mobile,
-                "phone_mobile2": a.phone_mobile2,
-                "phone_office": a.phone_office,
-                "emails": a.emails,
-                "websites": a.websites,
-                "facebook": a.facebook,
-                "instagram": a.instagram,
-                "linkedin": a.linkedin,
-                "tiktok": a.tiktok,
-                "telegram": a.telegram,
-                "whatsapp": a.whatsapp,
-                "pec": a.pec,
-                "piva": a.piva,
-                "sdi": a.sdi,
-                "addresses": a.addresses,
-                "photo_url": a.photo_url,
-                "extra_logo_url": a.extra_logo_url,
-                "gallery_urls": a.gallery_urls,
-                "video_urls": a.video_urls,
-                "pdf1_url": a.pdf1_url,
-                "plan": normalize_plan(getattr(a, "plan", "basic")),
-                "profiles_json": a.profiles_json,
-            })
-        content = json.dumps(payload, ensure_ascii=False, indent=2)
-        resp = Response(content, mimetype="application/json; charset=utf-8")
-        resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
-        return resp
-    finally:
-        db.close()
-
-# -------- ADMIN CREDENZIALI (reset password + mostra) --------
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    try:
-        ag = db.query(Agent).filter_by(slug=slug).first()
-        if not ag:
-            abort(404)
-
-        u = db.query(User).filter_by(username=slug).first()
-        if not u:
-            u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
-            db.add(u)
-        else:
-            u.password = generate_password()
-
-        db.commit()
-
-        return f"""
-        <!doctype html>
-        <html lang="it">
-        <head>
-          <meta charset="utf-8"/>
-          <meta name="viewport" content="width=device-width, initial-scale=1"/>
-          <title>Credenziali - {slug}</title>
-          <style>
-            body{{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;padding:24px}}
-            .box{{max-width:560px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
-            h2{{margin:0 0 12px 0}}
-            .row{{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}}
-            code{{background:#111827;padding:8px 10px;border-radius:10px;border:1px solid #1f2937}}
-            button,a{{background:#2563eb;color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none}}
-            a.secondary{{background:#334155}}
-            .small{{color:#94a3b8;font-size:12px;margin-top:10px}}
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <h2>Credenziali cliente</h2>
-            <div class="small">Card: <b>{slug}</b></div>
-
-            <div class="row">
-              <div style="min-width:90px;">Username</div>
-              <code>{u.username}</code>
-              <button onclick="copyText('{u.username}')">Copia</button>
-            </div>
-
-            <div class="row">
-              <div style="min-width:90px;">Password</div>
-              <code>{u.password}</code>
-              <button onclick="copyText('{u.password}')">Copia</button>
-            </div>
-
-            <div class="row" style="margin-top:14px;">
-              <a class="secondary" href="/login" target="_blank">Apri login</a>
-              <a class="secondary" href="/{slug}" target="_blank">Apri card</a>
-              <a class="secondary" href="/admin">⬅ Torna alla lista</a>
-            </div>
-
-            <p class="small">Nota: aprendo questa pagina rigeneri la password (reset).</p>
-          </div>
-
-          <script>
-            function copyText(t){{
-              if(navigator.clipboard) {{
-                navigator.clipboard.writeText(t).then(()=>alert("Copiato: " + t));
-              }} else {{
-                window.prompt("Copia:", t);
-              }}
-            }}
-          </script>
-        </body>
-        </html>
-        """
-    finally:
-        db.close()
-
 
 # -------- ADMIN NEW --------
 @app.get("/admin/new")
@@ -729,6 +604,7 @@ def create_agent():
     try:
         fields = [
             "slug", "name", "company", "role", "bio",
+            "name_en", "company_en", "role_en", "bio_en", "addresses_en",
             "phone_mobile", "phone_mobile2", "phone_office",
             "emails", "websites",
             "facebook", "instagram", "linkedin", "tiktok",
@@ -740,15 +616,6 @@ def create_agent():
         data["slug"] = slugify(data.get("slug", ""))
         data["plan"] = normalize_plan(data.get("plan", "basic"))
 
-        # valida JSON (se presente)
-        if data.get("profiles_json"):
-            try:
-                tmp = json.loads(data["profiles_json"])
-                if not isinstance(tmp, list):
-                    data["profiles_json"] = ""
-            except Exception:
-                data["profiles_json"] = ""
-
         if not data["slug"] or not data["name"]:
             flash("Slug e Nome sono obbligatori", "error")
             return redirect(url_for("new_agent"))
@@ -757,30 +624,47 @@ def create_agent():
             flash("Slug già esistente", "error")
             return redirect(url_for("new_agent"))
 
-        # upload
+        # upload con limiti
         photo = request.files.get("photo")
-        extra_logo = request.files.get("extra_logo")
+        logo = request.files.get("extra_logo")
         gallery_files = request.files.getlist("gallery")
         video_files = request.files.getlist("videos")
 
-        photo_url = upload_file(photo, "photos") if photo and photo.filename else None
-        extra_logo_url = upload_file(extra_logo, "logos") if extra_logo and extra_logo.filename else None
+        photo_url = None
+        extra_logo_url = None
+
+        try:
+            if photo and photo.filename:
+                photo_url = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_PHOTO_MB))
+            if logo and logo.filename:
+                extra_logo_url = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_LOGO_MB))
+        except ValueError:
+            flash("Foto/Logo troppo grande (limite superato)", "error")
+            return redirect(url_for("new_agent"))
 
         # pdfs
         pdf_entries = []
         for i in range(1, 13):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
-                u = upload_file(f, "pdf")
+                try:
+                    u = upload_file(f, "pdf", max_bytes=mb_to_bytes(MAX_PDF_MB))
+                except ValueError:
+                    flash(f"PDF troppo grande (max {MAX_PDF_MB}MB): {f.filename}", "error")
+                    continue
                 if u:
                     pdf_entries.append(f"{f.filename}||{u}")
         pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
         # gallery
         gallery_urls = []
-        for f in gallery_files[:MAX_GALLERY_IMAGES]:
+        for f in gallery_files[:MAX_G Fired: gallery files:
             if f and f.filename:
-                u = upload_file(f, "gallery")
+                try:
+                    u = upload_file(f, "gallery", max_bytes=mb_to_bytes(MAX_GALLERY_IMAGE_MB))
+                except ValueError:
+                    flash(f"Immagine troppo grande (max {MAX_GALLERY_IMAGE_MB}MB): {f.filename}", "error")
+                    continue
                 if u:
                     gallery_urls.append(u)
 
@@ -788,7 +672,11 @@ def create_agent():
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
             if f and f.filename:
-                u = upload_file(f, "videos")
+                try:
+                    u = upload_file(f, "videos", max_bytes=mb_to_bytes(MAX_VIDEO_MB))
+                except ValueError:
+                    flash(f"Video troppo grande (max {MAX_VIDEO_MB}MB): {f.filename}", "error")
+                    continue
                 if u:
                     video_urls.append(u)
 
@@ -848,47 +736,39 @@ def update_agent(slug):
         if not ag:
             abort(404)
 
-        # campi
         for k in [
             "name", "company", "role", "bio",
+            "name_en", "company_en", "role_en", "bio_en", "addresses_en",
             "phone_mobile", "phone_mobile2", "phone_office",
             "emails", "websites",
             "facebook", "instagram", "linkedin", "tiktok",
             "telegram", "whatsapp",
             "pec", "piva", "sdi", "addresses",
-            "profiles_json",
         ]:
-            val = (request.form.get(k, "") or "").strip()
-            if k == "profiles_json" and val:
-                try:
-                    tmp = json.loads(val)
-                    if not isinstance(tmp, list):
-                        val = ""
-                except Exception:
-                    val = ""
-            setattr(ag, k, val)
+            setattr(ag, k, (request.form.get(k, "") or "").strip())
 
         ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
 
-        # delete pdfs
         if request.form.get("delete_pdfs") == "1":
             ag.pdf1_url = None
 
-        # uploads
         photo = request.files.get("photo")
-        extra_logo = request.files.get("extra_logo")
+        logo = request.files.get("extra_logo")
         gallery_files = request.files.getlist("gallery")
         video_files = request.files.getlist("videos")
 
-        if photo and photo.filename:
-            u = upload_file(photo, "photos")
-            if u:
-                ag.photo_url = u
-
-        if extra_logo and extra_logo.filename:
-            u = upload_file(extra_logo, "logos")
-            if u:
-                ag.extra_logo_url = u
+        try:
+            if photo and photo.filename:
+                u = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_PHOTO_MB))
+                if u:
+                    ag.photo_url = u
+            if logo and logo.filename:
+                u = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_LOGO_MB))
+                if u:
+                    ag.extra_logo_url = u
+        except ValueError:
+            flash("Foto/Logo troppo grande (limite superato)", "error")
+            return redirect(url_for("edit_agent", slug=ag.slug))
 
         # pdf append
         if request.form.get("delete_pdfs") != "1":
@@ -896,7 +776,11 @@ def update_agent(slug):
             for i in range(1, 13):
                 f = request.files.get(f"pdf{i}")
                 if f and f.filename:
-                    u = upload_file(f, "pdf")
+                    try:
+                        u = upload_file(f, "pdf", max_bytes=mb_to_bytes(MAX_PDF_MB))
+                    except ValueError:
+                        flash(f"PDF troppo grande (max {MAX_PDF_MB}MB): {f.filename}", "error")
+                        continue
                     if u:
                         pdf_entries.append(f"{f.filename}||{u}")
             if pdf_entries:
@@ -907,7 +791,11 @@ def update_agent(slug):
             gallery_urls = []
             for f in gallery_files[:MAX_GALLERY_IMAGES]:
                 if f and f.filename:
-                    u = upload_file(f, "gallery")
+                    try:
+                        u = upload_file(f, "gallery", max_bytes=mb_to_bytes(MAX_GALLERY_IMAGE_MB))
+                    except ValueError:
+                        flash(f"Immagine troppo grande (max {MAX_GALLERY_IMAGE_MB}MB): {f.filename}", "error")
+                        continue
                     if u:
                         gallery_urls.append(u)
             if gallery_urls:
@@ -918,7 +806,11 @@ def update_agent(slug):
             video_urls = []
             for f in video_files[:MAX_VIDEOS]:
                 if f and f.filename:
-                    u = upload_file(f, "videos")
+                    try:
+                        u = upload_file(f, "videos", max_bytes=mb_to_bytes(MAX_VIDEO_MB))
+                    except ValueError:
+                        flash(f"Video troppo grande (max {MAX_VIDEO_MB}MB): {f.filename}", "error")
+                        continue
                     if u:
                         video_urls.append(u)
             if video_urls:
@@ -926,21 +818,6 @@ def update_agent(slug):
 
         db.commit()
         flash("Salvato ✅", "ok")
-        return redirect(url_for("admin_home"))
-    finally:
-        db.close()
-
-@app.post("/admin/<slug>/delete")
-@admin_required
-def delete_agent(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    try:
-        ag = db.query(Agent).filter_by(slug=slug).first()
-        if ag:
-            db.delete(ag)
-            db.commit()
-        flash("Eliminato", "ok")
         return redirect(url_for("admin_home"))
     finally:
         db.close()
@@ -962,7 +839,6 @@ def me_edit():
         ag = db.query(Agent).filter_by(slug=slug).first()
         if not ag:
             abort(404)
-        ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
         return render_template("agent_form.html", agent=ag)
     finally:
         db.close()
@@ -983,44 +859,47 @@ def me_edit_post():
         if not ag:
             abort(404)
 
-        current_plan = normalize_plan(getattr(ag, "plan", "basic"))
-
-        allowed_fields = [
+        # cliente può modificare anche campi EN opzionali
+        for k in [
             "name", "company", "role", "bio",
+            "name_en", "company_en", "role_en", "bio_en", "addresses_en",
             "phone_mobile", "phone_mobile2", "phone_office",
             "emails", "websites",
             "facebook", "instagram", "linkedin", "tiktok",
             "telegram", "whatsapp",
             "pec", "piva", "sdi", "addresses",
-        ]
-
-        for k in allowed_fields:
+        ]:
             setattr(ag, k, (request.form.get(k, "") or "").strip())
 
-        ag.plan = current_plan
-
-        # uploads
+        # uploads con limiti
         photo = request.files.get("photo")
-        extra_logo = request.files.get("extra_logo")
+        logo = request.files.get("extra_logo")
         gallery_files = request.files.getlist("gallery")
         video_files = request.files.getlist("videos")
 
-        if photo and photo.filename:
-            u = upload_file(photo, "photos")
-            if u:
-                ag.photo_url = u
-
-        if extra_logo and extra_logo.filename:
-            u = upload_file(extra_logo, "logos")
-            if u:
-                ag.extra_logo_url = u
+        try:
+            if photo and photo.filename:
+                u = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_PHOTO_MB))
+                if u:
+                    ag.photo_url = u
+            if logo and logo.filename:
+                u = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_LOGO_MB))
+                if u:
+                    ag.extra_logo_url = u
+        except ValueError:
+            flash("Foto/Logo troppo grande (limite superato)", "error")
+            return redirect(url_for("me_edit"))
 
         # pdf append
         pdf_entries = []
         for i in range(1, 13):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
-                u = upload_file(f, "pdf")
+                try:
+                    u = upload_file(f, "pdf", max_bytes=mb_to_bytes(MAX_PDF_MB))
+                except ValueError:
+                    flash(f"PDF troppo grande (max {MAX_PDF_MB}MB): {f.filename}", "error")
+                    continue
                 if u:
                     pdf_entries.append(f"{f.filename}||{u}")
         if pdf_entries:
@@ -1031,7 +910,11 @@ def me_edit_post():
             gallery_urls = []
             for f in gallery_files[:MAX_GALLERY_IMAGES]:
                 if f and f.filename:
-                    u = upload_file(f, "gallery")
+                    try:
+                        u = upload_file(f, "gallery", max_bytes=mb_to_bytes(MAX_GALLERY_IMAGE_MB))
+                    except ValueError:
+                        flash(f"Immagine troppo grande (max {MAX_GALLERY_IMAGE_MB}MB): {f.filename}", "error")
+                        continue
                     if u:
                         gallery_urls.append(u)
             if gallery_urls:
@@ -1042,7 +925,11 @@ def me_edit_post():
             video_urls = []
             for f in video_files[:MAX_VIDEOS]:
                 if f and f.filename:
-                    u = upload_file(f, "videos")
+                    try:
+                        u = upload_file(f, "videos", max_bytes=mb_to_bytes(MAX_VIDEO_MB))
+                    except ValueError:
+                        flash(f"Video troppo grande (max {MAX_VIDEO_MB}MB): {f.filename}", "error")
+                        continue
                     if u:
                         video_urls.append(u)
             if video_urls:
@@ -1055,7 +942,7 @@ def me_edit_post():
         db.close()
 
 
-# -------- CLIENT: PROFILO 2 (UGUALE, salva in profiles_json key=p2) --------
+# -------- CLIENT: PROFILO 2 --------
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
@@ -1077,7 +964,7 @@ def me_profile2():
 
         view = agent_to_view(ag)
         view = apply_profile_to_view(view, p2)
-        setattr(view, "__editing_profile2__", True)   # flag per template
+        setattr(view, "__editing_profile2__", True)
 
         return render_template("agent_form.html", agent=view)
     finally:
@@ -1103,25 +990,21 @@ def me_profile2_post():
 
         payload = {
             "key": "p2",
-            "label_it": (request.form.get("label_it") or "Profilo 2").strip(),
-            "label_en": (request.form.get("label_en") or "Profile 2").strip(),
-
+            "label_it": "Profilo 2",
+            "label_en": "Profile 2",
             "name": (request.form.get("name") or "").strip(),
             "company": (request.form.get("company") or "").strip(),
             "role": (request.form.get("role") or "").strip(),
             "bio": (request.form.get("bio") or "").strip(),
-
             "phone_mobile": (request.form.get("phone_mobile") or "").strip(),
             "phone_mobile2": (request.form.get("phone_mobile2") or "").strip(),
             "phone_office": (request.form.get("phone_office") or "").strip(),
-
             "emails": (request.form.get("emails") or "").strip(),
             "websites": (request.form.get("websites") or "").strip(),
             "pec": (request.form.get("pec") or "").strip(),
             "piva": (request.form.get("piva") or "").strip(),
             "sdi": (request.form.get("sdi") or "").strip(),
             "addresses": (request.form.get("addresses") or "").strip(),
-
             "facebook": (request.form.get("facebook") or "").strip(),
             "instagram": (request.form.get("instagram") or "").strip(),
             "linkedin": (request.form.get("linkedin") or "").strip(),
@@ -1131,15 +1014,20 @@ def me_profile2_post():
         }
 
         photo = request.files.get("photo")
-        extra_logo = request.files.get("extra_logo")
-        if photo and photo.filename:
-            u = upload_file(photo, "photos")
-            if u:
-                payload["photo_url"] = u
-        if extra_logo and extra_logo.filename:
-            u = upload_file(extra_logo, "logos")
-            if u:
-                payload["logo_url"] = u
+        logo = request.files.get("extra_logo")
+
+        try:
+            if photo and photo.filename:
+                u = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_PHOTO_MB))
+                if u:
+                    payload["photo_url"] = u
+            if logo and logo.filename:
+                u = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_LOGO_MB))
+                if u:
+                    payload["logo_url"] = u
+        except ValueError:
+            flash("Foto/Logo troppo grande (limite superato)", "error")
+            return redirect(url_for("me_profile2"))
 
         profiles = upsert_profile(profiles, "p2", payload)
         ag.profiles_json = dump_profiles_json(profiles)
@@ -1161,7 +1049,6 @@ def public_card(slug):
         if not ag:
             abort(404)
 
-        ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
         lang = pick_lang_from_request()
 
         profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
@@ -1172,11 +1059,24 @@ def public_card(slug):
         if active_profile:
             ag_view = apply_profile_to_view(ag_view, active_profile)
 
+        # applica EN se lang=en e se i campi en sono valorizzati (solo profilo principale)
+        if lang == "en" and not active_profile:
+            if getattr(ag_view, "name_en", ""):
+                ag_view.name = ag_view.name_en
+            if getattr(ag_view, "company_en", ""):
+                ag_view.company = ag_view.company_en
+            if getattr(ag_view, "role_en", ""):
+                ag_view.role = ag_view.role_en
+            if getattr(ag_view, "bio_en", ""):
+                ag_view.bio = ag_view.bio_en
+            if getattr(ag_view, "addresses_en", ""):
+                ag_view.addresses = ag_view.addresses_en
+
         gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
         videos = (ag.video_urls.split("|") if ag.video_urls else [])
 
         emails = [e.strip() for e in (ag_view.emails or "").split(",") if e.strip()]
-        websites = [w.strip() for w in (ag_view.websites or "").split(",") if w.strip()]
+        websites = [normalize_url(w.strip()) for w in (ag_view.websites or "").split(",") if w.strip()]
         addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if a.strip()]
         pdfs = parse_pdfs(ag.pdf1_url or "")
 
@@ -1184,25 +1084,28 @@ def public_card(slug):
 
         mobiles = []
         if getattr(ag_view, "phone_mobile", None):
-            mobiles.append(ag_view.phone_mobile.strip())
+            mobiles.append((ag_view.phone_mobile or "").strip())
         if getattr(ag_view, "phone_mobile2", None):
             m2 = (ag_view.phone_mobile2 or "").strip()
             if m2:
                 mobiles.append(m2)
 
-        # link opt-in (solo per clienti)
-        wa_optin_link = ""
-        if ag.plan == "pro":
-            optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
-            wa_optin_link = f"https://wa.me/{WA_OPTIN_PHONE}?text={quote(optin_text)}"
+        whatsapp_link = normalize_whatsapp(getattr(ag_view, "whatsapp", ""))
 
-        # nfc link mantiene p e lang
-        nfc_direct_url = f"{base}/{ag.slug}"
-        params = []
+        # per la card, mettiamo anche social normalizzati
+        social = {
+            "facebook": normalize_url(getattr(ag_view, "facebook", "")),
+            "instagram": normalize_url(getattr(ag_view, "instagram", "")),
+            "linkedin": normalize_url(getattr(ag_view, "linkedin", "")),
+            "tiktok": normalize_url(getattr(ag_view, "tiktok", "")),
+            "telegram": normalize_url(getattr(ag_view, "telegram", "")),
+        }
+
+        # URL card (per QR)
+        params = [("lang", lang)]
         if p_key:
             params.append(("p", p_key))
-        params.append(("lang", lang))
-        nfc_direct_url = nfc_direct_url + "?" + urllib.parse.urlencode(params)
+        card_url = f"{base}/{ag.slug}?" + urllib.parse.urlencode(params)
 
         return render_template(
             "card.html",
@@ -1215,13 +1118,13 @@ def public_card(slug):
             addresses=addresses,
             pdfs=pdfs,
             mobiles=mobiles,
-            wa_optin_link=wa_optin_link,
             lang=lang,
             t_func=lambda k: t(lang, k),
             profiles=profiles,
-            active_profile=active_profile,
             p_key=p_key,
-            nfc_direct_url=nfc_direct_url,
+            card_url=card_url,
+            whatsapp_link=whatsapp_link,
+            social=social,
         )
     finally:
         db.close()
@@ -1250,7 +1153,6 @@ def vcard(slug):
             f"FN:{full_name}",
             f"N:{last_name};{first_name};;;",
         ]
-
         if ag.role:
             lines.append(f"TITLE:{ag.role}")
         if ag.company:
@@ -1285,7 +1187,7 @@ def vcard(slug):
         db.close()
 
 
-# -------- QR PNG (sempre con lang + p) --------
+# -------- QR PNG --------
 @app.get("/<slug>/qr.png")
 def qr(slug):
     slug = slugify(slug)
@@ -1305,7 +1207,7 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# -------- WhatsApp Webhook verify (per Meta) --------
+# -------- WhatsApp webhook verify --------
 @app.get("/wa/webhook")
 def wa_webhook_verify():
     mode = request.args.get("hub.mode", "")
