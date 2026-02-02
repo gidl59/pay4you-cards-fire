@@ -4,9 +4,18 @@
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
+
     <h1 class="agent-form-title">
-      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuova card{% endif %}
+      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
     </h1>
+
+    {% if session.get('role') != 'admin' and agent %}
+      <div class="profile-tools">
+        <a class="header-link" href="{{ url_for('me_profile2') }}">👤 Profilo 2 (multi-utente)</a>
+        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card pubblica</a>
+      </div>
+    {% endif %}
 
     {% if session.get('role') == 'admin' %}
       {% if agent %}
@@ -23,16 +32,17 @@
       {% if session.get('role') == 'admin' %}
         <label>Slug (univoco)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
+
         <label>Piano</label>
-        <select name="plan" style="width:100%; padding:7px 8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background: rgba(15,23,42,0.96); color:#f9fafb; font-size:13px;">
+        <select name="plan" class="input-like">
           {% set p = (agent.plan if agent and agent.plan else 'basic') %}
           <option value="basic" {% if p=='basic' %}selected{% endif %}>basic</option>
           <option value="pro" {% if p=='pro' %}selected{% endif %}>pro</option>
         </select>
       {% else %}
-        <div style="font-size:12px; opacity:.75; margin-bottom:6px;">
-          Slug: <b>{{ agent.slug }}</b>
-        </div>
+        {% if agent %}
+          <div class="slug-badge">Slug: <b>{{ agent.slug }}</b></div>
+        {% endif %}
       {% endif %}
 
       <label>Nome</label>
@@ -47,16 +57,19 @@
       <label>Bio / Descrizione</label>
       <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
-      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+      <hr class="sep">
 
-      <label>Cellulare (contatto)</label>
+      <label>Telefono mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
-      <label>Cellulare 2</label>
+      <label>Telefono mobile 2</label>
       <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
 
       <label>Telefono ufficio</label>
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+
+      <label>WhatsApp (numero o link)</label>
+      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
 
       <label>Email (separate da virgola)</label>
       <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
@@ -64,13 +77,10 @@
       <label>Siti web (separati da virgola)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
-      <label>WhatsApp (numero o +39...)</label>
-      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
-
       <label>PEC</label>
       <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
 
-      <label>Partita IVA</label>
+      <label>P.IVA</label>
       <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
 
       <label>SDI</label>
@@ -79,38 +89,38 @@
       <label>Indirizzi (uno per riga)</label>
       <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
 
-      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+      <hr class="sep">
 
-      <label>Facebook (link)</label>
+      <label>Facebook</label>
       <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
 
-      <label>Instagram (link)</label>
+      <label>Instagram</label>
       <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
 
-      <label>LinkedIn (link)</label>
+      <label>LinkedIn</label>
       <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
 
-      <label>TikTok (link)</label>
+      <label>TikTok</label>
       <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
 
-      <label>Telegram (link)</label>
+      <label>Telegram</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
-      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+      <hr class="sep">
 
       <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo (mostrato in alto a sinistra sulla card, solo se caricato)</label>
-      <input type="file" name="logo" accept="image/*">
+      <label>Logo (in alto a sinistra + retro foto)</label>
+      <input type="file" name="extra_logo" accept="image/*">
 
-      <label>Galleria (max 30 immagini, max 8MB ciascuna)</label>
+      <label>Galleria (max 30 immagini)</label>
       <input type="file" name="gallery" accept="image/*" multiple>
 
-      <label>Video (max 10, max 60MB ciascuno)</label>
+      <label>Video (max 10)</label>
       <input type="file" name="videos" accept="video/*" multiple>
 
-      <label>PDF (fino a 12, max 15MB ciascuno)</label>
+      <label>PDF (fino a 12)</label>
       <input type="file" name="pdf1" accept="application/pdf">
       <input type="file" name="pdf2" accept="application/pdf">
       <input type="file" name="pdf3" accept="application/pdf">
@@ -124,38 +134,9 @@
       <input type="file" name="pdf11" accept="application/pdf">
       <input type="file" name="pdf12" accept="application/pdf">
 
-      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:14px 0;">
-
-      <!-- ===================== TRADUZIONI PROFILO 1 ===================== -->
-      {% set tr = i18n_data if i18n_data else {} %}
-
-      <h3 style="margin:0 0 8px; font-size:15px;">Traduzioni (profilo 1) — opzionale</h3>
-      <div style="font-size:12px; opacity:.8; margin-bottom:10px;">
-        Se un cliente apre la card con telefono in francese/inglese/spagnolo/tedesco, verranno mostrati questi testi (se compilati).
-        Se lasci vuoto, resta italiano.
-      </div>
-
-      {% for L, title in [('en','English'),('fr','Français'),('es','Español'),('de','Deutsch')] %}
-        {% set trL = tr.get(L, {}) %}
-        <div style="border:1px solid rgba(148,163,184,0.15); border-radius:14px; padding:10px; margin-bottom:10px;">
-          <div style="font-weight:650; margin-bottom:8px;">{{ title }}</div>
-
-          <label>Nome ({{ L }})</label>
-          <input type="text" name="name_{{L}}" value="{{ trL.get('name','') }}">
-
-          <label>Azienda ({{ L }})</label>
-          <input type="text" name="company_{{L}}" value="{{ trL.get('company','') }}">
-
-          <label>Ruolo ({{ L }})</label>
-          <input type="text" name="role_{{L}}" value="{{ trL.get('role','') }}">
-
-          <label>Bio ({{ L }})</label>
-          <textarea name="bio_{{L}}">{{ trL.get('bio','') }}</textarea>
-
-          <label>Indirizzi ({{ L }})</label>
-          <textarea name="addresses_{{L}}">{{ trL.get('addresses','') }}</textarea>
-        </div>
-      {% endfor %}
+      <!-- ✅ Non mostriamo più il box JSON come unico modo.
+           Se vuoi tenerlo “per admin”, lo possiamo rimettere solo admin.
+           Per ora: niente JSON all’utente base. -->
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
