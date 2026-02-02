@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ lang|default('it') }}">
+<html lang="it">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Pay4You Cards{% endblock %}</title>
@@ -7,18 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="format-detection" content="telephone=no">
 
-  {# ✅ utile per evitare cache aggressiva lato browser #}
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-  <link rel="stylesheet"
-        href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
   <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
 </head>
+
 <body>
   <div class="app-shell">
 
@@ -34,27 +29,21 @@
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
         {% else %}
           <a href="{{ url_for('me_edit') }}" class="header-link">Modifica</a>
-          <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
+
+          {% if 'me_profile2' in current_app.view_functions %}
+            <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
+          {% endif %}
+
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
         {% endif %}
       </div>
     </header>
     {% endif %}
 
-    {# ✅ Flash messages (se usi flash() in Flask) #}
-    {% with msgs = get_flashed_messages(with_categories=true) %}
-      {% if msgs %}
-        <div class="flash-wrap">
-          {% for cat, msg in msgs %}
-            <div class="flash {{ cat }}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
     <main class="app-main">
       {% block content %}{% endblock %}
     </main>
+
   </div>
 </body>
 </html>
