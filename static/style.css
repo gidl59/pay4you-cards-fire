@@ -715,3 +715,171 @@ a {
 @media (prefers-reduced-motion: reduce){
   .gallery-scroll img{ transition: none; }
 }
+/* =========================
+   PATCH UI CARD (02/02/2026)
+   ========================= */
+
+.card-header-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  margin-bottom: 10px;
+}
+
+.card-logo-top-left{
+  height: 56px;
+  width: auto;
+  filter: drop-shadow(0 4px 10px rgba(250,204,21,0.45));
+  animation: logo-spin 10s linear infinite;
+}
+
+.profile-tools{
+  margin-bottom:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.slug-badge{
+  font-size:12px;
+  opacity:.75;
+  margin-bottom:6px;
+}
+
+.sep{
+  border:0;
+  height:1px;
+  background:rgba(148,163,184,0.15);
+  margin:10px 0;
+}
+
+.input-like{
+  width:100%;
+  padding:7px 8px;
+  border-radius:10px;
+  border:1px solid rgba(75,85,99,0.8);
+  background: rgba(15,23,42,0.96);
+  color:#f9fafb;
+  font-size:13px;
+}
+
+.profile-switch{
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.profile-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.35);
+  background: rgba(15,23,42,0.55);
+  color:#e5e7eb;
+  font-size:12px;
+  font-weight:650;
+}
+
+.profile-pill.active{
+  border-color: rgba(250,204,21,0.60);
+  background: rgba(250,204,21,0.12);
+  color:#facc15;
+}
+
+.actions-box .actions-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.action-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(250,204,21,0.35);
+  background: rgba(15,23,42,0.55);
+  color:#facc15;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.action-btn.secondary{
+  border-color: rgba(148,163,184,0.30);
+  color:#e5e7eb;
+}
+
+.actions-hint{
+  margin-top:8px;
+  font-size:12px;
+  opacity:.8;
+}
+
+/* VIDEO THUMB piccoli come galleria */
+.video-thumb{
+  position: relative;
+  width: 185px;
+  height: 185px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148,163,184,0.5);
+}
+
+.video-mini{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  display:block;
+}
+
+.video-play{
+  position:absolute;
+  inset:auto auto 10px 10px;
+  background: rgba(2,6,23,0.65);
+  border: 1px solid rgba(148,163,184,0.35);
+  color:#facc15;
+  font-weight:800;
+  border-radius:999px;
+  padding:6px 10px;
+  z-index: 2;
+}
+
+/* MODAL: chiudi sempre sopra */
+.modal-media{
+  position: relative;
+}
+
+.modal-x{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:40px;
+  height:40px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.55);
+  background: rgba(2,6,23,0.65);
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+}
+
+#modal-img{
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+#modal-video{
+  width: 100%;
+  max-height: 78vh;
+  border-radius: 14px;
+  background:#000;
+}
