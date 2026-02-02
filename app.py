@@ -488,6 +488,85 @@ def logout():
 
 
 # ------------------ ADMIN LISTA ------------------
+@app.get("/admin/<slug>/credentials")
+@admin_required
+def admin_credentials(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    try:
+        ag = db.query(Agent).filter_by(slug=slug).first()
+        if not ag:
+            abort(404)
+
+        # crea/rigenera utente cliente (username=slug)
+        u = db.query(User).filter_by(username=slug).first()
+        if not u:
+            u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
+            db.add(u)
+        else:
+            u.password = generate_password()
+
+        db.commit()
+
+        return f"""
+        <!doctype html>
+        <html lang="it">
+        <head>
+          <meta charset="utf-8"/>
+          <meta name="viewport" content="width=device-width, initial-scale=1"/>
+          <title>Credenziali - {slug}</title>
+          <style>
+            body{{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;padding:24px}}
+            .box{{max-width:560px;margin:auto;background:#0f172a;border:1px solid #1f2937;border-radius:14px;padding:18px}}
+            h2{{margin:0 0 12px 0}}
+            .row{{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}}
+            code{{background:#111827;padding:8px 10px;border-radius:10px;border:1px solid #1f2937}}
+            button,a{{background:#2563eb;color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none}}
+            a.secondary{{background:#334155}}
+            .small{{color:#94a3b8;font-size:12px;margin-top:10px}}
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <h2>Credenziali cliente</h2>
+            <div class="small">Card: <b>{slug}</b></div>
+
+            <div class="row">
+              <div style="min-width:90px;">Username</div>
+              <code>{u.username}</code>
+              <button onclick="copyText('{u.username}')">Copia</button>
+            </div>
+
+            <div class="row">
+              <div style="min-width:90px;">Password</div>
+              <code>{u.password}</code>
+              <button onclick="copyText('{u.password}')">Copia</button>
+            </div>
+
+            <div class="row" style="margin-top:14px;">
+              <a class="secondary" href="/login" target="_blank">Apri login</a>
+              <a class="secondary" href="/{slug}" target="_blank">Apri card</a>
+              <a class="secondary" href="/admin">⬅ Torna alla lista</a>
+            </div>
+
+            <p class="small">Nota: aprendo questa pagina rigeneri la password (reset).</p>
+          </div>
+
+          <script>
+            function copyText(t){{
+              if(navigator.clipboard) {{
+                navigator.clipboard.writeText(t).then(()=>alert("Copiato: " + t));
+              }} else {{
+                window.prompt("Copia:", t);
+              }}
+            }}
+          </script>
+        </body>
+        </html>
+        """
+    finally:
+        db.close()
+
 @app.get("/admin")
 @admin_required
 def admin_home():
