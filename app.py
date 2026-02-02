@@ -985,7 +985,7 @@ def public_card(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    ag_view = = agent_to_view(ag)  # noqa: E999
+    ag_view = agent_to_view(ag)  # noqa: E999
 
     # applica traduzioni profilo 1 (se presenti)
     ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
