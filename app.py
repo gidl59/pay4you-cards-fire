@@ -656,9 +656,9 @@ def create_agent():
                     pdf_entries.append(f"{f.filename}||{u}")
         pdf_joined = "|".join(pdf_entries) if pdf_entries else None
 
-        # gallery
+            # gallery
         gallery_urls = []
-        for f in gallery_files[:MAX_G Fired: gallery files:
+        for f in gallery_files[:MAX_GALLERY_IMAGES]:
             if f and f.filename:
                 try:
                     u = upload_file(f, "gallery", max_bytes=mb_to_bytes(MAX_GALLERY_IMAGE_MB))
@@ -667,6 +667,7 @@ def create_agent():
                     continue
                 if u:
                     gallery_urls.append(u)
+
 
         # videos
         video_urls = []
