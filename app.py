@@ -893,7 +893,7 @@ def admin_export_agents_json():
             "websites": a.websites,
             "facebook": a.facebook,
             "instagram": a.instagram,
-            ".extract": a.linkedin,
+            "linkedin": a.linkedin,
             "tiktok": a.tiktok,
             "telegram": a.telegram,
             "whatsapp": a.whatsapp,
