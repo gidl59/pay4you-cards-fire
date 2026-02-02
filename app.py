@@ -1179,6 +1179,113 @@ def qr(slug):
 def not_found(e):
     return render_template("404.html"), 404
 
+# ==========================
+# ✅ ROUTES DI COMPATIBILITÀ
+# (evitano 500 se base.html punta a endpoint non presenti)
+# ==========================
+
+@app.get("/admin/export_agents.json")
+@admin_required
+def admin_export_agents_json():
+    # se già ce l'hai in un'altra parte, NON duplicare.
+    db = SessionLocal()
+    agents = db.query(Agent).order_by(Agent.id).all()
+
+    payload = []
+    for a in agents:
+        payload.append({
+            "id": a.id,
+            "slug": a.slug,
+            "name": a.name,
+            "company": a.company,
+            "role": a.role,
+            "bio": a.bio,
+            "phone_mobile": a.phone_mobile,
+            "phone_mobile2": a.phone_mobile2,
+            "phone_office": a.phone_office,
+            "emails": a.emails,
+            "websites": a.websites,
+            "facebook": a.facebook,
+            "instagram": a.instagram,
+            "linkedin": a.linkedin,
+            "tiktok": a.tiktok,
+            "telegram": a.telegram,
+            "whatsapp": a.whatsapp,
+            "pec": a.pec,
+            "piva": a.piva,
+            "sdi": a.sdi,
+            "addresses": a.addresses,
+            "photo_url": a.photo_url,
+            "extra_logo_url": a.extra_logo_url,
+            "gallery_urls": a.gallery_urls,
+            "video_urls": a.video_urls,
+            "pdf1_url": a.pdf1_url,
+            "plan": normalize_plan(getattr(a, "plan", "basic")),
+            "profiles_json": a.profiles_json,
+        })
+
+    content = json.dumps(payload, ensure_ascii=False, indent=2)
+    resp = Response(content, mimetype="application/json; charset=utf-8")
+    resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
+    return resp
+
+
+@app.get("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast(slug):
+    # Placeholder: domani lo completiamo (WhatsApp)
+    return redirect(url_for("admin_home"))
+
+
+@app.post("/admin/<slug>/broadcast")
+@admin_required
+def admin_broadcast_post(slug):
+    # Placeholder: domani lo completiamo (WhatsApp)
+    return redirect(url_for("admin_home"))
+
+
+@app.get("/admin/<slug>/credentials")
+@admin_required
+def admin_credentials(slug):
+    # Placeholder: se base.html lo linka non deve crashare
+    return redirect(url_for("admin_home"))
+
+
+@app.post("/admin/<slug>/send-credentials")
+@admin_required
+def admin_send_credentials(slug):
+    return redirect(url_for("admin_home"))
+
+
+@app.post("/admin/quick-pro")
+@admin_required
+def admin_quick_pro_create():
+    return redirect(url_for("admin_home"))
+
+
+# Se in base.html hai link a /wa/webhook
+@app.get("/wa/webhook")
+def wa_webhook_verify():
+    mode = request.args.get("hub.mode", "")
+    token = request.args.get("hub.verify_token", "")
+    challenge = request.args.get("hub.challenge", "")
+    if mode == "subscribe" and token == WA_VERIFY_TOKEN:
+        return Response(challenge, status=200, mimetype="text/plain")
+    return Response("forbidden", status=403, mimetype="text/plain")
+
+
+@app.post("/wa/webhook")
+def wa_webhook_receive():
+    # Placeholder per non rompere (lo rifiniamo quando torniamo su WhatsApp)
+    return "ok", 200
+
+
+# Link che io ho messo in agent_form.html: "me_profile2"
+@app.get("/me/profile2")
+@login_required
+def me_profile2():
+    # per ora rimanda alla pagina edit normale
+    return redirect(url_for("me_edit"))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
