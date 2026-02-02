@@ -1,71 +1,43 @@
 {% extends "base.html" %}
-{% block title %}Profilo 2{% endblock %}
+{% block title %}Profilo 2 | Pay4You{% endblock %}
 
 {% block content %}
 <div class="page-main">
-  <div class="admin-card" style="max-width:720px; width:100%;">
-    <h1 class="admin-title">Profilo 2 (IT + EN)</h1>
+  <div class="agent-form-wrapper">
+    <h1 class="agent-form-title">Profilo 2</h1>
 
-    <div style="font-size:12px; opacity:.8; margin-bottom:12px;">
-      Link diretto profilo 2: <b>/{{ agent.slug }}?p=p2</b>
+    <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna al profilo principale</a>
+      <a class="header-link" href="/{{ base_agent.slug }}?p=p2&owner=1" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
     </div>
 
-    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
-    {% if ok %}<div class="flash ok">{{ ok }}</div>{% endif %}
+    <form class="agent-form" method="post" action="{{ url_for('me_profile2_post') }}" enctype="multipart/form-data">
 
-    <form class="agent-form" method="post" enctype="multipart/form-data" action="{{ url_for('me_profile2_post') }}">
+      <label>Nome</label>
+      <input type="text" name="name" value="{{ agent.name or '' }}" required>
 
-      <h3 style="margin:0 0 6px 0;">Italiano (obbligatorio)</h3>
+      <label>Azienda</label>
+      <input type="text" name="company" value="{{ agent.company or '' }}">
 
-      <label>Nome (IT)</label>
-      <input type="text" name="name" value="{{ p2.name or '' }}" required>
+      <label>Ruolo</label>
+      <input type="text" name="role" value="{{ agent.role or '' }}">
 
-      <label>Ruolo (IT)</label>
-      <input type="text" name="role" value="{{ p2.role or '' }}">
+      <label>Bio / Descrizione</label>
+      <textarea name="bio">{{ agent.bio or '' }}</textarea>
 
-      <label>Azienda (IT)</label>
-      <input type="text" name="company" value="{{ p2.company or '' }}">
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Descrizione (IT)</label>
-      <textarea name="bio">{{ p2.bio or '' }}</textarea>
-
-      <div style="height:12px;"></div>
-      <h3 style="margin:0 0 6px 0;">English (optional)</h3>
-
-      <label>Name (EN)</label>
-      <input type="text" name="name_en" value="{{ p2.name_en or '' }}">
-
-      <label>Role (EN)</label>
-      <input type="text" name="role_en" value="{{ p2.role_en or '' }}">
-
-      <label>Company (EN)</label>
-      <input type="text" name="company_en" value="{{ p2.company_en or '' }}">
-
-      <label>Description (EN)</label>
-      <textarea name="bio_en">{{ p2.bio_en or '' }}</textarea>
-
-      <div style="height:12px;"></div>
-
-      <label>Foto profilo (vale per IT+EN)</label>
+      <label>Foto profilo (Profilo 2)</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo (vale per IT+EN)</label>
-      <input type="file" name="logo" accept="image/*">
+      <label>Logo extra (Profilo 2)</label>
+      <input type="file" name="extra_logo" accept="image/*">
 
-      <div class="agent-form-buttons" style="margin-top:14px;">
+      <div class="agent-form-buttons">
         <button type="submit">Salva Profilo 2</button>
-        <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna a Modifica</a>
+        <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna indietro</a>
       </div>
     </form>
-
-    <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:18px 0;">
-
-    <form method="post" action="{{ url_for('me_profile2_clear') }}" onsubmit="return confirm('Vuoi eliminare il Profilo 2?');">
-      <button type="submit" style="background:rgba(127,29,29,0.9); border:1px solid rgba(248,113,113,0.8); color:#fee2e2; padding:8px 12px; border-radius:999px; cursor:pointer;">
-        Elimina Profilo 2
-      </button>
-    </form>
-
   </div>
 </div>
 {% endblock %}
