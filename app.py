@@ -61,6 +61,81 @@ MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 
 SUPPORTED_LANGS = ("it", "en")
+TRANSLATIONS = {
+    "it": {
+        "profile_main": "Profilo principale",
+        "no_photo": "FOTO",
+        "contacts": "Contatti",
+        "mobile": "Cellulare",
+        "office_phone": "Telefono ufficio",
+        "open_whatsapp": "Apri",
+        "email": "Email",
+        "website": "Sito",
+        "open_site": "Apri sito",
+        "social": "Social",
+        "open": "Apri",
+        "quick_actions": "Azioni rapide",
+        "save_contact": "Salva contatto",
+        "download": "Scarica",
+        "scan_qr": "Scansiona QR",
+        "nfc_direct_link": "Link NFC diretto",
+        "copy": "Copia",
+        "copied": "Copiato",
+        "business_data": "Dati business",
+        "addresses": "Indirizzi",
+        "documents": "Documenti",
+        "gallery": "Galleria",
+        "videos": "Video",
+        "promos": "Promozioni",
+        "subscribe_promos": "Ricevi promozioni: premi e invia messaggio",
+        "unsubscribe_hint": "Per disattivare: scrivi STOP su WhatsApp.",
+        "footer_note": "Aggiornabile in qualsiasi momento.",
+        "preview": "Anteprima",
+        "close": "Chiudi",
+        "qr_code": "QR Code",
+        "video": "Video",
+        "image": "Immagine",
+    },
+    "en": {
+        "profile_main": "Main profile",
+        "no_photo": "PHOTO",
+        "contacts": "Contacts",
+        "mobile": "Mobile",
+        "office_phone": "Office phone",
+        "open_whatsapp": "Open",
+        "email": "Email",
+        "website": "Website",
+        "open_site": "Open website",
+        "social": "Social",
+        "open": "Open",
+        "quick_actions": "Quick actions",
+        "save_contact": "Save contact",
+        "download": "Download",
+        "scan_qr": "Scan QR",
+        "nfc_direct_link": "Direct NFC link",
+        "copy": "Copy",
+        "copied": "Copied",
+        "business_data": "Business data",
+        "addresses": "Addresses",
+        "documents": "Documents",
+        "gallery": "Gallery",
+        "videos": "Videos",
+        "promos": "Promotions",
+        "subscribe_promos": "Get promotions: tap and send the message",
+        "unsubscribe_hint": "To stop: send STOP on WhatsApp.",
+        "footer_note": "You can update it anytime.",
+        "preview": "Preview",
+        "close": "Close",
+        "qr_code": "QR Code",
+        "video": "Video",
+        "image": "Image",
+    }
+}
+
+def tr(lang: str) -> dict:
+    lang = (lang or "it").strip().lower()
+    return TRANSLATIONS.get(lang, TRANSLATIONS["it"])
+
 
 # ===== i18n MINIMO (IT+EN) =====
 I18N = {
@@ -1188,7 +1263,86 @@ def delete_agent(slug):
 
 
 # ------------------ AREA CLIENTE (Profilo 1) ------------------
-@app.get("/me/edit")
+@app.get("/me/edit") def upsert_profile(raw_json: str, profile_key: str, data: dict) -> str:
+    profiles = parse_profiles_json(raw_json or "")
+    found = False
+    for p in profiles:
+        if p.get("key") == profile_key:
+            p.update(data)
+            found = True
+            break
+    if not found:
+        profiles.append({"key": profile_key, "label": "Profilo 2", **data})
+    return json.dumps(profiles, ensure_ascii=False)
+
+@app.get("/me/profile2")
+@login_required
+def me_profile2():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    # prendiamo p2 dal JSON
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    p2 = select_profile(profiles, "p2") or {"key":"p2", "label":"Profilo 2"}
+
+    # creiamo una “vista” uguale alla principale ma con override p2
+    view = agent_to_view(ag)
+    view = apply_profile_to_view(view, p2)
+
+    # renderizziamo lo stesso form ma in modalità profilo2
+    return render_template("profile2_form.html", agent=view, base_agent=ag)
+
+@app.post("/me/profile2")
+@login_required
+def me_profile2_post():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    # campi profilo2 (stessi del profilo1 “base”)
+    data = {
+        "key": "p2",
+        "label": "Profilo 2",
+        "name": (request.form.get("name") or "").strip(),
+        "company": (request.form.get("company") or "").strip(),
+        "role": (request.form.get("role") or "").strip(),
+        "bio": (request.form.get("bio") or "").strip(),
+    }
+
+    # upload foto/logo per profilo2
+    photo = request.files.get("photo")
+    extra_logo = request.files.get("extra_logo")
+    if photo and photo.filename:
+        u = upload_file(photo, "photos")
+        if u:
+            data["photo_url"] = u
+    if extra_logo and extra_logo.filename:
+        u = upload_file(extra_logo, "logos")
+        if u:
+            data["logo_url"] = u
+
+    ag.profiles_json = upsert_profile(getattr(ag, "profiles_json", "") or "", "p2", data)
+    db.commit()
+    flash("Profilo 2 salvato ✅", "ok")
+    return redirect(url_for("me_profile2"))
+
 @login_required
 def me_edit():
     if is_admin():
@@ -1382,6 +1536,7 @@ def me_profile2_post():
 
 
 # ------------------ CARD PUBBLICA ------------------
+from flask import make_response
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
@@ -1434,7 +1589,7 @@ def public_card(slug):
     if qs:
         nfc_direct_url = nfc_direct_url + "?" + "&".join(qs)
 
-    return render_template(
+       resp = make_response(render_template(
         "card.html",
         ag=ag_view,
         base_url=base,
@@ -1447,12 +1602,20 @@ def public_card(slug):
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
         lang=lang,
-        t=t,
         profiles=profiles,
         active_profile=active_profile,
         p_key=p_key,
         nfc_direct_url=nfc_direct_url,
-    )
+        t=tr(lang),
+    ))
+
+    # ✅ evita che resti in cache sempre IT
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    resp.headers["Vary"] = "Accept-Language"
+    return resp
+
 
 
 # ------------------ VCARD ------------------
