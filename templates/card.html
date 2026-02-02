@@ -7,6 +7,83 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <meta name="format-detection" content="telephone=no">
+
+  <style>
+    .topbar {
+      display:flex; justify-content:space-between; align-items:center;
+      gap:10px; margin-bottom:10px;
+    }
+    .profile-switch { display:flex; gap:8px; flex-wrap:wrap; }
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:999px;
+      border:1px solid rgba(148,163,184,0.22);
+      background: rgba(15,23,42,0.55);
+      color:#e5e7eb; text-decoration:none; font-weight:700; font-size:13px;
+      cursor:pointer;
+    }
+    .pill.active { background: rgba(34,197,94,0.25); border-color: rgba(34,197,94,0.55); }
+
+    .brand-badge {
+      position:absolute; top:12px; left:12px;
+      width:52px; height:52px; border-radius:14px;
+      border:1px solid rgba(148,163,184,0.22);
+      background: rgba(2,6,23,0.55);
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      z-index: 5;
+    }
+    .brand-badge img { width:100%; height:100%; object-fit:cover; }
+
+    /* animazioni */
+    @keyframes spinOnce { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    @keyframes slowOrbit { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+    .spin-once { animation: spinOnce 1.2s linear 1; }
+    .spin-group { position: relative; }
+    .spin-group.slow-rotate .card-profile-photo-wrapper { animation: slowOrbit 28s linear infinite; transform-origin:center; }
+    .spin-group.slow-rotate .brand-badge { animation: slowOrbit 28s linear infinite; transform-origin:center; }
+
+    .link-button {
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(148,163,184,0.22);
+      background: rgba(15,23,42,0.55);
+      color:#e5e7eb; font-weight:700; cursor:pointer;
+    }
+
+    .modal-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,0.7);
+      display:none; align-items:center; justify-content:center;
+      z-index: 9999;
+      padding:16px;
+    }
+    .modal-box{
+      width:min(980px, 96vw);
+      max-height: 92vh;
+      background: rgba(15,23,42,0.95);
+      border:1px solid rgba(148,163,184,0.22);
+      border-radius: 16px;
+      padding: 12px;
+      overflow: hidden;
+    }
+    .modal-close-btn{
+      padding:8px 12px; border-radius:999px; border:none;
+      background: rgba(239,68,68,0.9); color:white; font-weight:800; cursor:pointer;
+    }
+    #modal-body{
+      margin-top:10px;
+      width:100%;
+      height: calc(92vh - 90px);
+      overflow:auto;
+    }
+    #modal-body iframe, #modal-body img, #modal-body video{
+      width:100%;
+      max-height: 78vh;
+      border:0;
+      border-radius: 12px;
+    }
+  </style>
 </head>
 <body>
 
@@ -15,33 +92,57 @@
 
   <div class="card-outer">
 
-    <!-- LINGUA -->
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px;">
-      <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=it{% else %}?lang=it{% endif %}">IT</a>
-      <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=en{% else %}?lang=en{% endif %}">EN</a>
-    </div>
+    <div class="topbar">
+      <!-- Switch profilo se esiste p2 -->
+      <div class="profile-switch">
+        {% set has_p2 = false %}
+        {% for p in profiles %}
+          {% if p.key == 'p2' %}
+            {% set has_p2 = true %}
+          {% endif %}
+        {% endfor %}
 
-    <!-- HEADER -->
-    <div class="business-card">
-      <div class="card-profile-photo-wrapper">
-        {% if ag.photo_url %}
-          <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="photo">
-        {% else %}
-          <div class="card-profile-photo" style="display:flex;align-items:center;justify-content:center;font-weight:700;">
-            {{ ag.name[:1] }}
-          </div>
+        <a class="pill {% if not p_key %}active{% endif %}" href="/{{ ag.slug }}"> {{ t_func('profile') }}</a>
+        {% if has_p2 %}
+          <a class="pill {% if p_key=='p2' %}active{% endif %}" href="/{{ ag.slug }}?p=p2"> {{ t_func('profile2') }}</a>
         {% endif %}
       </div>
 
-      <div class="card-name-block">
-        <h1 class="card-name">{{ ag.name }}</h1>
-        {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
-        {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
-        {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
+      <!-- niente toggle lingua manuale -->
+      <div style="font-size:12px; opacity:.75;">
+        {{ lang|upper }}
       </div>
     </div>
 
-    <!-- AZIONI (box come social) -->
+    <!-- HEADER CARD + LOGO TOP-LEFT -->
+    <div class="spin-group slow-rotate">
+      {% if ag.extra_logo_url %}
+        <div class="brand-badge" id="brandBadge">
+          <img src="{{ ag.extra_logo_url }}" alt="logo">
+        </div>
+      {% endif %}
+
+      <div class="business-card">
+        <div class="card-profile-photo-wrapper">
+          {% if ag.photo_url %}
+            <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="photo">
+          {% else %}
+            <div class="card-profile-photo" style="display:flex;align-items:center;justify-content:center;font-weight:700;">
+              {{ ag.name[:1] }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="card-name-block">
+          <h1 class="card-name">{{ ag.name }}</h1>
+          {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
+          {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
+          {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- AZIONI (senza NFC direct) -->
     <div class="card-section">
       <h2>{{ t_func('actions') }}</h2>
 
@@ -55,17 +156,9 @@
         <div class="icon">📷</div>
         <div class="label">{{ t_func('scan_qr') }}</div>
         <div class="value">
-          <button class="link-button" onclick="openQrModal('/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}')">
+          <button class="link-button" onclick="openModal('img','/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}')">
             {{ t_func('open') }}
           </button>
-        </div>
-      </div>
-
-      <div class="contact-row">
-        <div class="icon">🔗</div>
-        <div class="label">{{ t_func('direct_nfc') }}</div>
-        <div class="value">
-          <button class="link-button" onclick="copyText('{{ nfc_direct_url }}')">Copy</button>
         </div>
       </div>
     </div>
@@ -92,12 +185,12 @@
       </div>
       {% endif %}
 
-      {% if ag.whatsapp %}
+      {% if whatsapp_link %}
       <div class="contact-row whatsapp-row">
         <div class="icon">💬</div>
         <div class="label">{{ t_func('whatsapp') }}</div>
         <div class="value">
-          <a href="{{ ag.whatsapp }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
+          <a href="{{ whatsapp_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
         </div>
       </div>
       {% endif %}
@@ -147,52 +240,51 @@
       {% endif %}
     </div>
 
-    <!-- SOCIAL (solo nome cliccabile, non url lungo) -->
-    {% set has_social = (ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram) %}
+    <!-- SOCIAL -->
+    {% set has_social = (social.facebook or social.instagram or social.linkedin or social.tiktok or social.telegram) %}
     {% if has_social %}
     <div class="card-section">
       <h2>{{ t_func('social') }}</h2>
 
-      {% if ag.facebook %}
+      {% if social.facebook %}
       <div class="contact-row social-row">
         <div class="icon">📘</div>
         <div class="label">{{ t_func('facebook') }}</div>
-        <div class="value"><a href="{{ ag.facebook }}" target="_blank" rel="noopener">{{ t_func('facebook') }}</a></div>
+        <div class="value"><a href="{{ social.facebook }}" target="_blank" rel="noopener">{{ t_func('facebook') }}</a></div>
       </div>
       {% endif %}
 
-      {% if ag.instagram %}
+      {% if social.instagram %}
       <div class="contact-row social-row">
         <div class="icon">📸</div>
         <div class="label">{{ t_func('instagram') }}</div>
-        <div class="value"><a href="{{ ag.instagram }}" target="_blank" rel="noopener">{{ t_func('instagram') }}</a></div>
+        <div class="value"><a href="{{ social.instagram }}" target="_blank" rel="noopener">{{ t_func('instagram') }}</a></div>
       </div>
       {% endif %}
 
-      {% if ag.linkedin %}
+      {% if social.linkedin %}
       <div class="contact-row social-row">
         <div class="icon">💼</div>
         <div class="label">{{ t_func('linkedin') }}</div>
-        <div class="value"><a href="{{ ag.linkedin }}" target="_blank" rel="noopener">{{ t_func('linkedin') }}</a></div>
+        <div class="value"><a href="{{ social.linkedin }}" target="_blank" rel="noopener">{{ t_func('linkedin') }}</a></div>
       </div>
       {% endif %}
 
-      {% if ag.tiktok %}
+      {% if social.tiktok %}
       <div class="contact-row social-row">
         <div class="icon">🎵</div>
         <div class="label">{{ t_func('tiktok') }}</div>
-        <div class="value"><a href="{{ ag.tiktok }}" target="_blank" rel="noopener">{{ t_func('tiktok') }}</a></div>
+        <div class="value"><a href="{{ social.tiktok }}" target="_blank" rel="noopener">{{ t_func('tiktok') }}</a></div>
       </div>
       {% endif %}
 
-      {% if ag.telegram %}
+      {% if social.telegram %}
       <div class="contact-row social-row">
         <div class="icon">✈️</div>
         <div class="label">{{ t_func('telegram') }}</div>
-        <div class="value"><a href="{{ ag.telegram }}" target="_blank" rel="noopener">{{ t_func('telegram') }}</a></div>
+        <div class="value"><a href="{{ social.telegram }}" target="_blank" rel="noopener">{{ t_func('telegram') }}</a></div>
       </div>
       {% endif %}
-
     </div>
     {% endif %}
 
@@ -206,15 +298,15 @@
     </div>
     {% endif %}
 
-    <!-- PDF -->
+    <!-- PDF in MODALE -->
     {% if pdfs and pdfs|length > 0 %}
     <div class="card-section">
       <h2>{{ t_func('documents') }}</h2>
       <div class="pdf-list">
         {% for p in pdfs %}
-          <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
+          <button class="pdf-item" type="button" onclick="openModal('pdf','{{ p.url }}')">
             <span class="pdf-icon">📄</span> {{ p.name }}
-          </a>
+          </button>
         {% endfor %}
       </div>
     </div>
@@ -226,7 +318,7 @@
       <h2>{{ t_func('gallery') }}</h2>
       <div class="gallery-scroll">
         {% for img in gallery %}
-          <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('img','{{ img }}')">
+          <button class="gallery-thumb-btn" type="button" onclick="openModal('img','{{ img }}')">
             <img src="{{ img }}" alt="gallery">
           </button>
         {% endfor %}
@@ -240,7 +332,7 @@
       <h2>{{ t_func('videos') }}</h2>
       <div class="gallery-scroll">
         {% for v in videos %}
-          <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('video','{{ v }}')">
+          <button class="gallery-thumb-btn" type="button" onclick="openModal('video','{{ v }}')">
             <img src="https://dummyimage.com/185x185/111827/ffffff&text=VIDEO" alt="video">
           </button>
         {% endfor %}
@@ -248,81 +340,65 @@
     </div>
     {% endif %}
 
-    <!-- OPT-IN SOLO CLIENTI (testo chiaro) -->
-    {% if wa_optin_link %}
-    <div class="card-section">
-      <h2>{{ t_func('subscribe_title') }}</h2>
-      <div style="font-size:13px; color:#cbd5e1; margin-bottom:10px;">
-        {{ t_func('subscribe_desc') }}
-      </div>
-      <a class="header-link" href="{{ wa_optin_link }}" target="_blank" rel="noopener">
-        {{ t_func('subscribe_btn') }}
-      </a>
-    </div>
-    {% endif %}
-
     <div class="card-footer">© Card digitale</div>
   </div>
 </div>
 
-<!-- MODAL (QR / IMG / VIDEO) -->
-<div id="media-modal" style="display:none;" class="modal-overlay" onclick="closeMediaModal(event)">
+<!-- MODALE -->
+<div id="modal" class="modal-overlay" onclick="closeModal(event)">
   <div class="modal-box">
-    <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
-      <button class="modal-close-btn" type="button" onclick="forceCloseMedia()">{{ t_func('close') }}</button>
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button class="modal-close-btn" type="button" onclick="forceClose()">{{ t_func('close') }}</button>
     </div>
-    <div id="media-modal-body"></div>
+    <div id="modal-body"></div>
   </div>
 </div>
 
 <script>
-  function copyText(t){
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(t).then(()=>alert("Copiato ✅"));
-    }else{
-      window.prompt("Copia:", t);
-    }
-  }
+  // logo: gira su se stesso 1 volta all’avvio
+  (function(){
+    const b = document.getElementById('brandBadge');
+    if(b){ b.classList.add('spin-once'); }
+  })();
 
-  function openQrModal(url){
-    openMediaModal('img', url);
-  }
-
-  function openMediaModal(type, url){
-    const modal = document.getElementById('media-modal');
-    const body = document.getElementById('media-modal-body');
+  function openModal(type, url){
+    const m = document.getElementById('modal');
+    const body = document.getElementById('modal-body');
     body.innerHTML = "";
 
     if(type === 'img'){
       const img = document.createElement('img');
-      img.id = "qr-modal-img";
       img.src = url;
       img.alt = "media";
       body.appendChild(img);
-    } else {
-      const video = document.createElement('video');
-      video.src = url;
-      video.controls = true;
-      video.style.width = "100%";
-      video.style.maxHeight = "78vh";
-      body.appendChild(video);
+    } else if(type === 'video'){
+      const v = document.createElement('video');
+      v.src = url;
+      v.controls = true;
+      v.playsInline = true;
+      body.appendChild(v);
+    } else { // pdf
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.setAttribute('loading','lazy');
+      body.appendChild(iframe);
     }
 
-    modal.style.display = "flex";
+    m.style.display = "flex";
     document.body.style.overflow = "hidden";
   }
 
-  function forceCloseMedia(){
-    const modal = document.getElementById('media-modal');
-    const body = document.getElementById('media-modal-body');
+  function forceClose(){
+    const m = document.getElementById('modal');
+    const body = document.getElementById('modal-body');
     body.innerHTML = "";
-    modal.style.display = "none";
+    m.style.display = "none";
     document.body.style.overflow = "auto";
   }
 
-  function closeMediaModal(e){
-    if(e.target && e.target.id === "media-modal"){
-      forceCloseMedia();
+  function closeModal(e){
+    if(e.target && e.target.id === "modal"){
+      forceClose();
     }
   }
 </script>
