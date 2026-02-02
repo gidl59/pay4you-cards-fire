@@ -1172,6 +1172,19 @@ def qr(slug):
     img.save(bio, format="PNG")
     bio.seek(0)
     return send_file(bio, mimetype="image/png")
+    # ------------------ AREA CLIENTE: PROFILO 2 ------------------
+@app.get("/me/profile2")
+@login_required
+def me_profile2():
+    """
+    Per adesso: profilo 2 uguale al profilo 1.
+    Quindi rimando alla pagina di modifica principale.
+    (Poi lo rendiamo una pagina separata identica, come mi hai chiesto.)
+    """
+    if is_admin():
+        return redirect(url_for("admin_home"))
+    return redirect(url_for("me_edit"))
+
 
 
 # ------------------ ERRORI ------------------
