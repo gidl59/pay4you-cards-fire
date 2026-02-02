@@ -9,12 +9,11 @@
       {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
     </h1>
 
-    {# ✅ BOTTONI CLIENTE (NO ADMIN) #}
     {% if session.get('role') != 'admin' and agent %}
       <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Profilo 2</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2&owner=1" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        <a class="header-link" href="/{{ agent.slug }}?owner=1" target="_blank" rel="noopener">Apri Card principale</a>
+        <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Gestisci Profilo 2</a>
+        <a class="header-link" href="/{{ agent.slug }}?p=p2&lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+        <a class="header-link" href="/{{ agent.slug }}?lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Card principale</a>
       </div>
     {% endif %}
 
@@ -114,7 +113,7 @@
       <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo extra (opzionale)</label>
+      <label>Logo extra (visibile in alto se caricato)</label>
       <input type="file" name="extra_logo" accept="image/*">
 
       <label>Galleria (max 30 immagini)</label>
@@ -124,16 +123,18 @@
       <input type="file" name="videos" accept="video/*" multiple>
 
       <label>PDF (fino a 12)</label>
-      {% for i in range(1,13) %}
-        <input type="file" name="pdf{{ i }}" accept="application/pdf">
-      {% endfor %}
-
-      {# ✅ Il JSON resta, ma non serve più: Profilo 2 si gestisce dal bottone #}
-      <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
-      <textarea name="profiles_json" style="min-height:140px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
-      <div style="margin-top:6px; font-size:12px; opacity:.8;">
-        Se lasci vuoto, la card resta mono-profilo. Profilo 2 lo crei dal bottone sopra.
-      </div>
+      <input type="file" name="pdf1" accept="application/pdf">
+      <input type="file" name="pdf2" accept="application/pdf">
+      <input type="file" name="pdf3" accept="application/pdf">
+      <input type="file" name="pdf4" accept="application/pdf">
+      <input type="file" name="pdf5" accept="application/pdf">
+      <input type="file" name="pdf6" accept="application/pdf">
+      <input type="file" name="pdf7" accept="application/pdf">
+      <input type="file" name="pdf8" accept="application/pdf">
+      <input type="file" name="pdf9" accept="application/pdf">
+      <input type="file" name="pdf10" accept="application/pdf">
+      <input type="file" name="pdf11" accept="application/pdf">
+      <input type="file" name="pdf12" accept="application/pdf">
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
