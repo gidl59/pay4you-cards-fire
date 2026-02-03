@@ -1,19 +1,20 @@
 {% extends "base.html" %}
-{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %} | Pay4You{% endblock %}
+{% block title %}Modifica | Pay4You{% endblock %}
 
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
 
     <h1 class="agent-form-title">
-      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
+      {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
     </h1>
 
     {% if session.get('role') != 'admin' and agent %}
-      <div class="profile-tools">
-        <a class="header-link" href="{{ url_for('me_profile2') }}">👤 Profilo 2 (multi-utente)</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card pubblica</a>
+      <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="header-link" href="{{ url_for('me_edit') }}">Profilo 1</a>
+        <a class="header-link" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
       </div>
     {% endif %}
 
@@ -24,7 +25,11 @@
         {% set form_action = url_for('create_agent') %}
       {% endif %}
     {% else %}
-      {% set form_action = url_for('me_edit_post') %}
+      {% if editing_profile2 %}
+        {% set form_action = url_for('me_profile2_post') %}
+      {% else %}
+        {% set form_action = url_for('me_edit_post') %}
+      {% endif %}
     {% endif %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
@@ -32,17 +37,10 @@
       {% if session.get('role') == 'admin' %}
         <label>Slug (univoco)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
-
-        <label>Piano</label>
-        <select name="plan" class="input-like">
-          {% set p = (agent.plan if agent and agent.plan else 'basic') %}
-          <option value="basic" {% if p=='basic' %}selected{% endif %}>basic</option>
-          <option value="pro" {% if p=='pro' %}selected{% endif %}>pro</option>
-        </select>
       {% else %}
-        {% if agent %}
-          <div class="slug-badge">Slug: <b>{{ agent.slug }}</b></div>
-        {% endif %}
+        <div style="font-size:12px; opacity:.75; margin-bottom:6px;">
+          Slug: <b>{{ agent.slug }}</b>
+        </div>
       {% endif %}
 
       <label>Nome</label>
@@ -57,7 +55,7 @@
       <label>Bio / Descrizione</label>
       <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
-      <hr class="sep">
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Telefono mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
@@ -89,7 +87,7 @@
       <label>Indirizzi (uno per riga)</label>
       <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
 
-      <hr class="sep">
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Facebook</label>
       <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
@@ -106,37 +104,64 @@
       <label>Telegram</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
-      <hr class="sep">
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Foto profilo</label>
+      <label>Foto profilo (max 8MB)</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo (in alto a sinistra + retro foto)</label>
-      <input type="file" name="extra_logo" accept="image/*">
+      <label>Logo (max 8MB)</label>
+      <input type="file" name="logo" accept="image/*">
 
-      <label>Galleria (max 30 immagini)</label>
-      <input type="file" name="gallery" accept="image/*" multiple>
+      {% if not editing_profile2 %}
+        <label>Galleria (max 30 immagini, 8MB cad.)</label>
+        <input type="file" name="gallery" accept="image/*" multiple>
 
-      <label>Video (max 10)</label>
-      <input type="file" name="videos" accept="video/*" multiple>
+        <label>Video (max 10, 60MB cad.)</label>
+        <input type="file" name="videos" accept="video/*" multiple>
 
-      <label>PDF (fino a 12)</label>
-      <input type="file" name="pdf1" accept="application/pdf">
-      <input type="file" name="pdf2" accept="application/pdf">
-      <input type="file" name="pdf3" accept="application/pdf">
-      <input type="file" name="pdf4" accept="application/pdf">
-      <input type="file" name="pdf5" accept="application/pdf">
-      <input type="file" name="pdf6" accept="application/pdf">
-      <input type="file" name="pdf7" accept="application/pdf">
-      <input type="file" name="pdf8" accept="application/pdf">
-      <input type="file" name="pdf9" accept="application/pdf">
-      <input type="file" name="pdf10" accept="application/pdf">
-      <input type="file" name="pdf11" accept="application/pdf">
-      <input type="file" name="pdf12" accept="application/pdf">
+        <label>PDF (fino a 12, 15MB cad.)</label>
+        <input type="file" name="pdf1" accept="application/pdf">
+        <input type="file" name="pdf2" accept="application/pdf">
+        <input type="file" name="pdf3" accept="application/pdf">
+        <input type="file" name="pdf4" accept="application/pdf">
+        <input type="file" name="pdf5" accept="application/pdf">
+        <input type="file" name="pdf6" accept="application/pdf">
+        <input type="file" name="pdf7" accept="application/pdf">
+        <input type="file" name="pdf8" accept="application/pdf">
+        <input type="file" name="pdf9" accept="application/pdf">
+        <input type="file" name="pdf10" accept="application/pdf">
+        <input type="file" name="pdf11" accept="application/pdf">
+        <input type="file" name="pdf12" accept="application/pdf">
+      {% endif %}
 
-      <!-- ✅ Non mostriamo più il box JSON come unico modo.
-           Se vuoi tenerlo “per admin”, lo possiamo rimettere solo admin.
-           Per ora: niente JSON all’utente base. -->
+      {% if not editing_profile2 %}
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:14px 0;">
+      <h3 style="margin:0 0 8px 0; font-size:16px;">Traduzioni Profilo 1 (opzionali)</h3>
+      <div style="font-size:12px; opacity:.8; margin-bottom:10px;">
+        Se il telefono è in francese/inglese/tedesco/spagnolo, la card userà questi testi (se compilati).
+      </div>
+
+      {% for L in ['en','fr','es','de'] %}
+        <details style="margin:8px 0; border:1px solid rgba(148,163,184,.18); border-radius:12px; padding:10px; background:rgba(15,23,42,.55);">
+          <summary style="cursor:pointer; font-weight:700; opacity:.9;">{{ L|upper }}</summary>
+
+          <label style="margin-top:10px;">Nome ({{ L|upper }})</label>
+          <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
+
+          <label>Azienda ({{ L|upper }})</label>
+          <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
+
+          <label>Ruolo ({{ L|upper }})</label>
+          <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
+
+          <label>Bio ({{ L|upper }})</label>
+          <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
+
+          <label>Indirizzi ({{ L|upper }})</label>
+          <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
+        </details>
+      {% endfor %}
+      {% endif %}
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
