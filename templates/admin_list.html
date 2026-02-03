@@ -20,25 +20,57 @@
             <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Azioni</th>
           </tr>
         </thead>
+
         <tbody>
           {% for a in agents %}
           <tr>
             <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
               {{ a.name }}
             </td>
+
             <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
-              {{ a.slug }}
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <div><b>{{ a.slug }}</b></div>
+                <div style="font-size:12px; opacity:.75;">
+                  /{{ a.slug }}
+                </div>
+              </div>
             </td>
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12); display:flex; gap:10px; flex-wrap:wrap;">
-              <a class="header-link" href="/{{ a.slug }}" target="_blank">Apri Card</a>
-              <a class="header-link" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
-                <button class="header-link" type="submit" style="background:#7f1d1d;border:none;cursor:pointer;">Elimina</button>
-              </form>
+
+            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+
+                <!-- CARD PUBBLICHE -->
+                <a class="header-link" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
+                <a class="header-link" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2</a>
+
+                <!-- MODIFICA -->
+                <a class="header-link" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+
+                <!-- ✅ MODIFICA PROFILO 2 (serve route dedicata in app.py) -->
+                <a class="header-link" href="{{ url_for('admin_edit_profile2', slug=a.slug) }}">Modifica Profilo 2</a>
+
+                <!-- EXTRA UTILI -->
+                <a class="header-link" href="/{{ a.slug }}/qr.png" target="_blank" rel="noopener">QR</a>
+                <a class="header-link" href="/{{ a.slug }}.vcf" target="_blank" rel="noopener">VCF</a>
+
+                <!-- ELIMINA -->
+                <form method="post"
+                      action="{{ url_for('delete_agent', slug=a.slug) }}"
+                      onsubmit="return confirm('Eliminare la card {{ a.slug }}?')"
+                      style="display:inline;">
+                  <button class="header-link" type="submit"
+                          style="background:#7f1d1d;border:none;cursor:pointer;">
+                    Elimina
+                  </button>
+                </form>
+
+              </div>
             </td>
           </tr>
           {% endfor %}
         </tbody>
+
       </table>
     </div>
 
