@@ -4,8 +4,8 @@ import uuid
 import json
 from datetime import datetime
 from io import BytesIO
+from urllib.parse import quote
 from types import SimpleNamespace
-import urllib.parse
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -18,6 +18,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 import qrcode
+import urllib.parse
 
 load_dotenv()
 
@@ -43,6 +44,8 @@ I18N = {
     "it": {
         "save_contact": "Salva contatto",
         "scan_qr": "Scansiona QR",
+        "open_website": "Apri sito",
+        "open_pdf": "Apri PDF",
         "contacts": "Contatti",
         "social": "Social",
         "documents": "Documenti",
@@ -54,16 +57,17 @@ I18N = {
         "mobile_phone": "Cellulare",
         "whatsapp": "WhatsApp",
         "addresses": "Indirizzi",
-        "close": "Chiudi",
-        "open": "Apri",
-        "profile2": "Profilo 2",
-        "edit": "Modifica",
-        "logout": "Logout",
         "back": "Indietro",
+        "lang": "Lingua",
+        "profile1": "Profilo 1",
+        "profile2": "Profilo 2",
+        "actions": "Azioni",
     },
     "en": {
         "save_contact": "Save contact",
         "scan_qr": "Scan QR",
+        "open_website": "Open website",
+        "open_pdf": "Open PDF",
         "contacts": "Contacts",
         "social": "Social",
         "documents": "Documents",
@@ -75,16 +79,17 @@ I18N = {
         "mobile_phone": "Mobile",
         "whatsapp": "WhatsApp",
         "addresses": "Addresses",
-        "close": "Close",
-        "open": "Open",
-        "profile2": "Profile 2",
-        "edit": "Edit",
-        "logout": "Logout",
         "back": "Back",
+        "lang": "Language",
+        "profile1": "Profile 1",
+        "profile2": "Profile 2",
+        "actions": "Actions",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
         "scan_qr": "Scanner le QR",
+        "open_website": "Ouvrir le site",
+        "open_pdf": "Ouvrir le PDF",
         "contacts": "Contacts",
         "social": "Réseaux sociaux",
         "documents": "Documents",
@@ -96,16 +101,17 @@ I18N = {
         "mobile_phone": "Mobile",
         "whatsapp": "WhatsApp",
         "addresses": "Adresses",
-        "close": "Fermer",
-        "open": "Ouvrir",
-        "profile2": "Profil 2",
-        "edit": "Modifier",
-        "logout": "Déconnexion",
         "back": "Retour",
+        "lang": "Langue",
+        "profile1": "Profil 1",
+        "profile2": "Profil 2",
+        "actions": "Actions",
     },
     "es": {
         "save_contact": "Guardar contacto",
         "scan_qr": "Escanear QR",
+        "open_website": "Abrir web",
+        "open_pdf": "Abrir PDF",
         "contacts": "Contactos",
         "social": "Redes sociales",
         "documents": "Documentos",
@@ -117,16 +123,17 @@ I18N = {
         "mobile_phone": "Móvil",
         "whatsapp": "WhatsApp",
         "addresses": "Direcciones",
-        "close": "Cerrar",
-        "open": "Abrir",
-        "profile2": "Perfil 2",
-        "edit": "Editar",
-        "logout": "Salir",
         "back": "Atrás",
+        "lang": "Idioma",
+        "profile1": "Perfil 1",
+        "profile2": "Perfil 2",
+        "actions": "Acciones",
     },
     "de": {
         "save_contact": "Kontakt speichern",
         "scan_qr": "QR scannen",
+        "open_website": "Website öffnen",
+        "open_pdf": "PDF öffnen",
         "contacts": "Kontakte",
         "social": "Social",
         "documents": "Dokumente",
@@ -138,20 +145,21 @@ I18N = {
         "mobile_phone": "Mobil",
         "whatsapp": "WhatsApp",
         "addresses": "Adressen",
-        "close": "Schließen",
-        "open": "Öffnen",
-        "profile2": "Profil 2",
-        "edit": "Bearbeiten",
-        "logout": "Abmelden",
         "back": "Zurück",
+        "lang": "Sprache",
+        "profile1": "Profil 1",
+        "profile2": "Profil 2",
+        "actions": "Aktionen",
     },
 }
+
 
 def t(lang: str, key: str) -> str:
     lang = (lang or "it").lower()
     if lang not in SUPPORTED_LANGS:
         lang = "it"
     return I18N.get(lang, I18N["it"]).get(key, key)
+
 
 def mb_to_bytes(mb: int) -> int:
     return int(mb) * 1024 * 1024
@@ -174,7 +182,7 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
 
-    # Profilo 1
+    # Profilo 1 (base)
     name = Column(String, nullable=False)
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
@@ -200,17 +208,18 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    logo_url = Column(String, nullable=True)      # (nuovo) logo
-    extra_logo_url = Column(String, nullable=True)  # (vecchio) fallback se esiste
+
+    # ✅ nuovo nome: logo_url (ma supportiamo fallback extra_logo_url se esiste nel DB vecchio)
+    logo_url = Column(String, nullable=True)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    # multi profilo (p2)
+    # ✅ multi-utente: profilo2 salvato qui
     profiles_json = Column(Text, nullable=True)
 
-    # traduzioni profilo 1
+    # ✅ traduzioni profilo1 salvate qui
     i18n_json = Column(Text, nullable=True)
 
 
@@ -235,10 +244,11 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
             conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
             conn.commit()
 
+
+# nuove colonne
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
 ensure_sqlite_column("agents", "logo_url", "TEXT")
-ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
 ensure_sqlite_column("agents", "phone_office", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "sdi", "TEXT")
@@ -246,35 +256,49 @@ ensure_sqlite_column("agents", "piva", "TEXT")
 
 
 # ===== HELPERS =====
+def now_iso():
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+
 def is_logged_in() -> bool:
     return bool(session.get("username"))
+
 
 def is_admin() -> bool:
     return session.get("role") == "admin"
 
+
 def current_client_slug():
     return session.get("agent_slug")
 
+
 def admin_required(f):
     from functools import wraps
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not is_logged_in() or not is_admin():
             return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return wrapper
+
 
 def login_required(f):
     from functools import wraps
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not is_logged_in():
             return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return wrapper
+
 
 def generate_password(length=10):
     return uuid.uuid4().hex[:length]
+
 
 def slugify(s: str) -> str:
     s = (s or "").strip().lower()
@@ -282,6 +306,7 @@ def slugify(s: str) -> str:
     s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
     s = re.sub(r"\s+", "-", s).strip("-")
     return s
+
 
 def ensure_admin_user():
     db = SessionLocal()
@@ -291,19 +316,24 @@ def ensure_admin_user():
         db.commit()
     db.close()
 
+
 ensure_admin_user()
+
 
 def get_base_url():
     if BASE_URL:
         return BASE_URL
     return request.url_root.strip().rstrip("/")
 
+
 def pick_lang_from_request() -> str:
+    # 1) querystring ?lang=
     q = (request.args.get("lang") or "").strip().lower()
     if q:
         q = q.split("-", 1)[0]
         return q if q in SUPPORTED_LANGS else "it"
 
+    # 2) header Accept-Language
     al = (request.headers.get("Accept-Language") or "").lower()
     if al:
         first = al.split(",", 1)[0].strip().split("-", 1)[0]
@@ -311,35 +341,48 @@ def pick_lang_from_request() -> str:
             return first
     return "it"
 
+
 def safe_json_load(s: str, default):
     try:
         return json.loads(s) if s else default
     except Exception:
         return default
 
+
 def i18n_get(ag: Agent) -> dict:
     return safe_json_load(getattr(ag, "i18n_json", "") or "", {})
+
 
 def i18n_set(ag: Agent, data: dict):
     ag.i18n_json = json.dumps(data, ensure_ascii=False)
 
+
 def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
+    """
+    Applica traduzioni al profilo 1.
+    Se in i18n_json[lang] trovi company/role/bio/addresses ecc. -> sovrascrive.
+    """
     if lang not in SUPPORTED_LANGS or lang == "it":
         return ag_view
+
     data = i18n_get(ag)
     tr = data.get(lang) if isinstance(data, dict) else None
     if not isinstance(tr, dict):
         return ag_view
+
     for k in ("name", "company", "role", "bio", "addresses"):
         v = (tr.get(k) or "").strip()
         if v:
             setattr(ag_view, k, v)
+
     return ag_view
+
 
 def upload_file(file_storage, folder="uploads", max_bytes=None):
     if not file_storage or not file_storage.filename:
         return None
 
+    # limite singolo file
     if max_bytes is not None:
         file_storage.stream.seek(0, os.SEEK_END)
         size = file_storage.stream.tell()
@@ -357,9 +400,11 @@ def upload_file(file_storage, folder="uploads", max_bytes=None):
 
     return f"/uploads/{folder}/{filename}"
 
+
 @app.get("/uploads/<path:subpath>")
 def serve_uploads(subpath):
     return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
+
 
 def parse_pdfs(raw: str):
     pdfs = []
@@ -383,31 +428,84 @@ def parse_pdfs(raw: str):
             pdfs.append({"name": filename, "url": url})
     return pdfs
 
+
 def normalize_whatsapp_link(raw: str) -> str:
     t0 = (raw or "").strip()
     if not t0:
         return ""
+
     if t0.startswith("http://") or t0.startswith("https://"):
         return t0
 
-    t = t0.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if t.startswith("+"):
-        t = t[1:]
-    if t.startswith("00"):
-        t = t[2:]
-    if t.isdigit():
-        return f"https://wa.me/{t}"
+    t2 = t0.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if t2.startswith("+"):
+        t2 = t2[1:]
+    if t2.startswith("00"):
+        t2 = t2[2:]
+
+    if t2.isdigit():
+        return f"https://wa.me/{t2}"
+
     return ""
 
+
+# ===== PROFILO 2 (multiutente) su profiles_json =====
 def parse_profiles_json(raw: str):
-    data = safe_json_load(raw or "", [])
-    if not isinstance(data, list):
+    if not raw:
         return []
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return []
+    except Exception:
+        return []
+
     out = []
-    for p in data:
-        if isinstance(p, dict) and p.get("key"):
-            out.append(p)
+    for i, p in enumerate(data):
+        if not isinstance(p, dict):
+            continue
+        key = (p.get("key") or "").strip() or f"p{i+1}"
+        key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
+
+        out.append({
+            "key": key,
+            "name": (p.get("name") or "").strip(),
+            "company": (p.get("company") or "").strip(),
+            "role": (p.get("role") or "").strip(),
+            "bio": (p.get("bio") or "").strip(),
+            "phone_mobile": (p.get("phone_mobile") or "").strip(),
+            "phone_mobile2": (p.get("phone_mobile2") or "").strip(),
+            "phone_office": (p.get("phone_office") or "").strip(),
+            "whatsapp": (p.get("whatsapp") or "").strip(),
+            "emails": (p.get("emails") or "").strip(),
+            "websites": (p.get("websites") or "").strip(),
+            "pec": (p.get("pec") or "").strip(),
+            "piva": (p.get("piva") or "").strip(),
+            "sdi": (p.get("sdi") or "").strip(),
+            "addresses": (p.get("addresses") or "").strip(),
+            "facebook": (p.get("facebook") or "").strip(),
+            "instagram": (p.get("instagram") or "").strip(),
+            "linkedin": (p.get("linkedin") or "").strip(),
+            "tiktok": (p.get("tiktok") or "").strip(),
+            "telegram": (p.get("telegram") or "").strip(),
+            "photo_url": (p.get("photo_url") or "").strip(),
+            "logo_url": (p.get("logo_url") or "").strip(),
+        })
     return out
+
+
+def dump_profiles_json(profiles: list) -> str:
+    return json.dumps(profiles, ensure_ascii=False)
+
+
+def select_profile(profiles: list, key: str):
+    if not key:
+        return None
+    for p in profiles:
+        if p.get("key") == key:
+            return p
+    return None
+
 
 def upsert_profile(profiles: list, key: str, payload: dict):
     found = False
@@ -422,16 +520,11 @@ def upsert_profile(profiles: list, key: str, payload: dict):
         profiles.append(base)
     return profiles
 
-def select_profile(profiles: list, key: str):
-    if not key:
-        return None
-    for p in profiles:
-        if p.get("key") == key:
-            return p
-    return None
 
 def agent_to_view(ag: Agent):
-    logo = (getattr(ag, "logo_url", None) or "").strip() or (getattr(ag, "extra_logo_url", None) or "").strip()
+    # fallback: se nel DB vecchio esiste extra_logo_url, lo leggiamo
+    logo_url = getattr(ag, "logo_url", None) or getattr(ag, "extra_logo_url", None)
+
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -455,89 +548,15 @@ def agent_to_view(ag: Agent):
         sdi=ag.sdi,
         addresses=ag.addresses,
         photo_url=ag.photo_url,
-        logo_url=logo,
+        logo_url=logo_url,
         gallery_urls=ag.gallery_urls,
         video_urls=ag.video_urls,
         pdf1_url=ag.pdf1_url,
     )
 
-# ===== PROFILO 2 (multiutente) su profiles_json =====
-
-def parse_profiles_json(raw: str):
-    if not raw:
-        return []
-    try:
-        data = json.loads(raw)
-        if not isinstance(data, list):
-            return []
-    except Exception:
-        return []
-
-    out = []
-    for i, p in enumerate(data):
-        if not isinstance(p, dict):
-            continue
-        key = (p.get("key") or "").strip() or f"p{i+1}"
-        key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
-
-        out.append({
-            "key": key,
-            "label_it": (p.get("label_it") or p.get("label") or f"Profilo {i+1}").strip(),
-            "label_en": (p.get("label_en") or p.get("label") or f"Profile {i+1}").strip(),
-            "name": (p.get("name") or "").strip(),
-            "company": (p.get("company") or "").strip(),
-            "role": (p.get("role") or "").strip(),
-            "bio": (p.get("bio") or "").strip(),
-            "phone_mobile": (p.get("phone_mobile") or "").strip(),
-            "phone_mobile2": (p.get("phone_mobile2") or "").strip(),
-            "phone_office": (p.get("phone_office") or "").strip(),
-            "whatsapp": (p.get("whatsapp") or "").strip(),
-            "emails": (p.get("emails") or "").strip(),
-            "websites": (p.get("websites") or "").strip(),
-            "pec": (p.get("pec") or "").strip(),
-            "piva": (p.get("piva") or "").strip(),
-            "sdi": (p.get("sdi") or "").strip(),
-            "addresses": (p.get("addresses") or "").strip(),
-            "facebook": (p.get("facebook") or "").strip(),
-            "instagram": (p.get("instagram") or "").strip(),
-            "linkedin": (p.get("linkedin") or "").strip(),
-            "tiktok": (p.get("tiktok") or "").strip(),
-            "telegram": (p.get("telegram") or "").strip(),
-            # media dedicati profilo2 (opzionali)
-            "photo_url": (p.get("photo_url") or "").strip(),
-            "logo_url": (p.get("logo_url") or "").strip(),
-        })
-    return out
-
-def dump_profiles_json(profiles: list) -> str:
-    return json.dumps(profiles, ensure_ascii=False)
-
-def select_profile(profiles: list, key: str):
-    if not key:
-        return None
-    for p in profiles:
-        if p.get("key") == key:
-            return p
-    return None
-
-def upsert_profile(profiles: list, key: str, payload: dict):
-    found = False
-    for p in profiles:
-        if p.get("key") == key:
-            p.update(payload)
-            found = True
-            break
-    if not found:
-        base = {"key": key}
-        base.update(payload)
-        profiles.append(base)
-    return profiles
 
 def apply_profile_to_view(view, profile: dict):
-    """
-    Applica campi di profilo2 sulla view (senza toccare traduzioni profile1).
-    Sovrascrive solo se il valore è non vuoto.
-    """
+    """Overlay profilo 2 sulla view pubblica."""
     if not profile:
         return view
 
@@ -572,44 +591,6 @@ def apply_profile_to_view(view, profile: dict):
 
     return view
 
-def apply_profile2_to_view(view, p2: dict):
-    """
-    Profilo 2: prende SOLO i campi compilati, sovrascrive la view.
-    (no traduzione automatica su p2)
-    """
-    if not isinstance(p2, dict):
-        return view
-
-    mapping = {
-        "name": "name",
-        "company": "company",
-        "role": "role",
-        "bio": "bio",
-        "phone_mobile": "phone_mobile",
-        "phone_mobile2": "phone_mobile2",
-        "phone_office": "phone_office",
-        "emails": "emails",
-        "websites": "websites",
-        "facebook": "facebook",
-        "instagram": "instagram",
-        "linkedin": "linkedin",
-        "tiktok": "tiktok",
-        "telegram": "telegram",
-        "whatsapp": "whatsapp",
-        "pec": "pec",
-        "piva": "piva",
-        "sdi": "sdi",
-        "addresses": "addresses",
-        "photo_url": "photo_url",
-        "logo_url": "logo_url",
-    }
-
-    for k, attr in mapping.items():
-        v = (p2.get(k) or "").strip()
-        if v:
-            setattr(view, attr, v)
-    return view
-
 
 # ===================== ROUTES =====================
 
@@ -619,6 +600,7 @@ def home():
         return redirect(url_for("admin_home" if is_admin() else "me_edit"))
     return redirect(url_for("login"))
 
+
 @app.get("/health")
 def health():
     return "ok", 200
@@ -627,7 +609,8 @@ def health():
 # ---------- LOGIN ----------
 @app.get("/login")
 def login():
-    return render_template("login.html", error=None)
+    return render_template("login.html", error=None, next=request.args.get("next", ""))
+
 
 @app.post("/login")
 def login_post():
@@ -635,7 +618,7 @@ def login_post():
     password = (request.form.get("password") or "").strip()
 
     if not username or not password:
-        return render_template("login.html", error="Inserisci username e password")
+        return render_template("login.html", error="Inserisci username e password", next="")
 
     if username == "admin" and password == ADMIN_PASSWORD:
         session["username"] = "admin"
@@ -648,13 +631,14 @@ def login_post():
     db.close()
 
     if not u:
-        return render_template("login.html", error="Credenziali errate")
+        return render_template("login.html", error="Credenziali errate", next="")
 
     session["username"] = u.username
     session["role"] = u.role
     session["agent_slug"] = u.agent_slug
 
     return redirect(url_for("admin_home" if u.role == "admin" else "me_edit"))
+
 
 @app.get("/logout")
 def logout():
@@ -670,6 +654,7 @@ def admin_home():
     agents = db.query(Agent).order_by(Agent.name).all()
     db.close()
     return render_template("admin_list.html", agents=agents)
+
 
 @app.get("/admin/export_agents.json")
 @admin_required
@@ -701,7 +686,7 @@ def admin_export_agents_json():
             "sdi": a.sdi,
             "addresses": a.addresses,
             "photo_url": a.photo_url,
-            "logo_url": (getattr(a, "logo_url", None) or getattr(a, "extra_logo_url", None)),
+            "logo_url": getattr(a, "logo_url", None) or getattr(a, "extra_logo_url", None),
             "gallery_urls": a.gallery_urls,
             "video_urls": a.video_urls,
             "pdf1_url": a.pdf1_url,
@@ -709,15 +694,18 @@ def admin_export_agents_json():
             "i18n_json": a.i18n_json,
         })
     db.close()
+
     content = json.dumps(payload, ensure_ascii=False, indent=2)
     resp = Response(content, mimetype="application/json; charset=utf-8")
     resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
     return resp
 
+
 @app.get("/admin/new")
 @admin_required
 def new_agent():
     return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
+
 
 @app.post("/admin/new")
 @admin_required
@@ -726,6 +714,7 @@ def create_agent():
 
     slug = slugify(request.form.get("slug", ""))
     name = (request.form.get("name") or "").strip()
+
     if not slug or not name:
         db.close()
         return "Slug e Nome obbligatori", 400
@@ -740,23 +729,29 @@ def create_agent():
         company=(request.form.get("company") or "").strip() or None,
         role=(request.form.get("role") or "").strip() or None,
         bio=(request.form.get("bio") or "").strip() or None,
+
         phone_mobile=(request.form.get("phone_mobile") or "").strip() or None,
         phone_mobile2=(request.form.get("phone_mobile2") or "").strip() or None,
         phone_office=(request.form.get("phone_office") or "").strip() or None,
+
+        whatsapp=(request.form.get("whatsapp") or "").strip() or None,
+
         emails=(request.form.get("emails") or "").strip() or None,
         websites=(request.form.get("websites") or "").strip() or None,
+
         facebook=(request.form.get("facebook") or "").strip() or None,
         instagram=(request.form.get("instagram") or "").strip() or None,
         linkedin=(request.form.get("linkedin") or "").strip() or None,
         tiktok=(request.form.get("tiktok") or "").strip() or None,
         telegram=(request.form.get("telegram") or "").strip() or None,
-        whatsapp=(request.form.get("whatsapp") or "").strip() or None,
+
         pec=(request.form.get("pec") or "").strip() or None,
         piva=(request.form.get("piva") or "").strip() or None,
         sdi=(request.form.get("sdi") or "").strip() or None,
         addresses=(request.form.get("addresses") or "").strip() or None,
-        i18n_json=None,
+
         profiles_json=None,
+        i18n_json=None,
     )
 
     # i18n profile 1
@@ -854,6 +849,7 @@ def create_agent():
     db.close()
     return redirect(url_for("admin_home"))
 
+
 @app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
@@ -865,6 +861,7 @@ def edit_agent(slug):
         abort(404)
     return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
+
 @app.post("/admin/<slug>/edit")
 @admin_required
 def update_agent(slug):
@@ -875,12 +872,14 @@ def update_agent(slug):
         db.close()
         abort(404)
 
+    # base fields
     for k in [
-        "name","company","role","bio",
-        "phone_mobile","phone_mobile2","phone_office",
-        "emails","websites",
-        "facebook","instagram","linkedin","tiktok","telegram","whatsapp",
-        "pec","piva","sdi","addresses",
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office",
+        "whatsapp",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram",
+        "pec", "piva", "sdi", "addresses",
     ]:
         setattr(ag, k, (request.form.get(k) or "").strip() or None)
 
@@ -900,6 +899,7 @@ def update_agent(slug):
         tr = {k: v for k, v in tr.items() if v}
         if tr:
             i18n_data[lang] = tr
+
     i18n_set(ag, i18n_data)
 
     # uploads
@@ -918,7 +918,7 @@ def update_agent(slug):
         except ValueError:
             flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
 
-    # gallery replace
+    # gallery replace (solo se carichi)
     gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
@@ -934,7 +934,7 @@ def update_agent(slug):
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # videos replace
+    # videos replace (solo se carichi)
     video_files = request.files.getlist("videos")
     if video_files and any(v.filename for v in video_files):
         video_urls = []
@@ -969,6 +969,7 @@ def update_agent(slug):
     db.close()
     return redirect(url_for("admin_home"))
 
+
 @app.post("/admin/<slug>/delete")
 @admin_required
 def delete_agent(slug):
@@ -982,13 +983,95 @@ def delete_agent(slug):
     return redirect(url_for("admin_home"))
 
 
+# ---------- ADMIN: PROFILO 2 ----------
+@app.get("/admin/<slug>/profile2")
+@admin_required
+def admin_edit_profile2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
+    view = agent_to_view(ag)
+    view = apply_profile_to_view(view, p2)
+
+    return render_template(
+        "agent_form.html",
+        agent=view,
+        i18n_data=i18n_get(ag),
+        editing_profile2=True
+    )
+
+
+@app.post("/admin/<slug>/profile2")
+@admin_required
+def admin_edit_profile2_post(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+
+    payload = {
+        "key": "p2",
+        "name": (request.form.get("name") or "").strip(),
+        "company": (request.form.get("company") or "").strip(),
+        "role": (request.form.get("role") or "").strip(),
+        "bio": (request.form.get("bio") or "").strip(),
+        "phone_mobile": (request.form.get("phone_mobile") or "").strip(),
+        "phone_mobile2": (request.form.get("phone_mobile2") or "").strip(),
+        "phone_office": (request.form.get("phone_office") or "").strip(),
+        "whatsapp": (request.form.get("whatsapp") or "").strip(),
+        "emails": (request.form.get("emails") or "").strip(),
+        "websites": (request.form.get("websites") or "").strip(),
+        "pec": (request.form.get("pec") or "").strip(),
+        "piva": (request.form.get("piva") or "").strip(),
+        "sdi": (request.form.get("sdi") or "").strip(),
+        "addresses": (request.form.get("addresses") or "").strip(),
+        "facebook": (request.form.get("facebook") or "").strip(),
+        "instagram": (request.form.get("instagram") or "").strip(),
+        "linkedin": (request.form.get("linkedin") or "").strip(),
+        "tiktok": (request.form.get("tiktok") or "").strip(),
+        "telegram": (request.form.get("telegram") or "").strip(),
+    }
+
+    photo = request.files.get("photo")
+    logo = request.files.get("logo")
+
+    if photo and photo.filename:
+        try:
+            payload["photo_url"] = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_IMAGE_MB))
+        except ValueError:
+            flash(f"Foto troppo grande (max {MAX_IMAGE_MB}MB)", "error")
+
+    if logo and logo.filename:
+        try:
+            payload["logo_url"] = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_IMAGE_MB))
+        except ValueError:
+            flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
+
+    profiles = upsert_profile(profiles, "p2", payload)
+    ag.profiles_json = dump_profiles_json(profiles)
+
+    db.commit()
+    db.close()
+    return redirect(url_for("admin_home"))
+
+
 # ---------- CLIENT (profilo 1) ----------
 @app.get("/me/edit")
 @login_required
 def me_edit():
     if is_admin():
         return redirect(url_for("admin_home"))
-
     slug = current_client_slug()
     if not slug:
         return redirect(url_for("login"))
@@ -1001,12 +1084,12 @@ def me_edit():
 
     return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
+
 @app.post("/me/edit")
 @login_required
 def me_edit_post():
     if is_admin():
         return redirect(url_for("admin_home"))
-
     slug = current_client_slug()
     if not slug:
         return redirect(url_for("login"))
@@ -1017,18 +1100,19 @@ def me_edit_post():
         db.close()
         abort(404)
 
+    # campi profilo 1
     allowed_fields = [
-        "name","company","role","bio",
-        "phone_mobile","phone_mobile2","phone_office",
-        "emails","websites",
-        "facebook","instagram","linkedin","tiktok","telegram",
-        "pec","piva","sdi","addresses",
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office",
         "whatsapp",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram",
+        "pec", "piva", "sdi", "addresses",
     ]
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k) or "").strip() or None)
 
-    # i18n profile 1 (cliente compila)
+    # i18n profile 1
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
         i18n_data = {}
@@ -1044,9 +1128,10 @@ def me_edit_post():
         tr = {k: v for k, v in tr.items() if v}
         if tr:
             i18n_data[lang] = tr
+
     i18n_set(ag, i18n_data)
 
-    # uploads
+    # uploads profilo 1
     photo = request.files.get("photo")
     logo = request.files.get("logo")
 
@@ -1062,7 +1147,7 @@ def me_edit_post():
         except ValueError:
             flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
 
-    # gallery replace
+    # gallery replace (solo se carichi)
     gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
@@ -1078,7 +1163,7 @@ def me_edit_post():
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # videos replace
+    # videos replace (solo se carichi)
     video_files = request.files.getlist("videos")
     if video_files and any(v.filename for v in video_files):
         video_urls = []
@@ -1114,7 +1199,7 @@ def me_edit_post():
     return redirect(url_for("me_edit"))
 
 
-# ---------- CLIENT (profilo 2) ----------
+# ---------- CLIENT: PROFILO 2 ----------
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
@@ -1131,14 +1216,19 @@ def me_profile2():
     if not ag:
         abort(404)
 
-    profiles = parse_profiles_json(ag.profiles_json or "")
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
-    # creo view base e applico p2 sopra
     view = agent_to_view(ag)
-    view = apply_profile2_to_view(view, p2)
+    view = apply_profile_to_view(view, p2)
 
-    return render_template("agent_form.html", agent=view, i18n_data=None, editing_profile2=True)
+    return render_template(
+        "agent_form.html",
+        agent=view,
+        i18n_data=i18n_get(ag),   # non cambia, è profilo1
+        editing_profile2=True
+    )
+
 
 @app.post("/me/profile2")
 @login_required
@@ -1156,7 +1246,7 @@ def me_profile2_post():
         db.close()
         abort(404)
 
-    profiles = parse_profiles_json(ag.profiles_json or "")
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
 
     payload = {
         "key": "p2",
@@ -1167,21 +1257,20 @@ def me_profile2_post():
         "phone_mobile": (request.form.get("phone_mobile") or "").strip(),
         "phone_mobile2": (request.form.get("phone_mobile2") or "").strip(),
         "phone_office": (request.form.get("phone_office") or "").strip(),
+        "whatsapp": (request.form.get("whatsapp") or "").strip(),
         "emails": (request.form.get("emails") or "").strip(),
         "websites": (request.form.get("websites") or "").strip(),
+        "pec": (request.form.get("pec") or "").strip(),
+        "piva": (request.form.get("piva") or "").strip(),
+        "sdi": (request.form.get("sdi") or "").strip(),
+        "addresses": (request.form.get("addresses") or "").strip(),
         "facebook": (request.form.get("facebook") or "").strip(),
         "instagram": (request.form.get("instagram") or "").strip(),
         "linkedin": (request.form.get("linkedin") or "").strip(),
         "tiktok": (request.form.get("tiktok") or "").strip(),
         "telegram": (request.form.get("telegram") or "").strip(),
-        "whatsapp": (request.form.get("whatsapp") or "").strip(),
-        "pec": (request.form.get("pec") or "").strip(),
-        "piva": (request.form.get("piva") or "").strip(),
-        "sdi": (request.form.get("sdi") or "").strip(),
-        "addresses": (request.form.get("addresses") or "").strip(),
     }
 
-    # uploads p2 (foto e logo)
     photo = request.files.get("photo")
     logo = request.files.get("logo")
 
@@ -1198,7 +1287,7 @@ def me_profile2_post():
             flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
 
     profiles = upsert_profile(profiles, "p2", payload)
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+    ag.profiles_json = dump_profiles_json(profiles)
 
     db.commit()
     db.close()
@@ -1216,58 +1305,21 @@ def public_card(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    p = (request.args.get("p") or "").strip().lower()
 
-    # view base
+    # profilo richiesto: ?p=p2
+    p_key = (request.args.get("p") or "").strip()
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    active_profile = select_profile(profiles, p_key)
+
     ag_view = agent_to_view(ag)
 
-    # profilo 2 (solo se richiesto ?p=p2)
-    if p == "p2":
-        profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-        p2 = select_profile(profiles, "p2")
-        if p2:
-            ag_view = apply_profile2_to_view(ag_view, p2)
-        # NO i18n su p2
-    else:
-        # i18n su profilo 1
-        ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
-
-    gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
-    videos = (ag.video_urls.split("|") if ag.video_urls else [])
-    pdfs = parse_pdfs(ag.pdf1_url or "")
-
-    base = get_base_url()
-
-    emails = [e.strip() for e in (ag_view.emails or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (ag_view.websites or "").split(",") if w.strip()]
-    addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if a.strip()]
-
-    mobiles = []
-    if ag_view.phone_mobile:
-        mobiles.append(ag_view.phone_mobile.strip())
-    if ag_view.phone_mobile2:
-        mobiles.append(ag_view.phone_mobile2.strip())
-
-    wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
-
-    qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
-    vcf_url = f"{base}/{ag.slug}.vcf"
-
-    @app.get("/<slug>")
-def public_card(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-
-    lang = pick_lang_from_request()
-    ag_view = agent_to_view(ag)
-
-    # (se hai già le traduzioni profilo 1)
+    # ✅ traduzioni SOLO profilo 1 (come volevi)
     ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
 
+    # ✅ se p=p2, overlay dei campi del profilo2 (non tradotti)
+    if active_profile:
+        ag_view = apply_profile_to_view(ag_view, active_profile)
+
     gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
     videos = (ag.video_urls.split("|") if ag.video_urls else [])
     pdfs = parse_pdfs(ag.pdf1_url or "")
@@ -1279,19 +1331,16 @@ def public_card(slug):
     addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if a.strip()]
 
     mobiles = []
-    if ag_view.phone_mobile:
+    if getattr(ag_view, "phone_mobile", None):
         mobiles.append(ag_view.phone_mobile.strip())
-    if ag_view.phone_mobile2:
+    if getattr(ag_view, "phone_mobile2", None):
         mobiles.append(ag_view.phone_mobile2.strip())
 
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
 
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
-    vcf_url = f"{base}/{ag.slug}.vcf"
-
-    # ✅ QUI: multi-profili per mostrare il tasto Profilo 2
-    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    p_key = (request.args.get("p") or "").strip().lower() or None
+    if p_key:
+        qr_url += f"&p={urllib.parse.quote(p_key)}"
 
     return render_template(
         "card.html",
@@ -1308,29 +1357,8 @@ def public_card(slug):
         mobiles=mobiles,
         wa_link=wa_link,
         qr_url=qr_url,
-        vcf_url=vcf_url,
-        # ✅ PASSAGGIO AL TEMPLATE
         profiles=profiles,
         p_key=p_key,
-    )
-
-    return render_template(
-        "card.html",
-        ag=ag_view,
-        lang=lang,
-        t_func=lambda k: t(lang, k),
-        base_url=base,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        emails=emails,
-        websites=websites,
-        addresses=addresses,
-        mobiles=mobiles,
-        wa_link=wa_link,
-        qr_url=qr_url,
-        vcf_url=vcf_url,
-        is_profile2=(p == "p2"),
     )
 
 
@@ -1397,7 +1425,11 @@ def qr(slug):
     slug = slugify(slug)
     base = get_base_url()
     lang = pick_lang_from_request()
+
+    p = (request.args.get("p") or "").strip()
     url = f"{base}/{slug}?lang={urllib.parse.quote(lang)}"
+    if p:
+        url += f"&p={urllib.parse.quote(p)}"
 
     img = qrcode.make(url)
     bio = BytesIO()
@@ -1409,15 +1441,7 @@ def qr(slug):
 # ---------- ERRORS ----------
 @app.errorhandler(404)
 def not_found(e):
-    try:
-        return render_template("404.html"), 404
-    except Exception:
-        return "Not found", 404
-
-@app.errorhandler(500)
-def server_error(e):
-    # evita loop se manca 500.html
-    return "Internal server error", 500
+    return render_template("404.html"), 404
 
 
 if __name__ == "__main__":
