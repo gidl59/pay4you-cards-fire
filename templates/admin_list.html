@@ -4,31 +4,12 @@
 {% block content %}
 <div class="page-main">
   <div class="admin-wrapper">
-
     <div class="admin-card">
-      <h1 class="admin-title">Admin — Agenti</h1>
+      <h1 class="admin-title">Agenti</h1>
 
-      {# flash messages #}
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-wrap">
-            {% for category, message in messages %}
-              <div class="flash {% if category=='ok' %}ok{% else %}error{% endif %}">
-                {{ message }}
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 14px;">
-        <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuovo agente</a>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
         <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">⬇ Export JSON</a>
-      </div>
-
-      <div style="font-size:12px; opacity:.8; margin-bottom:10px;">
-        Nota: se “Modifica” dà “Non trovato”, quasi sempre stai usando uno slug diverso.
-        Copia lo slug esatto dalla colonna “Slug”.
       </div>
 
       <table class="admin-table">
@@ -37,67 +18,27 @@
             <th>Nome</th>
             <th>Slug</th>
             <th>Piano</th>
-            <th>Azioni</th>
+            <th class="admin-actions">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for a in agents %}
           <tr>
-            <td>
-              <b>{{ a.name }}</b>
-              {% if a.company %}<div style="font-size:12px;opacity:.75;">{{ a.company }}</div>{% endif %}
-            </td>
-
-            <td style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono','Courier New', monospace;">
-              {{ a.slug }}
-              <div style="font-size:12px;opacity:.7; margin-top:4px;">
-                <a href="/{{ a.slug }}" target="_blank" rel="noopener" style="text-decoration:underline;">Apri card</a>
-              </div>
-            </td>
-
-            <td>
-              <span style="font-weight:700; color:{% if a.plan=='pro' %}#22c55e{% else %}#facc15{% endif %};">
-                {{ a.plan }}
-              </span>
-            </td>
-
+            <td>{{ a.name }}</td>
+            <td><code>{{ a.slug }}</code></td>
+            <td>{{ a.plan if a.plan else 'basic' }}</td>
             <td class="admin-actions">
-              <!-- ✅ Link modifica corretto -->
-              <a href="{{ url_for('edit_agent', slug=a.slug) }}">✏️ Modifica</a>
-
-              <!-- strumenti PRO -->
-              {% if a.plan == 'pro' %}
-                <a href="{{ url_for('admin_credentials', slug=a.slug) }}">🔑 Credenziali</a>
-                <a href="{{ url_for('admin_broadcast', slug=a.slug) }}">📣 Broadcast</a>
-              {% endif %}
-
-              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
-                    onsubmit="return confirm('Eliminare {{ a.slug }}?');">
-                <button type="submit">🗑 Elimina</button>
+              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
+              <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+              <a href="{{ url_for('admin_credentials', slug=a.slug) }}">🔑 Credenziali</a>
+              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare {{ a.slug }}?');">
+                <button type="submit">Elimina</button>
               </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-
-      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:18px 0;">
-
-      <h3 style="margin:0 0 10px;">Creazione rapida Cliente PRO (WhatsApp credenziali)</h3>
-      <form method="post" action="{{ url_for('admin_quick_pro_create') }}" style="display:flex; flex-wrap:wrap; gap:10px;">
-        <input type="text" name="slug" placeholder="slug (es. bar-roma)" required
-               style="flex:1; min-width:180px; padding:8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background:rgba(15,23,42,0.96); color:#fff;">
-        <input type="text" name="name" placeholder="nome (es. Bar Roma)"
-               style="flex:1; min-width:180px; padding:8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background:rgba(15,23,42,0.96); color:#fff;">
-        <input type="text" name="wa" placeholder="WhatsApp (es. 393401112233)"
-               style="flex:1; min-width:180px; padding:8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background:rgba(15,23,42,0.96); color:#fff;">
-        <input type="text" name="email" placeholder="Email (opz.)"
-               style="flex:1; min-width:180px; padding:8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background:rgba(15,23,42,0.96); color:#fff;">
-        <button type="submit"
-                style="padding:9px 14px; border-radius:999px; border:none; background:linear-gradient(135deg,#22c55e,#16a34a); color:#022c22; font-weight:800; cursor:pointer;">
-          Crea PRO
-        </button>
-      </form>
 
     </div>
   </div>
