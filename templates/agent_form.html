@@ -1,95 +1,65 @@
 {% extends "base.html" %}
-{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %} | Pay4You{% endblock %}
+{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-main">
-  <div class="agent-form-wrapper">
+  <div class="admin-card" style="max-width:900px; width:100%;">
 
-    <h1 class="agent-form-title">
-      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
+    <h1 class="admin-title">
+      {% if agent %}Modifica: {{ agent.slug }}{% else %}Nuovo agente{% endif %}
     </h1>
 
-    {% if session.get('role') != 'admin' and agent %}
-      <div class="profile-tools">
-        <a class="header-link" href="{{ url_for('me_profile2') }}">👤 Profilo 2 (multi-utente)</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card pubblica</a>
-      </div>
-    {% endif %}
-
-    {% if session.get('role') == 'admin' %}
-      {% if agent %}
-        {% set form_action = url_for('update_agent', slug=agent.slug) %}
-      {% else %}
-        {% set form_action = url_for('create_agent') %}
-      {% endif %}
-    {% else %}
-      {% set form_action = url_for('me_edit_post') %}
-    {% endif %}
-
-    <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
+    <form class="agent-form" method="post" enctype="multipart/form-data">
 
       {% if session.get('role') == 'admin' %}
-        <label>Slug (univoco)</label>
-        <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
-
-        <label>Piano</label>
-        <select name="plan" class="input-like">
-          {% set p = (agent.plan if agent and agent.plan else 'basic') %}
-          <option value="basic" {% if p=='basic' %}selected{% endif %}>basic</option>
-          <option value="pro" {% if p=='pro' %}selected{% endif %}>pro</option>
-        </select>
-      {% else %}
-        {% if agent %}
-          <div class="slug-badge">Slug: <b>{{ agent.slug }}</b></div>
-        {% endif %}
+        <label>Slug (solo admin)</label>
+        <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" {% if agent %}readonly{% endif %} required>
       {% endif %}
 
-      <label>Nome</label>
+      <h3 style="margin:10px 0 6px;">Italiano (principale)</h3>
+
+      <label>Nome (IT)</label>
       <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
 
-      <label>Azienda</label>
-      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
-
-      <label>Ruolo</label>
+      <label>Ruolo (IT)</label>
       <input type="text" name="role" value="{{ agent.role if agent else '' }}">
 
-      <label>Bio / Descrizione</label>
+      <label>Azienda (IT)</label>
+      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
+
+      <label>Bio (IT)</label>
       <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
-      <hr class="sep">
+      <h3 style="margin:14px 0 6px;">English (optional)</h3>
 
-      <label>Telefono mobile</label>
+      <label>Name (EN)</label>
+      <input type="text" name="name_en" value="{{ agent.name_en if agent else '' }}">
+
+      <label>Role (EN)</label>
+      <input type="text" name="role_en" value="{{ agent.role_en if agent else '' }}">
+
+      <label>Company (EN)</label>
+      <input type="text" name="company_en" value="{{ agent.company_en if agent else '' }}">
+
+      <label>Bio (EN)</label>
+      <textarea name="bio_en">{{ agent.bio_en if agent else '' }}</textarea>
+
+      <h3 style="margin:14px 0 6px;">Contatti</h3>
+
+      <label>Mobile</label>
       <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
-      <label>Telefono mobile 2</label>
+      <label>Mobile 2</label>
       <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
 
-      <label>Telefono ufficio</label>
+      <label>Ufficio</label>
       <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
-
-      <label>WhatsApp (numero o link)</label>
-      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
 
       <label>Email (separate da virgola)</label>
       <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
 
-      <label>Siti web (separati da virgola)</label>
+      <label>Siti web (separati da virgola, includi https://)</label>
       <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
-
-      <label>PEC</label>
-      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
-
-      <label>P.IVA</label>
-      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
-
-      <label>SDI</label>
-      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
-
-      <label>Indirizzi (uno per riga)</label>
-      <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
-
-      <hr class="sep">
 
       <label>Facebook</label>
       <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
@@ -106,49 +76,76 @@
       <label>Telegram</label>
       <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
-      <hr class="sep">
+      {% if session.get('role') == 'admin' or agent.plan == 'pro' %}
+        <label>WhatsApp (solo PRO)</label>
+        <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+      {% endif %}
+
+      <label>PEC</label>
+      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+
+      <h3 style="margin:14px 0 6px;">Dati fiscali / indirizzi</h3>
+
+      <label>P.IVA</label>
+      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+
+      <label>SDI</label>
+      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+
+      <label>Indirizzi (uno per riga)</label>
+      <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
+
+      <h3 style="margin:14px 0 6px;">Media</h3>
 
       <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo (in alto a sinistra + retro foto)</label>
+      <label>Logo extra</label>
       <input type="file" name="extra_logo" accept="image/*">
 
-      <label>Galleria (max 30 immagini)</label>
+      <label>Galleria foto (multi)</label>
       <input type="file" name="gallery" accept="image/*" multiple>
 
-      <label>Video (max 10)</label>
+      <label>Video (multi)</label>
       <input type="file" name="videos" accept="video/*" multiple>
 
-      <label>PDF (fino a 12)</label>
-      <input type="file" name="pdf1" accept="application/pdf">
-      <input type="file" name="pdf2" accept="application/pdf">
-      <input type="file" name="pdf3" accept="application/pdf">
-      <input type="file" name="pdf4" accept="application/pdf">
-      <input type="file" name="pdf5" accept="application/pdf">
-      <input type="file" name="pdf6" accept="application/pdf">
-      <input type="file" name="pdf7" accept="application/pdf">
-      <input type="file" name="pdf8" accept="application/pdf">
-      <input type="file" name="pdf9" accept="application/pdf">
-      <input type="file" name="pdf10" accept="application/pdf">
-      <input type="file" name="pdf11" accept="application/pdf">
-      <input type="file" name="pdf12" accept="application/pdf">
+      <h3 style="margin:14px 0 6px;">PDF (max 12)</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        {% for i in range(1,13) %}
+          <div>
+            <label>PDF {{ i }}</label>
+            <input type="file" name="pdf{{ i }}" accept="application/pdf">
+          </div>
+        {% endfor %}
+      </div>
 
-      <!-- ✅ Non mostriamo più il box JSON come unico modo.
-           Se vuoi tenerlo “per admin”, lo possiamo rimettere solo admin.
-           Per ora: niente JSON all’utente base. -->
+      {% if session.get('role') == 'admin' %}
+        <div style="margin-top:12px;">
+          <label><input type="checkbox" name="delete_pdfs" value="1"> Elimina tutti i PDF esistenti</label>
+        </div>
+      {% endif %}
 
-      <div class="agent-form-buttons">
+      {% if session.get('role') == 'admin' %}
+        <h3 style="margin:14px 0 6px;">Piano</h3>
+        <label>Plan</label>
+        <select name="plan">
+          <option value="basic" {% if agent and agent.plan=='basic' %}selected{% endif %}>basic</option>
+          <option value="pro" {% if agent and agent.plan=='pro' %}selected{% endif %}>pro</option>
+        </select>
+
+        <h3 style="margin:14px 0 6px;">Multi-profile JSON (opzionale)</h3>
+        <textarea name="profiles_json" placeholder='[{"key":"p1",...}]'>{{ agent.profiles_json if agent else '' }}</textarea>
+      {% endif %}
+
+      <div class="agent-form-buttons" style="margin-top:16px;">
         <button type="submit">Salva</button>
-
         {% if session.get('role') == 'admin' %}
-          <a class="btn-secondary" href="{{ url_for('admin_home') }}">Torna alla lista</a>
-        {% else %}
-          <a class="btn-secondary" href="{{ url_for('logout') }}">Logout</a>
+          <a class="btn-secondary" href="{{ url_for('admin_home') }}">Torna lista</a>
         {% endif %}
       </div>
 
     </form>
+
   </div>
 </div>
 {% endblock %}
