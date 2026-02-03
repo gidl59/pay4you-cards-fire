@@ -7,26 +7,21 @@
 
   <div class="card-outer">
 
-    <!-- Header/logo -->
     <div class="card-header-row" style="align-items:center; justify-content:space-between; gap:12px;">
       <div>
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You" class="card-logo-big">
       </div>
 
-      <!-- ✅ Selettore lingua (solo card pubblica) -->
+      <!-- ✅ solo IT/EN -->
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <div style="font-size:12px; opacity:.8; font-weight:800;">
           {{ t("language") }}:
         </div>
-
         {% set keep_p = "" %}
         {% if p_key %}{% set keep_p = "&p=" ~ p_key %}{% endif %}
 
         <a class="link-button" href="/{{ ag.slug }}?lang=it{{ keep_p }}">IT</a>
         <a class="link-button" href="/{{ ag.slug }}?lang=en{{ keep_p }}">EN</a>
-        <a class="link-button" href="/{{ ag.slug }}?lang=es{{ keep_p }}">ES</a>
-        <a class="link-button" href="/{{ ag.slug }}?lang=fr{{ keep_p }}">FR</a>
-        <a class="link-button" href="/{{ ag.slug }}?lang=de{{ keep_p }}">DE</a>
       </div>
     </div>
 
@@ -42,21 +37,14 @@
           <a class="link-button" href="/{{ ag.slug }}?lang={{ lang }}">{{ t("open_main") }}</a>
           {% for p in profiles %}
             <a class="link-button" href="/{{ ag.slug }}?p={{ p.key }}&lang={{ lang }}">
-              {{ p.label }}
+              {{ p.label_ui }}
             </a>
           {% endfor %}
-        </div>
-
-        <div style="margin-top:10px; font-size:12px; opacity:.8;">
-          <b>QR standard:</b> /{{ ag.slug }} (mostra i profili se ci sono) <br>
-          <b>NFC direct:</b> /{{ ag.slug }}?p=p1 oppure ?p=p2
         </div>
       </div>
     {% endif %}
 
-    <!-- Business block -->
     <div class="business-card">
-
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
           <div class="avatar-flip">
@@ -90,10 +78,8 @@
           </div>
         {% endif %}
       </div>
-
     </div>
 
-    <!-- CONTATTI -->
     <div class="card-section">
       <h2>{{ t("contacts") }}</h2>
 
@@ -121,14 +107,6 @@
         </div>
       {% endfor %}
 
-      {% if ag.pec %}
-        <div class="contact-row">
-          <div class="icon">📩</div>
-          <div class="label">PEC</div>
-          <div class="value"><span>{{ ag.pec }}</span></div>
-        </div>
-      {% endif %}
-
       {% for w in websites %}
         <div class="contact-row">
           <div class="icon">🌐</div>
@@ -136,61 +114,28 @@
           <div class="value"><a href="{{ w }}" target="_blank" rel="noopener">{{ w }}</a></div>
         </div>
       {% endfor %}
-
-      {% if ag.whatsapp %}
-        <div class="contact-row whatsapp-row">
-          <div class="icon">💬</div>
-          <div class="label">WhatsApp</div>
-          <div class="value">{{ ag.whatsapp }}</div>
-        </div>
-      {% endif %}
     </div>
 
-    <!-- BUSINESS -->
+    {% if addresses %}
     <div class="card-section">
-      <h2>{{ t("business") }}</h2>
-
-      {% if ag.piva %}
-        <div class="contact-row">
-          <div class="icon">🧾</div>
-          <div class="label">P.IVA</div>
-          <div class="value">{{ ag.piva }}</div>
-        </div>
-      {% endif %}
-
-      {% if ag.sdi %}
-        <div class="contact-row">
-          <div class="icon">🏷️</div>
-          <div class="label">SDI</div>
-          <div class="value">{{ ag.sdi }}</div>
-        </div>
-      {% endif %}
-
-      {% if addresses %}
-        <div class="address-row" style="margin-top:8px;">
-          <div style="font-weight:800; color:#e5e7eb; margin-bottom:6px;">{{ t("addresses") }}</div>
-          {% for a in addresses %}
-            <div class="address-value">• {{ a }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
+      <h2>{{ t("addresses") }}</h2>
+      {% for a in addresses %}
+        <div class="address-value">• {{ a }}</div>
+      {% endfor %}
     </div>
+    {% endif %}
 
-    <!-- GALLERY -->
     {% if gallery %}
     <div class="card-section">
       <h2>{{ t("gallery") }}</h2>
       <div class="gallery-scroll">
         {% for g in gallery %}
-          <a href="{{ g }}" target="_blank" rel="noopener">
-            <img src="{{ g }}" alt="Foto">
-          </a>
+          <a href="{{ g }}" target="_blank" rel="noopener"><img src="{{ g }}" alt="Foto"></a>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
-    <!-- VIDEOS -->
     {% if videos %}
     <div class="card-section">
       <h2>{{ t("videos") }}</h2>
@@ -205,22 +150,19 @@
     </div>
     {% endif %}
 
-    <!-- PDFS -->
     {% if pdfs %}
     <div class="card-section">
       <h2>{{ t("documents") }}</h2>
       <div class="pdf-list">
         {% for p in pdfs %}
           <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
-            <span class="pdf-icon">📄</span>
-            <span>{{ p.name }}</span>
+            <span class="pdf-icon">📄</span><span>{{ p.name }}</span>
           </a>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
-    <!-- ✅ OPT-IN promo WhatsApp (solo PRO) -->
     {% if wa_optin_link %}
     <div class="card-section">
       <h2>{{ t("promos") }}</h2>
@@ -238,10 +180,7 @@
     </div>
     {% endif %}
 
-    <div class="card-footer">
-      © Pay4You — {{ t("updated_always") }}
-    </div>
-
+    <div class="card-footer">© Pay4You — {{ t("updated_always") }}</div>
   </div>
 </div>
 {% endblock %}
