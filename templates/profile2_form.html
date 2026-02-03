@@ -4,34 +4,49 @@
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
+
     <h1 class="agent-form-title">Profilo 2</h1>
 
     <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna al profilo principale</a>
-      <a class="header-link" href="/{{ base_agent.slug }}?p=p2&owner=1" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+      <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna al Profilo principale</a>
+      <a class="header-link" href="/{{ agent.slug }}?p=p2&lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
     </div>
 
     <form class="agent-form" method="post" action="{{ url_for('me_profile2_post') }}" enctype="multipart/form-data">
 
+      <label>Nome profilo (IT)</label>
+      <input type="text" name="label_it" value="{{ p2.label_it or 'Profilo 2' }}">
+
+      <label>Profile name (EN)</label>
+      <input type="text" name="label_en" value="{{ p2.label_en or 'Profile 2' }}">
+
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+
       <label>Nome</label>
-      <input type="text" name="name" value="{{ agent.name or '' }}" required>
+      <input type="text" name="name" value="{{ p2.name or '' }}">
 
       <label>Azienda</label>
-      <input type="text" name="company" value="{{ agent.company or '' }}">
+      <input type="text" name="company" value="{{ p2.company or '' }}">
 
       <label>Ruolo</label>
-      <input type="text" name="role" value="{{ agent.role or '' }}">
+      <input type="text" name="role" value="{{ p2.role or '' }}">
 
       <label>Bio / Descrizione</label>
-      <textarea name="bio">{{ agent.bio or '' }}</textarea>
+      <textarea name="bio">{{ p2.bio or '' }}</textarea>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Foto profilo (Profilo 2)</label>
       <input type="file" name="photo" accept="image/*">
+      {% if p2.photo_url %}
+        <div style="font-size:12px; opacity:.75;">Attuale: {{ p2.photo_url }}</div>
+      {% endif %}
 
-      <label>Logo extra (Profilo 2)</label>
-      <input type="file" name="extra_logo" accept="image/*">
+      <label>Logo (Profilo 2)</label>
+      <input type="file" name="logo" accept="image/*">
+      {% if p2.logo_url %}
+        <div style="font-size:12px; opacity:.75;">Attuale: {{ p2.logo_url }}</div>
+      {% endif %}
 
       <div class="agent-form-buttons">
         <button type="submit">Salva Profilo 2</button>
