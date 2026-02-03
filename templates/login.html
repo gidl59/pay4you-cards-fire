@@ -1,36 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Login{% endblock %}
-
 {% block content %}
 <div class="page-main">
-  <div class="login-wrapper">
-    <div class="login-card">
-      <h1 class="login-title">Accesso</h1>
+  <div class="login-card">
+    <h1 class="page-title">Accesso</h1>
 
-      {% if error %}
-        <p style="color:#fecaca; font-size:13px; margin-bottom:8px;">{{ error }}</p>
-      {% endif %}
+    {% if error %}
+      <div class="flash" style="margin:10px 0;">{{ error }}</div>
+    {% endif %}
 
-      <form method="post" action="{{ url_for('login_post') }}">
-        <input type="hidden" name="next" value="{{ next }}">
+    <form method="post" action="{{ url_for('login_post') }}" class="form-grid">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" required autocomplete="current-password">
+      </div>
+      <button class="btn primary" type="submit">Entra</button>
+    </form>
 
-        <label for="username" style="font-size:13px; display:block; margin-bottom:4px;">Username</label>
-        <input type="text" id="username" name="username" required autocomplete="username"
-               style="width:100%; padding:7px 8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background: rgba(15,23,42,0.96); color:#f9fafb;">
-
-        <div style="height:10px;"></div>
-
-        <label for="password" style="font-size:13px; display:block; margin-bottom:4px;">Password</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password"
-               style="width:100%; padding:7px 8px; border-radius:10px; border:1px solid rgba(75,85,99,0.8); background: rgba(15,23,42,0.96); color:#f9fafb;">
-
-        <button type="submit" style="margin-top:10px; width:100%; padding:8px 10px; border-radius:999px; border:none; background:linear-gradient(135deg,#22c55e,#16a34a); color:#022c22; font-weight:700;">
-          Entra
-        </button>
-      </form>
-
-      <p style="margin-top:10px; font-size:12px; color:#cbd5e1;">Se non hai le credenziali, contatta Pay4You.</p>
-    </div>
+    <p class="muted" style="margin-top:10px;">Se non hai le credenziali, contatta Pay4You.</p>
   </div>
 </div>
 {% endblock %}
