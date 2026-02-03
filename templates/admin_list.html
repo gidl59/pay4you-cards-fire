@@ -3,43 +3,45 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="admin-wrapper">
-    <div class="admin-card">
-      <h1 class="admin-title">Admin – Lista Card</h1>
+  <div class="agent-form-wrapper">
+    <h1 class="agent-form-title">Admin – Lista Card</h1>
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-        <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
-        <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
-      </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+      <a class="header-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+      <a class="header-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+    </div>
 
-      <table class="admin-table">
+    <div style="overflow:auto;">
+      <table style="width:100%; border-collapse:collapse;">
         <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Slug</th>
-            <th>Piano</th>
-            <th class="admin-actions">Azioni</th>
+          <tr style="text-align:left; opacity:.85;">
+            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Nome</th>
+            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Slug</th>
+            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for a in agents %}
           <tr>
-            <td>{{ a.name }}</td>
-            <td>{{ a.slug }}</td>
-            <td>{{ a.plan }}</td>
-            <td class="admin-actions">
-              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri</a>
-              <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare {{ a.slug }}?');">
-                <button type="submit">Elimina</button>
+            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
+              {{ a.name }}
+            </td>
+            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
+              {{ a.slug }}
+            </td>
+            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12); display:flex; gap:10px; flex-wrap:wrap;">
+              <a class="header-link" href="/{{ a.slug }}" target="_blank">Apri Card</a>
+              <a class="header-link" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+              <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
+                <button class="header-link" type="submit" style="background:#7f1d1d;border:none;cursor:pointer;">Elimina</button>
               </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-
     </div>
+
   </div>
 </div>
 {% endblock %}
