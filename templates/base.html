@@ -1,4 +1,4 @@
-c<!doctype html>
+<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
@@ -22,12 +22,12 @@ c<!doctype html>
       <div class="app-header-right">
         {% if session.get('role') == 'admin' %}
           <a href="{{ url_for('admin_home') }}" class="header-link">Lista Card</a>
-          <a href="{{ url_for('admin_export_agents_json') }}" class="header-link">Export JSON</a>
-          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+          <a href="{{ url_for('admin_export_agents_json') }}" class="header-link primary">Export JSON</a>
+          <a href="{{ url_for('logout') }}" class="header-link danger">Logout</a>
         {% else %}
-          <a href="{{ url_for('me_edit') }}" class="header-link">Modifica</a>
+          <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
           <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
-          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+          <a href="{{ url_for('logout') }}" class="header-link danger">Logout</a>
         {% endif %}
       </div>
     </header>
@@ -50,6 +50,7 @@ c<!doctype html>
 
       {% block content %}{% endblock %}
     </main>
+
   </div>
 </body>
 </html>
