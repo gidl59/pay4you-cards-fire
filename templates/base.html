@@ -7,45 +7,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="format-detection" content="telephone=no">
 
-  <!-- CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-  <!-- Cropper (se lo usi) -->
-  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
+  <link rel="stylesheet"
+        href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css">
   <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
 </head>
-
 <body>
   <div class="app-shell">
 
-    {% if session.get("role") == "admin" %}
+    {% if session.get('username') %}
     <header class="app-header">
       <div class="app-header-left">
         <span class="app-logo-text">Pay4You – Card digitale</span>
       </div>
+
       <div class="app-header-right">
-        <a href="{{ url_for('admin_home') }}" class="header-link">Agenti</a>
-        <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+        {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('admin_home') }}" class="header-link">Agenti</a>
+          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+        {% else %}
+          <a href="{{ url_for('me_edit') }}" class="header-link">Modifica</a>
+          <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
+          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+        {% endif %}
       </div>
     </header>
     {% endif %}
 
-    {# (opzionale) Flash messages se li usi in app.py con flash() #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-      <div class="flash-wrap">
-        {% for category, message in messages %}
-          <div class="flash {% if category %}{{ category }}{% endif %}">{{ message }}</div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    {% endwith %}
-
     <main class="app-main">
       {% block content %}{% endblock %}
     </main>
-
   </div>
 </body>
 </html>
