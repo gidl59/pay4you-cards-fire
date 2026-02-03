@@ -1,331 +1,179 @@
 <!doctype html>
 <html lang="{{ lang }}">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>{{ ag.name }} | Card</title>
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <meta name="format-detection" content="telephone=no">
+  <meta charset="utf-8">
+  <title>{{ ag.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
 
-<div class="card-fullscreen">
-  <div class="card-glass-bg"></div>
+<body style="margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#050814; color:#e5e7eb;">
+  <div style="max-width:940px; margin:0 auto; padding:18px 12px 28px;">
 
-  <div class="card-outer">
-
-    <!-- LINGUA -->
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px;">
-      <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=it{% else %}?lang=it{% endif %}">IT</a>
-      <a class="header-link" href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang=en{% else %}?lang=en{% endif %}">EN</a>
-    </div>
-
-    <!-- HEADER -->
-    <div class="business-card">
-      <div class="card-profile-photo-wrapper">
-        {% if ag.photo_url %}
-          <img class="card-profile-photo" src="{{ ag.photo_url }}" alt="photo">
-        {% else %}
-          <div class="card-profile-photo" style="display:flex;align-items:center;justify-content:center;font-weight:700;">
-            {{ ag.name[:1] }}
-          </div>
+    <!-- header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        {% if ag.logo_url %}
+          <img src="{{ ag.logo_url }}" alt="logo" style="height:38px; width:auto; border-radius:10px;">
         {% endif %}
-      </div>
-
-      <div class="card-name-block">
-        <h1 class="card-name">{{ ag.name }}</h1>
-        {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
-        {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
-        {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
-      </div>
-    </div>
-
-    <!-- AZIONI (box come social) -->
-    <div class="card-section">
-      <h2>{{ t_func('actions') }}</h2>
-
-      <div class="contact-row">
-        <div class="icon">📇</div>
-        <div class="label">{{ t_func('save_contact') }}</div>
-        <div class="value"><a href="/{{ ag.slug }}.vcf">{{ t_func('open') }}</a></div>
-      </div>
-
-      <div class="contact-row">
-        <div class="icon">📷</div>
-        <div class="label">{{ t_func('scan_qr') }}</div>
-        <div class="value">
-          <button class="link-button" onclick="openQrModal('/{{ ag.slug }}/qr.png{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}')">
-            {{ t_func('open') }}
-          </button>
+        <div>
+          <div style="font-weight:800; font-size:18px; line-height:1.1;">{{ ag.name }}</div>
+          <div style="opacity:.85; font-size:13px;">{{ ag.company or '' }}</div>
         </div>
       </div>
 
-      <div class="contact-row">
-        <div class="icon">🔗</div>
-        <div class="label">{{ t_func('direct_nfc') }}</div>
-        <div class="value">
-          <button class="link-button" onclick="copyText('{{ nfc_direct_url }}')">Copy</button>
+      <!-- (opzionale) forzatura lingua -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+        {% for item in lang_links %}
+          <a href="{{ item.url }}" style="font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid rgba(250,204,21,0.25); color:#facc15; text-decoration:none;">
+            {{ item.code|upper }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- profilo -->
+    <div style="display:flex; gap:14px; align-items:center; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+      {% if ag.photo_url %}
+        <img src="{{ ag.photo_url }}" alt="foto" style="width:110px; height:110px; border-radius:999px; object-fit:cover; border:2px solid rgba(255,255,255,0.65);">
+      {% else %}
+        <div style="width:110px; height:110px; border-radius:999px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
+          <span style="opacity:.6;">IMG</span>
+        </div>
+      {% endif %}
+
+      <div style="flex:1;">
+        {% if ag.role %}
+          <div style="font-weight:700;">{{ ag.role }}</div>
+        {% endif %}
+        {% if ag.bio %}
+          <div style="margin-top:6px; font-size:13px; opacity:.9; white-space:pre-wrap;">{{ ag.bio }}</div>
+        {% endif %}
+
+        <!-- QUICK ACTIONS BOX (Salva contatto + QR) -->
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="/{{ ag.slug }}.vcf" style="text-decoration:none; background:#facc15; color:#111827; font-weight:800; padding:8px 12px; border-radius:999px;">
+            {{ t_func('save_contact') }}
+          </a>
+          <a href="{{ qr_url }}" target="_blank" rel="noopener"
+             style="text-decoration:none; background:rgba(250,204,21,0.10); color:#facc15; font-weight:800; padding:8px 12px; border-radius:999px; border:1px solid rgba(250,204,21,0.25);">
+            {{ t_func('scan_qr') }}
+          </a>
         </div>
       </div>
     </div>
 
     <!-- CONTATTI -->
-    <div class="card-section">
-      <h2>{{ t_func('contacts') }}</h2>
+    <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+      <div style="font-weight:800; margin-bottom:10px;">{{ t_func('contacts') }}</div>
 
-      {% if mobiles and mobiles|length > 0 %}
+      {% if mobiles %}
         {% for m in mobiles %}
-          <div class="contact-row">
-            <div class="icon">📞</div>
-            <div class="label">{{ t_func('phone_mobile') }}</div>
-            <div class="value"><a href="tel:{{ m }}">{{ m }}</a></div>
+          <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+            <div style="opacity:.8;">{{ t_func('mobile_phone') }}</div>
+            <div style="font-weight:700;">{{ m }}</div>
           </div>
         {% endfor %}
       {% endif %}
 
       {% if ag.phone_office %}
-      <div class="contact-row">
-        <div class="icon">☎️</div>
-        <div class="label">{{ t_func('phone_office') }}</div>
-        <div class="value"><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.whatsapp %}
-      <div class="contact-row whatsapp-row">
-        <div class="icon">💬</div>
-        <div class="label">{{ t_func('whatsapp') }}</div>
-        <div class="value">
-          <a href="{{ ag.whatsapp }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
+        <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+          <div style="opacity:.8;">{{ t_func('office_phone') }}</div>
+          <div style="font-weight:700;">{{ ag.phone_office }}</div>
         </div>
-      </div>
       {% endif %}
 
-      {% if emails and emails|length > 0 %}
+      {% if wa_link %}
+        <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+          <div style="opacity:.8;">{{ t_func('whatsapp') }}</div>
+          <div style="font-weight:800;">
+            <a href="{{ wa_link }}" target="_blank" rel="noopener" style="color:#22c55e; text-decoration:none;">Apri WhatsApp</a>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if emails %}
         {% for e in emails %}
-          <div class="contact-row">
-            <div class="icon">✉️</div>
-            <div class="label">{{ t_func('email') }}</div>
-            <div class="value"><a href="mailto:{{ e }}">{{ e }}</a></div>
+          <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+            <div style="opacity:.8;">Email</div>
+            <div style="font-weight:700;"><a href="mailto:{{ e }}" style="color:#93c5fd; text-decoration:none;">{{ e }}</a></div>
           </div>
         {% endfor %}
-      {% endif %}
-
-      {% if websites and websites|length > 0 %}
-        {% for w in websites %}
-          <div class="contact-row">
-            <div class="icon">🌐</div>
-            <div class="label">{{ t_func('website') }}</div>
-            <div class="value"><a href="{{ w }}" target="_blank" rel="noopener">{{ t_func('website') }}</a></div>
-          </div>
-        {% endfor %}
-      {% endif %}
-
-      {% if ag.pec %}
-      <div class="contact-row">
-        <div class="icon">📨</div>
-        <div class="label">{{ t_func('pec') }}</div>
-        <div class="value">{{ ag.pec }}</div>
-      </div>
       {% endif %}
 
       {% if ag.piva %}
-      <div class="contact-row">
-        <div class="icon">🧾</div>
-        <div class="label">{{ t_func('piva') }}</div>
-        <div class="value">{{ ag.piva }}</div>
-      </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.12);">
+          <div style="opacity:.8;">{{ t_func('vat') }}</div>
+          <div style="font-weight:700;">{{ ag.piva }}</div>
+        </div>
       {% endif %}
 
       {% if ag.sdi %}
-      <div class="contact-row">
-        <div class="icon">🏷️</div>
-        <div class="label">{{ t_func('sdi') }}</div>
-        <div class="value">{{ ag.sdi }}</div>
-      </div>
+        <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0;">
+          <div style="opacity:.8;">{{ t_func('sdi') }}</div>
+          <div style="font-weight:700;">{{ ag.sdi }}</div>
+        </div>
       {% endif %}
     </div>
 
-    <!-- SOCIAL (solo nome cliccabile, non url lungo) -->
-    {% set has_social = (ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram) %}
-    {% if has_social %}
-    <div class="card-section">
-      <h2>{{ t_func('social') }}</h2>
+    <!-- SOCIAL -->
+    <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+      <div style="font-weight:800; margin-bottom:10px;">{{ t_func('social') }}</div>
 
-      {% if ag.facebook %}
-      <div class="contact-row social-row">
-        <div class="icon">📘</div>
-        <div class="label">{{ t_func('facebook') }}</div>
-        <div class="value"><a href="{{ ag.facebook }}" target="_blank" rel="noopener">{{ t_func('facebook') }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.instagram %}
-      <div class="contact-row social-row">
-        <div class="icon">📸</div>
-        <div class="label">{{ t_func('instagram') }}</div>
-        <div class="value"><a href="{{ ag.instagram }}" target="_blank" rel="noopener">{{ t_func('instagram') }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.linkedin %}
-      <div class="contact-row social-row">
-        <div class="icon">💼</div>
-        <div class="label">{{ t_func('linkedin') }}</div>
-        <div class="value"><a href="{{ ag.linkedin }}" target="_blank" rel="noopener">{{ t_func('linkedin') }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.tiktok %}
-      <div class="contact-row social-row">
-        <div class="icon">🎵</div>
-        <div class="label">{{ t_func('tiktok') }}</div>
-        <div class="value"><a href="{{ ag.tiktok }}" target="_blank" rel="noopener">{{ t_func('tiktok') }}</a></div>
-      </div>
-      {% endif %}
-
-      {% if ag.telegram %}
-      <div class="contact-row social-row">
-        <div class="icon">✈️</div>
-        <div class="label">{{ t_func('telegram') }}</div>
-        <div class="value"><a href="{{ ag.telegram }}" target="_blank" rel="noopener">{{ t_func('telegram') }}</a></div>
-      </div>
-      {% endif %}
-
+      {% if ag.facebook %}<a href="{{ ag.facebook }}" target="_blank" rel="noopener" style="display:inline-block; margin-right:10px; color:#93c5fd; text-decoration:none; font-weight:700;">Facebook</a>{% endif %}
+      {% if ag.instagram %}<a href="{{ ag.instagram }}" target="_blank" rel="noopener" style="display:inline-block; margin-right:10px; color:#93c5fd; text-decoration:none; font-weight:700;">Instagram</a>{% endif %}
+      {% if ag.linkedin %}<a href="{{ ag.linkedin }}" target="_blank" rel="noopener" style="display:inline-block; margin-right:10px; color:#93c5fd; text-decoration:none; font-weight:700;">LinkedIn</a>{% endif %}
+      {% if ag.tiktok %}<a href="{{ ag.tiktok }}" target="_blank" rel="noopener" style="display:inline-block; margin-right:10px; color:#93c5fd; text-decoration:none; font-weight:700;">TikTok</a>{% endif %}
+      {% if ag.telegram %}<a href="{{ ag.telegram }}" target="_blank" rel="noopener" style="display:inline-block; margin-right:10px; color:#93c5fd; text-decoration:none; font-weight:700;">Telegram</a>{% endif %}
     </div>
-    {% endif %}
 
     <!-- INDIRIZZI -->
-    {% if addresses and addresses|length > 0 %}
-    <div class="card-section">
-      <h2>{{ t_func('addresses') }}</h2>
-      {% for a in addresses %}
-        <div class="address-row"><div class="address-value">{{ a }}</div></div>
-      {% endfor %}
-    </div>
+    {% if addresses %}
+      <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+        <div style="font-weight:800; margin-bottom:10px;">{{ t_func('addresses') }}</div>
+        {% for a in addresses %}
+          <div style="opacity:.9; margin:6px 0;">{{ a }}</div>
+        {% endfor %}
+      </div>
     {% endif %}
 
     <!-- PDF -->
-    {% if pdfs and pdfs|length > 0 %}
-    <div class="card-section">
-      <h2>{{ t_func('documents') }}</h2>
-      <div class="pdf-list">
+    {% if pdfs %}
+      <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+        <div style="font-weight:800; margin-bottom:10px;">{{ t_func('documents') }}</div>
         {% for p in pdfs %}
-          <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
-            <span class="pdf-icon">📄</span> {{ p.name }}
-          </a>
+          <div style="margin:6px 0;">
+            <a href="{{ p.url }}" target="_blank" rel="noopener" style="color:#facc15; text-decoration:none; font-weight:700;">📄 {{ p.name }}</a>
+          </div>
         {% endfor %}
       </div>
-    </div>
     {% endif %}
 
     <!-- GALLERIA -->
-    {% if gallery and gallery|length > 0 %}
-    <div class="card-section">
-      <h2>{{ t_func('gallery') }}</h2>
-      <div class="gallery-scroll">
-        {% for img in gallery %}
-          <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('img','{{ img }}')">
-            <img src="{{ img }}" alt="gallery">
-          </button>
-        {% endfor %}
+    {% if gallery %}
+      <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+        <div style="font-weight:800; margin-bottom:10px;">{{ t_func('gallery') }}</div>
+        <div style="display:flex; gap:10px; overflow:auto; padding-bottom:6px;">
+          {% for img in gallery %}
+            <a href="{{ img }}" target="_blank" rel="noopener">
+              <img src="{{ img }}" style="width:150px; height:150px; object-fit:cover; border-radius:14px; border:1px solid rgba(148,163,184,0.25);">
+            </a>
+          {% endfor %}
+        </div>
       </div>
-    </div>
     {% endif %}
 
     <!-- VIDEO -->
-    {% if videos and videos|length > 0 %}
-    <div class="card-section">
-      <h2>{{ t_func('videos') }}</h2>
-      <div class="gallery-scroll">
+    {% if videos %}
+      <div style="margin-top:12px; padding:14px; border-radius:18px; border:1px solid rgba(148,163,184,0.25); background:rgba(15,23,42,0.65);">
+        <div style="font-weight:800; margin-bottom:10px;">{{ t_func('videos') }}</div>
         {% for v in videos %}
-          <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('video','{{ v }}')">
-            <img src="https://dummyimage.com/185x185/111827/ffffff&text=VIDEO" alt="video">
-          </button>
+          <div style="margin:10px 0;">
+            <video src="{{ v }}" controls style="width:100%; border-radius:14px; border:1px solid rgba(148,163,184,0.25);"></video>
+          </div>
         {% endfor %}
       </div>
-    </div>
     {% endif %}
 
-    <!-- OPT-IN SOLO CLIENTI (testo chiaro) -->
-    {% if wa_optin_link %}
-    <div class="card-section">
-      <h2>{{ t_func('subscribe_title') }}</h2>
-      <div style="font-size:13px; color:#cbd5e1; margin-bottom:10px;">
-        {{ t_func('subscribe_desc') }}
-      </div>
-      <a class="header-link" href="{{ wa_optin_link }}" target="_blank" rel="noopener">
-        {{ t_func('subscribe_btn') }}
-      </a>
-    </div>
-    {% endif %}
-
-    <div class="card-footer">© Card digitale</div>
   </div>
-</div>
-
-<!-- MODAL (QR / IMG / VIDEO) -->
-<div id="media-modal" style="display:none;" class="modal-overlay" onclick="closeMediaModal(event)">
-  <div class="modal-box">
-    <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
-      <button class="modal-close-btn" type="button" onclick="forceCloseMedia()">{{ t_func('close') }}</button>
-    </div>
-    <div id="media-modal-body"></div>
-  </div>
-</div>
-
-<script>
-  function copyText(t){
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(t).then(()=>alert("Copiato ✅"));
-    }else{
-      window.prompt("Copia:", t);
-    }
-  }
-
-  function openQrModal(url){
-    openMediaModal('img', url);
-  }
-
-  function openMediaModal(type, url){
-    const modal = document.getElementById('media-modal');
-    const body = document.getElementById('media-modal-body');
-    body.innerHTML = "";
-
-    if(type === 'img'){
-      const img = document.createElement('img');
-      img.id = "qr-modal-img";
-      img.src = url;
-      img.alt = "media";
-      body.appendChild(img);
-    } else {
-      const video = document.createElement('video');
-      video.src = url;
-      video.controls = true;
-      video.style.width = "100%";
-      video.style.maxHeight = "78vh";
-      body.appendChild(video);
-    }
-
-    modal.style.display = "flex";
-    document.body.style.overflow = "hidden";
-  }
-
-  function forceCloseMedia(){
-    const modal = document.getElementById('media-modal');
-    const body = document.getElementById('media-modal-body');
-    body.innerHTML = "";
-    modal.style.display = "none";
-    document.body.style.overflow = "auto";
-  }
-
-  function closeMediaModal(e){
-    if(e.target && e.target.id === "media-modal"){
-      forceCloseMedia();
-    }
-  }
-</script>
-
 </body>
 </html>
