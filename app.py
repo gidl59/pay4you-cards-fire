@@ -1142,6 +1142,67 @@ def public_card(slug):
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
     vcf_url = f"{base}/{ag.slug}.vcf"
 
+    @app.get("/<slug>")
+def public_card(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+
+    lang = pick_lang_from_request()
+    ag_view = agent_to_view(ag)
+
+    # (se hai già le traduzioni profilo 1)
+    ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
+
+    gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
+    videos = (ag.video_urls.split("|") if ag.video_urls else [])
+    pdfs = parse_pdfs(ag.pdf1_url or "")
+
+    base = get_base_url()
+
+    emails = [e.strip() for e in (ag_view.emails or "").split(",") if e.strip()]
+    websites = [w.strip() for w in (ag_view.websites or "").split(",") if w.strip()]
+    addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if a.strip()]
+
+    mobiles = []
+    if ag_view.phone_mobile:
+        mobiles.append(ag_view.phone_mobile.strip())
+    if ag_view.phone_mobile2:
+        mobiles.append(ag_view.phone_mobile2.strip())
+
+    wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
+
+    qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
+    vcf_url = f"{base}/{ag.slug}.vcf"
+
+    # ✅ QUI: multi-profili per mostrare il tasto Profilo 2
+    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+    p_key = (request.args.get("p") or "").strip().lower() or None
+
+    return render_template(
+        "card.html",
+        ag=ag_view,
+        lang=lang,
+        t_func=lambda k: t(lang, k),
+        base_url=base,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+        emails=emails,
+        websites=websites,
+        addresses=addresses,
+        mobiles=mobiles,
+        wa_link=wa_link,
+        qr_url=qr_url,
+        vcf_url=vcf_url,
+        # ✅ PASSAGGIO AL TEMPLATE
+        profiles=profiles,
+        p_key=p_key,
+    )
+
     return render_template(
         "card.html",
         ag=ag_view,
