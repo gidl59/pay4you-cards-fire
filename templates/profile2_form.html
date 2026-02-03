@@ -4,58 +4,57 @@
 {% block content %}
 <div class="page-main">
   <div class="admin-card" style="max-width:720px; width:100%;">
-    <h1 class="admin-title">Profilo 2 (uguale al profilo 1)</h1>
+    <h1 class="admin-title">Profilo 2 (IT + EN)</h1>
 
     <div style="font-size:12px; opacity:.8; margin-bottom:12px;">
-      Qui compili il <b>Profilo 2</b> in modo semplice. Poi lo condividi con:
-      <br>
-      <b>NFC direct:</b> /{{ agent.slug }}?p=p2
+      Link diretto profilo 2: <b>/{{ agent.slug }}?p=p2</b>
     </div>
 
-    {% if error %}
-      <div class="flash error">{{ error }}</div>
-    {% endif %}
-    {% if ok %}
-      <div class="flash ok">{{ ok }}</div>
-    {% endif %}
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    {% if ok %}<div class="flash ok">{{ ok }}</div>{% endif %}
 
     <form class="agent-form" method="post" enctype="multipart/form-data" action="{{ url_for('me_profile2_post') }}">
 
-      <label>Nome visualizzato (profilo 2)</label>
-      <input type="text" name="name" value="{{ p2.name or '' }}" placeholder="Es. Bar Jonni – Promo" required>
+      <h3 style="margin:0 0 6px 0;">Italiano (obbligatorio)</h3>
 
-      <label>Ruolo / Titolo</label>
-      <input type="text" name="role" value="{{ p2.role or '' }}" placeholder="Es. Offerte del giorno">
+      <label>Nome (IT)</label>
+      <input type="text" name="name" value="{{ p2.name or '' }}" required>
 
-      <label>Azienda</label>
-      <input type="text" name="company" value="{{ p2.company or '' }}" placeholder="Es. Bar Jonni">
+      <label>Ruolo (IT)</label>
+      <input type="text" name="role" value="{{ p2.role or '' }}">
 
-      <label>Descrizione</label>
-      <textarea name="bio" placeholder="Es. Promo, eventi, offerte...">{{ p2.bio or '' }}</textarea>
+      <label>Azienda (IT)</label>
+      <input type="text" name="company" value="{{ p2.company or '' }}">
 
-      <label>Foto profilo (profilo 2)</label>
+      <label>Descrizione (IT)</label>
+      <textarea name="bio">{{ p2.bio or '' }}</textarea>
+
+      <div style="height:12px;"></div>
+      <h3 style="margin:0 0 6px 0;">English (optional)</h3>
+
+      <label>Name (EN)</label>
+      <input type="text" name="name_en" value="{{ p2.name_en or '' }}">
+
+      <label>Role (EN)</label>
+      <input type="text" name="role_en" value="{{ p2.role_en or '' }}">
+
+      <label>Company (EN)</label>
+      <input type="text" name="company_en" value="{{ p2.company_en or '' }}">
+
+      <label>Description (EN)</label>
+      <textarea name="bio_en">{{ p2.bio_en or '' }}</textarea>
+
+      <div style="height:12px;"></div>
+
+      <label>Foto profilo (vale per IT+EN)</label>
       <input type="file" name="photo" accept="image/*">
-      {% if p2.photo_url %}
-        <div style="margin-top:6px; font-size:12px; opacity:.85;">
-          Attuale: <a class="link-button" href="{{ p2.photo_url }}" target="_blank">Apri foto</a>
-        </div>
-      {% endif %}
 
-      <label>Logo (profilo 2)</label>
+      <label>Logo (vale per IT+EN)</label>
       <input type="file" name="logo" accept="image/*">
-      {% if p2.logo_url %}
-        <div style="margin-top:6px; font-size:12px; opacity:.85;">
-          Attuale: <a class="link-button" href="{{ p2.logo_url }}" target="_blank">Apri logo</a>
-        </div>
-      {% endif %}
 
       <div class="agent-form-buttons" style="margin-top:14px;">
         <button type="submit">Salva Profilo 2</button>
         <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna a Modifica</a>
-      </div>
-
-      <div style="margin-top:12px; font-size:12px; opacity:.8;">
-        Suggerimento: usa <b>Profilo 1</b> come biglietto “Business” e <b>Profilo 2</b> come “Promo”.
       </div>
     </form>
 
