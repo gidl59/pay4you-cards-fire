@@ -3,210 +3,140 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ ag.name }} | Pay4You Card</title>
+  <meta name="color-scheme" content="light dark">
 
+  <title>{{ ag.name }} | Pay4You Card</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
 
+<body data-theme="{{ theme or 'auto' }}">
   <div class="page-main">
-    <div class="card-outer">
+    <div class="card-outer card-theme">
 
-      {# Logo: usa logo_url, fallback extra_logo_url #}
-      {% set the_logo = ag.logo_url or ag.extra_logo_url %}
-
-      <!-- LOGO in alto a sinistra (solo se caricato) -->
+      {% set the_logo = ag.logo_url %}
       {% if the_logo %}
-        <div class="top-left-logo">
-          <img src="{{ the_logo }}" alt="Logo">
+        <div class="top-left-logo" style="--logoSize: {{ logo_size }}px;">
+          <img class="{% if logo_spin %}spin-slow{% endif %}" src="{{ the_logo }}" alt="Logo">
         </div>
       {% endif %}
 
-      <!-- HERO: foto + testi -->
       <div class="hero">
-
         <div class="avatar-wrap">
-          {% if the_logo %}
-            {# ✅ ruota TUTTO (logo orbit + foto) usando @keyframes spin già nel CSS #}
-            <div class="spin-wrap" style="position:relative; width:170px; height:170px; animation:spin 8s linear infinite;">
-              {# disattivo animazione orbit (così non gira doppio) #}
-              <div class="orbit" style="animation:none;">
-                <img src="{{ the_logo }}" alt="Logo orbit">
-              </div>
 
-              <div class="avatar">
-                {% if ag.photo_url %}
-                  <img src="{{ ag.photo_url }}" alt="Foto profilo">
-                {% else %}
-                  <div class="avatar-placeholder">👤</div>
-                {% endif %}
-              </div>
-            </div>
-          {% else %}
-            <div class="avatar">
-              {% if ag.photo_url %}
-                <img src="{{ ag.photo_url }}" alt="Foto profilo">
-              {% else %}
-                <div class="avatar-placeholder">👤</div>
-              {% endif %}
+          {% if the_logo %}
+            <div class="orbit {% if logo_spin %}spin{% endif %}" style="--logoSize: {{ logo_size }}px;">
+              <img src="{{ the_logo }}" alt="Logo orbit">
             </div>
           {% endif %}
+
+          <div class="avatar {% if avatar_spin %}spin{% endif %}">
+            {% if ag.photo_url %}
+              <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto profilo">
+            {% else %}
+              <div class="avatar-placeholder">👤</div>
+            {% endif %}
+          </div>
         </div>
 
         <div class="hero-text">
-          <div class="name">{{ ag.name }}</div>
+          {% if ag.name %}<div class="name">{{ ag.name }}</div>{% endif %}
+          {% if ag.company %}<div class="company">{{ ag.company }}</div>{% endif %}
+          {% if ag.role %}<div class="role">{{ ag.role }}</div>{% endif %}
+          {% if ag.bio %}<div class="bio">{{ ag.bio }}</div>{% endif %}
 
-          {% if ag.company %}
-            <div class="company">{{ ag.company }}</div>
-          {% endif %}
-
-          {% if ag.role %}
-            <div class="role">{{ ag.role }}</div>
-          {% endif %}
-
-          {% if ag.bio %}
-            <div class="bio">{{ ag.bio }}</div>
-          {% endif %}
-
-          {# ✅ PROFILO 1 / PROFILO 2 solo se p2 esiste #}
-          {% set has_p2 = false %}
           {% if profiles and profiles|length > 0 %}
-            {% for p in profiles %}
-              {% if p.key == 'p2' %}
-                {% set has_p2 = true %}
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-
-          {% if has_p2 %}
             <div class="profile-switch">
               <a class="profile-pill {% if not p_key %}active{% endif %}"
                  href="/{{ ag.slug }}{% if request.args.get('lang') %}?lang={{ request.args.get('lang') }}{% endif %}">
-                {{ t_func('profile1') if t_func else 'Profilo 1' }}
+                Profilo 1
               </a>
 
               <a class="profile-pill {% if p_key=='p2' %}active{% endif %}"
                  href="/{{ ag.slug }}?p=p2{% if request.args.get('lang') %}&lang={{ request.args.get('lang') }}{% endif %}">
-                {{ t_func('profile2') if t_func else 'Profilo 2' }}
+                Profilo 2
               </a>
             </div>
           {% endif %}
         </div>
       </div>
 
-      <!-- CONTATTI -->
       <div class="section">
-        <div class="section-title">{{ t_func('contacts') if t_func else 'Contatti' }}</div>
+        <div class="section-title">{{ t_func('contacts') }}</div>
 
         {% if mobiles and mobiles|length > 0 %}
           {% for m in mobiles %}
-            <div class="row">
-              <span>{{ t_func('mobile_phone') if t_func else 'Cell' }}</span>
-              <a href="tel:{{ m }}">{{ m }}</a>
-            </div>
+            <div class="row"><span>{{ t_func('mobile_phone') }}</span><a href="tel:{{ m }}">{{ m }}</a></div>
           {% endfor %}
         {% endif %}
 
         {% if ag.phone_office %}
-          <div class="row">
-            <span>{{ t_func('office_phone') if t_func else 'Ufficio' }}</span>
-            <a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a>
-          </div>
+          <div class="row"><span>{{ t_func('office_phone') }}</span><a href="tel:{{ ag.phone_office }}">{{ ag.phone_office }}</a></div>
         {% endif %}
 
         {% if wa_link %}
-          <div class="row">
-            <span>{{ t_func('whatsapp') if t_func else 'WhatsApp' }}</span>
-            <a href="{{ wa_link }}" target="_blank" rel="noopener">Apri WhatsApp</a>
-          </div>
+          <div class="row"><span>{{ t_func('whatsapp') }}</span><a href="{{ wa_link }}" target="_blank" rel="noopener">Apri WhatsApp</a></div>
         {% endif %}
 
         {% if emails and emails|length > 0 %}
           {% for e in emails %}
-            <div class="row">
-              <span>Email</span>
-              <a href="mailto:{{ e }}">{{ e }}</a>
-            </div>
+            <div class="row"><span>Email</span><a href="mailto:{{ e }}">{{ e }}</a></div>
           {% endfor %}
         {% endif %}
 
         {% if websites and websites|length > 0 %}
           {% for w in websites %}
-            <div class="row">
-              <span>{{ t_func('open_website') if t_func else 'Sito' }}</span>
-              <a href="{{ w }}" target="_blank" rel="noopener">Apri sito</a>
-            </div>
+            <div class="row"><span>{{ t_func('open_website') }}</span><a href="{{ w }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a></div>
           {% endfor %}
         {% endif %}
       </div>
 
-      <!-- SOCIAL -->
       {% set has_social = ag.facebook or ag.instagram or ag.linkedin or ag.tiktok or ag.telegram %}
       {% if has_social %}
         <div class="section">
-          <div class="section-title">{{ t_func('social') if t_func else 'Social' }}</div>
-
-          {% if ag.facebook %}
-            <div class="row"><span>Facebook</span><a href="{{ ag.facebook }}" target="_blank" rel="noopener">Facebook</a></div>
-          {% endif %}
-          {% if ag.instagram %}
-            <div class="row"><span>Instagram</span><a href="{{ ag.instagram }}" target="_blank" rel="noopener">Instagram</a></div>
-          {% endif %}
-          {% if ag.linkedin %}
-            <div class="row"><span>LinkedIn</span><a href="{{ ag.linkedin }}" target="_blank" rel="noopener">LinkedIn</a></div>
-          {% endif %}
-          {% if ag.tiktok %}
-            <div class="row"><span>TikTok</span><a href="{{ ag.tiktok }}" target="_blank" rel="noopener">TikTok</a></div>
-          {% endif %}
-          {% if ag.telegram %}
-            <div class="row"><span>Telegram</span><a href="{{ ag.telegram }}" target="_blank" rel="noopener">Telegram</a></div>
-          {% endif %}
+          <div class="section-title">{{ t_func('social') }}</div>
+          {% if ag.facebook %}<div class="row"><span>Facebook</span><a href="{{ ag.facebook }}" target="_blank" rel="noopener">Facebook</a></div>{% endif %}
+          {% if ag.instagram %}<div class="row"><span>Instagram</span><a href="{{ ag.instagram }}" target="_blank" rel="noopener">Instagram</a></div>{% endif %}
+          {% if ag.linkedin %}<div class="row"><span>LinkedIn</span><a href="{{ ag.linkedin }}" target="_blank" rel="noopener">LinkedIn</a></div>{% endif %}
+          {% if ag.tiktok %}<div class="row"><span>TikTok</span><a href="{{ ag.tiktok }}" target="_blank" rel="noopener">TikTok</a></div>{% endif %}
+          {% if ag.telegram %}<div class="row"><span>Telegram</span><a href="{{ ag.telegram }}" target="_blank" rel="noopener">Telegram</a></div>{% endif %}
         </div>
       {% endif %}
 
-      <!-- AZIONI sotto social -->
       <div class="section actions-box">
-        <div class="section-title">{{ t_func('actions') if t_func else 'Azioni' }}</div>
+        <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
-          <a class="action-btn" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') if t_func else 'Salva contatto' }}</a>
-          <button class="action-btn secondary" type="button" onclick="openQrModal('{{ qr_url }}')">
-            {{ t_func('scan_qr') if t_func else 'Scansiona QR' }}
+          <a class="action-btn" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+          <button class="action-btn secondary" type="button" onclick="openMediaModal('{{ qr_url }}', 'image')">
+            {{ t_func('scan_qr') }}
           </button>
         </div>
-        <div class="actions-hint">Consiglio: salva il contatto e poi condividi la card ai tuoi clienti.</div>
       </div>
 
-      <!-- DATI -->
       {% if ag.piva or ag.sdi or ag.pec or (addresses and addresses|length > 0) %}
         <div class="section">
-          <div class="section-title">Dati</div>
+          <div class="section-title">{{ t_func('data') }}</div>
+          {% if ag.piva %}<div class="row"><span>{{ t_func('vat') }}</span><span>{{ ag.piva }}</span></div>{% endif %}
+          {% if ag.sdi %}<div class="row"><span>{{ t_func('sdi') }}</span><span>{{ ag.sdi }}</span></div>{% endif %}
+          {% if ag.pec %}<div class="row"><span>PEC</span><span>{{ ag.pec }}</span></div>{% endif %}
 
-          {% if ag.piva %}
-            <div class="row"><span>{{ t_func('vat') if t_func else 'P.IVA' }}</span><span>{{ ag.piva }}</span></div>
-          {% endif %}
-          {% if ag.sdi %}
-            <div class="row"><span>{{ t_func('sdi') if t_func else 'SDI' }}</span><span>{{ ag.sdi }}</span></div>
-          {% endif %}
-          {% if ag.pec %}
-            <div class="row"><span>PEC</span><span>{{ ag.pec }}</span></div>
-          {% endif %}
           {% if addresses and addresses|length > 0 %}
-            <div style="margin-top:8px; color:rgba(226,232,240,.85); font-weight:700;">
+            <div class="addr-list">
               {% for a in addresses %}
-                <div>📍 {{ a }}</div>
+                <a class="addr-item" href="{{ a.maps }}" target="_blank" rel="noopener">
+                  📍 {{ a.text }} <span class="addr-mini">({{ t_func('open_maps') }})</span>
+                </a>
               {% endfor %}
             </div>
           {% endif %}
         </div>
       {% endif %}
 
-      <!-- GALLERIA -->
       {% if gallery and gallery|length > 0 %}
         <div class="section">
-          <div class="section-title">{{ t_func('gallery') if t_func else 'Foto' }}</div>
+          <div class="section-title">{{ t_func('gallery') }}</div>
           <div class="gallery-scroll">
             {% for img in gallery %}
-              <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ img }}', 'image')">
+              <button class="thumb" type="button" onclick="openMediaModal('{{ img }}', 'image')">
                 <img src="{{ img }}" alt="Foto {{ loop.index }}">
               </button>
             {% endfor %}
@@ -214,13 +144,12 @@
         </div>
       {% endif %}
 
-      <!-- VIDEO (piccoli) -->
       {% if videos and videos|length > 0 %}
         <div class="section">
-          <div class="section-title">{{ t_func('videos') if t_func else 'Video' }}</div>
+          <div class="section-title">{{ t_func('videos') }}</div>
           <div class="gallery-scroll">
             {% for v in videos %}
-              <button class="gallery-thumb-btn" type="button" onclick="openMediaModal('{{ v }}', 'video')">
+              <button class="thumb" type="button" onclick="openMediaModal('{{ v }}', 'video')">
                 <div class="video-thumb">
                   <span class="video-play">▶</span>
                   <video class="video-mini" muted playsinline preload="metadata">
@@ -233,13 +162,12 @@
         </div>
       {% endif %}
 
-      <!-- PDF (MODAL con CHIUDI) -->
       {% if pdfs and pdfs|length > 0 %}
         <div class="section">
-          <div class="section-title">{{ t_func('documents') if t_func else 'Documenti' }}</div>
+          <div class="section-title">{{ t_func('documents') }}</div>
           <div class="pdf-list">
             {% for p in pdfs %}
-              <button class="pdf-btn" type="button" onclick="openPdfModal('{{ p.url }}')">
+              <button class="pdf-btn" type="button" onclick="openMediaModal('{{ p.url }}', 'pdf')">
                 📄 {{ p.name }}
               </button>
             {% endfor %}
@@ -254,74 +182,63 @@
     </div>
   </div>
 
-  <!-- MODAL unico (IMG/VIDEO/PDF/QR) con CHIUDI sopra + bottone -->
-  <div id="media-modal" class="modal" style="display:none;">
+  <!-- MODAL unico (IMG / VIDEO / PDF) -->
+  <div id="mediaModal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <button class="modal-x" type="button" onclick="closeMediaModal()">✕</button>
 
-      <img id="modal-img" src="" alt="media" style="display:none;">
-      <video id="modal-video" controls playsinline style="display:none;">
-        <source id="modal-video-src" src="">
+      <img id="mImg" src="" alt="media" style="display:none;">
+      <video id="mVideo" controls playsinline style="display:none;">
+        <source id="mVideoSrc" src="">
       </video>
-      <div class="modal-pdf" style="display:none;" id="modal-pdf-wrap">
-        <iframe id="modal-pdf" src="" title="pdf"></iframe>
-      </div>
+      <iframe id="mPdf" src="" style="display:none;" title="pdf"></iframe>
 
-      <button class="modal-close" type="button" onclick="closeMediaModal()">Chiudi</button>
+      <button class="modal-close" type="button" onclick="closeMediaModal()">{{ t_func('close') }}</button>
     </div>
   </div>
 
   <script>
-    function openQrModal(src){
-      openMediaModal(src, 'image');
-    }
-
-    function openPdfModal(src){
-      openMediaModal(src, 'pdf');
-    }
-
     function openMediaModal(src, type){
-      const modal = document.getElementById('media-modal');
-      const img = document.getElementById('modal-img');
-      const vid = document.getElementById('modal-video');
-      const vidSrc = document.getElementById('modal-video-src');
-      const pdfWrap = document.getElementById('modal-pdf-wrap');
-      const pdf = document.getElementById('modal-pdf');
+      const modal = document.getElementById('mediaModal');
+      const img = document.getElementById('mImg');
+      const vid = document.getElementById('mVideo');
+      const vidSrc = document.getElementById('mVideoSrc');
+      const pdf = document.getElementById('mPdf');
 
-      // reset
-      img.style.display = 'none';
-      vid.style.display = 'none';
-      pdfWrap.style.display = 'none';
-      img.src = '';
-      pdf.src = '';
-      try { vid.pause(); } catch(e){}
-      vidSrc.src = '';
+      img.style.display='none';
+      vid.style.display='none';
+      pdf.style.display='none';
+
+      img.src='';
+      pdf.src='';
+      try{ vid.pause(); }catch(e){}
+      vidSrc.src='';
 
       if(type === 'video'){
         vidSrc.src = src;
         vid.load();
-        vid.style.display = 'block';
+        vid.style.display='block';
       } else if(type === 'pdf'){
         pdf.src = src;
-        pdfWrap.style.display = 'block';
+        pdf.style.display='block';
       } else {
         img.src = src;
-        img.style.display = 'block';
+        img.style.display='block';
       }
 
-      modal.style.display = 'flex';
+      modal.style.display='flex';
     }
 
     function closeMediaModal(){
-      const modal = document.getElementById('media-modal');
-      const vid = document.getElementById('modal-video');
-      const vidSrc = document.getElementById('modal-video-src');
-      const pdf = document.getElementById('modal-pdf');
+      const modal = document.getElementById('mediaModal');
+      const vid = document.getElementById('mVideo');
+      const vidSrc = document.getElementById('mVideoSrc');
+      const pdf = document.getElementById('mPdf');
 
-      try { vid.pause(); } catch(e){}
-      vidSrc.src = '';
-      pdf.src = '';
-      modal.style.display = 'none';
+      try{ vid.pause(); }catch(e){}
+      vidSrc.src='';
+      pdf.src='';
+      modal.style.display='none';
     }
   </script>
 
