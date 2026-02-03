@@ -7,7 +7,7 @@
 
   <div class="card-outer">
 
-    <!-- HEADER: logo + lingua -->
+    <!-- Header: Logo + lingua -->
     <div class="card-header-row" style="align-items:center; justify-content:space-between; gap:12px;">
       <div>
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You" class="card-logo-big">
@@ -21,47 +21,62 @@
         {% set keep_p = "" %}
         {% if p_key %}{% set keep_p = "&p=" ~ p_key %}{% endif %}
 
-        <a class="link-button" href="/{{ ag.slug }}?lang=it{{ keep_p }}" style="{% if lang=='it' %}font-weight:800;text-decoration:underline;{% endif %}">
-          IT
-        </a>
-        <a class="link-button" href="/{{ ag.slug }}?lang=en{{ keep_p }}" style="{% if lang=='en' %}font-weight:800;text-decoration:underline;{% endif %}">
-          EN
-        </a>
+        <a class="link-button" href="/{{ ag.slug }}?lang=it{{ keep_p }}"
+           style="{% if lang=='it' %}font-weight:900;text-decoration:underline;{% endif %}">IT</a>
+
+        <a class="link-button" href="/{{ ag.slug }}?lang=en{{ keep_p }}"
+           style="{% if lang=='en' %}font-weight:900;text-decoration:underline;{% endif %}">EN</a>
       </div>
     </div>
 
-    <!-- ✅ PROFILI: sempre visibili se esistono profili nel JSON -->
+    <!-- Profili -->
     {% if profiles %}
       <div class="card-section" style="margin-top:6px;">
         <h2>{{ t("multi_profile") }}</h2>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-          <!-- MAIN -->
           <a class="link-button"
              href="/{{ ag.slug }}?lang={{ lang }}"
-             style="{% if not p_key %}background:rgba(250,204,21,0.15); border-color:rgba(250,204,21,0.65); font-weight:800;{% endif %}">
+             style="{% if not p_key %}background:rgba(250,204,21,0.14); border-color:rgba(250,204,21,0.65); font-weight:900;{% endif %}">
             {{ t("open_main") }}
           </a>
 
-          <!-- PROFILI -->
           {% for p in profiles %}
             <a class="link-button"
                href="/{{ ag.slug }}?p={{ p.key }}&lang={{ lang }}"
-               style="{% if p_key == p.key %}background:rgba(250,204,21,0.15); border-color:rgba(250,204,21,0.65); font-weight:800;{% endif %}">
+               style="{% if p_key == p.key %}background:rgba(250,204,21,0.14); border-color:rgba(250,204,21,0.65); font-weight:900;{% endif %}">
               {{ p.label_ui }}
             </a>
           {% endfor %}
         </div>
 
-        {% if p_key %}
-          <div style="margin-top:8px; font-size:12px; opacity:.8;">
-            {{ t("direct_profile") }}: <b>{{ p_key }}</b>
-          </div>
-        {% endif %}
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <!-- QR MULTILINGUA -->
+          <a class="link-button" href="/{{ ag.slug }}/qr.png{% if p_key or lang %}?{% endif %}{% if p_key %}p={{ p_key }}{% endif %}{% if p_key and lang %}&{% endif %}{% if lang %}lang={{ lang }}{% endif %}"
+             target="_blank" rel="noopener">
+            📌 {{ t("qr_for_profile") }}
+          </a>
+
+          <!-- VCF -->
+          <a class="link-button" href="/{{ ag.slug }}.vcf" target="_blank" rel="noopener">
+            📇 {{ t("download_vcard") }}
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <div class="card-section" style="margin-top:6px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a class="link-button" href="/{{ ag.slug }}/qr.png?lang={{ lang }}" target="_blank" rel="noopener">
+            📌 {{ t("qr_for_profile") }}
+          </a>
+          <a class="link-button" href="/{{ ag.slug }}.vcf" target="_blank" rel="noopener">
+            📇 {{ t("download_vcard") }}
+          </a>
+        </div>
       </div>
     {% endif %}
 
-    <!-- BUSINESS CARD -->
+    <!-- Blocco business -->
     <div class="business-card">
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
@@ -85,14 +100,14 @@
       </div>
 
       <div class="card-name-block">
-        <h1 class="card-name" style="margin:0;">{{ ag.name }}</h1>
+        <h1 class="card-name">{{ ag.name }}</h1>
         {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
         {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
         {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
       </div>
     </div>
 
-    <!-- CONTATTI -->
+    <!-- Contatti -->
     <div class="card-section">
       <h2>{{ t("contacts") }}</h2>
 
@@ -130,68 +145,67 @@
     </div>
 
     {% if addresses %}
-    <div class="card-section">
-      <h2>{{ t("addresses") }}</h2>
-      {% for a in addresses %}
-        <div class="address-value">• {{ a }}</div>
-      {% endfor %}
-    </div>
+      <div class="card-section">
+        <h2>{{ t("addresses") }}</h2>
+        {% for a in addresses %}
+          <div class="address-value">• {{ a }}</div>
+        {% endfor %}
+      </div>
     {% endif %}
 
     {% if gallery %}
-    <div class="card-section">
-      <h2>{{ t("gallery") }}</h2>
-      <div class="gallery-scroll">
-        {% for g in gallery %}
-          <a href="{{ g }}" target="_blank" rel="noopener"><img src="{{ g }}" alt="Foto"></a>
-        {% endfor %}
+      <div class="card-section">
+        <h2>{{ t("gallery") }}</h2>
+        <div class="gallery-scroll">
+          {% for g in gallery %}
+            <a href="{{ g }}" target="_blank" rel="noopener"><img src="{{ g }}" alt="Foto"></a>
+          {% endfor %}
+        </div>
       </div>
-    </div>
     {% endif %}
 
     {% if videos %}
-    <div class="card-section">
-      <h2>{{ t("videos") }}</h2>
-      {% for v in videos %}
-        <div style="margin-top:10px;">
-          <video controls style="width:100%; border-radius:14px; border:1px solid rgba(148,163,184,0.25);">
-            <source src="{{ v }}" type="video/mp4">
-            {{ t("video_not_supported") }}
-          </video>
-        </div>
-      {% endfor %}
-    </div>
+      <div class="card-section">
+        <h2>{{ t("videos") }}</h2>
+        {% for v in videos %}
+          <div style="margin-top:10px;">
+            <video controls style="width:100%; border-radius:14px; border:1px solid rgba(148,163,184,0.25);">
+              <source src="{{ v }}" type="video/mp4">
+              {{ t("video_not_supported") }}
+            </video>
+          </div>
+        {% endfor %}
+      </div>
     {% endif %}
 
     {% if pdfs %}
-    <div class="card-section">
-      <h2>{{ t("documents") }}</h2>
-      <div class="pdf-list">
-        {% for p in pdfs %}
-          <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
-            <span class="pdf-icon">📄</span><span>{{ p.name }}</span>
-          </a>
-        {% endfor %}
+      <div class="card-section">
+        <h2>{{ t("documents") }}</h2>
+        <div class="pdf-list">
+          {% for p in pdfs %}
+            <a class="pdf-item" href="{{ p.url }}" target="_blank" rel="noopener">
+              <span class="pdf-icon">📄</span><span>{{ p.name }}</span>
+            </a>
+          {% endfor %}
+        </div>
       </div>
-    </div>
     {% endif %}
 
-    <!-- Promo WA (PRO) -->
     {% if wa_optin_link %}
-    <div class="card-section">
-      <h2>{{ t("promos") }}</h2>
-      <div style="font-size:13px; color:#cbd5f5; line-height:1.35;">
-        {{ t("promos_desc") }}
+      <div class="card-section">
+        <h2>{{ t("promos") }}</h2>
+        <div style="font-size:13px; color:#cbd5f5; line-height:1.35;">
+          {{ t("promos_desc") }}
+        </div>
+        <div style="margin-top:10px;">
+          <a class="link-button" href="{{ wa_optin_link }}" target="_blank" rel="noopener">
+            ✅ {{ t("subscribe_whatsapp") }}
+          </a>
+        </div>
+        <div style="margin-top:8px; font-size:12px; opacity:.8;">
+          {{ t("stop_note") }}
+        </div>
       </div>
-      <div style="margin-top:10px;">
-        <a class="link-button" href="{{ wa_optin_link }}" target="_blank" rel="noopener">
-          ✅ {{ t("subscribe_whatsapp") }}
-        </a>
-      </div>
-      <div style="margin-top:8px; font-size:12px; opacity:.8;">
-        {{ t("stop_note") }}
-      </div>
-    </div>
     {% endif %}
 
     <div class="card-footer">© Pay4You — {{ t("updated_always") }}</div>
