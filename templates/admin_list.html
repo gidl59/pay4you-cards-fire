@@ -7,49 +7,46 @@
     <h1 class="agent-form-title">Admin – Lista Card</h1>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-      <a class="header-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+      <a class="header-link primary" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
       <a class="header-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
     </div>
 
-    <div style="overflow:auto;">
-      <table style="width:100%; border-collapse:collapse;">
+    <div class="table-wrap">
+      <table class="table">
         <thead>
-          <tr style="text-align:left; opacity:.85;">
-            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Nome</th>
-            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Slug</th>
-            <th style="padding:8px; border-bottom:1px solid rgba(148,163,184,.2);">Azioni</th>
+          <tr>
+            <th>Nome</th>
+            <th>Slug</th>
+            <th>Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for a in agents %}
           <tr>
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
-              {{ a.name }}
-            </td>
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
-              {{ a.slug }}
-            </td>
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12); display:flex; gap:10px; flex-wrap:wrap;">
-              <a class="header-link" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
-              <a class="header-link" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+            <td>{{ a.name }}</td>
+            <td style="opacity:.85;">{{ a.slug }}</td>
+            <td>
+              <div class="actions">
+                <a class="action-pill primary" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
+                <a class="action-pill" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+                <a class="action-pill" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
 
-              <a class="header-link" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
-              <a class="header-link" href="{{ url_for('admin_edit_profile2', slug=a.slug) }}">Modifica P2</a>
-
-              <form method="post"
-                    action="{{ url_for('delete_agent', slug=a.slug) }}"
-                    onsubmit="return confirm('Eliminare questa card?')"
-                    style="display:inline;">
-                <button class="header-link" type="submit"
-                        style="background:#7f1d1d;border:none;cursor:pointer;">
-                  Elimina
-                </button>
-              </form>
+                <form method="post"
+                      action="{{ url_for('delete_agent', slug=a.slug) }}"
+                      onsubmit="return confirm('Eliminare questa card?')"
+                      style="display:inline;">
+                  <button class="action-pill danger" type="submit">Elimina</button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <div class="subtle" style="margin-top:12px;">
+      Suggerimento: apri la card in una nuova scheda per verificare foto, logo, video e PDF.
     </div>
 
   </div>
