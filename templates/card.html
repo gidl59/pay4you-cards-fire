@@ -7,43 +7,61 @@
 
   <div class="card-outer">
 
+    <!-- HEADER: logo + lingua -->
     <div class="card-header-row" style="align-items:center; justify-content:space-between; gap:12px;">
       <div>
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You" class="card-logo-big">
       </div>
 
-      <!-- ✅ solo IT/EN -->
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <div style="font-size:12px; opacity:.8; font-weight:800;">
           {{ t("language") }}:
         </div>
+
         {% set keep_p = "" %}
         {% if p_key %}{% set keep_p = "&p=" ~ p_key %}{% endif %}
 
-        <a class="link-button" href="/{{ ag.slug }}?lang=it{{ keep_p }}">IT</a>
-        <a class="link-button" href="/{{ ag.slug }}?lang=en{{ keep_p }}">EN</a>
+        <a class="link-button" href="/{{ ag.slug }}?lang=it{{ keep_p }}" style="{% if lang=='it' %}font-weight:800;text-decoration:underline;{% endif %}">
+          IT
+        </a>
+        <a class="link-button" href="/{{ ag.slug }}?lang=en{{ keep_p }}" style="{% if lang=='en' %}font-weight:800;text-decoration:underline;{% endif %}">
+          EN
+        </a>
       </div>
     </div>
 
-    <!-- ✅ Selettore profili (se esistono) -->
-    {% if profiles and (not p_key) %}
+    <!-- ✅ PROFILI: sempre visibili se esistono profili nel JSON -->
+    {% if profiles %}
       <div class="card-section" style="margin-top:6px;">
         <h2>{{ t("multi_profile") }}</h2>
-        <div style="font-size:13px; color:#cbd5f5;">
-          {{ t("choose_profile") }}
-        </div>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-          <a class="link-button" href="/{{ ag.slug }}?lang={{ lang }}">{{ t("open_main") }}</a>
+          <!-- MAIN -->
+          <a class="link-button"
+             href="/{{ ag.slug }}?lang={{ lang }}"
+             style="{% if not p_key %}background:rgba(250,204,21,0.15); border-color:rgba(250,204,21,0.65); font-weight:800;{% endif %}">
+            {{ t("open_main") }}
+          </a>
+
+          <!-- PROFILI -->
           {% for p in profiles %}
-            <a class="link-button" href="/{{ ag.slug }}?p={{ p.key }}&lang={{ lang }}">
+            <a class="link-button"
+               href="/{{ ag.slug }}?p={{ p.key }}&lang={{ lang }}"
+               style="{% if p_key == p.key %}background:rgba(250,204,21,0.15); border-color:rgba(250,204,21,0.65); font-weight:800;{% endif %}">
               {{ p.label_ui }}
             </a>
           {% endfor %}
         </div>
+
+        {% if p_key %}
+          <div style="margin-top:8px; font-size:12px; opacity:.8;">
+            {{ t("direct_profile") }}: <b>{{ p_key }}</b>
+          </div>
+        {% endif %}
       </div>
     {% endif %}
 
+    <!-- BUSINESS CARD -->
     <div class="business-card">
       <div class="card-profile-photo-wrapper">
         {% if ag.photo_url %}
@@ -71,15 +89,10 @@
         {% if ag.role %}<div class="card-role-main">{{ ag.role }}</div>{% endif %}
         {% if ag.company %}<div class="card-role-sub">{{ ag.company }}</div>{% endif %}
         {% if ag.bio %}<div class="card-bio">{{ ag.bio }}</div>{% endif %}
-
-        {% if p_key %}
-          <div style="margin-top:8px; font-size:12px; opacity:.8;">
-            {{ t("direct_profile") }}: <b>{{ p_key }}</b>
-          </div>
-        {% endif %}
       </div>
     </div>
 
+    <!-- CONTATTI -->
     <div class="card-section">
       <h2>{{ t("contacts") }}</h2>
 
@@ -163,6 +176,7 @@
     </div>
     {% endif %}
 
+    <!-- Promo WA (PRO) -->
     {% if wa_optin_link %}
     <div class="card-section">
       <h2>{{ t("promos") }}</h2>
