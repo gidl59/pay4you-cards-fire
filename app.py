@@ -34,12 +34,14 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 
-# WhatsApp Cloud API (lo facciamo dopo)
+# WhatsApp Cloud API
 WA_VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "verify_token_change_me")
-WA_TOKEN = os.getenv("WA_TOKEN", "")
-WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "")
+WA_TOKEN = os.getenv("WA_TOKEN", "")  # permanent access token
+WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "")  # phone number id
 WA_API_VERSION = os.getenv("WA_API_VERSION", "v20.0")
 
+# ✅ Numero per link OPT-IN (WhatsApp web "wa.me/<numero>?text=...")
+# Default: Pay4You +39 350 872 5353 -> "393508725353"
 WA_OPTIN_PHONE = os.getenv("WA_OPTIN_PHONE", "393508725353").strip().replace("+", "").replace(" ", "")
 
 # Upload persistenti (Render Disk su /var/data)
@@ -59,6 +61,36 @@ MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 
 SUPPORTED_LANGS = ("it", "en")
+
+# ===== i18n MINIMO (IT+EN) =====
+I18N = {
+    "it": {
+        "profile": "Profilo",
+        "profile_1": "Profilo 1",
+        "profile_2": "Profilo 2",
+        "open_profile_2": "Apri Profilo 2",
+        "open_profile_1": "Apri Profilo principale",
+        "language": "Lingua",
+        "save_contact": "Salva contatto",
+        "share": "Condividi",
+        "scan_qr": "Scansiona QR",
+        "nfc_link": "Link NFC diretto",
+        "close": "Chiudi",
+    },
+    "en": {
+        "profile": "Profile",
+        "profile_1": "Profile 1",
+        "profile_2": "Profile 2",
+        "open_profile_2": "Open Profile 2",
+        "open_profile_1": "Open main profile",
+        "language": "Language",
+        "save_contact": "Save contact",
+        "share": "Share",
+        "scan_qr": "Scan QR",
+        "nfc_link": "Direct NFC link",
+        "close": "Close",
+    }
+}
 
 
 # ===== MODELS =====
@@ -98,15 +130,21 @@ class Agent(Base):
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    # Piano (basic/pro)
+    # ✅ Piano (basic/pro). Basic = solo card, Pro = WhatsApp promo + broadcast ecc.
     plan = Column(String, nullable=True)  # "basic" | "pro"
 
-    # Multi-profile JSON (lista di profili)
+    # ✅ Multi-profile JSON (testo JSON)
     profiles_json = Column(Text, nullable=True)
 
 
 class User(Base):
+    """
+    Utenti per login:
+    - admin: username=admin, password=ADMIN_PASSWORD (creato automaticamente)
+    - client: username=slug, password=generata, agent_slug=slug
+    """
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)                  # per ora in chiaro
@@ -115,11 +153,17 @@ class User(Base):
 
 
 class Subscriber(Base):
+    """
+    Iscritti WhatsApp per singola attività (merchant_slug).
+    wa_id = numero utente senza + (es: 39333...)
+    status = active | stopped
+    """
     __tablename__ = "subscribers"
+
     id = Column(Integer, primary_key=True)
-    wa_id = Column(String, nullable=False)
-    merchant_slug = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="active")
+    wa_id = Column(String, nullable=False)            # es "393333..."
+    merchant_slug = Column(String, nullable=False)    # es "bar-jonni"
+    status = Column(String, nullable=False, default="active")  # active/stopped
     created_at = Column(String, nullable=True)
     updated_at = Column(String, nullable=True)
     last_text = Column(Text, nullable=True)
@@ -137,6 +181,7 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
             conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
             conn.commit()
 
+
 ensure_sqlite_column("agents", "video_urls", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "plan", "TEXT")
@@ -149,9 +194,14 @@ ensure_sqlite_column("subscribers", "status", "TEXT")
 
 
 def ensure_default_plan_basic():
+    """
+    Imposta plan='basic' dove mancante/vuoto.
+    (Così di default NON appare WhatsApp promo)
+    """
     with engine.connect() as conn:
         conn.execute(sa_text("UPDATE agents SET plan='basic' WHERE plan IS NULL OR TRIM(plan)=''"))
         conn.commit()
+
 
 ensure_default_plan_basic()
 
@@ -207,6 +257,10 @@ def get_base_url():
 
 
 def upload_file(file_storage, folder="uploads"):
+    """
+    ✅ Salva i file su disco persistente Render: /var/data/uploads/<folder>/...
+    e restituisce un URL servito da /uploads/<folder>/<filename>
+    """
     if not file_storage or not file_storage.filename:
         return None
 
@@ -264,43 +318,90 @@ def slugify(s: str) -> str:
     return s
 
 
+# ✅ VALIDAZIONE NUMERO WHATSAPP (FORTE)
+def normalize_wa_id_strict(raw: str):
+    """
+    Accetta:
+      - "393401112233"
+      - "+39 340 111 2233"
+      - "3401112233"  -> diventa "393401112233"
+    """
+    t = (raw or "").strip()
+    if not t:
+        return "", ""  # vuoto = ok (non obbligatorio)
+
+    t = t.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if t.startswith("+"):
+        t = t[1:]
+    if t.startswith("00"):
+        t = t[2:]
+
+    if not t.isdigit():
+        return "", "Numero WhatsApp non valido: usa solo numeri (es: 393401112233)."
+
+    if len(t) == 10 and t.startswith("3"):
+        t = "39" + t
+
+    if not t.startswith("39"):
+        return "", "Numero WhatsApp non valido: usa formato italiano con prefisso 39 (es: 393401112233)."
+
+    if len(t) != 12:
+        return "", "Numero WhatsApp non valido: per Italia deve essere 12 cifre (39 + 10). Esempio: 393401112233."
+
+    if not t[2:].startswith("3"):
+        return "", "Numero WhatsApp non valido: sembra non essere un cellulare (deve iniziare con 3 dopo 39)."
+
+    return t, ""
+
+
+def extract_merchant_from_optin(text_body: str) -> str:
+    t = (text_body or "").strip()
+    t_up = t.upper()
+    if "ISCRIVIMI" not in t_up:
+        return ""
+
+    after = re.split(r"\bISCRIVIMI\b", t, flags=re.IGNORECASE, maxsplit=1)[-1].strip()
+
+    if "+" in after:
+        after = after.split("+", 1)[0].strip()
+
+    after = re.split(r"\bACCETTO\b", after, flags=re.IGNORECASE, maxsplit=1)[0].strip()
+
+    return slugify(after)
+
+
+def find_agent_slug_best_effort(db, guess_slug: str) -> str:
+    if not guess_slug:
+        return ""
+
+    ag = db.query(Agent).filter_by(slug=guess_slug).first()
+    if ag:
+        return ag.slug
+
+    agents = db.query(Agent).all()
+    for a in agents:
+        if slugify(a.name) == guess_slug:
+            return a.slug
+        if slugify(a.company or "") == guess_slug:
+            return a.slug
+
+    return ""
+
+
 def normalize_plan(p: str) -> str:
     p = (p or "").strip().lower()
     return p if p in ("basic", "pro") else "basic"
 
+
 def is_pro_agent(ag) -> bool:
     return normalize_plan(getattr(ag, "plan", "basic")) == "pro"
+
 
 def sanitize_fields_for_plan(ag):
     return
 
 
-# ===== LINGUA (IT/EN) =====
-I18N = {
-    "it": {
-        "save_contact": "Salva contatto",
-        "open_whatsapp": "Apri WhatsApp",
-        "open_website": "Apri sito",
-        "documents": "Documenti",
-        "gallery": "Galleria",
-        "videos": "Video",
-        "addresses": "Indirizzi",
-        "profile": "Profilo",
-        "language": "Lingua",
-    },
-    "en": {
-        "save_contact": "Save contact",
-        "open_whatsapp": "Open WhatsApp",
-        "open_website": "Open website",
-        "documents": "Documents",
-        "gallery": "Gallery",
-        "videos": "Videos",
-        "addresses": "Addresses",
-        "profile": "Profile",
-        "language": "Language",
-    }
-}
-
+# ===== LINGUA =====
 def pick_lang_from_request() -> str:
     q = (request.args.get("lang") or "").strip().lower()
     if q:
@@ -315,20 +416,21 @@ def pick_lang_from_request() -> str:
 
     return "it"
 
-def t(lang: str, key: str) -> str:
-    lang = lang if lang in I18N else "it"
-    return I18N.get(lang, I18N["it"]).get(key, key)
 
-
-# ===== MULTI-PROFILI =====
-PROFILE_KEYS_ALLOWED = {"p1", "p2"}  # per ora gestiamo solo p2 (p1 = principale)
+# ===== MULTI-PROFILI (JSON) =====
+# ✅ Ora supportiamo OVERRIDE COMPLETO (non solo 4 campi)
+PROFILE_FIELDS = [
+    "label_it", "label_en",
+    "photo_url", "logo_url",
+    "name", "company", "role", "bio",
+    "phone_mobile", "phone_mobile2", "phone_office",
+    "emails", "websites",
+    "facebook", "instagram", "linkedin", "tiktok", "telegram",
+    "whatsapp", "pec",
+    "piva", "sdi", "addresses"
+]
 
 def parse_profiles_json(raw: str):
-    """
-    JSON = lista di oggetti.
-    Supporta label_it / label_en
-    Supporta (quasi) tutti i campi del profilo principale (identico).
-    """
     if not raw:
         return []
     try:
@@ -346,53 +448,12 @@ def parse_profiles_json(raw: str):
         key = (p.get("key") or "").strip() or f"p{i+1}"
         key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
 
-        # Normalizziamo solo p2 (ma non blocchiamo chi vuole p3 etc)
-        label_it = (p.get("label_it") or p.get("label") or p.get("name") or f"Profilo {i+1}").strip()
-        label_en = (p.get("label_en") or "Profile " + str(i+1)).strip()
-
-        out.append({
-            "key": key,
-            "label_it": label_it,
-            "label_en": label_en,
-
-            "photo_url": (p.get("photo_url") or "").strip(),
-            "logo_url": (p.get("logo_url") or p.get("extra_logo_url") or "").strip(),
-
-            "name": (p.get("name") or "").strip(),
-            "company": (p.get("company") or "").strip(),
-            "role": (p.get("role") or "").strip(),
-            "bio": (p.get("bio") or "").strip(),
-
-            "phone_mobile": (p.get("phone_mobile") or "").strip(),
-            "phone_mobile2": (p.get("phone_mobile2") or "").strip(),
-            "phone_office": (p.get("phone_office") or "").strip(),
-
-            "emails": (p.get("emails") or "").strip(),
-            "websites": (p.get("websites") or "").strip(),
-
-            "facebook": (p.get("facebook") or "").strip(),
-            "instagram": (p.get("instagram") or "").strip(),
-            "linkedin": (p.get("linkedin") or "").strip(),
-            "tiktok": (p.get("tiktok") or "").strip(),
-            "telegram": (p.get("telegram") or "").strip(),
-            "whatsapp": (p.get("whatsapp") or "").strip(),
-            "pec": (p.get("pec") or "").strip(),
-
-            "piva": (p.get("piva") or "").strip(),
-            "sdi": (p.get("sdi") or "").strip(),
-            "addresses": (p.get("addresses") or "").strip(),
-
-            # media opzionali separati (se non li vuoi, lasciali vuoti)
-            "gallery_urls": (p.get("gallery_urls") or "").strip(),
-            "video_urls": (p.get("video_urls") or "").strip(),
-            "pdf1_url": (p.get("pdf1_url") or "").strip(),
-        })
+        item = {"key": key}
+        for f in PROFILE_FIELDS:
+            item[f] = (p.get(f) or "").strip()
+        out.append(item)
 
     return out
-
-
-def profiles_to_json(profiles: list) -> str:
-    return json.dumps(profiles, ensure_ascii=False, indent=2)
 
 
 def select_profile(profiles, requested_key: str):
@@ -404,16 +465,34 @@ def select_profile(profiles, requested_key: str):
     return None
 
 
-def upsert_profile(profiles: list, key: str, new_obj: dict) -> list:
-    updated = False
-    for i, p in enumerate(profiles):
+def upsert_profile(profiles, key: str, data: dict):
+    key = (key or "").strip() or "p2"
+    found = None
+    for p in profiles:
         if p.get("key") == key:
-            profiles[i] = new_obj
-            updated = True
+            found = p
             break
-    if not updated:
-        profiles.append(new_obj)
+    if not found:
+        found = {"key": key}
+        for f in PROFILE_FIELDS:
+            found[f] = ""
+        profiles.append(found)
+
+    for f in PROFILE_FIELDS:
+        if f in data:
+            found[f] = (data.get(f) or "").strip()
+
+    # label fallback
+    if not found.get("label_it"):
+        found["label_it"] = "Profilo 2" if key == "p2" else f"Profilo {key}"
+    if not found.get("label_en"):
+        found["label_en"] = "Profile 2" if key == "p2" else f"Profile {key}"
+
     return profiles
+
+
+def profiles_to_json(profiles):
+    return json.dumps(profiles, ensure_ascii=False, indent=2)
 
 
 def agent_to_view(ag: Agent):
@@ -450,103 +529,98 @@ def agent_to_view(ag: Agent):
 
 
 def apply_profile_to_view(view, profile: dict):
-    """
-    Profilo 2 IDENTICO: se un campo è valorizzato in p2, sovrascrive p1.
-    """
     if not profile:
         return view
 
-    def apply(attr, src_key=None):
-        k = src_key or attr
-        v = (profile.get(k) or "").strip()
-        if v:
-            setattr(view, attr, v)
+    # immagini
+    if profile.get("photo_url"):
+        view.photo_url = profile["photo_url"]
+    if profile.get("logo_url"):
+        view.extra_logo_url = profile["logo_url"]
 
-    apply("photo_url", "photo_url")
-    apply("extra_logo_url", "logo_url")
-
-    apply("name")
-    apply("company")
-    apply("role")
-    apply("bio")
-
-    apply("phone_mobile")
-    apply("phone_mobile2")
-    apply("phone_office")
-
-    apply("emails")
-    apply("websites")
-
-    apply("facebook")
-    apply("instagram")
-    apply("linkedin")
-    apply("tiktok")
-    apply("telegram")
-    apply("whatsapp")
-    apply("pec")
-
-    apply("piva")
-    apply("sdi")
-    apply("addresses")
-
-    # media (se valorizzati in p2 sovrascrivono p1)
-    apply("gallery_urls")
-    apply("video_urls")
-    apply("pdf1_url")
+    # testuali
+    for k in [
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram",
+        "whatsapp", "pec",
+        "piva", "sdi", "addresses"
+    ]:
+        if profile.get(k):
+            setattr(view, k, profile[k])
 
     return view
 
 
-def copy_agent_to_profile2(ag: Agent, existing_p2: dict | None = None) -> dict:
-    """
-    Crea p2 copiando TUTTO da p1 (ag).
-    Se esiste già p2, mantiene eventuali campi già compilati (se vuoi).
-    """
-    def keep(existing_val, fallback):
-        ev = (existing_val or "").strip()
-        return ev if ev else (fallback or "")
+# ===== WhatsApp Cloud API helpers =====
+def wa_api_url(path: str) -> str:
+    return f"https://graph.facebook.com/{WA_API_VERSION}/{path.lstrip('/')}"
 
-    p2 = existing_p2 or {}
+def wa_send_text(to_wa_id: str, body: str) -> (bool, str):
+    if not WA_TOKEN or not WA_PHONE_NUMBER_ID:
+        return False, "WA_TOKEN o WA_PHONE_NUMBER_ID mancanti"
 
-    return {
-        "key": "p2",
-        "label_it": keep(p2.get("label_it"), "Profilo 2"),
-        "label_en": keep(p2.get("label_en"), "Profile 2"),
-
-        "photo_url": keep(p2.get("photo_url"), ag.photo_url),
-        "logo_url": keep(p2.get("logo_url"), ag.extra_logo_url),
-
-        "name": keep(p2.get("name"), ag.name),
-        "company": keep(p2.get("company"), ag.company),
-        "role": keep(p2.get("role"), ag.role),
-        "bio": keep(p2.get("bio"), ag.bio),
-
-        "phone_mobile": keep(p2.get("phone_mobile"), ag.phone_mobile),
-        "phone_mobile2": keep(p2.get("phone_mobile2"), ag.phone_mobile2),
-        "phone_office": keep(p2.get("phone_office"), ag.phone_office),
-
-        "emails": keep(p2.get("emails"), ag.emails),
-        "websites": keep(p2.get("websites"), ag.websites),
-
-        "facebook": keep(p2.get("facebook"), ag.facebook),
-        "instagram": keep(p2.get("instagram"), ag.instagram),
-        "linkedin": keep(p2.get("linkedin"), ag.linkedin),
-        "tiktok": keep(p2.get("tiktok"), ag.tiktok),
-        "telegram": keep(p2.get("telegram"), ag.telegram),
-        "whatsapp": keep(p2.get("whatsapp"), ag.whatsapp),
-        "pec": keep(p2.get("pec"), ag.pec),
-
-        "piva": keep(p2.get("piva"), ag.piva),
-        "sdi": keep(p2.get("sdi"), ag.sdi),
-        "addresses": keep(p2.get("addresses"), ag.addresses),
-
-        "gallery_urls": keep(p2.get("gallery_urls"), ag.gallery_urls),
-        "video_urls": keep(p2.get("video_urls"), ag.video_urls),
-        "pdf1_url": keep(p2.get("pdf1_url"), ag.pdf1_url),
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_wa_id,
+        "type": "text",
+        "text": {"body": body}
     }
 
+    try:
+        if requests:
+            r = requests.post(
+                wa_api_url(f"{WA_PHONE_NUMBER_ID}/messages"),
+                headers={"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"},
+                data=json.dumps(payload),
+                timeout=20
+            )
+            ok = 200 <= r.status_code < 300
+            return ok, r.text
+        else:
+            import urllib.request
+            req = urllib.request.Request(
+                wa_api_url(f"{WA_PHONE_NUMBER_ID}/messages"),
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return True, resp.read().decode("utf-8")
+    except Exception as e:
+        return False, str(e)
 
-# ===== ROUTES BASE =====
+
+def build_credentials_message(slug: str, username: str, password: str) -> str:
+    base = get_base_url()
+    login_url = f"{base}/login"
+    card_url = f"{base}/{slug}"
+    msg = (
+        "✅ Credenziali Pay4You Card\n\n"
+        f"Login: {login_url}\n"
+        f"Username: {username}\n"
+        f"Password: {password}\n\n"
+        f"Card: {card_url}\n\n"
+        "Consiglio: al primo accesso salva queste credenziali."
+    )
+    return msg
+
+
+def send_credentials_to_client_wa_only(ag: Agent, user_obj: User, wa_raw: str = ""):
+    wa_target, err = normalize_wa_id_strict(wa_raw or (getattr(ag, "phone_mobile", "") or ""))
+    if err:
+        return {"wa": (False, err)}
+
+    if not wa_target:
+        return {"wa": (False, "numero WhatsApp non presente")}
+
+    body = build_credentials_message(ag.slug, user_obj.username, user_obj.password)
+    ok, resp = wa_send_text(wa_target, body)
+    return {"wa": (ok, resp)}
+
+
+# ------------------ ROUTES BASE ------------------
 @app.get("/")
 def home():
     if is_logged_in():
@@ -561,7 +635,7 @@ def health():
     return "ok", 200
 
 
-# ===== LOGIN =====
+# ------------------ LOGIN ------------------
 @app.get("/login")
 def login():
     return render_template("login.html", error=None, next=request.args.get("next", ""))
@@ -601,7 +675,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ===== ADMIN LISTA =====
+# ------------------ ADMIN LISTA ------------------
 @app.get("/admin")
 @admin_required
 def admin_home():
@@ -612,11 +686,126 @@ def admin_home():
     return render_template("admin_list.html", agents=agents)
 
 
-# ===== ADMIN NEW/EDIT (come tuo codice, invariato nei concetti) =====
+# ✅ CREAZIONE RAPIDA PRO + INVIO (WHATSAPP)
+@app.post("/admin/quick-pro")
+@admin_required
+def admin_quick_pro_create():
+    db = SessionLocal()
+
+    slug = slugify(request.form.get("slug", ""))
+    name = (request.form.get("name") or "").strip()
+    wa_raw = (request.form.get("wa") or "").strip()
+    email_raw = (request.form.get("email") or "").strip()
+
+    if not slug:
+        flash("Slug obbligatorio", "error")
+        return redirect(url_for("admin_home"))
+
+    if db.query(Agent).filter_by(slug=slug).first():
+        flash("Slug già esistente", "error")
+        return redirect(url_for("admin_home"))
+
+    if not name:
+        name = slug
+
+    wa_norm, wa_err = normalize_wa_id_strict(wa_raw)
+    if wa_err:
+        flash(wa_err, "error")
+        return redirect(url_for("admin_home"))
+
+    ag = Agent(
+        slug=slug,
+        name=name,
+        company=None,
+        role=None,
+        bio=None,
+        phone_mobile=wa_norm or None,
+        phone_mobile2=None,
+        phone_office=None,
+        emails=email_raw or None,
+        websites=None,
+        facebook=None,
+        instagram=None,
+        linkedin=None,
+        tiktok=None,
+        telegram=None,
+        whatsapp=None,
+        pec=None,
+        piva=None,
+        sdi=None,
+        addresses=None,
+        photo_url=None,
+        extra_logo_url=None,
+        gallery_urls=None,
+        video_urls=None,
+        pdf1_url=None,
+        plan="pro",
+        profiles_json=None,
+    )
+
+    sanitize_fields_for_plan(ag)
+
+    db.add(ag)
+    db.commit()
+
+    pw = generate_password()
+    u = User(username=slug, password=pw, role="client", agent_slug=slug)
+    db.add(u)
+    db.commit()
+
+    results = send_credentials_to_client_wa_only(ag, u, wa_raw=wa_norm)
+    wa_ok, wa_resp = results.get("wa") or (False, "")
+
+    info = ["Cliente PRO creato ✅"]
+    if wa_ok:
+        info.append("WhatsApp inviato ✅")
+    else:
+        info.append(f"WhatsApp non inviato ({wa_resp})")
+
+    if email_raw:
+        info.append("Email: domani (SMTP)")
+
+    flash(" — ".join(info), "ok" if wa_ok else "error")
+    return redirect(url_for("admin_home"))
+
+
+@app.post("/admin/<slug>/send-credentials")
+@admin_required
+def admin_send_credentials(slug):
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_pro_agent(ag):
+        flash("Funzione disponibile solo per piano PRO.", "error")
+        return redirect(url_for("admin_home"))
+
+    u = db.query(User).filter_by(username=slug).first()
+    if not u:
+        u = User(username=slug, password=generate_password(), role="client", agent_slug=slug)
+        db.add(u)
+    else:
+        u.password = generate_password()
+
+    db.commit()
+
+    results = send_credentials_to_client_wa_only(ag, u)
+    wa_ok, wa_resp = results.get("wa") or (False, "")
+
+    if wa_ok:
+        flash("WhatsApp inviato ✅", "ok")
+    else:
+        flash(f"WhatsApp non inviato ({wa_resp})", "error")
+
+    return redirect(url_for("admin_home"))
+
+
+# ------------------ NUOVO AGENTE ------------------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
-    return render_template("agent_form.html", agent=None, mode="main", p_key="")
+    return render_template("agent_form.html", agent=None, form_mode="main", profile_key="")
 
 
 @app.post("/admin/new")
@@ -716,6 +905,7 @@ def create_agent():
     return redirect(url_for("admin_home"))
 
 
+# ------------------ MODIFICA / ELIMINA (ADMIN) ------------------
 @app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
@@ -724,7 +914,7 @@ def edit_agent(slug):
     if not ag:
         abort(404)
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-    return render_template("agent_form.html", agent=ag, mode="main", p_key="")
+    return render_template("agent_form.html", agent=ag, form_mode="main", profile_key="")
 
 
 @app.post("/admin/<slug>/edit")
@@ -757,6 +947,9 @@ def update_agent(slug):
     ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
     sanitize_fields_for_plan(ag)
 
+    if request.form.get("delete_pdfs") == "1":
+        ag.pdf1_url = None
+
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
     gallery_files = request.files.getlist("gallery")
@@ -772,15 +965,16 @@ def update_agent(slug):
         if u:
             ag.extra_logo_url = u
 
-    pdf_entries = []
-    for i in range(1, 13):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf")
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
-    if pdf_entries:
-        ag.pdf1_url = "|".join(pdf_entries)
+    if request.form.get("delete_pdfs") != "1":
+        pdf_entries = []
+        for i in range(1, 13):
+            f = request.files.get(f"pdf{i}")
+            if f and f.filename:
+                u = upload_file(f, "pdf")
+                if u:
+                    pdf_entries.append(f"{f.filename}||{u}")
+        if pdf_entries:
+            ag.pdf1_url = "|".join(pdf_entries)
 
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
@@ -817,7 +1011,7 @@ def delete_agent(slug):
     return redirect(url_for("admin_home"))
 
 
-# ===== AREA CLIENTE (PROFILO 1) =====
+# ------------------ AREA CLIENTE (Profilo 1) ------------------
 @app.get("/me/edit")
 @login_required
 def me_edit():
@@ -834,7 +1028,7 @@ def me_edit():
         abort(404)
 
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-    return render_template("agent_form.html", agent=ag, mode="main", p_key="")
+    return render_template("agent_form.html", agent=ag, form_mode="main", profile_key="")
 
 
 @app.post("/me/edit")
@@ -917,24 +1111,16 @@ def me_edit_post():
             ag.video_urls = "|".join(video_urls)
 
     db.commit()
-    flash("Profilo salvato ✅", "ok")
+    flash("Salvato ✅", "ok")
     return redirect(url_for("me_edit"))
 
 
-# ===== PROFILO 2 (IDENTICO) =====
+# ------------------ AREA CLIENTE (Profilo 2 SEMPLICE) ------------------
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
-    # route chiamata dal template (risolve il tuo errore)
-    return redirect(url_for("me_profile_edit", p_key="p2"))
-
-
-@app.post("/me/profile2/enable")
-@login_required
-def me_profile2_enable():
     """
-    Bottone "Vuoi un secondo profilo?"
-    - crea/aggiorna p2 copiando da p1
+    Pagina uguale al profilo principale, ma salva in profiles_json dentro key=p2.
     """
     if is_admin():
         return redirect(url_for("admin_home"))
@@ -947,66 +1133,30 @@ def me_profile2_enable():
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
-
-    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    existing_p2 = select_profile(profiles, "p2")
-
-    p2 = copy_agent_to_profile2(ag, existing_p2)
-    profiles = upsert_profile(profiles, "p2", p2)
-
-    ag.profiles_json = profiles_to_json(profiles)
-    db.commit()
-
-    flash("Profilo 2 attivato ✅", "ok")
-    return redirect(url_for("me_profile_edit", p_key="p2"))
-
-
-@app.get("/me/profile/<p_key>/edit")
-@login_required
-def me_profile_edit(p_key):
-    """
-    Pagina identica per modificare p2.
-    """
-    if is_admin():
-        return redirect(url_for("admin_home"))
-
-    p_key = (p_key or "").strip()
-    if p_key not in ("p2",):
-        abort(404)
-
-    slug = current_client_slug()
-    if not slug:
-        return redirect(url_for("login"))
-
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        abort(404)
-
-    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
 
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
     p2 = select_profile(profiles, "p2")
 
-    # se non esiste ancora, proponiamo enable
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        mode="profile",
-        p_key="p2",
-        profile=p2
-    )
+    # se non esiste ancora, crea una bozza vuota per mostrare il form
+    if not p2:
+        profiles = upsert_profile(profiles, "p2", {
+            "label_it": "Profilo 2",
+            "label_en": "Profile 2"
+        })
+        p2 = select_profile(profiles, "p2")
+        ag.profiles_json = profiles_to_json(profiles)
+        db.commit()
+
+    # Passo al template sia agent (profilo 1) che profile_data (p2)
+    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
+    return render_template("agent_form.html", agent=ag, form_mode="profile2", profile_key="p2", profile_data=p2)
 
 
-@app.post("/me/profile/<p_key>/edit")
+@app.post("/me/profile2")
 @login_required
-def me_profile_edit_post(p_key):
+def me_profile2_post():
     if is_admin():
         return redirect(url_for("admin_home"))
-
-    p_key = (p_key or "").strip()
-    if p_key not in ("p2",):
-        abort(404)
 
     slug = current_client_slug()
     if not slug:
@@ -1018,105 +1168,44 @@ def me_profile_edit_post(p_key):
         abort(404)
 
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    existing = select_profile(profiles, "p2") or {}
 
-    # campi identici
-    def getf(k):
-        return (request.form.get(k, "") or "").strip()
+    # prendiamo TUTTI i campi come nel profilo 1
+    data = {}
+    for k in [
+        "label_it", "label_en",
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office",
+        "emails", "websites",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram",
+        "whatsapp", "pec",
+        "piva", "sdi", "addresses",
+    ]:
+        data[k] = (request.form.get(k, "") or "").strip()
 
-    p2 = {
-        "key": "p2",
-        "label_it": getf("label_it") or (existing.get("label_it") or "Profilo 2"),
-        "label_en": getf("label_en") or (existing.get("label_en") or "Profile 2"),
-
-        "photo_url": existing.get("photo_url", ""),
-        "logo_url": existing.get("logo_url", ""),
-
-        "name": getf("name"),
-        "company": getf("company"),
-        "role": getf("role"),
-        "bio": getf("bio"),
-
-        "phone_mobile": getf("phone_mobile"),
-        "phone_mobile2": getf("phone_mobile2"),
-        "phone_office": getf("phone_office"),
-
-        "emails": getf("emails"),
-        "websites": getf("websites"),
-
-        "facebook": getf("facebook"),
-        "instagram": getf("instagram"),
-        "linkedin": getf("linkedin"),
-        "tiktok": getf("tiktok"),
-        "telegram": getf("telegram"),
-        "whatsapp": getf("whatsapp"),
-        "pec": getf("pec"),
-
-        "piva": getf("piva"),
-        "sdi": getf("sdi"),
-        "addresses": getf("addresses"),
-
-        "gallery_urls": existing.get("gallery_urls", ""),
-        "video_urls": existing.get("video_urls", ""),
-        "pdf1_url": existing.get("pdf1_url", ""),
-    }
-
-    # upload separati per p2
+    # upload foto/logo specifici del profilo 2
     photo = request.files.get("photo")
     extra_logo = request.files.get("extra_logo")
-    gallery_files = request.files.getlist("gallery")
-    video_files = request.files.getlist("videos")
-
     if photo and photo.filename:
         u = upload_file(photo, "photos")
         if u:
-            p2["photo_url"] = u
-
+            data["photo_url"] = u
     if extra_logo and extra_logo.filename:
         u = upload_file(extra_logo, "logos")
         if u:
-            p2["logo_url"] = u
+            data["logo_url"] = u
 
-    # media opzionali per p2 (se carichi, sovrascrivono)
-    pdf_entries = []
-    for i in range(1, 13):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf")
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
-    if pdf_entries:
-        p2["pdf1_url"] = "|".join(pdf_entries)
+    # NOTA: per semplicità p2 NON ha galleria/video/pdf separati (restano quelli del profilo principale)
+    # se vuoi anche quelli separati, lo facciamo dopo.
 
-    if gallery_files and any(g.filename for g in gallery_files):
-        gallery_urls = []
-        for f in gallery_files[:MAX_GALLERY_IMAGES]:
-            if f and f.filename:
-                u = upload_file(f, "gallery")
-                if u:
-                    gallery_urls.append(u)
-        if gallery_urls:
-            p2["gallery_urls"] = "|".join(gallery_urls)
-
-    if video_files and any(v.filename for v in video_files):
-        video_urls = []
-        for f in video_files[:MAX_VIDEOS]:
-            if f and f.filename:
-                u = upload_file(f, "videos")
-                if u:
-                    video_urls.append(u)
-        if video_urls:
-            p2["video_urls"] = "|".join(video_urls)
-
-    profiles = upsert_profile(profiles, "p2", p2)
+    profiles = upsert_profile(profiles, "p2", data)
     ag.profiles_json = profiles_to_json(profiles)
     db.commit()
 
     flash("Profilo 2 salvato ✅", "ok")
-    return redirect(url_for("me_profile_edit", p_key="p2"))
+    return redirect(url_for("me_profile2"))
 
 
-# ===== CARD PUBBLICA =====
+# ------------------ CARD PUBBLICA ------------------
 @app.get("/<slug>")
 def public_card(slug):
     db = SessionLocal()
@@ -1126,6 +1215,7 @@ def public_card(slug):
 
     ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
     lang = pick_lang_from_request()
+    t = I18N.get(lang, I18N["it"])
 
     profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
     p_key = (request.args.get("p") or "").strip()
@@ -1135,14 +1225,14 @@ def public_card(slug):
     if active_profile:
         ag_view = apply_profile_to_view(ag_view, active_profile)
 
-    gallery = (ag_view.gallery_urls.split("|") if ag_view.gallery_urls else [])
-    videos = (ag_view.video_urls.split("|") if ag_view.video_urls else [])
+    gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
+    videos = (ag.video_urls.split("|") if ag.video_urls else [])
 
     emails = [e.strip() for e in (ag_view.emails or "").split(",") if e.strip()]
     websites = [w.strip() for w in (ag_view.websites or "").split(",") if w.strip()]
     addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if a.strip()]
 
-    pdfs = parse_pdfs(ag_view.pdf1_url or "")
+    pdfs = parse_pdfs(ag.pdf1_url or "")
     base = get_base_url()
 
     mobiles = []
@@ -1158,9 +1248,15 @@ def public_card(slug):
         optin_text = f"ISCRIVIMI {ag.slug} + ACCETTO RICEVERE PROMO"
         wa_optin_link = f"https://wa.me/{WA_OPTIN_PHONE}?text={quote(optin_text)}"
 
+    # ✅ Link NFC diretto (include p + lang)
     nfc_direct_url = f"{base}/{ag.slug}"
+    qs = []
     if p_key:
-        nfc_direct_url = f"{nfc_direct_url}?p={urllib.parse.quote(p_key)}"
+        qs.append("p=" + urllib.parse.quote(p_key))
+    if lang:
+        qs.append("lang=" + urllib.parse.quote(lang))
+    if qs:
+        nfc_direct_url = nfc_direct_url + "?" + "&".join(qs)
 
     return render_template(
         "card.html",
@@ -1175,7 +1271,7 @@ def public_card(slug):
         mobiles=mobiles,
         wa_optin_link=wa_optin_link,
         lang=lang,
-        tfunc=lambda k: t(lang, k),
+        t=t,
         profiles=profiles,
         active_profile=active_profile,
         p_key=p_key,
@@ -1183,24 +1279,15 @@ def public_card(slug):
     )
 
 
-# ===== VCARD =====
+# ------------------ VCARD ------------------
 @app.get("/<slug>.vcf")
 def vcard(slug):
-    # vcf si riferisce sempre al profilo richiesto con ?p=
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         abort(404)
 
-    profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
-    p_key = (request.args.get("p") or "").strip()
-    active_profile = select_profile(profiles, p_key)
-
-    ag_view = agent_to_view(ag)
-    if active_profile:
-        ag_view = apply_profile_to_view(ag_view, active_profile)
-
-    full_name = ag_view.name or ""
+    full_name = ag.name or ""
     parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
         first_name, last_name = parts[0], parts[1]
@@ -1214,32 +1301,30 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    if ag_view.role:
-        lines.append(f"TITLE:{ag_view.role}")
-    if ag_view.company:
-        lines.append(f"ORG:{ag_view.company}")
+    if ag.role:
+        lines.append(f"TITLE:{ag.role}")
+    if ag.company:
+        lines.append(f"ORG:{ag.company}")
 
-    if ag_view.phone_mobile:
-        lines.append(f"TEL;TYPE=CELL:{ag_view.phone_mobile}")
-    if ag_view.phone_mobile2:
-        lines.append(f"TEL;TYPE=CELL:{ag_view.phone_mobile2}")
-    if ag_view.phone_office:
-        lines.append(f"TEL;TYPE=WORK:{ag_view.phone_office}")
+    if ag.phone_mobile:
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+    if ag.phone_mobile2:
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile2}")
+    if ag.phone_office:
+        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
 
-    if ag_view.emails:
-        for e in [x.strip() for x in ag_view.emails.split(",") if x.strip()]:
+    if ag.emails:
+        for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
-    if p_key:
-        card_url = f"{card_url}?p={urllib.parse.quote(p_key)}"
     lines.append(f"URL:{card_url}")
 
-    if ag_view.piva:
-        lines.append(f"X-TAX-ID:{ag_view.piva}")
-    if ag_view.sdi:
-        lines.append(f"X-SDI-CODE:{ag_view.sdi}")
+    if ag.piva:
+        lines.append(f"X-TAX-ID:{ag.piva}")
+    if ag.sdi:
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
@@ -1249,14 +1334,14 @@ def vcard(slug):
     return resp
 
 
-# ===== QR CODE (multilingua + profilo) =====
+# ------------------ QR CODE (multilingua + profilo) ------------------
 @app.get("/<slug>/qr.png")
 def qr(slug):
     base = get_base_url()
     p = (request.args.get("p") or "").strip()
     lang = (request.args.get("lang") or "").strip().lower()
-    if lang not in SUPPORTED_LANGS:
-        lang = ""
+    if lang and lang not in SUPPORTED_LANGS:
+        lang = "it"
 
     url = f"{base}/{slug}"
     qs = []
@@ -1274,7 +1359,7 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# ===== WhatsApp Webhook (lasciato, lo facciamo dopo) =====
+# ------------------ WhatsApp Webhook ------------------
 @app.get("/wa/webhook")
 def wa_webhook_verify():
     mode = request.args.get("hub.mode", "")
@@ -1288,11 +1373,78 @@ def wa_webhook_verify():
 
 @app.post("/wa/webhook")
 def wa_webhook_receive():
-    # lasciato invariato per ora
+    data = request.get_json(silent=True) or {}
+
+    try:
+        entry = data.get("entry", []) or []
+        for e in entry:
+            changes = (e.get("changes", []) or [])
+            for c in changes:
+                value = (c.get("value", {}) or {})
+                messages = (value.get("messages", []) or [])
+                for m in messages:
+                    wa_id = (m.get("from") or "").strip()
+                    text_obj = m.get("text") or {}
+                    body = (text_obj.get("body") or "").strip()
+
+                    if not wa_id or not body:
+                        continue
+
+                    db = SessionLocal()
+
+                    if re.search(r"\bSTOP\b", body, flags=re.IGNORECASE):
+                        subs = db.query(Subscriber).filter_by(wa_id=wa_id, status="active").all()
+                        for s in subs:
+                            s.status = "stopped"
+                            s.updated_at = now_iso()
+                            s.last_text = body
+                        db.commit()
+
+                        wa_send_text(wa_id, "✅ Ok, iscrizione disattivata. Se vuoi riattivare: scrivi ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO.")
+                        continue
+
+                    if re.search(r"\bISCRIVIMI\b", body, flags=re.IGNORECASE):
+                        guess = extract_merchant_from_optin(body)
+                        merchant_slug = find_agent_slug_best_effort(db, guess)
+
+                        if not merchant_slug:
+                            wa_send_text(wa_id, "⚠️ Non ho capito quale attività. Scrivi: ISCRIVIMI NOME-ATTIVITÀ + ACCETTO RICEVERE PROMO")
+                            continue
+
+                        ag = db.query(Agent).filter_by(slug=merchant_slug).first()
+                        if not ag or not is_pro_agent(ag):
+                            wa_send_text(wa_id, "⚠️ Questo servizio non è attivo per questa card.")
+                            continue
+
+                        sub = db.query(Subscriber).filter_by(wa_id=wa_id, merchant_slug=merchant_slug).first()
+                        if not sub:
+                            sub = Subscriber(
+                                wa_id=wa_id,
+                                merchant_slug=merchant_slug,
+                                status="active",
+                                created_at=now_iso(),
+                                updated_at=now_iso(),
+                                last_text=body
+                            )
+                            db.add(sub)
+                        else:
+                            sub.status = "active"
+                            sub.updated_at = now_iso()
+                            sub.last_text = body
+                        db.commit()
+
+                        wa_send_text(wa_id, f"✅ Iscrizione confermata per {merchant_slug}. Per annullare: scrivi STOP.")
+                        continue
+
+                    wa_send_text(wa_id, "Ciao! Per iscriverti alle novità scrivi: ISCRIVIMI <attività> + ACCETTO RICEVERE PROMO. Per annullare: STOP.")
+
+    except Exception:
+        pass
+
     return "ok", 200
 
 
-# ===== ERRORI =====
+# ------------------ ERRORI ------------------
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
