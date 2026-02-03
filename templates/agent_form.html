@@ -1,22 +1,49 @@
 {% extends "base.html" %}
-{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %} | Pay4You{% endblock %}
+{% block title %}
+  {% if mode == 'profile' %}Profilo 2{% else %}{% if agent %}Modifica{% else %}Nuovo{% endif %}{% endif %} | Pay4You
+{% endblock %}
 
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
 
-    <h1 class="agent-form-title">
-      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
-    </h1>
+    {% if mode == 'profile' %}
+      <h1 class="agent-form-title">Modifica Profilo 2</h1>
+    {% else %}
+      <h1 class="agent-form-title">
+        {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
+      </h1>
+    {% endif %}
+
+    {# FLASH MESSAGES #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin:10px 0;">
+          {% for cat, msg in messages %}
+            <div class="flash {{ 'ok' if cat=='ok' else 'error' }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
     {% if session.get('role') != 'admin' and agent %}
       <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Gestisci Profilo 2</a>
-        <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card principale</a>
+
+        {% if mode != 'profile' %}
+          {# Profilo 2 tools in profilo 1 #}
+          <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Gestisci Profilo 2</a>
+          <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+          <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card principale</a>
+        {% else %}
+          {# tools in profilo 2 #}
+          <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna a Profilo 1</a>
+          <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+          <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card principale</a>
+        {% endif %}
       </div>
     {% endif %}
 
+    {# FORM ACTION #}
     {% if session.get('role') == 'admin' %}
       {% if agent %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
@@ -24,12 +51,32 @@
         {% set form_action = url_for('create_agent') %}
       {% endif %}
     {% else %}
-      {% set form_action = url_for('me_edit_post') %}
+      {% if mode == 'profile' %}
+        {% set form_action = url_for('me_profile_edit_post', p_key='p2') %}
+      {% else %}
+        {% set form_action = url_for('me_edit_post') %}
+      {% endif %}
     {% endif %}
+
+    {# PROFILO 2: se non esiste, mostro bottone attiva #}
+    {% if session.get('role') != 'admin' and mode == 'profile' and (profile is none) %}
+      <div class="admin-card" style="margin-bottom:14px;">
+        <h2 style="margin:0 0 8px 0;">Vuoi attivare il Profilo 2?</h2>
+        <p style="margin:0 0 12px 0; opacity:.85;">
+          Clicca qui e ti creo un Profilo 2 <b>identico</b> al Profilo 1. Poi puoi modificare tutto (foto, indirizzi, ecc.).
+        </p>
+        <form method="post" action="{{ url_for('me_profile2_enable') }}">
+          <button type="submit">✅ Sì, attiva Profilo 2</button>
+        </form>
+      </div>
+    {% endif %}
+
+    {# SORGENTE DATI: se profilo2, uso profile.* altrimenti agent.* #}
+    {% set src = profile if (mode=='profile' and profile) else agent %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
-      {% if session.get('role') == 'admin' %}
+      {% if session.get('role') == 'admin' and mode != 'profile' %}
         <label>Slug (univoco)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
 
@@ -47,66 +94,76 @@
         {% endif %}
       {% endif %}
 
+      {% if mode == 'profile' %}
+        <label>Nome Profilo (IT)</label>
+        <input type="text" name="label_it" value="{{ src.label_it if src else 'Profilo 2' }}">
+
+        <label>Profile name (EN)</label>
+        <input type="text" name="label_en" value="{{ src.label_en if src else 'Profile 2' }}">
+
+        <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+      {% endif %}
+
       <label>Nome</label>
-      <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+      <input type="text" name="name" value="{{ src.name if src else '' }}" required>
 
       <label>Azienda</label>
-      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
+      <input type="text" name="company" value="{{ src.company if src else '' }}">
 
       <label>Ruolo</label>
-      <input type="text" name="role" value="{{ agent.role if agent else '' }}">
+      <input type="text" name="role" value="{{ src.role if src else '' }}">
 
       <label>Bio / Descrizione</label>
-      <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
+      <textarea name="bio">{{ src.bio if src else '' }}</textarea>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Telefono mobile (WhatsApp / Cell)</label>
-      <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+      <input type="text" name="phone_mobile" value="{{ src.phone_mobile if src else '' }}">
 
       <label>Telefono mobile 2</label>
-      <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+      <input type="text" name="phone_mobile2" value="{{ src.phone_mobile2 if src else '' }}">
 
       <label>Telefono ufficio</label>
-      <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+      <input type="text" name="phone_office" value="{{ src.phone_office if src else '' }}">
 
       <label>Email (separate da virgola)</label>
-      <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+      <input type="text" name="emails" value="{{ src.emails if src else '' }}">
 
       <label>Siti web (separati da virgola)</label>
-      <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+      <input type="text" name="websites" value="{{ src.websites if src else '' }}">
 
       <label>PEC</label>
-      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+      <input type="text" name="pec" value="{{ src.pec if src else '' }}">
 
       <label>P.IVA</label>
-      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+      <input type="text" name="piva" value="{{ src.piva if src else '' }}">
 
       <label>SDI</label>
-      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+      <input type="text" name="sdi" value="{{ src.sdi if src else '' }}">
 
       <label>Indirizzi (uno per riga)</label>
-      <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
+      <textarea name="addresses">{{ src.addresses if src else '' }}</textarea>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Facebook</label>
-      <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
+      <input type="text" name="facebook" value="{{ src.facebook if src else '' }}">
 
       <label>Instagram</label>
-      <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
+      <input type="text" name="instagram" value="{{ src.instagram if src else '' }}">
 
       <label>LinkedIn</label>
-      <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
+      <input type="text" name="linkedin" value="{{ src.linkedin if src else '' }}">
 
       <label>TikTok</label>
-      <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
+      <input type="text" name="tiktok" value="{{ src.tiktok if src else '' }}">
 
       <label>Telegram</label>
-      <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
+      <input type="text" name="telegram" value="{{ src.telegram if src else '' }}">
 
       <label>WhatsApp (link o numero)</label>
-      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+      <input type="text" name="whatsapp" value="{{ src.whatsapp if src else '' }}">
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
@@ -136,29 +193,12 @@
       <input type="file" name="pdf11" accept="application/pdf">
       <input type="file" name="pdf12" accept="application/pdf">
 
-      {% if session.get('role') == 'admin' %}
-        <label style="margin-top:10px;">
-          Multi-profile (JSON) — facoltativo
-        </label>
+      {# JSON RAW SOLO PER ADMIN E SOLO IN PROFILO 1 #}
+      {% if session.get('role') == 'admin' and mode != 'profile' %}
+        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
         <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-          <button type="button" onclick="fillExampleProfiles()">Incolla esempio 2 profili</button>
-          <button type="button" onclick="clearProfiles()">Svuota</button>
-        </div>
         <div style="margin-top:8px; font-size:12px; opacity:.8;">
-          Se lasci vuoto, la card resta mono-profilo (come oggi).
-        </div>
-      {% else %}
-        <label style="margin-top:10px;">
-          Multi-profile (JSON) — facoltativo
-        </label>
-        <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-          <button type="button" onclick="fillExampleProfiles()">Incolla esempio 2 profili</button>
-          <button type="button" onclick="clearProfiles()">Svuota</button>
-        </div>
-        <div style="margin-top:8px; font-size:12px; opacity:.8;">
-          Suggerimento: usa p2 come “profilo promo” o “seconda attività”.
+          Se lasci vuoto, la card resta mono-profilo.
         </div>
       {% endif %}
 
@@ -168,38 +208,15 @@
         {% if session.get('role') == 'admin' %}
           <a class="btn-secondary" href="{{ url_for('admin_home') }}">Torna alla lista</a>
         {% else %}
-          <a class="btn-secondary" href="{{ url_for('logout') }}">Logout</a>
+          {% if mode == 'profile' %}
+            <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna a Profilo 1</a>
+          {% else %}
+            <a class="btn-secondary" href="{{ url_for('logout') }}">Logout</a>
+          {% endif %}
         {% endif %}
       </div>
 
     </form>
   </div>
 </div>
-
-<script>
-  function fillExampleProfiles(){
-    const ta = document.querySelector('textarea[name="profiles_json"]');
-    if(!ta) return;
-
-    ta.value = JSON.stringify([
-      {
-        "key": "p2",
-        "label_it": "Profilo 2",
-        "label_en": "Profile 2",
-        "photo_url": "",
-        "logo_url": "",
-        "name": "",
-        "role": "",
-        "company": "",
-        "bio": ""
-      }
-    ], null, 2);
-  }
-
-  function clearProfiles(){
-    const ta = document.querySelector('textarea[name="profiles_json"]');
-    if(!ta) return;
-    ta.value = "";
-  }
-</script>
 {% endblock %}
