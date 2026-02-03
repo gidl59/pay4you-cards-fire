@@ -8,15 +8,8 @@
       <h1 class="admin-title">Agenti</h1>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-        {% if 'new_agent' in current_app.view_functions %}
-          <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
-        {% else %}
-          <a class="admin-new-link" href="/admin/new">+ Nuovo agente</a>
-        {% endif %}
-
-        {% if 'admin_export_agents_json' in current_app.view_functions %}
-          <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">Export JSON</a>
-        {% endif %}
+        <a class="admin-new-link" href="/admin/new">+ Nuovo agente</a>
+        <a class="admin-new-link" href="/admin/export_agents.json">Export JSON</a>
       </div>
 
       {% if agents and agents|length > 0 %}
@@ -39,20 +32,12 @@
             <td>{{ a.phone_mobile if a.phone_mobile else '-' }}</td>
 
             <td class="admin-actions">
-              {% if 'edit_agent' in current_app.view_functions %}
-                <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-              {% else %}
-                <a href="/admin/{{ a.slug }}/edit">Modifica</a>
-              {% endif %}
-
+              <a href="/admin/{{ a.slug }}/edit">Modifica</a>
               <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
 
               {% if a.plan == 'pro' %}
-                {% if 'admin_broadcast' in current_app.view_functions %}
-                  <a href="{{ url_for('admin_broadcast', slug=a.slug) }}">Promo</a>
-                {% else %}
-                  <a href="/admin/{{ a.slug }}/broadcast">Promo</a>
-                {% endif %}
+                <a href="/admin/{{ a.slug }}/broadcast">Promo</a>
+                <a href="/admin/{{ a.slug }}/credentials">Credenziali</a>
               {% endif %}
 
               <form method="post" action="/admin/{{ a.slug }}/delete" onsubmit="return confirm('Eliminare agente?')">
