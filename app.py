@@ -4,8 +4,8 @@ import uuid
 import json
 from datetime import datetime
 from io import BytesIO
-from urllib.parse import quote
 from types import SimpleNamespace
+import urllib.parse
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -18,7 +18,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 import qrcode
-import urllib.parse
 
 load_dotenv()
 
@@ -44,8 +43,6 @@ I18N = {
     "it": {
         "save_contact": "Salva contatto",
         "scan_qr": "Scansiona QR",
-        "open_website": "Apri sito",
-        "open_pdf": "Apri PDF",
         "contacts": "Contatti",
         "social": "Social",
         "documents": "Documenti",
@@ -57,14 +54,16 @@ I18N = {
         "mobile_phone": "Cellulare",
         "whatsapp": "WhatsApp",
         "addresses": "Indirizzi",
+        "close": "Chiudi",
+        "open": "Apri",
+        "profile2": "Profilo 2",
+        "edit": "Modifica",
+        "logout": "Logout",
         "back": "Indietro",
-        "lang": "Lingua",
     },
     "en": {
         "save_contact": "Save contact",
         "scan_qr": "Scan QR",
-        "open_website": "Open website",
-        "open_pdf": "Open PDF",
         "contacts": "Contacts",
         "social": "Social",
         "documents": "Documents",
@@ -76,14 +75,16 @@ I18N = {
         "mobile_phone": "Mobile",
         "whatsapp": "WhatsApp",
         "addresses": "Addresses",
+        "close": "Close",
+        "open": "Open",
+        "profile2": "Profile 2",
+        "edit": "Edit",
+        "logout": "Logout",
         "back": "Back",
-        "lang": "Language",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
         "scan_qr": "Scanner le QR",
-        "open_website": "Ouvrir le site",
-        "open_pdf": "Ouvrir le PDF",
         "contacts": "Contacts",
         "social": "Réseaux sociaux",
         "documents": "Documents",
@@ -95,14 +96,16 @@ I18N = {
         "mobile_phone": "Mobile",
         "whatsapp": "WhatsApp",
         "addresses": "Adresses",
+        "close": "Fermer",
+        "open": "Ouvrir",
+        "profile2": "Profil 2",
+        "edit": "Modifier",
+        "logout": "Déconnexion",
         "back": "Retour",
-        "lang": "Langue",
     },
     "es": {
         "save_contact": "Guardar contacto",
         "scan_qr": "Escanear QR",
-        "open_website": "Abrir web",
-        "open_pdf": "Abrir PDF",
         "contacts": "Contactos",
         "social": "Redes sociales",
         "documents": "Documentos",
@@ -114,14 +117,16 @@ I18N = {
         "mobile_phone": "Móvil",
         "whatsapp": "WhatsApp",
         "addresses": "Direcciones",
+        "close": "Cerrar",
+        "open": "Abrir",
+        "profile2": "Perfil 2",
+        "edit": "Editar",
+        "logout": "Salir",
         "back": "Atrás",
-        "lang": "Idioma",
     },
     "de": {
         "save_contact": "Kontakt speichern",
         "scan_qr": "QR scannen",
-        "open_website": "Website öffnen",
-        "open_pdf": "PDF öffnen",
         "contacts": "Kontakte",
         "social": "Social",
         "documents": "Dokumente",
@@ -133,8 +138,12 @@ I18N = {
         "mobile_phone": "Mobil",
         "whatsapp": "WhatsApp",
         "addresses": "Adressen",
+        "close": "Schließen",
+        "open": "Öffnen",
+        "profile2": "Profil 2",
+        "edit": "Bearbeiten",
+        "logout": "Abmelden",
         "back": "Zurück",
-        "lang": "Sprache",
     },
 }
 
@@ -165,7 +174,7 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
 
-    # Profilo 1 (base)
+    # Profilo 1
     name = Column(String, nullable=False)
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
@@ -191,15 +200,18 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    logo_url = Column(String, nullable=True)  # rinominato: era extra_logo_url
+    logo_url = Column(String, nullable=True)      # (nuovo) logo
+    extra_logo_url = Column(String, nullable=True)  # (vecchio) fallback se esiste
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    plan = Column(String, nullable=True)           # basic|pro
-    profiles_json = Column(Text, nullable=True)   # se vuoi p2 in futuro
-    i18n_json = Column(Text, nullable=True)       # traduzioni profilo 1
+    # multi profilo (p2)
+    profiles_json = Column(Text, nullable=True)
+
+    # traduzioni profilo 1
+    i18n_json = Column(Text, nullable=True)
 
 
 class User(Base):
@@ -223,11 +235,10 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
             conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
             conn.commit()
 
-ensure_sqlite_column("agents", "plan", "TEXT")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
-# se nel tuo DB vecchio esiste extra_logo_url, non lo tocchiamo, ma useremo logo_url da ora in poi
 ensure_sqlite_column("agents", "logo_url", "TEXT")
+ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
 ensure_sqlite_column("agents", "phone_office", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "sdi", "TEXT")
@@ -235,9 +246,6 @@ ensure_sqlite_column("agents", "piva", "TEXT")
 
 
 # ===== HELPERS =====
-def now_iso():
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
-
 def is_logged_in() -> bool:
     return bool(session.get("username"))
 
@@ -275,10 +283,6 @@ def slugify(s: str) -> str:
     s = re.sub(r"\s+", "-", s).strip("-")
     return s
 
-def normalize_plan(p: str) -> str:
-    p = (p or "").strip().lower()
-    return p if p in ("basic", "pro") else "basic"
-
 def ensure_admin_user():
     db = SessionLocal()
     admin = db.query(User).filter_by(username="admin").first()
@@ -295,20 +299,16 @@ def get_base_url():
     return request.url_root.strip().rstrip("/")
 
 def pick_lang_from_request() -> str:
-    # 1) querystring ?lang=
     q = (request.args.get("lang") or "").strip().lower()
     if q:
         q = q.split("-", 1)[0]
         return q if q in SUPPORTED_LANGS else "it"
 
-    # 2) header Accept-Language
     al = (request.headers.get("Accept-Language") or "").lower()
     if al:
-        # esempio: "fr-FR,fr;q=0.9,en;q=0.8"
         first = al.split(",", 1)[0].strip().split("-", 1)[0]
         if first in SUPPORTED_LANGS:
             return first
-
     return "it"
 
 def safe_json_load(s: str, default):
@@ -324,30 +324,22 @@ def i18n_set(ag: Agent, data: dict):
     ag.i18n_json = json.dumps(data, ensure_ascii=False)
 
 def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
-    """
-    Applica traduzioni al profilo 1.
-    Se in i18n_json[lang] trovi company/role/bio/addresses -> sovrascrive.
-    """
     if lang not in SUPPORTED_LANGS or lang == "it":
         return ag_view
-
     data = i18n_get(ag)
     tr = data.get(lang) if isinstance(data, dict) else None
     if not isinstance(tr, dict):
         return ag_view
-
     for k in ("name", "company", "role", "bio", "addresses"):
         v = (tr.get(k) or "").strip()
         if v:
             setattr(ag_view, k, v)
-
     return ag_view
 
 def upload_file(file_storage, folder="uploads", max_bytes=None):
     if not file_storage or not file_storage.filename:
         return None
 
-    # limite singolo file
     if max_bytes is not None:
         file_storage.stream.seek(0, os.SEEK_END)
         size = file_storage.stream.tell()
@@ -392,36 +384,54 @@ def parse_pdfs(raw: str):
     return pdfs
 
 def normalize_whatsapp_link(raw: str) -> str:
-    """
-    Accetta:
-    - +39333337521
-    - 39333337521
-    - 333337521 -> (se vuoi, possiamo forzare Italia; per ora lo lasciamo com'è)
-    - link già pronto
-    """
-    t = (raw or "").strip()
-    if not t:
+    t0 = (raw or "").strip()
+    if not t0:
         return ""
+    if t0.startswith("http://") or t0.startswith("https://"):
+        return t0
 
-    if t.startswith("http://") or t.startswith("https://"):
-        return t
-
-    # pulizia
-    t2 = t.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if t2.startswith("+"):
-        t2 = t2[1:]
-    if t2.startswith("00"):
-        t2 = t2[2:]
-
-    if t2.isdigit():
-        return f"https://wa.me/{t2}"
-
+    t = t0.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if t.startswith("+"):
+        t = t[1:]
+    if t.startswith("00"):
+        t = t[2:]
+    if t.isdigit():
+        return f"https://wa.me/{t}"
     return ""
 
-def agent_to_view(ag: Agent):
-    # compatibilità: se nel DB vecchio hai extra_logo_url, prova a leggerlo come fallback
-    logo_url = getattr(ag, "logo_url", None) or getattr(ag, "extra_logo_url", None)
+def parse_profiles_json(raw: str):
+    data = safe_json_load(raw or "", [])
+    if not isinstance(data, list):
+        return []
+    out = []
+    for p in data:
+        if isinstance(p, dict) and p.get("key"):
+            out.append(p)
+    return out
 
+def upsert_profile(profiles: list, key: str, payload: dict):
+    found = False
+    for p in profiles:
+        if p.get("key") == key:
+            p.update(payload)
+            found = True
+            break
+    if not found:
+        base = {"key": key}
+        base.update(payload)
+        profiles.append(base)
+    return profiles
+
+def select_profile(profiles: list, key: str):
+    if not key:
+        return None
+    for p in profiles:
+        if p.get("key") == key:
+            return p
+    return None
+
+def agent_to_view(ag: Agent):
+    logo = (getattr(ag, "logo_url", None) or "").strip() or (getattr(ag, "extra_logo_url", None) or "").strip()
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -445,13 +455,49 @@ def agent_to_view(ag: Agent):
         sdi=ag.sdi,
         addresses=ag.addresses,
         photo_url=ag.photo_url,
-        logo_url=logo_url,
+        logo_url=logo,
         gallery_urls=ag.gallery_urls,
         video_urls=ag.video_urls,
         pdf1_url=ag.pdf1_url,
-        plan=ag.plan,
-        i18n_json=getattr(ag, "i18n_json", None),
     )
+
+def apply_profile2_to_view(view, p2: dict):
+    """
+    Profilo 2: prende SOLO i campi compilati, sovrascrive la view.
+    (no traduzione automatica su p2)
+    """
+    if not isinstance(p2, dict):
+        return view
+
+    mapping = {
+        "name": "name",
+        "company": "company",
+        "role": "role",
+        "bio": "bio",
+        "phone_mobile": "phone_mobile",
+        "phone_mobile2": "phone_mobile2",
+        "phone_office": "phone_office",
+        "emails": "emails",
+        "websites": "websites",
+        "facebook": "facebook",
+        "instagram": "instagram",
+        "linkedin": "linkedin",
+        "tiktok": "tiktok",
+        "telegram": "telegram",
+        "whatsapp": "whatsapp",
+        "pec": "pec",
+        "piva": "piva",
+        "sdi": "sdi",
+        "addresses": "addresses",
+        "photo_url": "photo_url",
+        "logo_url": "logo_url",
+    }
+
+    for k, attr in mapping.items():
+        v = (p2.get(k) or "").strip()
+        if v:
+            setattr(view, attr, v)
+    return view
 
 
 # ===================== ROUTES =====================
@@ -511,8 +557,6 @@ def logout():
 def admin_home():
     db = SessionLocal()
     agents = db.query(Agent).order_by(Agent.name).all()
-    for a in agents:
-        a.plan = normalize_plan(getattr(a, "plan", "basic"))
     db.close()
     return render_template("admin_list.html", agents=agents)
 
@@ -546,11 +590,11 @@ def admin_export_agents_json():
             "sdi": a.sdi,
             "addresses": a.addresses,
             "photo_url": a.photo_url,
-            "logo_url": getattr(a, "logo_url", None) or getattr(a, "extra_logo_url", None),
+            "logo_url": (getattr(a, "logo_url", None) or getattr(a, "extra_logo_url", None)),
             "gallery_urls": a.gallery_urls,
             "video_urls": a.video_urls,
             "pdf1_url": a.pdf1_url,
-            "plan": normalize_plan(getattr(a, "plan", "basic")),
+            "profiles_json": a.profiles_json,
             "i18n_json": a.i18n_json,
         })
     db.close()
@@ -562,14 +606,13 @@ def admin_export_agents_json():
 @app.get("/admin/new")
 @admin_required
 def new_agent():
-    return render_template("agent_form.html", agent=None, i18n_data=None)
+    return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
 
 @app.post("/admin/new")
 @admin_required
 def create_agent():
     db = SessionLocal()
 
-    # base fields
     slug = slugify(request.form.get("slug", ""))
     name = (request.form.get("name") or "").strip()
     if not slug or not name:
@@ -586,28 +629,23 @@ def create_agent():
         company=(request.form.get("company") or "").strip() or None,
         role=(request.form.get("role") or "").strip() or None,
         bio=(request.form.get("bio") or "").strip() or None,
-
         phone_mobile=(request.form.get("phone_mobile") or "").strip() or None,
         phone_mobile2=(request.form.get("phone_mobile2") or "").strip() or None,
         phone_office=(request.form.get("phone_office") or "").strip() or None,
-
         emails=(request.form.get("emails") or "").strip() or None,
         websites=(request.form.get("websites") or "").strip() or None,
-
         facebook=(request.form.get("facebook") or "").strip() or None,
         instagram=(request.form.get("instagram") or "").strip() or None,
         linkedin=(request.form.get("linkedin") or "").strip() or None,
         tiktok=(request.form.get("tiktok") or "").strip() or None,
         telegram=(request.form.get("telegram") or "").strip() or None,
         whatsapp=(request.form.get("whatsapp") or "").strip() or None,
-
         pec=(request.form.get("pec") or "").strip() or None,
         piva=(request.form.get("piva") or "").strip() or None,
         sdi=(request.form.get("sdi") or "").strip() or None,
         addresses=(request.form.get("addresses") or "").strip() or None,
-
-        plan=normalize_plan(request.form.get("plan", "basic")),
         i18n_json=None,
+        profiles_json=None,
     )
 
     # i18n profile 1
@@ -714,9 +752,7 @@ def edit_agent(slug):
     db.close()
     if not ag:
         abort(404)
-
-    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag))
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/admin/<slug>/edit")
 @admin_required
@@ -728,7 +764,6 @@ def update_agent(slug):
         db.close()
         abort(404)
 
-    # base fields
     for k in [
         "name","company","role","bio",
         "phone_mobile","phone_mobile2","phone_office",
@@ -738,12 +773,11 @@ def update_agent(slug):
     ]:
         setattr(ag, k, (request.form.get(k) or "").strip() or None)
 
-    ag.plan = normalize_plan(request.form.get("plan", getattr(ag, "plan", "basic")))
-
     # i18n update
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
         i18n_data = {}
+
     for lang in ("en", "fr", "es", "de"):
         tr = {
             "name": (request.form.get(f"name_{lang}") or "").strip(),
@@ -755,9 +789,6 @@ def update_agent(slug):
         tr = {k: v for k, v in tr.items() if v}
         if tr:
             i18n_data[lang] = tr
-        else:
-            # se lasci tutto vuoto, non cancelliamo automaticamente (evita perdite)
-            pass
     i18n_set(ag, i18n_data)
 
     # uploads
@@ -776,7 +807,7 @@ def update_agent(slug):
         except ValueError:
             flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
 
-    # gallery replace (solo se carichi)
+    # gallery replace
     gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
@@ -792,7 +823,7 @@ def update_agent(slug):
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # videos replace (solo se carichi)
+    # videos replace
     video_files = request.files.getlist("videos")
     if video_files and any(v.filename for v in video_files):
         video_urls = []
@@ -846,6 +877,7 @@ def delete_agent(slug):
 def me_edit():
     if is_admin():
         return redirect(url_for("admin_home"))
+
     slug = current_client_slug()
     if not slug:
         return redirect(url_for("login"))
@@ -856,14 +888,14 @@ def me_edit():
     if not ag:
         abort(404)
 
-    ag.plan = normalize_plan(getattr(ag, "plan", "basic"))
-    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag))
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/me/edit")
 @login_required
 def me_edit_post():
     if is_admin():
         return redirect(url_for("admin_home"))
+
     slug = current_client_slug()
     if not slug:
         return redirect(url_for("login"))
@@ -874,26 +906,22 @@ def me_edit_post():
         db.close()
         abort(404)
 
-    current_plan = normalize_plan(getattr(ag, "plan", "basic"))
-
     allowed_fields = [
         "name","company","role","bio",
         "phone_mobile","phone_mobile2","phone_office",
         "emails","websites",
         "facebook","instagram","linkedin","tiktok","telegram",
         "pec","piva","sdi","addresses",
-        "whatsapp",  # lo lasciamo sempre: serve per link WA pubblico
+        "whatsapp",
     ]
-
     for k in allowed_fields:
         setattr(ag, k, (request.form.get(k) or "").strip() or None)
 
-    ag.plan = current_plan
-
-    # i18n profile 1 (cliente può compilarlo)
+    # i18n profile 1 (cliente compila)
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
         i18n_data = {}
+
     for lang in ("en", "fr", "es", "de"):
         tr = {
             "name": (request.form.get(f"name_{lang}") or "").strip(),
@@ -910,6 +938,7 @@ def me_edit_post():
     # uploads
     photo = request.files.get("photo")
     logo = request.files.get("logo")
+
     if photo and photo.filename:
         try:
             ag.photo_url = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_IMAGE_MB))
@@ -922,7 +951,7 @@ def me_edit_post():
         except ValueError:
             flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
 
-    # gallery replace (solo se carichi)
+    # gallery replace
     gallery_files = request.files.getlist("gallery")
     if gallery_files and any(g.filename for g in gallery_files):
         gallery_urls = []
@@ -938,7 +967,7 @@ def me_edit_post():
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
-    # videos replace (solo se carichi)
+    # videos replace
     video_files = request.files.getlist("videos")
     if video_files and any(v.filename for v in video_files):
         video_urls = []
@@ -974,6 +1003,97 @@ def me_edit_post():
     return redirect(url_for("me_edit"))
 
 
+# ---------- CLIENT (profilo 2) ----------
+@app.get("/me/profile2")
+@login_required
+def me_profile2():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
+    # creo view base e applico p2 sopra
+    view = agent_to_view(ag)
+    view = apply_profile2_to_view(view, p2)
+
+    return render_template("agent_form.html", agent=view, i18n_data=None, editing_profile2=True)
+
+@app.post("/me/profile2")
+@login_required
+def me_profile2_post():
+    if is_admin():
+        return redirect(url_for("admin_home"))
+
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("login"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+
+    payload = {
+        "key": "p2",
+        "name": (request.form.get("name") or "").strip(),
+        "company": (request.form.get("company") or "").strip(),
+        "role": (request.form.get("role") or "").strip(),
+        "bio": (request.form.get("bio") or "").strip(),
+        "phone_mobile": (request.form.get("phone_mobile") or "").strip(),
+        "phone_mobile2": (request.form.get("phone_mobile2") or "").strip(),
+        "phone_office": (request.form.get("phone_office") or "").strip(),
+        "emails": (request.form.get("emails") or "").strip(),
+        "websites": (request.form.get("websites") or "").strip(),
+        "facebook": (request.form.get("facebook") or "").strip(),
+        "instagram": (request.form.get("instagram") or "").strip(),
+        "linkedin": (request.form.get("linkedin") or "").strip(),
+        "tiktok": (request.form.get("tiktok") or "").strip(),
+        "telegram": (request.form.get("telegram") or "").strip(),
+        "whatsapp": (request.form.get("whatsapp") or "").strip(),
+        "pec": (request.form.get("pec") or "").strip(),
+        "piva": (request.form.get("piva") or "").strip(),
+        "sdi": (request.form.get("sdi") or "").strip(),
+        "addresses": (request.form.get("addresses") or "").strip(),
+    }
+
+    # uploads p2 (foto e logo)
+    photo = request.files.get("photo")
+    logo = request.files.get("logo")
+
+    if photo and photo.filename:
+        try:
+            payload["photo_url"] = upload_file(photo, "photos", max_bytes=mb_to_bytes(MAX_IMAGE_MB))
+        except ValueError:
+            flash(f"Foto troppo grande (max {MAX_IMAGE_MB}MB)", "error")
+
+    if logo and logo.filename:
+        try:
+            payload["logo_url"] = upload_file(logo, "logos", max_bytes=mb_to_bytes(MAX_IMAGE_MB))
+        except ValueError:
+            flash(f"Logo troppo grande (max {MAX_IMAGE_MB}MB)", "error")
+
+    profiles = upsert_profile(profiles, "p2", payload)
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    return redirect(url_for("me_profile2"))
+
+
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
 def public_card(slug):
@@ -985,10 +1105,21 @@ def public_card(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    ag_view = agent_to_view(ag)  # noqa: E999
+    p = (request.args.get("p") or "").strip().lower()
 
-    # applica traduzioni profilo 1 (se presenti)
-    ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
+    # view base
+    ag_view = agent_to_view(ag)
+
+    # profilo 2 (solo se richiesto ?p=p2)
+    if p == "p2":
+        profiles = parse_profiles_json(getattr(ag, "profiles_json", "") or "")
+        p2 = select_profile(profiles, "p2")
+        if p2:
+            ag_view = apply_profile2_to_view(ag_view, p2)
+        # NO i18n su p2
+    else:
+        # i18n su profilo 1
+        ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
 
     gallery = (ag.gallery_urls.split("|") if ag.gallery_urls else [])
     videos = (ag.video_urls.split("|") if ag.video_urls else [])
@@ -1008,16 +1139,8 @@ def public_card(slug):
 
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
 
-    # QR deve “portare” la lingua
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
-
-    # Lingue disponibili (solo per debug/forzatura)
-    lang_links = []
-    for L in SUPPORTED_LANGS:
-        lang_links.append({
-            "code": L,
-            "url": f"{base}/{ag.slug}?lang={L}"
-        })
+    vcf_url = f"{base}/{ag.slug}.vcf"
 
     return render_template(
         "card.html",
@@ -1034,7 +1157,8 @@ def public_card(slug):
         mobiles=mobiles,
         wa_link=wa_link,
         qr_url=qr_url,
-        lang_links=lang_links,
+        vcf_url=vcf_url,
+        is_profile2=(p == "p2"),
     )
 
 
@@ -1113,7 +1237,15 @@ def qr(slug):
 # ---------- ERRORS ----------
 @app.errorhandler(404)
 def not_found(e):
-    return render_template("404.html"), 404
+    try:
+        return render_template("404.html"), 404
+    except Exception:
+        return "Not found", 404
+
+@app.errorhandler(500)
+def server_error(e):
+    # evita loop se manca 500.html
+    return "Internal server error", 500
 
 
 if __name__ == "__main__":
