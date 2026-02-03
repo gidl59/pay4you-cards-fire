@@ -3,12 +3,13 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="agent-form-wrapper">
-    <h1 class="agent-form-title">Admin – Lista Card</h1>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-      <a class="header-link primary" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
-      <a class="header-link" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+  <div class="panel">
+    <div class="panel-head">
+      <h1 class="page-title">Admin – Lista Card</h1>
+      <div class="toolbar">
+        <a class="btn" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+        <a class="btn ghost" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -17,25 +18,28 @@
           <tr>
             <th>Nome</th>
             <th>Slug</th>
-            <th>Azioni</th>
+            <th style="width:420px;">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for a in agents %}
           <tr>
-            <td>{{ a.name }}</td>
-            <td style="opacity:.85;">{{ a.slug }}</td>
+            <td><strong>{{ a.name }}</strong></td>
+            <td><span class="badge">{{ a.slug }}</span></td>
             <td>
-              <div class="actions">
-                <a class="action-pill primary" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
-                <a class="action-pill" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-                <a class="action-pill" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+              <div class="row-actions">
+                <a class="chip chip-gold" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
+                {% if a.has_p2 %}
+                  <a class="chip" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+                {% else %}
+                  <span class="chip disabled" title="Profilo 2 non compilato">Apri P2</span>
+                {% endif %}
+                <a class="chip" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+                <a class="chip chip-blue" href="{{ url_for('admin_credentials', slug=a.slug) }}">Credenziali</a>
 
-                <form method="post"
-                      action="{{ url_for('delete_agent', slug=a.slug) }}"
-                      onsubmit="return confirm('Eliminare questa card?')"
-                      style="display:inline;">
-                  <button class="action-pill danger" type="submit">Elimina</button>
+                <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
+                      onsubmit="return confirm('Eliminare la card e le credenziali?');" style="display:inline;">
+                  <button class="chip chip-red" type="submit">Elimina</button>
                 </form>
               </div>
             </td>
@@ -43,10 +47,6 @@
           {% endfor %}
         </tbody>
       </table>
-    </div>
-
-    <div class="subtle" style="margin-top:12px;">
-      Suggerimento: apri la card in una nuova scheda per verificare foto, logo, video e PDF.
     </div>
 
   </div>
