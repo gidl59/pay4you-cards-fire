@@ -1,42 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Admin – Lista Card{% endblock %}
+{% block title %}Agenti | Pay4You{% endblock %}
 
 {% block content %}
 <div class="page-main">
   <div class="admin-wrapper">
-    <h1 class="admin-title">Admin – Lista Card</h1>
+    <div class="admin-card">
+      <h1 class="admin-title">Agenti</h1>
 
-    <div class="admin-top-actions">
-      <a class="admin-new-link" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        {% if 'new_agent' in current_app.view_functions %}
+          <a class="admin-new-link" href="{{ url_for('new_agent') }}">+ Nuovo agente</a>
+        {% else %}
+          <a class="admin-new-link" href="/admin/new">+ Nuovo agente</a>
+        {% endif %}
+
+        {% if 'admin_export_agents_json' in current_app.view_functions %}
+          <a class="admin-new-link" href="{{ url_for('admin_export_agents_json') }}">Export JSON</a>
+        {% endif %}
+      </div>
+
+      {% if agents and agents|length > 0 %}
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Slug</th>
+            <th>Piano</th>
+            <th>WhatsApp</th>
+            <th class="admin-actions">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in agents %}
+          <tr>
+            <td>{{ a.name }}</td>
+            <td><code>{{ a.slug }}</code></td>
+            <td>{{ a.plan if a.plan else 'basic' }}</td>
+            <td>{{ a.phone_mobile if a.phone_mobile else '-' }}</td>
+
+            <td class="admin-actions">
+              {% if 'edit_agent' in current_app.view_functions %}
+                <a href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
+              {% else %}
+                <a href="/admin/{{ a.slug }}/edit">Modifica</a>
+              {% endif %}
+
+              <a href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
+
+              {% if a.plan == 'pro' %}
+                {% if 'admin_broadcast' in current_app.view_functions %}
+                  <a href="{{ url_for('admin_broadcast', slug=a.slug) }}">Promo</a>
+                {% else %}
+                  <a href="/admin/{{ a.slug }}/broadcast">Promo</a>
+                {% endif %}
+              {% endif %}
+
+              <form method="post" action="/admin/{{ a.slug }}/delete" onsubmit="return confirm('Eliminare agente?')">
+                <button type="submit">Elimina</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div style="opacity:.85;">Nessun agente presente.</div>
+      {% endif %}
     </div>
-
-    <div class="admin-list">
-      {% for a in agents %}
-        <div class="admin-card">
-          <div class="admin-card-head">
-            <div class="admin-card-title">
-              <b>{{ a.name }}</b>
-              <div class="admin-card-sub">Slug: <code>{{ a.slug }}</code> — Piano: <b>{{ a.plan }}</b></div>
-            </div>
-
-            <div class="admin-card-links">
-              <a class="mini-btn" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri</a>
-              <a class="mini-btn" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-
-              <!-- ✅ export “per riga”: scarica JSON completo ma da qui -->
-              <a class="mini-btn" href="{{ url_for('admin_export_agents_json') }}">Export JSON</a>
-            </div>
-          </div>
-
-          <div class="admin-card-actions">
-            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare questa card?');">
-              <button type="submit" class="mini-btn danger">Elimina</button>
-            </form>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-
   </div>
 </div>
 {% endblock %}
