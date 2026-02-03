@@ -461,6 +461,117 @@ def agent_to_view(ag: Agent):
         pdf1_url=ag.pdf1_url,
     )
 
+# ===== PROFILO 2 (multiutente) su profiles_json =====
+
+def parse_profiles_json(raw: str):
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return []
+    except Exception:
+        return []
+
+    out = []
+    for i, p in enumerate(data):
+        if not isinstance(p, dict):
+            continue
+        key = (p.get("key") or "").strip() or f"p{i+1}"
+        key = re.sub(r"[^a-zA-Z0-9_-]", "", key) or f"p{i+1}"
+
+        out.append({
+            "key": key,
+            "label_it": (p.get("label_it") or p.get("label") or f"Profilo {i+1}").strip(),
+            "label_en": (p.get("label_en") or p.get("label") or f"Profile {i+1}").strip(),
+            "name": (p.get("name") or "").strip(),
+            "company": (p.get("company") or "").strip(),
+            "role": (p.get("role") or "").strip(),
+            "bio": (p.get("bio") or "").strip(),
+            "phone_mobile": (p.get("phone_mobile") or "").strip(),
+            "phone_mobile2": (p.get("phone_mobile2") or "").strip(),
+            "phone_office": (p.get("phone_office") or "").strip(),
+            "whatsapp": (p.get("whatsapp") or "").strip(),
+            "emails": (p.get("emails") or "").strip(),
+            "websites": (p.get("websites") or "").strip(),
+            "pec": (p.get("pec") or "").strip(),
+            "piva": (p.get("piva") or "").strip(),
+            "sdi": (p.get("sdi") or "").strip(),
+            "addresses": (p.get("addresses") or "").strip(),
+            "facebook": (p.get("facebook") or "").strip(),
+            "instagram": (p.get("instagram") or "").strip(),
+            "linkedin": (p.get("linkedin") or "").strip(),
+            "tiktok": (p.get("tiktok") or "").strip(),
+            "telegram": (p.get("telegram") or "").strip(),
+            # media dedicati profilo2 (opzionali)
+            "photo_url": (p.get("photo_url") or "").strip(),
+            "logo_url": (p.get("logo_url") or "").strip(),
+        })
+    return out
+
+def dump_profiles_json(profiles: list) -> str:
+    return json.dumps(profiles, ensure_ascii=False)
+
+def select_profile(profiles: list, key: str):
+    if not key:
+        return None
+    for p in profiles:
+        if p.get("key") == key:
+            return p
+    return None
+
+def upsert_profile(profiles: list, key: str, payload: dict):
+    found = False
+    for p in profiles:
+        if p.get("key") == key:
+            p.update(payload)
+            found = True
+            break
+    if not found:
+        base = {"key": key}
+        base.update(payload)
+        profiles.append(base)
+    return profiles
+
+def apply_profile_to_view(view, profile: dict):
+    """
+    Applica campi di profilo2 sulla view (senza toccare traduzioni profile1).
+    Sovrascrive solo se il valore è non vuoto.
+    """
+    if not profile:
+        return view
+
+    mapping = {
+        "name": "name",
+        "company": "company",
+        "role": "role",
+        "bio": "bio",
+        "phone_mobile": "phone_mobile",
+        "phone_mobile2": "phone_mobile2",
+        "phone_office": "phone_office",
+        "whatsapp": "whatsapp",
+        "emails": "emails",
+        "websites": "websites",
+        "pec": "pec",
+        "piva": "piva",
+        "sdi": "sdi",
+        "addresses": "addresses",
+        "facebook": "facebook",
+        "instagram": "instagram",
+        "linkedin": "linkedin",
+        "tiktok": "tiktok",
+        "telegram": "telegram",
+        "photo_url": "photo_url",
+        "logo_url": "logo_url",
+    }
+
+    for src, dst in mapping.items():
+        v = (profile.get(src) or "").strip()
+        if v:
+            setattr(view, dst, v)
+
+    return view
+
 def apply_profile2_to_view(view, p2: dict):
     """
     Profilo 2: prende SOLO i campi compilati, sovrascrive la view.
