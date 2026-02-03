@@ -1,11 +1,16 @@
 <!doctype html>
-<html lang="it">
+<html lang="{{ lang|default('it') }}">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Pay4You Cards{% endblock %}</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="format-detection" content="telephone=no">
+
+  {# ✅ utile per evitare cache aggressiva lato browser #}
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -35,6 +40,17 @@
       </div>
     </header>
     {% endif %}
+
+    {# ✅ Flash messages (se usi flash() in Flask) #}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        <div class="flash-wrap">
+          {% for cat, msg in msgs %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
     <main class="app-main">
       {% block content %}{% endblock %}
