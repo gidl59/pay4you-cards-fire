@@ -1,44 +1,23 @@
 {% extends "base.html" %}
-{% block title %}
-  {% if form_mode == 'profile2' %}Profilo 2{% else %}{% if agent %}Modifica{% else %}Nuovo{% endif %}{% endif %} | Pay4You
-{% endblock %}
+{% block title %}{% if agent %}Modifica{% else %}Nuovo{% endif %} | Pay4You{% endblock %}
 
 {% block content %}
 <div class="page-main">
   <div class="agent-form-wrapper">
 
     <h1 class="agent-form-title">
-      {% if form_mode == 'profile2' %}
-        Profilo 2 (uguale al profilo principale)
-      {% else %}
-        {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
-      {% endif %}
+      {% if agent %}Modifica: {{ agent.name }}{% else %}Nuovo profilo{% endif %}
     </h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div style="margin:10px 0;">
-          {% for cat, msg in messages %}
-            <div class="flash {% if cat=='ok' %}ok{% else %}error{% endif %}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
+    {# ✅ BOTTONI CLIENTE (NO ADMIN) #}
     {% if session.get('role') != 'admin' and agent %}
       <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        {% if form_mode != 'profile2' %}
-          <a class="header-link" href="{{ url_for('me_profile2') }}">✨ Vuoi un secondo profilo?</a>
-          <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-          <a class="header-link" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card principale</a>
-        {% else %}
-          <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna a Profilo 1</a>
-          <a class="header-link" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-        {% endif %}
+        <a class="header-link" href="{{ url_for('me_profile2') }}">➕/✏️ Profilo 2</a>
+        <a class="header-link" href="/{{ agent.slug }}?p=p2&owner=1" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
+        <a class="header-link" href="/{{ agent.slug }}?owner=1" target="_blank" rel="noopener">Apri Card principale</a>
       </div>
     {% endif %}
 
-    {# FORM ACTION #}
     {% if session.get('role') == 'admin' %}
       {% if agent %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
@@ -46,23 +25,12 @@
         {% set form_action = url_for('create_agent') %}
       {% endif %}
     {% else %}
-      {% if form_mode == 'profile2' %}
-        {% set form_action = url_for('me_profile2_post') %}
-      {% else %}
-        {% set form_action = url_for('me_edit_post') %}
-      {% endif %}
-    {% endif %}
-
-    {# valori da mostrare: se profile2 uso profile_data, altrimenti agent #}
-    {% if form_mode == 'profile2' %}
-      {% set v = profile_data %}
-    {% else %}
-      {% set v = agent %}
+      {% set form_action = url_for('me_edit_post') %}
     {% endif %}
 
     <form class="agent-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
-      {% if session.get('role') == 'admin' and form_mode != 'profile2' %}
+      {% if session.get('role') == 'admin' %}
         <label>Slug (univoco)</label>
         <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
 
@@ -80,114 +48,92 @@
         {% endif %}
       {% endif %}
 
-      {% if form_mode == 'profile2' %}
-        <label>Etichetta Profilo 2 (IT)</label>
-        <input type="text" name="label_it" value="{{ v.label_it if v else 'Profilo 2' }}">
-
-        <label>Label Profile 2 (EN)</label>
-        <input type="text" name="label_en" value="{{ v.label_en if v else 'Profile 2' }}">
-
-        <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
-      {% endif %}
-
       <label>Nome</label>
-      <input type="text" name="name" value="{{ v.name if v else '' }}" required>
+      <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
 
       <label>Azienda</label>
-      <input type="text" name="company" value="{{ v.company if v else '' }}">
+      <input type="text" name="company" value="{{ agent.company if agent else '' }}">
 
       <label>Ruolo</label>
-      <input type="text" name="role" value="{{ v.role if v else '' }}">
+      <input type="text" name="role" value="{{ agent.role if agent else '' }}">
 
       <label>Bio / Descrizione</label>
-      <textarea name="bio">{{ v.bio if v else '' }}</textarea>
+      <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Telefono mobile (WhatsApp / Cell)</label>
-      <input type="text" name="phone_mobile" value="{{ v.phone_mobile if v else '' }}">
+      <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
 
       <label>Telefono mobile 2</label>
-      <input type="text" name="phone_mobile2" value="{{ v.phone_mobile2 if v else '' }}">
+      <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
 
       <label>Telefono ufficio</label>
-      <input type="text" name="phone_office" value="{{ v.phone_office if v else '' }}">
+      <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
 
       <label>Email (separate da virgola)</label>
-      <input type="text" name="emails" value="{{ v.emails if v else '' }}">
+      <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
 
       <label>Siti web (separati da virgola)</label>
-      <input type="text" name="websites" value="{{ v.websites if v else '' }}">
+      <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
 
       <label>PEC</label>
-      <input type="text" name="pec" value="{{ v.pec if v else '' }}">
+      <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
 
       <label>P.IVA</label>
-      <input type="text" name="piva" value="{{ v.piva if v else '' }}">
+      <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
 
       <label>SDI</label>
-      <input type="text" name="sdi" value="{{ v.sdi if v else '' }}">
+      <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
 
       <label>Indirizzi (uno per riga)</label>
-      <textarea name="addresses">{{ v.addresses if v else '' }}</textarea>
+      <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
       <label>Facebook</label>
-      <input type="text" name="facebook" value="{{ v.facebook if v else '' }}">
+      <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
 
       <label>Instagram</label>
-      <input type="text" name="instagram" value="{{ v.instagram if v else '' }}">
+      <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
 
       <label>LinkedIn</label>
-      <input type="text" name="linkedin" value="{{ v.linkedin if v else '' }}">
+      <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
 
       <label>TikTok</label>
-      <input type="text" name="tiktok" value="{{ v.tiktok if v else '' }}">
+      <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
 
       <label>Telegram</label>
-      <input type="text" name="telegram" value="{{ v.telegram if v else '' }}">
+      <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
 
       <label>WhatsApp (link o numero)</label>
-      <input type="text" name="whatsapp" value="{{ v.whatsapp if v else '' }}">
+      <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
 
       <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
 
-      <label>Foto profilo {% if form_mode == 'profile2' %}(Profilo 2){% endif %}</label>
+      <label>Foto profilo</label>
       <input type="file" name="photo" accept="image/*">
 
-      <label>Logo extra {% if form_mode == 'profile2' %}(Profilo 2){% endif %}</label>
+      <label>Logo extra (opzionale)</label>
       <input type="file" name="extra_logo" accept="image/*">
 
-      {% if form_mode != 'profile2' %}
-        <label>Galleria (max 30 immagini)</label>
-        <input type="file" name="gallery" accept="image/*" multiple>
+      <label>Galleria (max 30 immagini)</label>
+      <input type="file" name="gallery" accept="image/*" multiple>
 
-        <label>Video (max 10)</label>
-        <input type="file" name="videos" accept="video/*" multiple>
+      <label>Video (max 10)</label>
+      <input type="file" name="videos" accept="video/*" multiple>
 
-        <label>PDF (fino a 12)</label>
-        <input type="file" name="pdf1" accept="application/pdf">
-        <input type="file" name="pdf2" accept="application/pdf">
-        <input type="file" name="pdf3" accept="application/pdf">
-        <input type="file" name="pdf4" accept="application/pdf">
-        <input type="file" name="pdf5" accept="application/pdf">
-        <input type="file" name="pdf6" accept="application/pdf">
-        <input type="file" name="pdf7" accept="application/pdf">
-        <input type="file" name="pdf8" accept="application/pdf">
-        <input type="file" name="pdf9" accept="application/pdf">
-        <input type="file" name="pdf10" accept="application/pdf">
-        <input type="file" name="pdf11" accept="application/pdf">
-        <input type="file" name="pdf12" accept="application/pdf">
-      {% endif %}
+      <label>PDF (fino a 12)</label>
+      {% for i in range(1,13) %}
+        <input type="file" name="pdf{{ i }}" accept="application/pdf">
+      {% endfor %}
 
-      {% if session.get('role') == 'admin' and form_mode != 'profile2' %}
-        <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
-        <textarea name="profiles_json" style="min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
-        <div style="margin-top:8px; font-size:12px; opacity:.8;">
-          Admin: qui puoi vedere/modificare il JSON se serve.
-        </div>
-      {% endif %}
+      {# ✅ Il JSON resta, ma non serve più: Profilo 2 si gestisce dal bottone #}
+      <label style="margin-top:10px;">Multi-profile (JSON) — facoltativo</label>
+      <textarea name="profiles_json" style="min-height:140px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;">{{ agent.profiles_json if agent else '' }}</textarea>
+      <div style="margin-top:6px; font-size:12px; opacity:.8;">
+        Se lasci vuoto, la card resta mono-profilo. Profilo 2 lo crei dal bottone sopra.
+      </div>
 
       <div class="agent-form-buttons">
         <button type="submit">Salva</button>
