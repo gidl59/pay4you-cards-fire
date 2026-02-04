@@ -11,12 +11,12 @@
       </h1>
 
       {% if session.get('role') != 'admin' and agent %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-          <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card P1</a>
-          <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card P2</a>
-        </div>
+      <div class="toolbar">
+        <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
+        <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+        <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+        <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+      </div>
       {% endif %}
     </div>
 
@@ -34,239 +34,161 @@
       {% endif %}
     {% endif %}
 
-    <form class="form-grid" method="post" action="{{ form_action }}" enctype="multipart/form-data">
+    <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
-      {% if session.get('role') == 'admin' %}
+      <div class="form-grid">
+        {% if session.get('role') == 'admin' %}
+          <div class="field">
+            <label>Slug (univoco)</label>
+            <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
+          </div>
+        {% else %}
+          <div class="field">
+            <label>Slug</label>
+            <input type="text" value="{{ agent.slug }}" disabled>
+          </div>
+        {% endif %}
+
         <div class="field">
-          <label>Slug (univoco)</label>
-          <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
+          <label>Nome</label>
+          <input type="text" name="name" value="{{ agent.name or '' }}" required>
         </div>
-      {% else %}
-        <div class="field full">
-          <div class="muted">Slug: <b>{{ agent.slug }}</b></div>
+
+        <div class="field">
+          <label>Azienda</label>
+          <input type="text" name="company" value="{{ agent.company or '' }}">
         </div>
-      {% endif %}
 
-      <div class="field">
-        <label>Nome</label>
-        <input type="text" name="name" value="{{ (p2.get('name') if editing_profile2 else agent.name) if agent else '' }}" required>
-      </div>
-
-      <div class="field">
-        <label>Azienda</label>
-        <input type="text" name="company" value="{{ (p2.get('company') if editing_profile2 else agent.company) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Ruolo</label>
-        <input type="text" name="role" value="{{ (p2.get('role') if editing_profile2 else agent.role) if agent else '' }}">
-      </div>
-
-      <div class="field full">
-        <label>Bio / Descrizione</label>
-        <textarea name="bio">{{ (p2.get('bio') if editing_profile2 else agent.bio) if agent else '' }}</textarea>
-      </div>
-
-      <div class="sep full"></div>
-
-      <div class="field">
-        <label>Tema card</label>
-        <select name="theme">
-          {% set cur_theme = (p2.get('theme') if editing_profile2 else agent.theme) if agent else 'auto' %}
-          <option value="auto" {% if cur_theme == 'auto' or not cur_theme %}selected{% endif %}>Auto (iPhone)</option>
-          <option value="dark" {% if cur_theme == 'dark' %}selected{% endif %}>Scuro</option>
-          <option value="light" {% if cur_theme == 'light' %}selected{% endif %}>Chiaro</option>
-        </select>
-        <div class="hint">Auto segue chiaro/scuro del telefono.</div>
-      </div>
-
-      <div class="field">
-        <label>Logo size (48-120)</label>
-        <input type="number" name="logo_size" min="48" max="120"
-               value="{{ (p2.get('logo_size') if editing_profile2 else agent.logo_size) if agent else '72' }}">
-      </div>
-
-      <div class="field">
-        <label>Logo gira?</label>
-        {% set ls = (p2.get('logo_spin') if editing_profile2 else agent.logo_spin) if agent else '1' %}
-        <select name="logo_spin">
-          <option value="1" {% if ls == '1' or not ls %}selected{% endif %}>Sì</option>
-          <option value="0" {% if ls == '0' %}selected{% endif %}>No</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Foto gira?</label>
-        {% set asv = (p2.get('avatar_spin') if editing_profile2 else agent.avatar_spin) if agent else '0' %}
-        <select name="avatar_spin">
-          <option value="0" {% if asv == '0' or not asv %}selected{% endif %}>No</option>
-          <option value="1" {% if asv == '1' %}selected{% endif %}>Sì</option>
-        </select>
-      </div>
-
-      <div class="sep full"></div>
-
-      <div class="field">
-        <label>Telefono mobile</label>
-        <input type="text" name="phone_mobile" value="{{ (p2.get('phone_mobile') if editing_profile2 else agent.phone_mobile) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Telefono mobile 2</label>
-        <input type="text" name="phone_mobile2" value="{{ (p2.get('phone_mobile2') if editing_profile2 else agent.phone_mobile2) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Telefono ufficio</label>
-        <input type="text" name="phone_office" value="{{ (p2.get('phone_office') if editing_profile2 else agent.phone_office) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>WhatsApp (numero o link)</label>
-        <input type="text" name="whatsapp" value="{{ (p2.get('whatsapp') if editing_profile2 else agent.whatsapp) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Email (separate da virgola)</label>
-        <input type="text" name="emails" value="{{ (p2.get('emails') if editing_profile2 else agent.emails) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Siti web (separati da virgola)</label>
-        <input type="text" name="websites" value="{{ (p2.get('websites') if editing_profile2 else agent.websites) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>PEC</label>
-        <input type="text" name="pec" value="{{ (p2.get('pec') if editing_profile2 else agent.pec) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>P.IVA</label>
-        <input type="text" name="piva" value="{{ (p2.get('piva') if editing_profile2 else agent.piva) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>SDI</label>
-        <input type="text" name="sdi" value="{{ (p2.get('sdi') if editing_profile2 else agent.sdi) if agent else '' }}">
-      </div>
-
-      <div class="field full">
-        <label>Indirizzi (uno per riga)</label>
-        <textarea name="addresses">{{ (p2.get('addresses') if editing_profile2 else agent.addresses) if agent else '' }}</textarea>
-      </div>
-
-      <div class="sep full"></div>
-
-      <div class="field">
-        <label>Facebook (link completo)</label>
-        <input type="text" name="facebook" value="{{ (p2.get('facebook') if editing_profile2 else agent.facebook) if agent else '' }}">
-        <div class="hint">Verrà mostrato SOLO se inizia con https://</div>
-      </div>
-
-      <div class="field">
-        <label>Instagram (link completo)</label>
-        <input type="text" name="instagram" value="{{ (p2.get('instagram') if editing_profile2 else agent.instagram) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>LinkedIn (link completo)</label>
-        <input type="text" name="linkedin" value="{{ (p2.get('linkedin') if editing_profile2 else agent.linkedin) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>TikTok (link completo)</label>
-        <input type="text" name="tiktok" value="{{ (p2.get('tiktok') if editing_profile2 else agent.tiktok) if agent else '' }}">
-      </div>
-
-      <div class="field">
-        <label>Telegram (link completo)</label>
-        <input type="text" name="telegram" value="{{ (p2.get('telegram') if editing_profile2 else agent.telegram) if agent else '' }}">
-      </div>
-
-      <div class="sep full"></div>
-
-      <div class="field">
-        <label>Foto profilo (max 8MB)</label>
-        <input type="file" name="photo" accept="image/*">
-      </div>
-
-      <div class="field">
-        <label>Logo (max 8MB)</label>
-        <input type="file" name="logo" accept="image/*">
-      </div>
-
-      {% if not editing_profile2 %}
-        <div class="field full">
-          <label>Galleria (max 30 immagini, 8MB cad.)</label>
-          <input type="file" name="gallery" accept="image/*" multiple>
+        <div class="field">
+          <label>Ruolo</label>
+          <input type="text" name="role" value="{{ agent.role or '' }}">
         </div>
 
         <div class="field full">
-          <label>Video (max 10, 60MB cad.)</label>
-          <input type="file" name="videos" accept="video/*" multiple>
+          <label>Bio / Descrizione</label>
+          <textarea name="bio">{{ agent.bio or '' }}</textarea>
+        </div>
+
+        <div class="field full"><div class="sep"></div></div>
+
+        <div class="field">
+          <label>Telefono mobile</label>
+          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile or '' }}">
+        </div>
+        <div class="field">
+          <label>Telefono mobile 2</label>
+          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 or '' }}">
+        </div>
+        <div class="field">
+          <label>Telefono ufficio</label>
+          <input type="text" name="phone_office" value="{{ agent.phone_office or '' }}">
+        </div>
+        <div class="field">
+          <label>WhatsApp (numero o link)</label>
+          <input type="text" name="whatsapp" value="{{ agent.whatsapp or '' }}">
         </div>
 
         <div class="field full">
-          <label>PDF (fino a 12, 15MB cad.)</label>
-          <div class="grid-3">
-            {% for i in range(1,13) %}
-              <input type="file" name="pdf{{i}}" accept="application/pdf">
-            {% endfor %}
-          </div>
+          <label>Email (separate da virgola)</label>
+          <input type="text" name="emails" value="{{ agent.emails or '' }}">
         </div>
-
-        <div class="sep full"></div>
 
         <div class="field full">
-          <h3 style="margin:0 0 6px 0;">Traduzioni Profilo 1 (opzionali)</h3>
-          <div class="hint">Se il telefono è in FR/EN/DE/ES la card userà questi testi (se compilati).</div>
+          <label>Siti web (separati da virgola)</label>
+          <input type="text" name="websites" value="{{ agent.websites or '' }}">
         </div>
 
-        {% for L in ['en','fr','es','de'] %}
+        <div class="field">
+          <label>PEC</label>
+          <input type="text" name="pec" value="{{ agent.pec or '' }}">
+        </div>
+        <div class="field">
+          <label>P.IVA</label>
+          <input type="text" name="piva" value="{{ agent.piva or '' }}">
+        </div>
+        <div class="field">
+          <label>SDI</label>
+          <input type="text" name="sdi" value="{{ agent.sdi or '' }}">
+        </div>
+
+        <div class="field full">
+          <label>Indirizzi (uno per riga)</label>
+          <textarea name="addresses">{{ agent.addresses or '' }}</textarea>
+        </div>
+
+        <div class="field full"><div class="sep"></div></div>
+
+        <div class="field">
+          <label>Facebook (link completo)</label>
+          <input type="text" name="facebook" value="{{ agent.facebook or '' }}">
+        </div>
+        <div class="field">
+          <label>Instagram (link completo)</label>
+          <input type="text" name="instagram" value="{{ agent.instagram or '' }}">
+        </div>
+        <div class="field">
+          <label>LinkedIn (link completo)</label>
+          <input type="text" name="linkedin" value="{{ agent.linkedin or '' }}">
+        </div>
+        <div class="field">
+          <label>TikTok (link completo)</label>
+          <input type="text" name="tiktok" value="{{ agent.tiktok or '' }}">
+        </div>
+        <div class="field">
+          <label>Telegram (link o @user)</label>
+          <input type="text" name="telegram" value="{{ agent.telegram or '' }}">
+        </div>
+
+        <div class="field full"><div class="sep"></div></div>
+
+        <div class="field">
+          <label>Foto profilo (max 8MB)</label>
+          <input type="file" name="photo" accept="image/*">
+        </div>
+        <div class="field">
+          <label>Logo (max 8MB)</label>
+          <input type="file" name="logo" accept="image/*">
+        </div>
+
+        {% if not editing_profile2 %}
           <div class="field full">
-            <details class="details">
-              <summary>{{ L|upper }}</summary>
-
-              <div class="grid-2" style="margin-top:10px;">
-                <div class="field">
-                  <label>Nome ({{ L|upper }})</label>
-                  <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
-                </div>
-                <div class="field">
-                  <label>Azienda ({{ L|upper }})</label>
-                  <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
-                </div>
-                <div class="field">
-                  <label>Ruolo ({{ L|upper }})</label>
-                  <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
-                </div>
-                <div class="field full">
-                  <label>Bio ({{ L|upper }})</label>
-                  <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Indirizzi ({{ L|upper }})</label>
-                  <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                </div>
-              </div>
-            </details>
+            <label>Galleria (max 30 immagini, 8MB cad.)</label>
+            <input type="file" name="gallery" accept="image/*" multiple>
           </div>
-        {% endfor %}
-      {% endif %}
 
-      <div class="field full">
-        <div class="toolbar">
-          <button class="btn primary" type="submit">Salva</button>
-          {% if session.get('role') == 'admin' %}
-            <a class="btn ghost" href="{{ url_for('admin_home') }}">Torna alla lista</a>
-          {% else %}
-            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
-          {% endif %}
+          <div class="field full">
+            <label>Video (max 10, 60MB cad.)</label>
+            <input type="file" name="videos" accept="video/*" multiple>
+          </div>
+
+          <div class="field full">
+            <label>PDF (fino a 12, 15MB cad.)</label>
+            <div class="grid-3">
+              {% for i in range(1,13) %}
+                <input type="file" name="pdf{{i}}" accept="application/pdf">
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="field full">
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Salva</button>
+            {% if session.get('role') == 'admin' %}
+              <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+            {% else %}
+              <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
+            {% endif %}
+          </div>
         </div>
       </div>
 
     </form>
+
+    <div class="footer">
+      Realizzato © Pay4You da Giuseppe Di Lisio 2026
+    </div>
+
   </div>
 </div>
 {% endblock %}
