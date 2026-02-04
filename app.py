@@ -954,6 +954,107 @@ def me_edit_post():
     return redirect(url_for("me_edit"))
 
 # ---------- P2: attiva + edit ----------
+# ---------- P2: attiva + edit (CLIENT) ----------
+@app.post("/me/activate_p2", endpoint="me_activate_p2")
+@login_required
+def me_activate_p2():
+    if is_admin():
+        return redirect(url_for("dashboard"))
+    slug = current_client_slug()
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+    ag.p2_enabled = 1
+    if not ag.profiles_json:
+        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
+    db.commit()
+    db.close()
+    return redirect(url_for("me_profile2"))
+
+
+# ---------- P2: attiva (ADMIN) ----------
+@app.post("/admin/<slug>/activate_p2", endpoint="admin_activate_p2")
+@admin_required
+def admin_activate_p2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+    ag.p2_enabled = 1
+    if not ag.profiles_json:
+        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
+    db.commit()
+    db.close()
+    return redirect(url_for("dashboard"))
+
+
+# ---------- P2: MODIFICA (ADMIN) ----------
+@app.get("/admin/<slug>/edit_p2", endpoint="admin_edit_p2")
+@admin_required
+def admin_edit_p2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+
+    # se non attivo, lo attiviamo
+    if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
+        return redirect(url_for("admin_activate_p2", slug=slug))
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
+    view = agent_to_view(ag)
+    # sovrascrive con i dati di p2 se presenti
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "photo_url","logo_url"]:
+        v = clean_str(p2.get(k))
+        if v:
+            setattr(view, k, v)
+
+    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
+
+
+@app.post("/admin/<slug>/edit_p2", endpoint="admin_edit_p2_post")
+@admin_required
+def admin_edit_p2_post(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 1
+    profiles = parse_profiles_json(ag.profiles_json or "")
+
+    payload = {}
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+        payload[k] = clean_str(request.form.get(k))
+
+    # uploads p2
+    photo = request.files.get("photo")
+    logo = request.files.get("logo")
+    if photo and photo.filename:
+        payload["photo_url"] = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
+    if logo and logo.filename:
+        payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
+
+    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v})
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    return redirect(url_for("admin_edit_p2", slug=slug))
+
 @app.post("/me/activate_p2", endpoint="me_activate_p2")
 @login_required
 def me_activate_p2():
