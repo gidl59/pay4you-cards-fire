@@ -335,6 +335,7 @@ def i18n_set(ag: Agent, data: dict):
     ag.i18n_json = json.dumps(data, ensure_ascii=False)
 
 def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
+    # ATTENZIONE: le traduzioni sono SOLO per P1.
     if lang not in SUPPORTED_LANGS or lang == "it":
         return ag_view
     data = i18n_get(ag)
@@ -457,6 +458,7 @@ def select_profile(profiles: list, key: str):
 
 def agent_to_view(ag: Agent):
     logo = clean_str(getattr(ag, "logo_url", None)) or clean_str(getattr(ag, "extra_logo_url", None))
+    p2_enabled_val = int(getattr(ag, "p2_enabled", 0) or 0)
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -484,9 +486,47 @@ def agent_to_view(ag: Agent):
         gallery_urls=clean_str(ag.gallery_urls),
         video_urls=clean_str(ag.video_urls),
         pdf1_url=clean_str(ag.pdf1_url),
-        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
+        p2_enabled=p2_enabled_val,
+        profile2_enabled=(p2_enabled_val == 1),  # alias comodo per i template
         profiles_json=getattr(ag, "profiles_json", None),
     )
+
+def blank_profile_view_from_agent(ag: Agent):
+    """
+    Crea una view "vuota" per P2 (NON eredita P1).
+    Lascia solo slug/id e flag p2_enabled.
+    """
+    v = agent_to_view(ag)
+
+    # campi profilo: vuoti
+    v.name = ""
+    v.company = None
+    v.role = None
+    v.bio = None
+
+    v.phone_mobile = None
+    v.phone_mobile2 = None
+    v.phone_office = None
+
+    v.emails = None
+    v.websites = None
+
+    v.facebook = ""
+    v.instagram = ""
+    v.linkedin = ""
+    v.tiktok = ""
+    v.telegram = ""
+    v.whatsapp = None
+
+    v.pec = None
+    v.piva = None
+    v.sdi = None
+    v.addresses = None
+
+    v.photo_url = None
+    v.logo_url = None
+
+    return v
 
 # ===================== ROUTES =====================
 
@@ -754,39 +794,6 @@ def delete_agent(slug):
     flash("Card eliminata.", "success")
     return redirect(url_for("dashboard"))
 
-@app.get("/admin/export_agents.json")
-@admin_required
-def admin_export_agents_json():
-    db = SessionLocal()
-    agents = db.query(Agent).order_by(Agent.id).all()
-    payload = []
-    for a in agents:
-        payload.append({"id": a.id, "slug": a.slug, "name": a.name})
-    db.close()
-    content = json.dumps(payload, ensure_ascii=False, indent=2)
-    resp = Response(content, mimetype="application/json; charset=utf-8")
-    resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
-    return resp
-
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=slug).first()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not u or not ag:
-        abort(404)
-    base = get_base_url()
-    return {
-        "username": u.username,
-        "password": u.password,
-        "dashboard": f"{base}/dashboard",
-        "card_p1": f"{base}/{slug}",
-        "card_p2": f"{base}/{slug}?p=p2",
-    }
-
 # ---------- CLIENT EDIT P1 ----------
 @app.get("/me/edit")
 @login_required
@@ -890,9 +897,15 @@ def me_activate_p2():
     if not ag:
         db.close()
         abort(404)
+
     ag.p2_enabled = 1
-    if not ag.profiles_json:
-        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
+
+    # IMPORTANTISSIMO: P2 deve partire da zero (non copiare P1).
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    if not select_profile(profiles, "p2"):
+        profiles.append({"key": "p2"})
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
     db.commit()
     db.close()
     return redirect(url_for("me_profile2"))
@@ -906,9 +919,15 @@ def admin_activate_p2(slug):
     if not ag:
         db.close()
         abort(404)
+
     ag.p2_enabled = 1
-    if not ag.profiles_json:
-        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
+
+    # IMPORTANTISSIMO: P2 deve partire da zero (non copiare P1).
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    if not select_profile(profiles, "p2"):
+        profiles.append({"key": "p2"})
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
     db.commit()
     db.close()
     flash("Profilo 2 attivato.", "success")
@@ -930,8 +949,11 @@ def me_profile2():
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
-    view = agent_to_view(ag)
 
+    # VIEW VUOTA: P2 non eredita P1
+    view = blank_profile_view_from_agent(ag)
+
+    # Applica solo i campi realmente salvati in P2
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
               "photo_url","logo_url"]:
@@ -952,9 +974,10 @@ def me_profile2_post():
     if not ag:
         db.close()
         abort(404)
-    ag.p2_enabled = 1
 
+    ag.p2_enabled = 1
     profiles = parse_profiles_json(ag.profiles_json or "")
+
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
@@ -967,7 +990,7 @@ def me_profile2_post():
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v})
+    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v is not None and v != ""})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -975,7 +998,7 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
-# --- ADMIN: modifica P2 (FINALMENTE) ---
+# --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
 def admin_profile2(slug):
@@ -993,7 +1016,9 @@ def admin_profile2(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
-    view = agent_to_view(ag)
+    # VIEW VUOTA: P2 non eredita P1
+    view = blank_profile_view_from_agent(ag)
+
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
               "photo_url","logo_url"]:
@@ -1028,7 +1053,7 @@ def admin_profile2_post(slug):
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v})
+    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v is not None and v != ""})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1049,20 +1074,25 @@ def public_card(slug):
     lang = pick_lang_from_request()
     p_key = (request.args.get("p") or "").strip()  # "" o "p2"
 
-    ag_view = agent_to_view(ag)
-    ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
-
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2")
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
 
+    # P1: view normale + i18n
+    ag_view_p1 = agent_to_view(ag)
+    ag_view_p1 = apply_i18n_to_agent_view(ag_view_p1, ag, lang)
+
+    # P2: view vuota (non eredita P1) + applica solo P2
     if p_key == "p2" and p2_enabled and p2:
+        ag_view = blank_profile_view_from_agent(ag)
         for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                   "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
                   "photo_url","logo_url"]:
             v = clean_str(p2.get(k))
             if v:
                 setattr(ag_view, k, v)
+    else:
+        ag_view = ag_view_p1
 
     gallery = (ag.gallery_urls.split("|") if clean_str(ag.gallery_urls) else [])
     videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
