@@ -2,13 +2,9 @@ import os
 import re
 import uuid
 import json
-import urllib.parse
-from datetime import datetime
 from io import BytesIO
 from types import SimpleNamespace
-from functools import wraps
-import smtplib
-from email.message import EmailMessage
+import urllib.parse
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -32,13 +28,6 @@ APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 # Upload persistenti (Render Disk su /var/data/uploads)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
-# SMTP (opzionale) per inviare credenziali
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "").strip()
-SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
-
 # Limiti upload
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
@@ -58,17 +47,20 @@ I18N = {
         "documents": "Documenti",
         "gallery": "Foto",
         "videos": "Video",
-        "back": "Indietro",
-        "close": "Chiudi",
         "actions": "Azioni",
         "data": "Dati",
         "vat": "P.IVA",
         "sdi": "SDI",
-        "open_website": "Apri sito",
         "open_maps": "Apri Maps",
+        "open_website": "Apri sito",
         "mobile_phone": "Cellulare",
         "office_phone": "Ufficio",
         "whatsapp": "WhatsApp",
+        "close": "Chiudi",
+        "theme": "Tema",
+        "theme_auto": "Auto",
+        "theme_light": "Chiaro",
+        "theme_dark": "Scuro",
     },
     "en": {
         "save_contact": "Save contact",
@@ -78,17 +70,20 @@ I18N = {
         "documents": "Documents",
         "gallery": "Photos",
         "videos": "Videos",
-        "back": "Back",
-        "close": "Close",
         "actions": "Actions",
-        "data": "Data",
+        "data": "Company data",
         "vat": "VAT",
         "sdi": "SDI",
-        "open_website": "Open website",
         "open_maps": "Open Maps",
+        "open_website": "Open website",
         "mobile_phone": "Mobile",
         "office_phone": "Office",
         "whatsapp": "WhatsApp",
+        "close": "Close",
+        "theme": "Theme",
+        "theme_auto": "Auto",
+        "theme_light": "Light",
+        "theme_dark": "Dark",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
@@ -98,37 +93,43 @@ I18N = {
         "documents": "Documents",
         "gallery": "Photos",
         "videos": "Vidéos",
-        "back": "Retour",
-        "close": "Fermer",
         "actions": "Actions",
         "data": "Données",
         "vat": "TVA",
         "sdi": "SDI",
-        "open_website": "Ouvrir le site",
         "open_maps": "Ouvrir Maps",
+        "open_website": "Ouvrir le site",
         "mobile_phone": "Mobile",
         "office_phone": "Bureau",
         "whatsapp": "WhatsApp",
+        "close": "Fermer",
+        "theme": "Thème",
+        "theme_auto": "Auto",
+        "theme_light": "Clair",
+        "theme_dark": "Sombre",
     },
     "es": {
         "save_contact": "Guardar contacto",
-        "scan_qr": "QR Code",
+        "scan_qr": "Código QR",
         "contacts": "Contactos",
-        "social": "Redes sociales",
+        "social": "Redes",
         "documents": "Documentos",
         "gallery": "Fotos",
         "videos": "Vídeos",
-        "back": "Atrás",
-        "close": "Cerrar",
         "actions": "Acciones",
         "data": "Datos",
         "vat": "IVA",
         "sdi": "SDI",
-        "open_website": "Abrir web",
         "open_maps": "Abrir Maps",
+        "open_website": "Abrir sitio",
         "mobile_phone": "Móvil",
         "office_phone": "Oficina",
         "whatsapp": "WhatsApp",
+        "close": "Cerrar",
+        "theme": "Tema",
+        "theme_auto": "Auto",
+        "theme_light": "Claro",
+        "theme_dark": "Oscuro",
     },
     "de": {
         "save_contact": "Kontakt speichern",
@@ -138,17 +139,20 @@ I18N = {
         "documents": "Dokumente",
         "gallery": "Fotos",
         "videos": "Videos",
-        "back": "Zurück",
-        "close": "Schließen",
         "actions": "Aktionen",
         "data": "Daten",
-        "vat": "USt-IdNr",
+        "vat": "USt-IdNr.",
         "sdi": "SDI",
-        "open_website": "Website öffnen",
         "open_maps": "Maps öffnen",
+        "open_website": "Website öffnen",
         "mobile_phone": "Mobil",
         "office_phone": "Büro",
         "whatsapp": "WhatsApp",
+        "close": "Schließen",
+        "theme": "Theme",
+        "theme_auto": "Auto",
+        "theme_light": "Hell",
+        "theme_dark": "Dunkel",
     },
 }
 
@@ -203,16 +207,16 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    logo_url = Column(String, nullable=True)         # nuovo
-    extra_logo_url = Column(String, nullable=True)   # compat vecchia
+    logo_url = Column(String, nullable=True)
+    extra_logo_url = Column(String, nullable=True)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
-    pdf1_url = Column(Text, nullable=True)           # contiene anche pdf2..pdf12 come pipe
+    pdf1_url = Column(Text, nullable=True)
 
     # Multi-utente
-    p2_enabled = Column(Integer, nullable=True)       # 0/1
-    profiles_json = Column(Text, nullable=True)       # salva profilo 2
+    p2_enabled = Column(Integer, nullable=True)     # 0/1
+    profiles_json = Column(Text, nullable=True)     # salva profilo 2
 
     # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
@@ -255,6 +259,7 @@ def current_client_slug():
     return session.get("agent_slug")
 
 def admin_required(f):
+    from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not is_logged_in() or not is_admin():
@@ -263,6 +268,7 @@ def admin_required(f):
     return wrapper
 
 def login_required(f):
+    from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not is_logged_in():
@@ -308,6 +314,7 @@ def pick_lang_from_request() -> str:
     if q:
         q = q.split("-", 1)[0]
         return q if q in SUPPORTED_LANGS else "it"
+
     al = (request.headers.get("Accept-Language") or "").lower()
     if al:
         first = al.split(",", 1)[0].strip().split("-", 1)[0]
@@ -361,7 +368,7 @@ def upload_file(file_storage, folder="uploads", max_bytes=None):
 
     return f"/uploads/{folder}/{filename}"
 
-@app.get("/uploads/<path:subpath>", endpoint="serve_uploads")
+@app.get("/uploads/<path:subpath>")
 def serve_uploads(subpath):
     return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
 
@@ -402,6 +409,10 @@ def normalize_whatsapp_link(raw: str) -> str:
     return ""
 
 def safe_url(u: str) -> str:
+    """
+    Accetta link anche senza https se sembrano domini (instagram.com/.., www.., ecc).
+    Se non sembra un link valido -> non pubblichiamo.
+    """
     u = clean_str(u)
     if not u:
         return ""
@@ -409,7 +420,14 @@ def safe_url(u: str) -> str:
         return u
     if u.startswith("@"):
         return f"https://t.me/{u[1:]}"
+    # se contiene un dominio (punto) e nessuno spazio -> prepend https://
+    if "." in u and " " not in u and not u.startswith("mailto:"):
+        return "https://" + u.lstrip("/")
     return ""
+
+def google_maps_link(address: str) -> str:
+    q = urllib.parse.quote_plus(address)
+    return f"https://www.google.com/maps/search/?api=1&query={q}"
 
 def parse_profiles_json(raw: str):
     data = safe_json_load(raw, [])
@@ -463,7 +481,6 @@ def agent_to_view(ag: Agent):
         addresses=clean_str(ag.addresses),
         photo_url=clean_str(ag.photo_url),
         logo_url=logo,
-        extra_logo_url=clean_str(getattr(ag, "extra_logo_url", None)),
         gallery_urls=clean_str(ag.gallery_urls),
         video_urls=clean_str(ag.video_urls),
         pdf1_url=clean_str(ag.pdf1_url),
@@ -471,46 +488,24 @@ def agent_to_view(ag: Agent):
         profiles_json=getattr(ag, "profiles_json", None),
     )
 
-def build_maps_link(addr: str) -> str:
-    q = urllib.parse.quote(addr)
-    return f"https://www.google.com/maps/search/?api=1&query={q}"
-
-def can_send_email() -> bool:
-    return bool(SMTP_HOST and SMTP_PORT and SMTP_FROM)
-
-def send_credentials_email(to_email: str, subject: str, body: str):
-    if not can_send_email():
-        raise RuntimeError("SMTP non configurato")
-    msg = EmailMessage()
-    msg["From"] = SMTP_FROM
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.set_content(body)
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as s:
-        s.starttls()
-        if SMTP_USER and SMTP_PASS:
-            s.login(SMTP_USER, SMTP_PASS)
-        s.send_message(msg)
-
 # ===================== ROUTES =====================
 
-@app.get("/", endpoint="home")
+@app.get("/")
 def home():
     if is_logged_in():
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
-@app.get("/health", endpoint="health")
+@app.get("/health")
 def health():
     return "ok", 200
 
 # ---------- LOGIN ----------
-@app.get("/login", endpoint="login")
+@app.get("/login")
 def login():
     return render_template("login.html", error=None)
 
-@app.post("/login", endpoint="login_post")
+@app.post("/login")
 def login_post():
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -535,13 +530,13 @@ def login_post():
     session["agent_slug"] = u.agent_slug
     return redirect(url_for("dashboard"))
 
-@app.get("/logout", endpoint="logout")
+@app.get("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
 # ---------- DASHBOARD (admin e clienti) ----------
-@app.get("/dashboard", endpoint="dashboard")
+@app.get("/dashboard")
 @login_required
 def dashboard():
     db = SessionLocal()
@@ -555,7 +550,7 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
-        return render_template("admin_list.html", agents=[ag], is_admin=False, agent=agent_to_view(ag))
+        return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
 # ---------- ADMIN CRUD ----------
 @app.get("/admin", endpoint="admin_home")
@@ -563,12 +558,12 @@ def dashboard():
 def admin_home():
     return redirect(url_for("dashboard"))
 
-@app.get("/admin/new", endpoint="new_agent")
+@app.get("/admin/new")
 @admin_required
 def new_agent():
-    return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False, is_admin=True)
+    return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
 
-@app.post("/admin/new", endpoint="create_agent")
+@app.post("/admin/new")
 @admin_required
 def create_agent():
     db = SessionLocal()
@@ -649,18 +644,18 @@ def create_agent():
         db.close()
         return "Errore salvataggio", 400
 
-    # crea utente client automatico (username=slug)
+    # crea utente client automatico
     u = db.query(User).filter_by(username=slug).first()
     if not u:
         pw = generate_password()
         db.add(User(username=slug, password=pw, role="client", agent_slug=slug))
         db.commit()
-        flash(f"Creato utente cliente: {slug} / {pw}", "info")
 
     db.close()
+    flash("Card creata.", "success")
     return redirect(url_for("dashboard"))
 
-@app.get("/admin/<slug>/edit", endpoint="edit_agent")
+@app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
     slug = slugify(slug)
@@ -669,11 +664,9 @@ def edit_agent(slug):
     db.close()
     if not ag:
         abort(404)
-    # passiamo una view pulita -> niente "None" nei campi
-    view = agent_to_view(ag)
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=False, is_admin=True)
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
-@app.post("/admin/<slug>/edit", endpoint="update_agent")
+@app.post("/admin/<slug>/edit")
 @admin_required
 def update_agent(slug):
     slug = slugify(slug)
@@ -745,10 +738,10 @@ def update_agent(slug):
 
     db.commit()
     db.close()
-    flash("Salvato ✅", "ok")
+    flash("Profilo 1 salvato.", "success")
     return redirect(url_for("dashboard"))
 
-@app.post("/admin/<slug>/delete", endpoint="delete_agent")
+@app.post("/admin/<slug>/delete")
 @admin_required
 def delete_agent(slug):
     slug = slugify(slug)
@@ -758,38 +751,24 @@ def delete_agent(slug):
         db.delete(ag)
         db.commit()
     db.close()
+    flash("Card eliminata.", "success")
     return redirect(url_for("dashboard"))
 
-@app.get("/admin/export_agents.json", endpoint="admin_export_agents_json")
+@app.get("/admin/export_agents.json")
 @admin_required
 def admin_export_agents_json():
     db = SessionLocal()
     agents = db.query(Agent).order_by(Agent.id).all()
-    payload = [{"id": a.id, "slug": a.slug, "name": a.name} for a in agents]
+    payload = []
+    for a in agents:
+        payload.append({"id": a.id, "slug": a.slug, "name": a.name})
     db.close()
     content = json.dumps(payload, ensure_ascii=False, indent=2)
     resp = Response(content, mimetype="application/json; charset=utf-8")
     resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
     return resp
 
-@app.post("/admin/<slug>/activate_p2", endpoint="admin_activate_p2")
-@admin_required
-def admin_activate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-    ag.p2_enabled = 1
-    if not ag.profiles_json:
-        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
-    db.commit()
-    db.close()
-    flash("Profilo 2 attivato ✅", "ok")
-    return redirect(url_for("dashboard"))
-
-@app.get("/admin/<slug>/credentials", endpoint="admin_credentials")
+@app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials(slug):
     slug = slugify(slug)
@@ -804,65 +783,12 @@ def admin_credentials(slug):
         "username": u.username,
         "password": u.password,
         "dashboard": f"{base}/dashboard",
-        "card": f"{base}/{slug}",
+        "card_p1": f"{base}/{slug}",
         "card_p2": f"{base}/{slug}?p=p2",
     }
 
-@app.post("/admin/<slug>/send_credentials", endpoint="admin_send_credentials")
-@admin_required
-def admin_send_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=slug).first()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not u or not ag:
-        abort(404)
-
-    base = get_base_url()
-    dashboard_url = f"{base}/dashboard"
-    card_url = f"{base}/{slug}"
-    card_p2_url = f"{base}/{slug}?p=p2"
-
-    # destinatario: prima email del campo emails
-    emails = []
-    if ag.emails:
-        emails = [x.strip() for x in ag.emails.split(",") if x.strip()]
-
-    if not emails:
-        flash("Nessuna email impostata nella card (campo Email). Inseriscila e riprova.", "err")
-        return redirect(url_for("dashboard"))
-
-    to_email = emails[0]
-    subject = "Credenziali Area Riservata Pay4You"
-    body = (
-        f"Ciao,\n\n"
-        f"di seguito le credenziali per gestire la tua Pay4You Card:\n\n"
-        f"LINK: {dashboard_url}\n"
-        f"USERNAME: {u.username}\n"
-        f"PASSWORD: {u.password}\n\n"
-        f"Card Profilo 1: {card_url}\n"
-        f"Card Profilo 2 (se attivato): {card_p2_url}\n\n"
-        f"Al primo accesso ti consigliamo di salvare queste credenziali.\n"
-        f"Buon lavoro!\n"
-        f"Pay4You\n"
-    )
-
-    try:
-        if can_send_email():
-            send_credentials_email(to_email, subject, body)
-            flash(f"Credenziali inviate a {to_email} ✅", "ok")
-        else:
-            # fallback: mostra a video
-            flash("SMTP non configurato: ti mostro le credenziali qui sotto (copiale).", "err")
-            flash(f"LINK: {dashboard_url} | USER: {u.username} | PASS: {u.password}", "info")
-    except Exception as e:
-        flash(f"Errore invio email: {e}", "err")
-
-    return redirect(url_for("dashboard"))
-
 # ---------- CLIENT EDIT P1 ----------
-@app.get("/me/edit", endpoint="me_edit")
+@app.get("/me/edit")
 @login_required
 def me_edit():
     if is_admin():
@@ -873,10 +799,9 @@ def me_edit():
     db.close()
     if not ag:
         abort(404)
-    view = agent_to_view(ag)
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=False, is_admin=False)
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
-@app.post("/me/edit", endpoint="me_edit_post")
+@app.post("/me/edit")
 @login_required
 def me_edit_post():
     if is_admin():
@@ -921,9 +846,9 @@ def me_edit_post():
         gallery_urls = []
         for f in gallery_files[:MAX_GALLERY_IMAGES]:
             if f and f.filename:
-                u2 = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
-                if u2:
-                    gallery_urls.append(u2)
+                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
+                if u:
+                    gallery_urls.append(u)
         if gallery_urls:
             ag.gallery_urls = "|".join(gallery_urls)
 
@@ -932,9 +857,9 @@ def me_edit_post():
         video_urls = []
         for f in video_files[:MAX_VIDEOS]:
             if f and f.filename:
-                u2 = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
-                if u2:
-                    video_urls.append(u2)
+                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
+                if u:
+                    video_urls.append(u)
         if video_urls:
             ag.video_urls = "|".join(video_urls)
 
@@ -942,20 +867,19 @@ def me_edit_post():
     for i in range(1, 13):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            u2 = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
-            if u2:
-                pdf_entries.append(f"{f.filename}||{u2}")
+            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
+            if u:
+                pdf_entries.append(f"{f.filename}||{u}")
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
 
     db.commit()
     db.close()
-    flash("Salvato ✅", "ok")
+    flash("Profilo 1 salvato.", "success")
     return redirect(url_for("me_edit"))
 
 # ---------- P2: attiva + edit ----------
-# ---------- P2: attiva + edit (CLIENT) ----------
-@app.post("/me/activate_p2", endpoint="me_activate_p2")
+@app.post("/me/activate_p2")
 @login_required
 def me_activate_p2():
     if is_admin():
@@ -973,9 +897,7 @@ def me_activate_p2():
     db.close()
     return redirect(url_for("me_profile2"))
 
-
-# ---------- P2: attiva (ADMIN) ----------
-@app.post("/admin/<slug>/activate_p2", endpoint="admin_activate_p2")
+@app.post("/admin/<slug>/activate_p2")
 @admin_required
 def admin_activate_p2(slug):
     slug = slugify(slug)
@@ -989,92 +911,10 @@ def admin_activate_p2(slug):
         ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
     db.commit()
     db.close()
+    flash("Profilo 2 attivato.", "success")
     return redirect(url_for("dashboard"))
 
-
-# ---------- P2: MODIFICA (ADMIN) ----------
-@app.get("/admin/<slug>/edit_p2", endpoint="admin_edit_p2")
-@admin_required
-def admin_edit_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-
-    # se non attivo, lo attiviamo
-    if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
-        return redirect(url_for("admin_activate_p2", slug=slug))
-
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    p2 = select_profile(profiles, "p2") or {"key": "p2"}
-
-    view = agent_to_view(ag)
-    # sovrascrive con i dati di p2 se presenti
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url"]:
-        v = clean_str(p2.get(k))
-        if v:
-            setattr(view, k, v)
-
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
-
-
-@app.post("/admin/<slug>/edit_p2", endpoint="admin_edit_p2_post")
-@admin_required
-def admin_edit_p2_post(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-
-    payload = {}
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
-        payload[k] = clean_str(request.form.get(k))
-
-    # uploads p2
-    photo = request.files.get("photo")
-    logo = request.files.get("logo")
-    if photo and photo.filename:
-        payload["photo_url"] = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
-    if logo and logo.filename:
-        payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
-
-    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v})
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    return redirect(url_for("admin_edit_p2", slug=slug))
-
-@app.post("/me/activate_p2", endpoint="me_activate_p2")
-@login_required
-def me_activate_p2():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-    ag.p2_enabled = 1
-    if not ag.profiles_json:
-        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
-    db.commit()
-    db.close()
-    flash("Profilo 2 attivato ✅", "ok")
-    return redirect(url_for("me_profile2"))
-
-@app.get("/me/profile2", endpoint="me_profile2")
+@app.get("/me/profile2")
 @login_required
 def me_profile2():
     if is_admin():
@@ -1099,9 +939,9 @@ def me_profile2():
         if v:
             setattr(view, k, v)
 
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True, is_admin=False)
+    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
-@app.post("/me/profile2", endpoint="me_profile2_post")
+@app.post("/me/profile2")
 @login_required
 def me_profile2_post():
     if is_admin():
@@ -1132,11 +972,72 @@ def me_profile2_post():
 
     db.commit()
     db.close()
-    flash("Salvato Profilo 2 ✅", "ok")
+    flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
+# --- ADMIN: modifica P2 (FINALMENTE) ---
+@app.get("/admin/<slug>/profile2")
+@admin_required
+def admin_profile2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+
+    if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
+        flash("Prima attiva il Profilo 2.", "warning")
+        return redirect(url_for("dashboard"))
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
+    view = agent_to_view(ag)
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "photo_url","logo_url"]:
+        v = clean_str(p2.get(k))
+        if v:
+            setattr(view, k, v)
+
+    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
+
+@app.post("/admin/<slug>/profile2")
+@admin_required
+def admin_profile2_post(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 1
+    profiles = parse_profiles_json(ag.profiles_json or "")
+
+    payload = {}
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+        payload[k] = clean_str(request.form.get(k))
+
+    photo = request.files.get("photo")
+    logo = request.files.get("logo")
+    if photo and photo.filename:
+        payload["photo_url"] = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
+    if logo and logo.filename:
+        payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
+
+    profiles = upsert_profile(profiles, "p2", {k: v for k, v in payload.items() if v})
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    flash("Profilo 2 salvato.", "success")
+    return redirect(url_for("admin_profile2", slug=slug))
+
 # ---------- PUBLIC CARD ----------
-@app.get("/<slug>", endpoint="public_card")
+@app.get("/<slug>")
 def public_card(slug):
     slug = slugify(slug)
     db = SessionLocal()
@@ -1170,9 +1071,11 @@ def public_card(slug):
     base = get_base_url()
 
     emails = [e.strip() for e in (ag_view.emails or "").split(",") if clean_str(e)]
+    pec_email = clean_str(ag_view.pec)
+
     websites = [w.strip() for w in (ag_view.websites or "").split(",") if clean_str(w)]
-    addr_lines = [a.strip() for a in (ag_view.addresses or "").split("\n") if clean_str(a)]
-    addresses = [{"text": a, "maps": build_maps_link(a)} for a in addr_lines]
+    raw_addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if clean_str(a)]
+    addresses = [{"text": a, "maps": google_maps_link(a)} for a in raw_addresses]
 
     mobiles = []
     if clean_str(ag_view.phone_mobile):
@@ -1186,11 +1089,6 @@ def public_card(slug):
     if p_key:
         qr_url += f"&p={urllib.parse.quote(p_key)}"
 
-    # tema auto/chiaro/scuro
-    theme = (request.args.get("theme") or "auto").strip().lower()
-    if theme not in ("auto", "light", "dark"):
-        theme = "auto"
-
     return render_template(
         "card.html",
         ag=ag_view,
@@ -1201,6 +1099,7 @@ def public_card(slug):
         videos=videos,
         pdfs=pdfs,
         emails=emails,
+        pec_email=pec_email,
         websites=websites,
         addresses=addresses,
         mobiles=mobiles,
@@ -1208,12 +1107,10 @@ def public_card(slug):
         qr_url=qr_url,
         p_key=p_key,
         p2_enabled=p2_enabled,
-        profiles=profiles if p2_enabled else [],
-        theme=theme,
     )
 
 # ---------- VCARD ----------
-@app.get("/<slug>.vcf", endpoint="vcard")
+@app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
     db = SessionLocal()
@@ -1251,6 +1148,8 @@ def vcard(slug):
     if ag.emails:
         for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
             lines.append(f"EMAIL;TYPE=WORK:{e}")
+    if ag.pec:
+        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
@@ -1269,21 +1168,16 @@ def vcard(slug):
     return resp
 
 # ---------- QR ----------
-@app.get("/<slug>/qr.png", endpoint="qr")
+@app.get("/<slug>/qr.png")
 def qr(slug):
     slug = slugify(slug)
     base = get_base_url()
     lang = pick_lang_from_request()
     p = (request.args.get("p") or "").strip()
-    theme = (request.args.get("theme") or "auto").strip().lower()
-    if theme not in ("auto", "light", "dark"):
-        theme = "auto"
 
     url = f"{base}/{slug}?lang={urllib.parse.quote(lang)}"
     if p:
         url += f"&p={urllib.parse.quote(p)}"
-    if theme != "auto":
-        url += f"&theme={urllib.parse.quote(theme)}"
 
     img = qrcode.make(url)
     bio = BytesIO()
