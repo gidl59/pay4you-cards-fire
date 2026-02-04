@@ -56,11 +56,8 @@
             <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica P1</a>
           {% endif %}
 
-          {% if (a.p2_enabled or 0)|int == 1 %}
-            <a class="btn-mini ghost" href="{{ url_for('me_profile2') if not is_admin else url_for('edit_agent', slug=a.slug) }}">{% if is_admin %}Modifica{% else %}Modifica P2{% endif %}</a>
-            {% if is_admin %}
-              <!-- per admin, la modifica P2 la fai entrando come cliente: per ora restiamo semplici -->
-            {% endif %}
+          {% if (a.p2_enabled or 0)|int == 1 and (not is_admin) %}
+            <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica P2</a>
           {% endif %}
 
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR</button>
@@ -86,7 +83,7 @@
   <div class="modal-box">
     <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
     <img id="qr-img" src="" alt="QR" style="width:100%;max-width:420px;display:block;margin:8px auto;border-radius:14px;">
-    <button class="modal-close-btn" type="button" onclick="closeQrModal()">Chiudi</button>
+    <button class="modal-close" type="button" onclick="closeQrModal()">Chiudi</button>
   </div>
 </div>
 
