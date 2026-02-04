@@ -1,27 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Login{% endblock %}
+{% block title %}Accesso | Pay4You{% endblock %}
+
 {% block content %}
 <div class="page-main">
   <div class="login-card">
-    <h1 class="page-title">Accesso</h1>
+    <div class="login-title">Accesso</div>
+    <div class="login-sub">Inserisci le credenziali per entrare nell’area riservata.</div>
 
-    {% if error %}
-      <div class="flash" style="margin:10px 0;">{{ error }}</div>
-    {% endif %}
-
-    <form method="post" action="{{ url_for('login_post') }}" class="form-grid">
-      <div class="field">
+    <form method="post" action="{{ url_for('login_post') }}" class="login-form">
+      <div class="field full">
         <label>Username</label>
-        <input type="text" name="username" required autocomplete="username">
+        <input type="text" name="username" autocomplete="username" placeholder="es. giuseppe">
       </div>
-      <div class="field">
+
+      <div class="field full">
         <label>Password</label>
-        <input type="password" name="password" required autocomplete="current-password">
+        <input type="password" name="password" autocomplete="current-password" placeholder="••••••••">
       </div>
+
+      {% if error %}
+        <div class="login-error">{{ error }}</div>
+      {% endif %}
+
       <button class="btn primary" type="submit">Entra</button>
+
+      <div class="login-hint">
+        Se non hai le credenziali, contatta Pay4You.
+      </div>
     </form>
 
-    <p class="muted" style="margin-top:10px;">Se non hai le credenziali, contatta Pay4You.</p>
+    <div class="footer footer-soft">
+      Realizzato © Pay4You da Giuseppe Di Lisio 2026
+    </div>
   </div>
 </div>
 {% endblock %}
