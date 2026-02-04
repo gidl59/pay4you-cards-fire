@@ -167,7 +167,7 @@ def mb_to_bytes(mb: int) -> int:
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # limite request complessiva
 
 DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -214,7 +214,7 @@ class Agent(Base):
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    # Profili multipli
+    # Multi-utente
     p2_enabled = Column(Integer, nullable=True)     # 0/1
     profiles_json = Column(Text, nullable=True)     # salva profilo 2
 
@@ -484,54 +484,56 @@ def agent_to_view(ag: Agent):
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    """✅ View per Profilo 2 COMPLETAMENTE VUOTO (non copia P1)."""
+    """View per Profilo 2 completamente VUOTO (NON copia P1)."""
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
+
         name="",
         company="",
         role="",
         bio="",
+
         phone_mobile="",
         phone_mobile2="",
         phone_office="",
+
         emails="",
         websites="",
+
         facebook="",
         instagram="",
         linkedin="",
         tiktok="",
         telegram="",
         whatsapp="",
+
         pec="",
         piva="",
         sdi="",
         addresses="",
+
         photo_url="",
         logo_url="",
+
         gallery_urls="",
         video_urls="",
         pdf1_url="",
+
         p2_enabled=1,
         profiles_json=ag.profiles_json,
     )
 
-# ✅ Variabile globale per i template: _p2_enabled (niente query nei template!)
-@app.context_processor
-def inject_globals():
-    p2 = 0
-    try:
-        if session.get("username") and session.get("role") != "admin":
-            slug = session.get("agent_slug")
-            if slug:
-                db = SessionLocal()
-                ag = db.query(Agent).filter_by(slug=slug).first()
-                db.close()
-                if ag and int(getattr(ag, "p2_enabled", 0) or 0) == 1:
-                    p2 = 1
-    except Exception:
-        p2 = 0
-    return {"_p2_enabled": p2}
+def refresh_session_p2_enabled_for_client(agent_slug: str):
+    """Aggiorna session['p2_enabled'] leggendo l'agente dal DB."""
+    session["p2_enabled"] = 0
+    if not agent_slug:
+        return
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=agent_slug).first()
+    if ag and int(getattr(ag, "p2_enabled", 0) or 0) == 1:
+        session["p2_enabled"] = 1
+    db.close()
 
 # ===================== ROUTES =====================
 
@@ -558,12 +560,15 @@ def login_post():
     if not username or not password:
         return render_template("login.html", error="Inserisci username e password")
 
+    # ADMIN
     if username == "admin" and password == ADMIN_PASSWORD:
         session["username"] = "admin"
         session["role"] = "admin"
         session["agent_slug"] = None
+        session["p2_enabled"] = 0
         return redirect(url_for("dashboard"))
 
+    # CLIENT
     db = SessionLocal()
     u = db.query(User).filter_by(username=username, password=password).first()
     db.close()
@@ -573,6 +578,10 @@ def login_post():
     session["username"] = u.username
     session["role"] = u.role
     session["agent_slug"] = u.agent_slug
+
+    # ✅ fondamentale per mostrare/nascondere "Profilo 2" in base.html
+    refresh_session_p2_enabled_for_client(u.agent_slug)
+
     return redirect(url_for("dashboard"))
 
 @app.get("/logout")
@@ -595,14 +604,101 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
+        # ✅ mantieni session aggiornata anche se P2 è stato attivato da admin
+        refresh_session_p2_enabled_for_client(slug)
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
-# ---------- ADMIN CRUD ----------
+# ---------- ADMIN HOME ----------
 @app.get("/admin", endpoint="admin_home")
 @admin_required
 def admin_home():
     return redirect(url_for("dashboard"))
 
+# ---------- ADMIN: EXPORT JSON ----------
+@app.get("/admin/export/agents.json", endpoint="admin_export_agents_json")
+@admin_required
+def admin_export_agents_json():
+    db = SessionLocal()
+    agents = db.query(Agent).order_by(Agent.name).all()
+    out = []
+    for ag in agents:
+        out.append({
+            "slug": ag.slug,
+            "name": ag.name,
+            "company": ag.company,
+            "role": ag.role,
+            "bio": ag.bio,
+            "phone_mobile": ag.phone_mobile,
+            "phone_mobile2": ag.phone_mobile2,
+            "phone_office": ag.phone_office,
+            "whatsapp": ag.whatsapp,
+            "emails": ag.emails,
+            "websites": ag.websites,
+            "pec": ag.pec,
+            "piva": ag.piva,
+            "sdi": ag.sdi,
+            "addresses": ag.addresses,
+            "facebook": ag.facebook,
+            "instagram": ag.instagram,
+            "linkedin": ag.linkedin,
+            "tiktok": ag.tiktok,
+            "telegram": ag.telegram,
+            "photo_url": ag.photo_url,
+            "logo_url": ag.logo_url,
+            "gallery_urls": ag.gallery_urls,
+            "video_urls": ag.video_urls,
+            "pdf1_url": ag.pdf1_url,
+            "p2_enabled": int(getattr(ag, "p2_enabled", 0) or 0),
+            "profiles_json": ag.profiles_json,
+            "i18n_json": ag.i18n_json,
+        })
+    db.close()
+    return Response(json.dumps(out, ensure_ascii=False, indent=2), mimetype="application/json; charset=utf-8")
+
+# ---------- ADMIN: CREDENTIALS JSON ----------
+@app.get("/admin/<slug>/credentials", endpoint="admin_credentials")
+@admin_required
+def admin_credentials(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    u = db.query(User).filter_by(username=slug).first()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    db.close()
+    if not ag:
+        abort(404)
+    if not u:
+        # se manca, rigenero al volo
+        db2 = SessionLocal()
+        pw = generate_password()
+        db2.add(User(username=slug, password=pw, role="client", agent_slug=slug))
+        db2.commit()
+        db2.close()
+        username_out = slug
+        password_out = pw
+    else:
+        username_out = u.username
+        password_out = u.password
+
+    base = get_base_url()
+    payload = {
+        "slug": slug,
+        "login_url": f"{base}/login",
+        "card_p1": f"{base}/{slug}",
+        "card_p2": f"{base}/{slug}?p=p2",
+        "username": username_out,
+        "password": password_out,
+        "p2_enabled": int(getattr(ag, "p2_enabled", 0) or 0),
+    }
+    return Response(json.dumps(payload, ensure_ascii=False, indent=2), mimetype="application/json; charset=utf-8")
+
+# ---------- ADMIN BROADCAST (placeholder per non avere 404) ----------
+@app.get("/admin/broadcast", endpoint="admin_broadcast")
+@admin_required
+def admin_broadcast():
+    # Template esiste: admin_broadcast.html
+    return render_template("admin_broadcast.html")
+
+# ---------- ADMIN CRUD ----------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -799,63 +895,6 @@ def delete_agent(slug):
     flash("Card eliminata.", "success")
     return redirect(url_for("dashboard"))
 
-# ✅ Export JSON (admin)
-@app.get("/admin/export/agents.json")
-@admin_required
-def admin_export_agents_json():
-    db = SessionLocal()
-    agents = db.query(Agent).order_by(Agent.name).all()
-    out = []
-    for a in agents:
-        av = agent_to_view(a)
-        out.append({
-            "slug": av.slug,
-            "name": av.name,
-            "company": av.company,
-            "role": av.role,
-            "bio": av.bio,
-            "phone_mobile": av.phone_mobile,
-            "phone_mobile2": av.phone_mobile2,
-            "phone_office": av.phone_office,
-            "emails": av.emails,
-            "websites": av.websites,
-            "facebook": av.facebook,
-            "instagram": av.instagram,
-            "linkedin": av.linkedin,
-            "tiktok": av.tiktok,
-            "telegram": av.telegram,
-            "whatsapp": av.whatsapp,
-            "pec": av.pec,
-            "piva": av.piva,
-            "sdi": av.sdi,
-            "addresses": av.addresses,
-            "photo_url": av.photo_url,
-            "logo_url": av.logo_url,
-            "gallery_urls": av.gallery_urls,
-            "video_urls": av.video_urls,
-            "pdf1_url": av.pdf1_url,
-            "p2_enabled": av.p2_enabled,
-            "profiles_json": safe_json_load(a.profiles_json or "", []),
-            "i18n_json": safe_json_load(a.i18n_json or "", {}),
-        })
-    db.close()
-    return Response(json.dumps(out, ensure_ascii=False, indent=2), mimetype="application/json")
-
-# ✅ Credenziali (admin): mostra username/password di un client
-@app.get("/admin/<slug>/credentials.json")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=slug, role="client").first()
-    if not u:
-        db.close()
-        return Response(json.dumps({"error": "utente non trovato"}, ensure_ascii=False, indent=2),
-                        status=404, mimetype="application/json")
-    data = {"username": u.username, "password": u.password, "role": u.role, "agent_slug": u.agent_slug}
-    db.close()
-    return Response(json.dumps(data, ensure_ascii=False, indent=2), mimetype="application/json")
-
 # ---------- CLIENT EDIT P1 ----------
 @app.get("/me/edit")
 @login_required
@@ -868,6 +907,7 @@ def me_edit():
     db.close()
     if not ag:
         abort(404)
+    refresh_session_p2_enabled_for_client(slug)
     return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/me/edit")
@@ -963,6 +1003,9 @@ def me_activate_p2():
 
     ag.p2_enabled = 1
 
+    # ✅ session per menu
+    session["p2_enabled"] = 1
+
     # ✅ P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
@@ -1010,6 +1053,8 @@ def me_profile2():
     if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
         return redirect(url_for("me_edit"))
 
+    session["p2_enabled"] = 1
+
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
@@ -1036,6 +1081,7 @@ def me_profile2_post():
         db.close()
         abort(404)
     ag.p2_enabled = 1
+    session["p2_enabled"] = 1
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
@@ -1141,7 +1187,7 @@ def public_card(slug):
     if p_key != "p2":
         ag_view = agent_to_view(ag)
         ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
-    # P2 (solo dati P2, non copia P1)
+    # P2 (vuoto + solo campi P2)
     else:
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
