@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="panel">
+  <div class="panel" style="width:min(1120px,100%);">
 
     <div class="panel-head">
       <h1 class="page-title">
@@ -11,18 +11,20 @@
       </h1>
 
       {% if session.get('role') != 'admin' and agent %}
-      <div class="toolbar">
-        <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-        <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-        <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-        <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-      </div>
+        <div class="toolbar">
+          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
+          <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+          <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+        </div>
       {% endif %}
     </div>
 
     {% if session.get('role') == 'admin' %}
-      {% if agent %}
+      {% if agent and not editing_profile2 %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
+      {% elif agent and editing_profile2 %}
+        {% set form_action = url_for('admin_profile2_post', slug=agent.slug) %}
       {% else %}
         {% set form_action = url_for('create_agent') %}
       {% endif %}
@@ -37,7 +39,8 @@
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
 
       <div class="form-grid">
-        {% if session.get('role') == 'admin' %}
+
+        {% if session.get('role') == 'admin' and not editing_profile2 %}
           <div class="field">
             <label>Slug (univoco)</label>
             <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
@@ -46,105 +49,106 @@
           <div class="field">
             <label>Slug</label>
             <input type="text" value="{{ agent.slug }}" disabled>
+            <div class="hint">Lo slug non è modificabile qui.</div>
           </div>
         {% endif %}
 
         <div class="field">
           <label>Nome</label>
-          <input type="text" name="name" value="{{ agent.name or '' }}" required>
+          <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
         </div>
 
         <div class="field">
           <label>Azienda</label>
-          <input type="text" name="company" value="{{ agent.company or '' }}">
+          <input type="text" name="company" value="{{ agent.company if agent else '' }}">
         </div>
 
         <div class="field">
           <label>Ruolo</label>
-          <input type="text" name="role" value="{{ agent.role or '' }}">
+          <input type="text" name="role" value="{{ agent.role if agent else '' }}">
         </div>
 
         <div class="field full">
           <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ agent.bio or '' }}</textarea>
+          <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
         </div>
-
-        <div class="field full"><div class="sep"></div></div>
 
         <div class="field">
           <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile or '' }}">
+          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
         </div>
+
         <div class="field">
           <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 or '' }}">
+          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
         </div>
+
         <div class="field">
           <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ agent.phone_office or '' }}">
+          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
         </div>
+
         <div class="field">
           <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ agent.whatsapp or '' }}">
+          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
         </div>
 
-        <div class="field full">
+        <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ agent.emails or '' }}">
+          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
         </div>
 
-        <div class="field full">
+        <div class="field">
           <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ agent.websites or '' }}">
+          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
         </div>
 
         <div class="field">
           <label>PEC</label>
-          <input type="text" name="pec" value="{{ agent.pec or '' }}">
+          <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
         </div>
+
         <div class="field">
           <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ agent.piva or '' }}">
+          <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
         </div>
+
         <div class="field">
           <label>SDI</label>
-          <input type="text" name="sdi" value="{{ agent.sdi or '' }}">
+          <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
         </div>
 
         <div class="field full">
           <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ agent.addresses or '' }}</textarea>
+          <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
         </div>
 
-        <div class="field full"><div class="sep"></div></div>
-
         <div class="field">
-          <label>Facebook (link completo)</label>
-          <input type="text" name="facebook" value="{{ agent.facebook or '' }}">
+          <label>Facebook (link)</label>
+          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
         </div>
         <div class="field">
-          <label>Instagram (link completo)</label>
-          <input type="text" name="instagram" value="{{ agent.instagram or '' }}">
+          <label>Instagram (link)</label>
+          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
         </div>
         <div class="field">
-          <label>LinkedIn (link completo)</label>
-          <input type="text" name="linkedin" value="{{ agent.linkedin or '' }}">
+          <label>LinkedIn (link)</label>
+          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
         </div>
         <div class="field">
-          <label>TikTok (link completo)</label>
-          <input type="text" name="tiktok" value="{{ agent.tiktok or '' }}">
+          <label>TikTok (link)</label>
+          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
         </div>
         <div class="field">
           <label>Telegram (link o @user)</label>
-          <input type="text" name="telegram" value="{{ agent.telegram or '' }}">
+          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
         </div>
-
-        <div class="field full"><div class="sep"></div></div>
 
         <div class="field">
           <label>Foto profilo (max 8MB)</label>
           <input type="file" name="photo" accept="image/*">
         </div>
+
         <div class="field">
           <label>Logo (max 8MB)</label>
           <input type="file" name="logo" accept="image/*">
@@ -152,42 +156,89 @@
 
         {% if not editing_profile2 %}
           <div class="field full">
-            <label>Galleria (max 30 immagini, 8MB cad.)</label>
+            <div class="sep"></div>
+          </div>
+
+          <div class="field">
+            <label>Galleria (max 30 immagini)</label>
             <input type="file" name="gallery" accept="image/*" multiple>
           </div>
 
-          <div class="field full">
-            <label>Video (max 10, 60MB cad.)</label>
+          <div class="field">
+            <label>Video (max 10)</label>
             <input type="file" name="videos" accept="video/*" multiple>
           </div>
 
           <div class="field full">
-            <label>PDF (fino a 12, 15MB cad.)</label>
+            <label>PDF (fino a 12)</label>
             <div class="grid-3">
-              {% for i in range(1,13) %}
-                <input type="file" name="pdf{{i}}" accept="application/pdf">
-              {% endfor %}
+              <input type="file" name="pdf1" accept="application/pdf">
+              <input type="file" name="pdf2" accept="application/pdf">
+              <input type="file" name="pdf3" accept="application/pdf">
+              <input type="file" name="pdf4" accept="application/pdf">
+              <input type="file" name="pdf5" accept="application/pdf">
+              <input type="file" name="pdf6" accept="application/pdf">
+              <input type="file" name="pdf7" accept="application/pdf">
+              <input type="file" name="pdf8" accept="application/pdf">
+              <input type="file" name="pdf9" accept="application/pdf">
+              <input type="file" name="pdf10" accept="application/pdf">
+              <input type="file" name="pdf11" accept="application/pdf">
+              <input type="file" name="pdf12" accept="application/pdf">
             </div>
           </div>
         {% endif %}
 
-        <div class="field full">
-          <div class="toolbar">
-            <button class="btn primary" type="submit">Salva</button>
-            {% if session.get('role') == 'admin' %}
-              <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-            {% else %}
-              <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
-            {% endif %}
+        {% if not editing_profile2 %}
+          <div class="field full">
+            <div class="sep"></div>
+            <h3 style="margin:0 0 8px 0;">Traduzioni Profilo 1 (opzionali)</h3>
+            <div class="hint">Se il telefono è in inglese/francese/spagnolo/tedesco, la card userà questi testi (se compilati).</div>
           </div>
+
+          {% for L in ['en','fr','es','de'] %}
+            <div class="field full details">
+              <details>
+                <summary>{{ L|upper }}</summary>
+
+                <div class="grid-2" style="margin-top:10px;">
+                  <div class="field">
+                    <label>Nome ({{ L|upper }})</label>
+                    <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
+                  </div>
+                  <div class="field">
+                    <label>Azienda ({{ L|upper }})</label>
+                    <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
+                  </div>
+                  <div class="field">
+                    <label>Ruolo ({{ L|upper }})</label>
+                    <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
+                  </div>
+                  <div class="field full">
+                    <label>Bio ({{ L|upper }})</label>
+                    <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
+                  </div>
+                  <div class="field full">
+                    <label>Indirizzi ({{ L|upper }})</label>
+                    <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
+                  </div>
+                </div>
+              </details>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn primary" type="submit">Salva</button>
+
+          {% if session.get('role') == 'admin' %}
+            <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+          {% else %}
+            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
+          {% endif %}
         </div>
+
       </div>
-
     </form>
-
-    <div class="footer">
-      Realizzato © Pay4You da Giuseppe Di Lisio 2026
-    </div>
 
   </div>
 </div>
