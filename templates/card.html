@@ -22,6 +22,14 @@
       <div class="hero">
         <div class="avatar-wrap">
 
+          {# ORBIT messo PRIMA del flip: così resta dietro nella maggior parte dei browser.
+             (Il fix definitivo è nel CSS con z-index.) #}
+          {% if the_logo %}
+            <div class="orbit">
+              <img src="{{ the_logo }}" alt="Logo orbit">
+            </div>
+          {% endif %}
+
           <!-- flip: tap = gira su se stessa e mostra il logo -->
           <div class="flip is-flippable" onclick="toggleFlip()">
             <div class="flip-inner">
@@ -42,12 +50,6 @@
               </div>
             </div>
           </div>
-
-          {% if the_logo %}
-            <div class="orbit">
-              <img src="{{ the_logo }}" alt="Logo orbit">
-            </div>
-          {% endif %}
         </div>
 
         <div class="hero-text">
@@ -68,14 +70,6 @@
               </a>
             </div>
           {% endif %}
-
-          <!-- Toggle tema visibile -->
-          <div class="theme-toggle">
-            <div class="theme-label">{{ t_func('theme') }}:</div>
-            <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
-            <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
-            <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
-          </div>
 
           <!-- Social icons -->
           {% set has_social_icons = wa_link or ag.instagram or ag.facebook or ag.linkedin or ag.tiktok or ag.telegram %}
@@ -123,12 +117,22 @@
 
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
+
         <div class="actions-row">
           <a class="action-btn" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
           <button class="action-btn secondary" type="button" onclick="openMediaModal('{{ qr_url }}','image')">
             {{ t_func('scan_qr') }}
           </button>
         </div>
+
+        {# Toggle tema SPOSTATO QUI (vicino ad Azioni) con bottoni più compatti #}
+        <div class="theme-toggle" style="margin-top:10px;">
+          <div class="theme-label" style="min-width:auto;">{{ t_func('theme') }}:</div>
+          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
+          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
+          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
+        </div>
+
         <div class="actions-hint">Suggerimento: salva il contatto e condividi la card ai tuoi clienti.</div>
       </div>
 
@@ -204,7 +208,12 @@
               <button class="thumb" type="button" onclick="openMediaModal('{{ v }}','video')">
                 <div class="video-thumb">
                   <span class="video-play">▶</span>
-                  <video class="video-mini" muted playsinline preload="metadata" src="{{ v }}"></video>
+                  <video class="video-mini"
+                         muted
+                         playsinline
+                         webkit-playsinline
+                         preload="metadata"
+                         src="{{ v }}"></video>
                 </div>
               </button>
             {% endfor %}
@@ -238,7 +247,7 @@
       <button class="modal-x" type="button" onclick="closeMediaModal()">✕</button>
 
       <img id="mImg" src="" alt="media" style="display:none;">
-      <video id="mVideo" controls playsinline style="display:none;">
+      <video id="mVideo" controls playsinline webkit-playsinline style="display:none;">
         <source id="mVideoSrc" src="">
       </video>
       <iframe id="mPdf" src="" style="display:none;" title="pdf"></iframe>
@@ -271,9 +280,12 @@
       pdf.src='';
       try{ vid.pause(); }catch(e){}
       vidSrc.src='';
+      vid.removeAttribute('src');
 
       if(type === 'video'){
+        // iOS spesso vuole src diretto sul tag video, non solo sul <source>
         vidSrc.src = src;
+        vid.src = src;
         vid.load();
         vid.style.display='block';
       } else if(type === 'pdf'){
@@ -292,14 +304,17 @@
       const vid = document.getElementById('mVideo');
       const vidSrc = document.getElementById('mVideoSrc');
       const pdf = document.getElementById('mPdf');
+      const img = document.getElementById('mImg');
 
       try{ vid.pause(); }catch(e){}
       vidSrc.src='';
+      vid.removeAttribute('src');
       pdf.src='';
+      img.src='';
       modal.style.display='none';
     }
 
-    // Tema toggle (Auto/Light/Dark) visibile + salva sul telefono
+    // Tema toggle (Auto/Light/Dark) + salva sul telefono
     const THEME_KEY = 'pay4you_card_theme';
     function applyTheme(theme){
       document.body.setAttribute('data-theme', theme);
@@ -318,6 +333,34 @@
       });
     });
     applyTheme(getStoredTheme());
+
+    // Video thumbs: prova a forzare un frame iniziale su mobile (iOS è “capriccioso”)
+    function initVideoThumbs(){
+      document.querySelectorAll('video.video-mini').forEach(v=>{
+        try{
+          v.muted = true;
+          v.playsInline = true;
+          v.setAttribute('playsinline','');
+          v.setAttribute('webkit-playsinline','');
+          v.preload = 'metadata';
+
+          v.addEventListener('loadedmetadata', ()=>{
+            // prova a saltare di pochissimo per far renderizzare un frame
+            try{
+              if (v.duration && v.duration > 0.2) v.currentTime = 0.1;
+            }catch(e){}
+          });
+
+          v.addEventListener('seeked', ()=>{
+            try{ v.pause(); }catch(e){}
+          });
+
+          // alcuni device caricano solo se "touch": prova comunque a chiamare load
+          v.load();
+        }catch(e){}
+      });
+    }
+    initVideoThumbs();
   </script>
 
 </body>
