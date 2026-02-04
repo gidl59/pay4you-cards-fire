@@ -445,6 +445,13 @@ def dashboard():
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
 # ---------- ADMIN CRUD ----------
+@app.get("/admin", endpoint="admin_home")
+@admin_required
+def admin_home():
+    db = SessionLocal()
+    agents = db.query(Agent).order_by(Agent.name).all()
+    db.close()
+    return render_template("admin_list.html", agents=agents)
 @app.get("/admin/new")
 @admin_required
 def new_agent():
