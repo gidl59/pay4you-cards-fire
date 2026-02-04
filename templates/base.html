@@ -14,21 +14,6 @@
 <body>
   <div class="app-shell">
 
-    {# Calcolo "p2_enabled" per il CLIENT (solo se loggato e non admin).
-       Non tutte le pagine passano "agent" al template, quindi facciamo una query piccola qui. #}
-    {% set _p2_enabled = 0 %}
-    {% if session.get('username') and session.get('role') != 'admin' %}
-      {% set _slug = session.get('agent_slug') %}
-      {% if _slug %}
-        {% set _db = SessionLocal() %}
-        {% set _ag = _db.query(Agent).filter_by(slug=_slug).first() %}
-        {% if _ag and (_ag.p2_enabled or 0)|int == 1 %}
-          {% set _p2_enabled = 1 %}
-        {% endif %}
-        {% set _ = _db.close() %}
-      {% endif %}
-    {% endif %}
-
     {% if session.get('username') %}
     <header class="app-header">
       <div class="app-header-left">
@@ -44,7 +29,7 @@
           <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
           <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
 
-          {% if _p2_enabled == 1 %}
+          {% if (session.get('p2_enabled') or 0)|int == 1 %}
             <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
           {% endif %}
 
