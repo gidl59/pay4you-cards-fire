@@ -1,14 +1,13 @@
 {% extends "base.html" %}
-{% block title %}500{% endblock %}
+{% block title %}Errore | Pay4You{% endblock %}
 {% block content %}
 <div class="page-main">
-  <div class="panel" style="max-width:760px;">
-    <div class="panel-head">
-      <h1 class="page-title">Errore</h1>
-      <div class="hint">Si è verificato un errore interno.</div>
-      <div class="toolbar">
-        <a class="btn" href="/">Home</a>
-      </div>
+  <div class="panel" style="width:min(700px,100%); padding:18px;">
+    <h1 class="page-title">Errore interno</h1>
+    <p class="hint">Il server ha riscontrato un problema. Riprova tra poco.</p>
+    <div style="margin-top:12px;">
+      <a class="btn primary" href="{{ url_for('dashboard') }}">Torna alla dashboard</a>
+      <a class="btn ghost" href="{{ url_for('login') }}">Login</a>
     </div>
   </div>
 </div>
