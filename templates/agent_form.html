@@ -10,16 +10,25 @@
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
       </h1>
 
+      {# Toolbar solo per AGENTE (non admin). Profilo 2 e Card P2 solo se abilitato #}
       {% if session.get('role') != 'admin' and agent %}
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-          <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+
+          {% if agent.profile2_enabled %}
+            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+          {% endif %}
+
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-          <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+
+          {% if agent.profile2_enabled %}
+            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+          {% endif %}
         </div>
       {% endif %}
     </div>
 
+    {# ACTION URL: admin e agent #}
     {% if session.get('role') == 'admin' %}
       {% if agent and not editing_profile2 %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
