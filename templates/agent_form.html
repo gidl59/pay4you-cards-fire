@@ -5,12 +5,6 @@
 <div class="page-main">
   <div class="panel" style="width:min(1120px,100%);">
 
-    {# --------------------------
-       FIX SICURO: p2_enabled può non esistere (quando agent è "view"/SimpleNamespace)
-       oppure può essere None. Quindi lo normalizziamo qui.
-       -------------------------- #}
-    {% set agent_p2_enabled = (agent.p2_enabled if agent is not none and agent.p2_enabled is defined else 0) | int %}
-
     <div class="panel-head">
       <h1 class="page-title">
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
@@ -25,17 +19,17 @@
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
 
-          {% if agent_p2_enabled == 1 %}
+          {% if agent.p2_enabled == 1 %}
             <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
           {% endif %}
 
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
-          {% if agent_p2_enabled == 1 %}
+          {% if agent.p2_enabled == 1 %}
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
           {% endif %}
 
-          {% if agent_p2_enabled != 1 %}
+          {% if agent.p2_enabled != 1 %}
             <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
               <button class="btn primary" type="submit">Attiva Profilo 2</button>
             </form>
@@ -52,7 +46,7 @@
           <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
-          {% if agent_p2_enabled == 1 %}
+          {% if agent.p2_enabled == 1 %}
             <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
           {% else %}
@@ -194,8 +188,50 @@
         </div>
 
         <div class="field">
-          <label>Logo (max 8MB)</label>
+          <label>Logo azienda (max 8MB)</label>
           <input type="file" name="logo" accept="image/*">
+        </div>
+
+        <!-- ✅ EFFETTI GRAFICI (rotazioni/flip) -->
+        <div class="field full details">
+          <details open>
+            <summary>Effetti grafici (rotazioni / tap)</summary>
+
+            <div class="grid-3" style="margin-top:10px;">
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="orbit_spin" value="1"
+                       {% if agent and (agent.orbit_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Logo dietro ruota
+              </label>
+
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="avatar_spin" value="1"
+                       {% if agent and (agent.avatar_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Foto ruota su se stessa
+              </label>
+
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="logo_spin" value="1"
+                       {% if agent and (agent.logo_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Logo (dietro) ruota su se stesso
+              </label>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="allow_flip" value="1"
+                       {% if agent and (agent.allow_flip or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Tap per flip (tocco sulla foto: mostra il logo)
+              </label>
+              <div class="hint" style="margin-top:6px;">
+                Se disattivo, la foto resta fissa stile concorrenza.
+              </div>
+            </div>
+          </details>
         </div>
 
         {% if not editing_profile2 %}
