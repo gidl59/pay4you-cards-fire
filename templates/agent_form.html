@@ -10,19 +10,49 @@
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
       </h1>
 
-      {# Toolbar solo per AGENTE (non admin). Profilo 2 e Card P2 solo se abilitato #}
+      {# --------------------------
+         TOOLBAR SOLO PER AGENTE (non admin)
+         Profilo 2 e Card P2 SOLO se abilitato
+         Se non abilitato: mostra pulsante "Attiva Profilo 2"
+         -------------------------- #}
       {% if session.get('role') != 'admin' and agent %}
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
 
-          {% if agent.profile2_enabled %}
+          {% if agent.p2_enabled == 1 %}
             <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
           {% endif %}
 
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
-          {% if agent.profile2_enabled %}
+          {% if agent.p2_enabled == 1 %}
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+          {% endif %}
+
+          {% if agent.p2_enabled != 1 %}
+            <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
+              <button class="btn primary" type="submit">Attiva Profilo 2</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {# --------------------------
+         TOOLBAR PER ADMIN (opzionale ma utile)
+         In admin, se sta modificando P1 e P2 non attivo -> mostra "Attiva Profilo 2"
+         -------------------------- #}
+      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
+        <div class="toolbar">
+          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+
+          {% if agent.p2_enabled == 1 %}
+            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
+            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
+              <button class="btn primary" type="submit">Attiva Profilo 2</button>
+            </form>
           {% endif %}
         </div>
       {% endif %}
@@ -46,7 +76,6 @@
     {% endif %}
 
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
-
       <div class="form-grid">
 
         {% if session.get('role') == 'admin' and not editing_profile2 %}
@@ -164,9 +193,7 @@
         </div>
 
         {% if not editing_profile2 %}
-          <div class="field full">
-            <div class="sep"></div>
-          </div>
+          <div class="field full"><div class="sep"></div></div>
 
           <div class="field">
             <label>Galleria (max 30 immagini)</label>
