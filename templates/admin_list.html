@@ -1,54 +1,107 @@
 {% extends "base.html" %}
-{% block title %}Admin | Pay4You{% endblock %}
+{% block title %}Dashboard | Pay4You{% endblock %}
 
 {% block content %}
 <div class="page-main">
-  <div class="panel">
-    <div class="panel-head">
-      <h1 class="page-title">Admin – Lista Card</h1>
-      <div class="toolbar">
-        <a class="btn" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
-        <a class="btn ghost" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+  <div class="admin-wrap">
+
+    <div class="admin-head">
+      <div>
+        <div class="admin-title">Dashboard</div>
+        <div class="admin-sub">
+          {% if is_admin %}Gestione completa{% else %}Gestione della tua card{% endif %}
+        </div>
+      </div>
+
+      <div class="admin-actions">
+        {% if is_admin %}
+          <a class="btn-pill" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
+          <a class="btn-pill ghost" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+        {% endif %}
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Slug</th>
-            <th style="width:420px;">Azioni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for a in agents %}
-          <tr>
-            <td><strong>{{ a.name }}</strong></td>
-            <td><span class="badge">{{ a.slug }}</span></td>
-            <td>
-              <div class="row-actions">
-                <a class="chip chip-gold" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri Card</a>
-                {% if a.has_p2 %}
-                  <a class="chip" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-                {% else %}
-                  <span class="chip disabled" title="Profilo 2 non compilato">Apri P2</span>
-                {% endif %}
-                <a class="chip" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica</a>
-                <a class="chip chip-blue" href="{{ url_for('admin_credentials', slug=a.slug) }}">Credenziali</a>
+    <div class="table-card">
+      <div class="table-row table-head">
+        <div>Nome</div>
+        <div>Slug</div>
+        <div>Azioni</div>
+      </div>
 
-                <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
-                      onsubmit="return confirm('Eliminare la card e le credenziali?');" style="display:inline;">
-                  <button class="chip chip-red" type="submit">Elimina</button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% for a in agents %}
+      <div class="table-row">
+        <div class="name-cell">{{ a.name }}</div>
+        <div class="slug-cell">{{ a.slug }}</div>
+
+        <div class="actions-cell">
+          <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
+
+          {% if (a.p2_enabled or 0)|int == 1 %}
+            <a class="btn-mini" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+          {% else %}
+            {% if is_admin %}
+              <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
+                <button class="btn-mini warn" type="submit">Attiva P2</button>
+              </form>
+            {% else %}
+              <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
+                <button class="btn-mini warn" type="submit">Attiva P2</button>
+              </form>
+            {% endif %}
+          {% endif %}
+
+          {% if is_admin %}
+            <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
+          {% else %}
+            <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica P1</a>
+          {% endif %}
+
+          {% if (a.p2_enabled or 0)|int == 1 %}
+            <a class="btn-mini ghost" href="{{ url_for('me_profile2') if not is_admin else url_for('edit_agent', slug=a.slug) }}">{% if is_admin %}Modifica{% else %}Modifica P2{% endif %}</a>
+            {% if is_admin %}
+              <!-- per admin, la modifica P2 la fai entrando come cliente: per ora restiamo semplici -->
+            {% endif %}
+          {% endif %}
+
+          <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR</button>
+
+          {% if is_admin %}
+            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
+              <button class="btn-mini danger" type="submit">Elimina</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
 
+    <div class="footer">
+      Realizzato © Pay4You da Giuseppe Di Lisio 2026
+    </div>
   </div>
 </div>
+
+<!-- QR modal -->
+<div id="qr-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
+    <img id="qr-img" src="" alt="QR" style="width:100%;max-width:420px;display:block;margin:8px auto;border-radius:14px;">
+    <button class="modal-close-btn" type="button" onclick="closeQrModal()">Chiudi</button>
+  </div>
+</div>
+
+<script>
+  function openQrModal(src){
+    const m = document.getElementById('qr-modal');
+    const img = document.getElementById('qr-img');
+    img.src = src;
+    m.style.display = 'flex';
+  }
+  function closeQrModal(){
+    const m = document.getElementById('qr-modal');
+    const img = document.getElementById('qr-img');
+    img.src = '';
+    m.style.display = 'none';
+  }
+</script>
 {% endblock %}
