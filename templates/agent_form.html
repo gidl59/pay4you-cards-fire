@@ -5,6 +5,12 @@
 <div class="page-main">
   <div class="panel" style="width:min(1120px,100%);">
 
+    {# --------------------------
+       FIX SICURO: p2_enabled può non esistere (quando agent è "view"/SimpleNamespace)
+       oppure può essere None. Quindi lo normalizziamo qui.
+       -------------------------- #}
+    {% set agent_p2_enabled = (agent.p2_enabled if agent is not none and agent.p2_enabled is defined else 0) | int %}
+
     <div class="panel-head">
       <h1 class="page-title">
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
@@ -19,17 +25,17 @@
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
 
-          {% if agent.p2_enabled == 1 %}
+          {% if agent_p2_enabled == 1 %}
             <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
           {% endif %}
 
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
-          {% if agent.p2_enabled == 1 %}
+          {% if agent_p2_enabled == 1 %}
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
           {% endif %}
 
-          {% if agent.p2_enabled != 1 %}
+          {% if agent_p2_enabled != 1 %}
             <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
               <button class="btn primary" type="submit">Attiva Profilo 2</button>
             </form>
@@ -38,7 +44,7 @@
       {% endif %}
 
       {# --------------------------
-         TOOLBAR PER ADMIN (opzionale ma utile)
+         TOOLBAR PER ADMIN
          In admin, se sta modificando P1 e P2 non attivo -> mostra "Attiva Profilo 2"
          -------------------------- #}
       {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
@@ -46,7 +52,7 @@
           <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
-          {% if agent.p2_enabled == 1 %}
+          {% if agent_p2_enabled == 1 %}
             <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
           {% else %}
