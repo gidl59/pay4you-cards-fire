@@ -165,8 +165,12 @@ def t(lang: str, key: str) -> str:
 def mb_to_bytes(mb: int) -> int:
     return int(mb) * 1024 * 1024
 
+def form_checkbox_int(name: str) -> int:
+    # checkbox: se presente => "1"
+    return 1 if request.form.get(name) in ("1", "on", "true", "True") else 0
+
 app = Flask(__name__)
-app.secret_key = APP_SECRET
+app.secret_key = os.getenv("APP_SECRET", "dev_secret")
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # limite request complessiva
 
 DB_URL = "sqlite:////var/data/data.db"
@@ -221,6 +225,12 @@ class Agent(Base):
     # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
 
+    # Effetti grafici P1 (P2 salva in profiles_json)
+    orbit_spin = Column(Integer, nullable=True)     # 0/1
+    avatar_spin = Column(Integer, nullable=True)    # 0/1
+    logo_spin = Column(Integer, nullable=True)      # 0/1
+    allow_flip = Column(Integer, nullable=True)     # 0/1
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
@@ -247,6 +257,11 @@ ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
+
+ensure_sqlite_column("agents", "orbit_spin", "INTEGER")
+ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
+ensure_sqlite_column("agents", "logo_spin", "INTEGER")
+ensure_sqlite_column("agents", "allow_flip", "INTEGER")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -481,10 +496,17 @@ def agent_to_view(ag: Agent):
         pdf1_url=clean_str(ag.pdf1_url),
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
         profiles_json=getattr(ag, "profiles_json", None),
+
+        orbit_spin=int(getattr(ag, "orbit_spin", 0) or 0),
+        avatar_spin=int(getattr(ag, "avatar_spin", 0) or 0),
+        logo_spin=int(getattr(ag, "logo_spin", 0) or 0),
+        allow_flip=int(getattr(ag, "allow_flip", 0) or 0),
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    """View per Profilo 2 completamente VUOTO (NON copia P1)."""
+    """
+    View per Profilo 2 completamente VUOTO (NON copia P1).
+    """
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -522,18 +544,12 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
 
         p2_enabled=1,
         profiles_json=ag.profiles_json,
-    )
 
-def refresh_session_p2_enabled_for_client(agent_slug: str):
-    """Aggiorna session['p2_enabled'] leggendo l'agente dal DB."""
-    session["p2_enabled"] = 0
-    if not agent_slug:
-        return
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=agent_slug).first()
-    if ag and int(getattr(ag, "p2_enabled", 0) or 0) == 1:
-        session["p2_enabled"] = 1
-    db.close()
+        orbit_spin=0,
+        avatar_spin=0,
+        logo_spin=0,
+        allow_flip=0,
+    )
 
 # ===================== ROUTES =====================
 
@@ -560,15 +576,12 @@ def login_post():
     if not username or not password:
         return render_template("login.html", error="Inserisci username e password")
 
-    # ADMIN
     if username == "admin" and password == ADMIN_PASSWORD:
         session["username"] = "admin"
         session["role"] = "admin"
         session["agent_slug"] = None
-        session["p2_enabled"] = 0
         return redirect(url_for("dashboard"))
 
-    # CLIENT
     db = SessionLocal()
     u = db.query(User).filter_by(username=username, password=password).first()
     db.close()
@@ -578,10 +591,6 @@ def login_post():
     session["username"] = u.username
     session["role"] = u.role
     session["agent_slug"] = u.agent_slug
-
-    # ✅ fondamentale per mostrare/nascondere "Profilo 2" in base.html
-    refresh_session_p2_enabled_for_client(u.agent_slug)
-
     return redirect(url_for("dashboard"))
 
 @app.get("/logout")
@@ -604,101 +613,14 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
-        # ✅ mantieni session aggiornata anche se P2 è stato attivato da admin
-        refresh_session_p2_enabled_for_client(slug)
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
-# ---------- ADMIN HOME ----------
+# ---------- ADMIN CRUD ----------
 @app.get("/admin", endpoint="admin_home")
 @admin_required
 def admin_home():
     return redirect(url_for("dashboard"))
 
-# ---------- ADMIN: EXPORT JSON ----------
-@app.get("/admin/export/agents.json", endpoint="admin_export_agents_json")
-@admin_required
-def admin_export_agents_json():
-    db = SessionLocal()
-    agents = db.query(Agent).order_by(Agent.name).all()
-    out = []
-    for ag in agents:
-        out.append({
-            "slug": ag.slug,
-            "name": ag.name,
-            "company": ag.company,
-            "role": ag.role,
-            "bio": ag.bio,
-            "phone_mobile": ag.phone_mobile,
-            "phone_mobile2": ag.phone_mobile2,
-            "phone_office": ag.phone_office,
-            "whatsapp": ag.whatsapp,
-            "emails": ag.emails,
-            "websites": ag.websites,
-            "pec": ag.pec,
-            "piva": ag.piva,
-            "sdi": ag.sdi,
-            "addresses": ag.addresses,
-            "facebook": ag.facebook,
-            "instagram": ag.instagram,
-            "linkedin": ag.linkedin,
-            "tiktok": ag.tiktok,
-            "telegram": ag.telegram,
-            "photo_url": ag.photo_url,
-            "logo_url": ag.logo_url,
-            "gallery_urls": ag.gallery_urls,
-            "video_urls": ag.video_urls,
-            "pdf1_url": ag.pdf1_url,
-            "p2_enabled": int(getattr(ag, "p2_enabled", 0) or 0),
-            "profiles_json": ag.profiles_json,
-            "i18n_json": ag.i18n_json,
-        })
-    db.close()
-    return Response(json.dumps(out, ensure_ascii=False, indent=2), mimetype="application/json; charset=utf-8")
-
-# ---------- ADMIN: CREDENTIALS JSON ----------
-@app.get("/admin/<slug>/credentials", endpoint="admin_credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=slug).first()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-    if not u:
-        # se manca, rigenero al volo
-        db2 = SessionLocal()
-        pw = generate_password()
-        db2.add(User(username=slug, password=pw, role="client", agent_slug=slug))
-        db2.commit()
-        db2.close()
-        username_out = slug
-        password_out = pw
-    else:
-        username_out = u.username
-        password_out = u.password
-
-    base = get_base_url()
-    payload = {
-        "slug": slug,
-        "login_url": f"{base}/login",
-        "card_p1": f"{base}/{slug}",
-        "card_p2": f"{base}/{slug}?p=p2",
-        "username": username_out,
-        "password": password_out,
-        "p2_enabled": int(getattr(ag, "p2_enabled", 0) or 0),
-    }
-    return Response(json.dumps(payload, ensure_ascii=False, indent=2), mimetype="application/json; charset=utf-8")
-
-# ---------- ADMIN BROADCAST (placeholder per non avere 404) ----------
-@app.get("/admin/broadcast", endpoint="admin_broadcast")
-@admin_required
-def admin_broadcast():
-    # Template esiste: admin_broadcast.html
-    return render_template("admin_broadcast.html")
-
-# ---------- ADMIN CRUD ----------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -717,7 +639,15 @@ def create_agent():
         db.close()
         return "Slug già esistente", 400
 
-    ag = Agent(slug=slug, name=name, p2_enabled=0)
+    ag = Agent(
+        slug=slug,
+        name=name,
+        p2_enabled=0,
+        orbit_spin=form_checkbox_int("orbit_spin"),
+        avatar_spin=form_checkbox_int("avatar_spin"),
+        logo_spin=form_checkbox_int("logo_spin"),
+        allow_flip=form_checkbox_int("allow_flip"),
+    )
 
     for k in ["company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
@@ -805,7 +735,7 @@ def edit_agent(slug):
     db.close()
     if not ag:
         abort(404)
-    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
+    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/admin/<slug>/edit")
 @admin_required
@@ -821,6 +751,11 @@ def update_agent(slug):
               "emails","websites","pec","piva","sdi","addresses",
               "facebook","instagram","linkedin","tiktok","telegram"]:
         setattr(ag, k, clean_str(request.form.get(k)))
+
+    ag.orbit_spin = form_checkbox_int("orbit_spin")
+    ag.avatar_spin = form_checkbox_int("avatar_spin")
+    ag.logo_spin = form_checkbox_int("logo_spin")
+    ag.allow_flip = form_checkbox_int("allow_flip")
 
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
@@ -907,8 +842,7 @@ def me_edit():
     db.close()
     if not ag:
         abort(404)
-    refresh_session_p2_enabled_for_client(slug)
-    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
+    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/me/edit")
 @login_required
@@ -926,6 +860,11 @@ def me_edit_post():
               "emails","websites","pec","piva","sdi","addresses",
               "facebook","instagram","linkedin","tiktok","telegram"]:
         setattr(ag, k, clean_str(request.form.get(k)))
+
+    ag.orbit_spin = form_checkbox_int("orbit_spin")
+    ag.avatar_spin = form_checkbox_int("avatar_spin")
+    ag.logo_spin = form_checkbox_int("logo_spin")
+    ag.allow_flip = form_checkbox_int("allow_flip")
 
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
@@ -1003,10 +942,7 @@ def me_activate_p2():
 
     ag.p2_enabled = 1
 
-    # ✅ session per menu
-    session["p2_enabled"] = 1
-
-    # ✅ P2 deve partire VUOTO (nessuna copia da P1)
+    # P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -1053,8 +989,6 @@ def me_profile2():
     if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
         return redirect(url_for("me_edit"))
 
-    session["p2_enabled"] = 1
-
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
@@ -1062,10 +996,19 @@ def me_profile2():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url"]:
-        v = clean_str(p2.get(k))
-        if v:
-            setattr(view, k, v)
+              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+        v = p2.get(k)
+        if v is None:
+            continue
+        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+            try:
+                setattr(view, k, int(v))
+            except Exception:
+                pass
+        else:
+            vv = clean_str(v)
+            if vv:
+                setattr(view, k, vv)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
@@ -1081,13 +1024,17 @@ def me_profile2_post():
         db.close()
         abort(404)
     ag.p2_enabled = 1
-    session["p2_enabled"] = 1
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
         payload[k] = clean_str(request.form.get(k))
+
+    payload["orbit_spin"] = form_checkbox_int("orbit_spin")
+    payload["avatar_spin"] = form_checkbox_int("avatar_spin")
+    payload["logo_spin"] = form_checkbox_int("logo_spin")
+    payload["allow_flip"] = form_checkbox_int("allow_flip")
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -1096,7 +1043,7 @@ def me_profile2_post():
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1126,10 +1073,19 @@ def admin_profile2(slug):
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url"]:
-        v = clean_str(p2.get(k))
-        if v:
-            setattr(view, k, v)
+              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+        v = p2.get(k)
+        if v is None:
+            continue
+        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+            try:
+                setattr(view, k, int(v))
+            except Exception:
+                pass
+        else:
+            vv = clean_str(v)
+            if vv:
+                setattr(view, k, vv)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
@@ -1151,6 +1107,11 @@ def admin_profile2_post(slug):
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
         payload[k] = clean_str(request.form.get(k))
 
+    payload["orbit_spin"] = form_checkbox_int("orbit_spin")
+    payload["avatar_spin"] = form_checkbox_int("avatar_spin")
+    payload["logo_spin"] = form_checkbox_int("logo_spin")
+    payload["allow_flip"] = form_checkbox_int("allow_flip")
+
     photo = request.files.get("photo")
     logo = request.files.get("logo")
     if photo and photo.filename:
@@ -1158,13 +1119,37 @@ def admin_profile2_post(slug):
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
     db.close()
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
+
+# ---------- ADMIN: INVIA CODICI (HTML) ----------
+@app.get("/admin/<slug>/credentials")
+@admin_required
+def admin_credentials_html(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    u = db.query(User).filter_by(username=slug).first()
+    db.close()
+    if not ag or not u:
+        abort(404)
+
+    base = get_base_url()
+    login_url = f"{base}/login"
+    card_url = f"{base}/{slug}"
+
+    return render_template(
+        "credentials.html",
+        username=u.username,
+        password=u.password,
+        login_url=login_url,
+        card_url=card_url
+    )
 
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
@@ -1183,20 +1168,27 @@ def public_card(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2")
 
-    # P1
     if p_key != "p2":
         ag_view = agent_to_view(ag)
         ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
-    # P2 (vuoto + solo campi P2)
     else:
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-                      "photo_url","logo_url"]:
-                v = clean_str(p2.get(k))
-                if v:
-                    setattr(ag_view, k, v)
+                      "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+                v = p2.get(k)
+                if v is None:
+                    continue
+                if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+                    try:
+                        setattr(ag_view, k, int(v))
+                    except Exception:
+                        pass
+                else:
+                    vv = clean_str(v)
+                    if vv:
+                        setattr(ag_view, k, vv)
 
     gallery = (ag.gallery_urls.split("|") if clean_str(ag.gallery_urls) else [])
     videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
