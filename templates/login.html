@@ -4,34 +4,30 @@
 {% block content %}
 <div class="page-main">
   <div class="login-card">
-    <div class="login-title">Accesso</div>
-    <div class="login-sub">Inserisci le credenziali per entrare nell’area riservata.</div>
+    <h1 class="page-title" style="margin-bottom:10px;">Accesso</h1>
 
-    <form method="post" action="{{ url_for('login_post') }}" class="login-form">
-      <div class="field full">
-        <label>Username</label>
-        <input type="text" name="username" autocomplete="username" placeholder="es. giuseppe">
-      </div>
+    {% if error %}
+      <div class="flash" style="margin:10px 0;">{{ error }}</div>
+    {% endif %}
 
-      <div class="field full">
-        <label>Password</label>
-        <input type="password" name="password" autocomplete="current-password" placeholder="••••••••">
-      </div>
-
-      {% if error %}
-        <div class="login-error">{{ error }}</div>
-      {% endif %}
-
-      <button class="btn primary" type="submit">Entra</button>
-
-      <div class="login-hint">
-        Se non hai le credenziali, contatta Pay4You.
+    <form method="post" action="{{ url_for('login_post') }}">
+      <div class="form-grid" style="padding:0; grid-template-columns:1fr; gap:12px;">
+        <div class="field">
+          <label>Username</label>
+          <input name="username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn primary" type="submit">Entra</button>
+          <div class="hint" style="align-self:center;">Se non hai le credenziali, contatta Pay4You.</div>
+        </div>
       </div>
     </form>
 
-    <div class="footer footer-soft">
-      Realizzato © Pay4You da Giuseppe Di Lisio 2026
-    </div>
+    <div class="footer">Realizzato © Pay4You da Giuseppe Di Lisio 2026</div>
   </div>
 </div>
 {% endblock %}
