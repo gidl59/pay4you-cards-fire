@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>{{ ag.name }} | Pay4You Card</title>
+  <title>{{ (ag.name or "Pay4You Card") }} | Pay4You</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
@@ -22,8 +22,7 @@
       <div class="hero">
         <div class="avatar-wrap">
 
-          {# ORBIT messo PRIMA del flip: così resta dietro nella maggior parte dei browser.
-             (Il fix definitivo è nel CSS con z-index.) #}
+          {# ORBIT dietro: z-index sistemato nel CSS #}
           {% if the_logo %}
             <div class="orbit">
               <img src="{{ the_logo }}" alt="Logo orbit">
@@ -125,12 +124,12 @@
           </button>
         </div>
 
-        {# Toggle tema SPOSTATO QUI (vicino ad Azioni) con bottoni più compatti #}
-        <div class="theme-toggle" style="margin-top:10px;">
-          <div class="theme-label" style="min-width:auto;">{{ t_func('theme') }}:</div>
-          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
-          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
-          <button class="theme-pill" style="padding:6px 10px; font-size:12px;" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
+        <!-- Tema spostato vicino ad Azioni -->
+        <div class="theme-toggle theme-toggle-compact">
+          <div class="theme-label">{{ t_func('theme') }}:</div>
+          <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
+          <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
+          <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
         </div>
 
         <div class="actions-hint">Suggerimento: salva il contatto e condividi la card ai tuoi clienti.</div>
@@ -247,9 +246,7 @@
       <button class="modal-x" type="button" onclick="closeMediaModal()">✕</button>
 
       <img id="mImg" src="" alt="media" style="display:none;">
-      <video id="mVideo" controls playsinline webkit-playsinline style="display:none;">
-        <source id="mVideoSrc" src="">
-      </video>
+      <video id="mVideo" controls playsinline webkit-playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;" title="pdf"></iframe>
 
       <button class="modal-close" type="button" onclick="closeMediaModal()">{{ t_func('close') }}</button>
@@ -269,7 +266,6 @@
       const modal = document.getElementById('mediaModal');
       const img = document.getElementById('mImg');
       const vid = document.getElementById('mVideo');
-      const vidSrc = document.getElementById('mVideoSrc');
       const pdf = document.getElementById('mPdf');
 
       img.style.display='none';
@@ -279,12 +275,11 @@
       img.src='';
       pdf.src='';
       try{ vid.pause(); }catch(e){}
-      vidSrc.src='';
       vid.removeAttribute('src');
+      vid.load();
 
       if(type === 'video'){
-        // iOS spesso vuole src diretto sul tag video, non solo sul <source>
-        vidSrc.src = src;
+        // iOS: più stabile così
         vid.src = src;
         vid.load();
         vid.style.display='block';
@@ -302,13 +297,12 @@
     function closeMediaModal(){
       const modal = document.getElementById('mediaModal');
       const vid = document.getElementById('mVideo');
-      const vidSrc = document.getElementById('mVideoSrc');
       const pdf = document.getElementById('mPdf');
       const img = document.getElementById('mImg');
 
       try{ vid.pause(); }catch(e){}
-      vidSrc.src='';
       vid.removeAttribute('src');
+      vid.load();
       pdf.src='';
       img.src='';
       modal.style.display='none';
@@ -334,7 +328,7 @@
     });
     applyTheme(getStoredTheme());
 
-    // Video thumbs: prova a forzare un frame iniziale su mobile (iOS è “capriccioso”)
+    // Video thumbs: best effort (su iOS può comunque non mostrare frame)
     function initVideoThumbs(){
       document.querySelectorAll('video.video-mini').forEach(v=>{
         try{
@@ -345,7 +339,6 @@
           v.preload = 'metadata';
 
           v.addEventListener('loadedmetadata', ()=>{
-            // prova a saltare di pochissimo per far renderizzare un frame
             try{
               if (v.duration && v.duration > 0.2) v.currentTime = 0.1;
             }catch(e){}
@@ -355,7 +348,6 @@
             try{ v.pause(); }catch(e){}
           });
 
-          // alcuni device caricano solo se "touch": prova comunque a chiamare load
           v.load();
         }catch(e){}
       });
