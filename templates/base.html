@@ -13,30 +13,39 @@
 </head>
 <body>
   <div class="app-shell">
-    {% if session.get('username') %}
-      <header class="app-header">
-        <div class="app-header-left">
-          <span class="app-logo-text">Area riservata</span>
-        </div>
 
-        <div class="app-header-right">
-          {% if session.get('role') == 'admin' %}
-            <a href="{{ url_for('dashboard') }}" class="header-link">Lista Card</a>
-            <a href="{{ url_for('admin_export_agents_json') }}" class="header-link">Export JSON</a>
-            <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
-          {% else %}
-            <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
-            <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
-            <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
-            <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
-          {% endif %}
-        </div>
-      </header>
+    {% if session.get('username') %}
+    <header class="app-header">
+      <div class="app-header-left">
+        <span class="app-logo-text">Area riservata</span>
+      </div>
+
+      <div class="app-header-right">
+        {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
+          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+        {% else %}
+          <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
+          <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
+          <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
+        {% endif %}
+      </div>
+    </header>
     {% endif %}
 
     <main class="app-main">
+      {% with messages = get_flashed_messages(with_categories=false) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for msg in messages %}
+              <div class="flash">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
       {% block content %}{% endblock %}
     </main>
+
   </div>
 </body>
 </html>
