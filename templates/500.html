@@ -2,10 +2,10 @@
 {% block title %}500{% endblock %}
 {% block content %}
 <div class="page-main">
-  <div class="admin-card" style="max-width:760px;">
-    <h1 class="admin-title">Errore</h1>
-    <p>Si è verificato un errore interno.</p>
-    <a class="header-link" href="/">Home</a>
+  <div class="login-card" style="max-width:760px;">
+    <div class="login-title">Errore</div>
+    <div class="login-sub">Si è verificato un errore interno.</div>
+    <a class="btn ghost" href="{{ url_for('home') }}">Home</a>
   </div>
 </div>
 {% endblock %}
