@@ -15,8 +15,8 @@
 
       <div class="admin-actions">
         {% if is_admin %}
-          <a class="btn-pill" href="{{ url_for('new_agent') }}">➕ Nuova card</a>
-          <a class="btn-pill ghost" href="{{ url_for('admin_export_agents_json') }}">⬇️ Export JSON</a>
+          <a class="btn-pill" href="/admin/new">➕ Nuova card</a>
+          <a class="btn-pill ghost" href="/admin/export_agents.json">⬇️ Export JSON</a>
         {% endif %}
       </div>
     </div>
@@ -40,30 +40,30 @@
             <a class="btn-mini" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
           {% else %}
             {% if is_admin %}
-              <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
+              <form method="post" action="/admin/{{ a.slug }}/activate_p2" style="display:inline;">
                 <button class="btn-mini warn" type="submit">Attiva P2</button>
               </form>
             {% else %}
-              <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
+              <form method="post" action="/me/activate_p2" style="display:inline;">
                 <button class="btn-mini warn" type="submit">Attiva P2</button>
               </form>
             {% endif %}
           {% endif %}
 
           {% if is_admin %}
-            <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
+            <a class="btn-mini ghost" href="/admin/{{ a.slug }}/edit">Modifica P1</a>
           {% else %}
-            <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica P1</a>
+            <a class="btn-mini ghost" href="/me/edit">Modifica P1</a>
           {% endif %}
 
           {% if (a.p2_enabled or 0)|int == 1 and (not is_admin) %}
-            <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica P2</a>
+            <a class="btn-mini ghost" href="/me/profile2">Modifica P2</a>
           {% endif %}
 
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR</button>
 
           {% if is_admin %}
-            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
+            <form method="post" action="/admin/{{ a.slug }}/delete" onsubmit="return confirm('Eliminare?')" style="display:inline;">
               <button class="btn-mini danger" type="submit">Elimina</button>
             </form>
           {% endif %}
