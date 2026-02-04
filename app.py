@@ -2,7 +2,6 @@ import os
 import re
 import uuid
 import json
-from datetime import datetime
 from io import BytesIO
 from types import SimpleNamespace
 import urllib.parse
@@ -10,7 +9,7 @@ import urllib.parse
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, session, abort, Response,
-    send_from_directory, flash
+    send_from_directory
 )
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
@@ -50,10 +49,22 @@ I18N = {
         "videos": "Video",
         "back": "Indietro",
     },
-    "en": {"save_contact": "Save contact", "scan_qr": "Scan QR", "contacts": "Contacts", "social": "Social", "documents": "Documents", "gallery": "Gallery", "videos": "Videos", "back": "Back"},
-    "fr": {"save_contact": "Enregistrer le contact", "scan_qr": "Scanner le QR", "contacts": "Contacts", "social": "Réseaux sociaux", "documents": "Documents", "gallery": "Galerie", "videos": "Vidéos", "back": "Retour"},
-    "es": {"save_contact": "Guardar contacto", "scan_qr": "Escanear QR", "contacts": "Contactos", "social": "Redes sociales", "documents": "Documentos", "gallery": "Galería", "videos": "Vídeos", "back": "Atrás"},
-    "de": {"save_contact": "Kontakt speichern", "scan_qr": "QR scannen", "contacts": "Kontakte", "social": "Social", "documents": "Dokumente", "gallery": "Galerie", "videos": "Videos", "back": "Zurück"},
+    "en": {
+        "save_contact": "Save contact", "scan_qr": "Scan QR", "contacts": "Contacts",
+        "social": "Social", "documents": "Documents", "gallery": "Gallery", "videos": "Videos", "back": "Back"
+    },
+    "fr": {
+        "save_contact": "Enregistrer le contact", "scan_qr": "Scanner le QR", "contacts": "Contacts",
+        "social": "Réseaux sociaux", "documents": "Documents", "gallery": "Galerie", "videos": "Vidéos", "back": "Retour"
+    },
+    "es": {
+        "save_contact": "Guardar contacto", "scan_qr": "Escanear QR", "contacts": "Contactos",
+        "social": "Redes sociales", "documents": "Documentos", "gallery": "Galería", "videos": "Vídeos", "back": "Atrás"
+    },
+    "de": {
+        "save_contact": "Kontakt speichern", "scan_qr": "QR scannen", "contacts": "Kontakte",
+        "social": "Social", "documents": "Dokumente", "gallery": "Galerie", "videos": "Videos", "back": "Zurück"
+    },
 }
 
 def t(lang: str, key: str) -> str:
@@ -107,16 +118,16 @@ class Agent(Base):
     addresses = Column(Text, nullable=True)
 
     photo_url = Column(String, nullable=True)
-    logo_url = Column(String, nullable=True)   # nuovo
-    extra_logo_url = Column(String, nullable=True)  # compat vecchia
+    logo_url = Column(String, nullable=True)            # nuovo
+    extra_logo_url = Column(String, nullable=True)      # compat vecchia
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
     # Multi-utente
-    p2_enabled = Column(Integer, nullable=True)     # 0/1
-    profiles_json = Column(Text, nullable=True)     # salva profilo 2
+    p2_enabled = Column(Integer, nullable=True, default=0)  # 0/1
+    profiles_json = Column(Text, nullable=True)             # salva profilo 2
 
     # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
@@ -144,7 +155,7 @@ ensure_sqlite_column("agents", "logo_url", "TEXT")
 ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
 ensure_sqlite_column("agents", "phone_office", "TEXT")
 ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
-ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
+ensure_sqlite_column("agents", "p2_enabled", "INTEGER DEFAULT 0")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
 
@@ -309,16 +320,14 @@ def normalize_whatsapp_link(raw: str) -> str:
     return ""
 
 def safe_url(u: str) -> str:
-    """Mostra solo URL sensate (evita stringhe rotte tipo 'lolo...' su LinkedIn)."""
     u = clean_str(u)
     if not u:
         return ""
     if u.startswith("http://") or u.startswith("https://"):
         return u
-    # accetta telegram @user
     if u.startswith("@"):
         return f"https://t.me/{u[1:]}"
-    return ""  # se non è url, non lo pubblichiamo
+    return ""
 
 def parse_profiles_json(raw: str):
     data = safe_json_load(raw, [])
@@ -441,17 +450,15 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
-        # dashboard “client”: mostra solo la sua riga
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
-# ---------- ADMIN CRUD ----------
+# ---------- /admin = alias ----------
 @app.get("/admin", endpoint="admin_home")
 @admin_required
 def admin_home():
-    db = SessionLocal()
-    agents = db.query(Agent).order_by(Agent.name).all()
-    db.close()
-    return render_template("admin_list.html", agents=agents)
+    return redirect(url_for("dashboard"))
+
+# ---------- ADMIN CRUD ----------
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -472,7 +479,6 @@ def create_agent():
 
     ag = Agent(slug=slug, name=name, p2_enabled=0)
 
-    # base fields
     for k in ["company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
               "facebook","instagram","linkedin","tiktok","telegram"]:
@@ -668,24 +674,6 @@ def admin_export_agents_json():
     resp.headers["Content-Disposition"] = 'attachment; filename="agents-export.json"'
     return resp
 
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=slug).first()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not u or not ag:
-        abort(404)
-    base = get_base_url()
-    return {
-        "username": u.username,
-        "password": u.password,
-        "dashboard": f"{base}/dashboard",
-        "card": f"{base}/{slug}"
-    }
-
 # ---------- CLIENT EDIT P1 ----------
 @app.get("/me/edit")
 @login_required
@@ -742,41 +730,6 @@ def me_edit_post():
     if logo and logo.filename:
         ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    # gallery replace se carichi
-    gallery_files = request.files.getlist("gallery")
-    if gallery_files and any(g.filename for g in gallery_files):
-        gallery_urls = []
-        for f in gallery_files[:MAX_GALLERY_IMAGES]:
-            if f and f.filename:
-                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
-                if u:
-                    gallery_urls.append(u)
-        if gallery_urls:
-            ag.gallery_urls = "|".join(gallery_urls)
-
-    # videos replace se carichi
-    video_files = request.files.getlist("videos")
-    if video_files and any(v.filename for v in video_files):
-        video_urls = []
-        for f in video_files[:MAX_VIDEOS]:
-            if f and f.filename:
-                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
-                if u:
-                    video_urls.append(u)
-        if video_urls:
-            ag.video_urls = "|".join(video_urls)
-
-    # pdf append
-    pdf_entries = []
-    for i in range(1, 13):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
-    if pdf_entries:
-        ag.pdf1_url = "|".join(pdf_entries)
-
     db.commit()
     db.close()
     return redirect(url_for("me_edit"))
@@ -800,22 +753,6 @@ def me_activate_p2():
     db.close()
     return redirect(url_for("me_profile2"))
 
-@app.post("/admin/<slug>/activate_p2")
-@admin_required
-def admin_activate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-    ag.p2_enabled = 1
-    if not ag.profiles_json:
-        ag.profiles_json = json.dumps([{"key": "p2"}], ensure_ascii=False)
-    db.commit()
-    db.close()
-    return redirect(url_for("dashboard"))
-
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
@@ -832,8 +769,8 @@ def me_profile2():
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
     view = agent_to_view(ag)
-    # sovrascrive con i dati di p2 se presenti
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
               "photo_url","logo_url"]:
@@ -862,7 +799,6 @@ def me_profile2_post():
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
         payload[k] = clean_str(request.form.get(k))
 
-    # uploads p2
     photo = request.files.get("photo")
     logo = request.files.get("logo")
     if photo and photo.filename:
@@ -893,7 +829,6 @@ def public_card(slug):
     ag_view = agent_to_view(ag)
     ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
 
-    # se p2 richiesto ed è abilitato, sovrascrive con p2
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2")
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
@@ -922,6 +857,7 @@ def public_card(slug):
         mobiles.append(ag_view.phone_mobile2.strip())
 
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
+
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
     if p_key:
         qr_url += f"&p={urllib.parse.quote(p_key)}"
