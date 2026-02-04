@@ -2,10 +2,10 @@
 {% block title %}404{% endblock %}
 {% block content %}
 <div class="page-main">
-  <div class="panel" style="max-width:760px;">
-    <h1 class="page-title">404</h1>
-    <p class="muted">Pagina non trovata.</p>
-    <a class="btn" href="/">Home</a>
+  <div class="login-card" style="max-width:760px;">
+    <div class="login-title">404</div>
+    <div class="login-sub">Pagina non trovata.</div>
+    <a class="btn ghost" href="{{ url_for('home') }}">Home</a>
   </div>
 </div>
 {% endblock %}
