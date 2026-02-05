@@ -166,12 +166,11 @@ def mb_to_bytes(mb: int) -> int:
     return int(mb) * 1024 * 1024
 
 def form_checkbox_int(name: str) -> int:
-    # checkbox: se presente => "1"
     return 1 if request.form.get(name) in ("1", "on", "true", "True") else 0
 
 app = Flask(__name__)
 app.secret_key = os.getenv("APP_SECRET", "dev_secret")
-app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # limite request complessiva
+app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
 
 DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -407,6 +406,12 @@ def parse_pdfs(raw: str):
             filename = os.path.basename(urllib.parse.urlparse(url).path) or "Documento"
             pdfs.append({"name": filename, "url": url})
     return pdfs
+
+def parse_media_list(raw: str):
+    raw = clean_str(raw)
+    if not raw:
+        return []
+    return [x.strip() for x in raw.split("|") if clean_str(x)]
 
 def normalize_whatsapp_link(raw: str) -> str:
     t0 = clean_str(raw)
@@ -926,7 +931,7 @@ def me_edit_post():
     flash("Profilo 1 salvato.", "success")
     return redirect(url_for("me_edit"))
 
-# ---------- P2: attiva + edit ----------
+# ---------- P2: attiva + disattiva + edit ----------
 @app.post("/me/activate_p2")
 @login_required
 def me_activate_p2():
@@ -953,6 +958,25 @@ def me_activate_p2():
     flash("Profilo 2 attivato (vuoto).", "success")
     return redirect(url_for("me_profile2"))
 
+@app.post("/me/deactivate_p2")
+@login_required
+def me_deactivate_p2():
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    slug = current_client_slug()
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    db.commit()
+    db.close()
+    flash("Profilo 2 disattivato.", "success")
+    return redirect(url_for("me_edit"))
+
 @app.post("/admin/<slug>/activate_p2")
 @admin_required
 def admin_activate_p2(slug):
@@ -973,6 +997,22 @@ def admin_activate_p2(slug):
     db.commit()
     db.close()
     flash("Profilo 2 attivato (vuoto).", "success")
+    return redirect(url_for("dashboard"))
+
+@app.post("/admin/<slug>/deactivate_p2")
+@admin_required
+def admin_deactivate_p2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    db.commit()
+    db.close()
+    flash("Profilo 2 disattivato.", "success")
     return redirect(url_for("dashboard"))
 
 @app.get("/me/profile2")
@@ -996,7 +1036,8 @@ def me_profile2():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+              "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1007,7 +1048,7 @@ def me_profile2():
                 pass
         else:
             vv = clean_str(v)
-            if vv:
+            if vv is not None:
                 setattr(view, k, vv)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
@@ -1043,7 +1084,44 @@ def me_profile2_post():
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    # MEDIA P2 (separati!)
+    gallery_files = request.files.getlist("gallery")
+    if gallery_files and any(g.filename for g in gallery_files):
+        gallery_urls = []
+        for f in gallery_files[:MAX_GALLERY_IMAGES]:
+            if f and f.filename:
+                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
+                if u:
+                    gallery_urls.append(u)
+        if gallery_urls:
+            payload["gallery_urls"] = "|".join(gallery_urls)
+
+    video_files = request.files.getlist("videos")
+    if video_files and any(v.filename for v in video_files):
+        video_urls = []
+        for f in video_files[:MAX_VIDEOS]:
+            if f and f.filename:
+                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
+                if u:
+                    video_urls.append(u)
+        if video_urls:
+            payload["video_urls"] = "|".join(video_urls)
+
+    pdf_entries = []
+    for i in range(1, 13):
+        f = request.files.get(f"pdf{i}")
+        if f and f.filename:
+            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
+            if u:
+                pdf_entries.append(f"{f.filename}||{u}")
+    if pdf_entries:
+        payload["pdf1_url"] = "|".join(pdf_entries)
+
+    profiles = upsert_profile(
+        profiles,
+        "p2",
+        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
+    )
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1073,7 +1151,8 @@ def admin_profile2(slug):
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+              "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1084,7 +1163,7 @@ def admin_profile2(slug):
                 pass
         else:
             vv = clean_str(v)
-            if vv:
+            if vv is not None:
                 setattr(view, k, vv)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
@@ -1119,7 +1198,44 @@ def admin_profile2_post(slug):
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    # MEDIA P2 (separati!)
+    gallery_files = request.files.getlist("gallery")
+    if gallery_files and any(g.filename for g in gallery_files):
+        gallery_urls = []
+        for f in gallery_files[:MAX_GALLERY_IMAGES]:
+            if f and f.filename:
+                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
+                if u:
+                    gallery_urls.append(u)
+        if gallery_urls:
+            payload["gallery_urls"] = "|".join(gallery_urls)
+
+    video_files = request.files.getlist("videos")
+    if video_files and any(v.filename for v in video_files):
+        video_urls = []
+        for f in video_files[:MAX_VIDEOS]:
+            if f and f.filename:
+                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
+                if u:
+                    video_urls.append(u)
+        if video_urls:
+            payload["video_urls"] = "|".join(video_urls)
+
+    pdf_entries = []
+    for i in range(1, 13):
+        f = request.files.get(f"pdf{i}")
+        if f and f.filename:
+            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
+            if u:
+                pdf_entries.append(f"{f.filename}||{u}")
+    if pdf_entries:
+        payload["pdf1_url"] = "|".join(pdf_entries)
+
+    profiles = upsert_profile(
+        profiles,
+        "p2",
+        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
+    )
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1171,12 +1287,17 @@ def public_card(slug):
     if p_key != "p2":
         ag_view = agent_to_view(ag)
         ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
+
+        gallery = parse_media_list(ag.gallery_urls)
+        videos = parse_media_list(ag.video_urls)
+        pdfs = parse_pdfs(ag.pdf1_url or "")
     else:
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-                      "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
+                      "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+                      "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
                 v = p2.get(k)
                 if v is None:
                     continue
@@ -1187,12 +1308,13 @@ def public_card(slug):
                         pass
                 else:
                     vv = clean_str(v)
-                    if vv:
+                    if vv is not None:
                         setattr(ag_view, k, vv)
 
-    gallery = (ag.gallery_urls.split("|") if clean_str(ag.gallery_urls) else [])
-    videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
-    pdfs = parse_pdfs(ag.pdf1_url or "")
+        # MEDIA DI P2 (vuoti se non caricati)
+        gallery = parse_media_list(getattr(ag_view, "gallery_urls", "") or "")
+        videos = parse_media_list(getattr(ag_view, "video_urls", "") or "")
+        pdfs = parse_pdfs(getattr(ag_view, "pdf1_url", "") or "")
 
     base = get_base_url()
 
