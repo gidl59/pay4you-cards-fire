@@ -25,8 +25,10 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 
+# Upload persistenti (Render Disk su /var/data/uploads)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
+# Limiti upload
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 MAX_IMAGE_MB = 8
@@ -35,6 +37,7 @@ MAX_PDF_MB = 15
 
 SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
 
+# ===== UI I18N (etichette fisse) =====
 I18N = {
     "it": {
         "save_contact": "Salva contatto",
@@ -169,7 +172,7 @@ def mb_to_bytes(mb: int) -> int:
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # limite request complessiva
 
 DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -183,6 +186,7 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
 
+    # Profilo 1
     name = Column(String, nullable=False)
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
@@ -216,14 +220,12 @@ class Agent(Base):
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
+    # Multi-utente
     p2_enabled = Column(Integer, nullable=True)     # 0/1
     profiles_json = Column(Text, nullable=True)     # salva profilo 2
 
+    # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
-
-    # ✅ SETTINGS GRAFICI P1 (admin)
-    p1_logo_spin = Column(Integer, nullable=True)   # 0/1
-    p1_flip_enabled = Column(Integer, nullable=True) # 0/1 (tap flip)
 
 class User(Base):
     __tablename__ = "users"
@@ -252,8 +254,6 @@ ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
 ensure_sqlite_column("agents", "youtube", "TEXT")
-ensure_sqlite_column("agents", "p1_logo_spin", "INTEGER")
-ensure_sqlite_column("agents", "p1_flip_enabled", "INTEGER")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -416,6 +416,10 @@ def normalize_whatsapp_link(raw: str) -> str:
     return ""
 
 def safe_url(u: str) -> str:
+    """
+    Accetta link anche senza https se sembrano domini.
+    Se non sembra un link valido -> non pubblichiamo.
+    """
     u = clean_str(u)
     if not u:
         return ""
@@ -457,6 +461,11 @@ def select_profile(profiles: list, key: str):
             return p
     return None
 
+def remove_profile(profiles: list, key: str):
+    if not isinstance(profiles, list):
+        return []
+    return [p for p in profiles if not (isinstance(p, dict) and p.get("key") == key)]
+
 def agent_to_view(ag: Agent):
     logo = clean_str(getattr(ag, "logo_url", None)) or clean_str(getattr(ag, "extra_logo_url", None))
     return SimpleNamespace(
@@ -489,14 +498,12 @@ def agent_to_view(ag: Agent):
         pdf1_url=clean_str(ag.pdf1_url),
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
         profiles_json=getattr(ag, "profiles_json", None),
-
-        # ✅ settings grafici P1
-        p1_logo_spin=int(getattr(ag, "p1_logo_spin", 0) or 0),
-        p1_flip_enabled=int(getattr(ag, "p1_flip_enabled", 1) or 1),
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    # profilo P2 vuoto (non eredita media/gal/video/pdf dal P1)
+    """
+    ✅ View per Profilo 2 completamente VUOTO (NON copia P1)
+    """
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -534,13 +541,8 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         pdf1_url="",
 
         p2_enabled=1,
-        profiles_json=getattr(ag, "profiles_json", None),
-
-        # settings P2 vengono letti da profiles_json (qui default)
-        p2_logo_spin=0,
-        p2_flip_enabled=1,
+        profiles_json=ag.profiles_json,
     )
-
 
 # ===================== ROUTES =====================
 
@@ -599,7 +601,7 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ---------- DASHBOARD ----------
+# ---------- DASHBOARD (admin e clienti) ----------
 @app.get("/dashboard")
 @login_required
 def dashboard():
@@ -616,29 +618,12 @@ def dashboard():
             abort(404)
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
-# ---------- CREDENTIALS PAGE (ADMIN) ----------
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    u = db.query(User).filter_by(username=slug).first()
-    db.close()
-    if not ag or not u:
-        abort(404)
-
-    base = get_base_url()
-    return render_template(
-        "credentials.html",
-        agent=ag,
-        username=u.username,
-        password=u.password,
-        activate_url=f"{base}/login",
-        card_url=f"{base}/{ag.slug}",
-    )
-
 # ---------- ADMIN CRUD ----------
+@app.get("/admin", endpoint="admin_home")
+@admin_required
+def admin_home():
+    return redirect(url_for("dashboard"))
+
 @app.get("/admin/new")
 @admin_required
 def new_agent():
@@ -664,10 +649,7 @@ def create_agent():
               "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
-    # ✅ settings grafici P1
-    ag.p1_logo_spin = 1 if request.form.get("p1_logo_spin") == "1" else 0
-    ag.p1_flip_enabled = 1 if request.form.get("p1_flip_enabled") == "1" else 0
-
+    # i18n
     i18n_data = {}
     for lang in ("en", "fr", "es", "de"):
         tr = {
@@ -760,14 +742,11 @@ def update_agent(slug):
         db.close()
         abort(404)
 
+    # ✅ SLUG NON SI MODIFICA MAI (anche se qualcuno lo manda nel form)
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
               "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
-
-    # ✅ settings grafici P1 (salvati da admin o cliente)
-    ag.p1_logo_spin = 1 if request.form.get("p1_logo_spin") == "1" else 0
-    ag.p1_flip_enabled = 1 if request.form.get("p1_flip_enabled") == "1" else 0
 
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
@@ -837,12 +816,55 @@ def delete_agent(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     if ag:
         db.delete(ag)
-        u = db.query(User).filter_by(username=slug).first()
-        if u:
-            db.delete(u)
         db.commit()
     db.close()
     flash("Card eliminata.", "success")
+    return redirect(url_for("dashboard"))
+
+# ✅ RIPRISTINO: pagina "Invia codici" (NO JSON)
+@app.get("/admin/<slug>/credentials")
+@admin_required
+def admin_credentials(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    u = db.query(User).filter_by(username=slug).first()
+    db.close()
+    if not ag or not u:
+        abort(404)
+
+    base = get_base_url()
+    login_url = f"{base}/login"
+    card_url = f"{base}/{ag.slug}"
+
+    return render_template(
+        "credentials.html",
+        agent=ag,
+        username=u.username,
+        password=u.password,
+        login_url=login_url,
+        card_url=card_url
+    )
+
+# ✅ DISATTIVA P2 (ADMIN)
+@app.post("/admin/<slug>/deactivate_p2")
+@admin_required
+def admin_deactivate_p2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    profiles = remove_profile(profiles, "p2")
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    flash("Profilo 2 disattivato.", "success")
     return redirect(url_for("dashboard"))
 
 # ---------- CLIENT EDIT P1 ----------
@@ -876,9 +898,21 @@ def me_edit_post():
               "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
-    # ✅ settings grafici P1: il cliente può impostare (ma NON sulla card)
-    ag.p1_logo_spin = 1 if request.form.get("p1_logo_spin") == "1" else 0
-    ag.p1_flip_enabled = 1 if request.form.get("p1_flip_enabled") == "1" else 0
+    i18n_data = i18n_get(ag)
+    if not isinstance(i18n_data, dict):
+        i18n_data = {}
+    for lang in ("en", "fr", "es", "de"):
+        tr = {
+            "name": clean_str(request.form.get(f"name_{lang}")),
+            "company": clean_str(request.form.get(f"company_{lang}")),
+            "role": clean_str(request.form.get(f"role_{lang}")),
+            "bio": clean_str(request.form.get(f"bio_{lang}")),
+            "addresses": clean_str(request.form.get(f"addresses_{lang}")),
+        }
+        tr = {k: v for k, v in tr.items() if v}
+        if tr:
+            i18n_data[lang] = tr
+    i18n_set(ag, i18n_data)
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -887,54 +921,44 @@ def me_edit_post():
     if logo and logo.filename:
         ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
+    gallery_files = request.files.getlist("gallery")
+    if gallery_files and any(g.filename for g in gallery_files):
+        gallery_urls = []
+        for f in gallery_files[:MAX_GALLERY_IMAGES]:
+            if f and f.filename:
+                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
+                if u:
+                    gallery_urls.append(u)
+        if gallery_urls:
+            ag.gallery_urls = "|".join(gallery_urls)
+
+    video_files = request.files.getlist("videos")
+    if video_files and any(v.filename for v in video_files):
+        video_urls = []
+        for f in video_files[:MAX_VIDEOS]:
+            if f and f.filename:
+                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
+                if u:
+                    video_urls.append(u)
+        if video_urls:
+            ag.video_urls = "|".join(video_urls)
+
+    pdf_entries = []
+    for i in range(1, 13):
+        f = request.files.get(f"pdf{i}")
+        if f and f.filename:
+            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
+            if u:
+                pdf_entries.append(f"{f.filename}||{u}")
+    if pdf_entries:
+        ag.pdf1_url = "|".join(pdf_entries)
+
     db.commit()
     db.close()
     flash("Profilo 1 salvato.", "success")
     return redirect(url_for("me_edit"))
 
-# ---------- P2: attiva + disattiva ----------
-@app.post("/admin/<slug>/activate_p2")
-@admin_required
-def admin_activate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    if not select_profile(profiles, "p2"):
-        profiles = upsert_profile(profiles, "p2", {"key": "p2"})
-        ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 attivato.", "success")
-    return redirect(url_for("dashboard"))
-
-@app.post("/admin/<slug>/deactivate_p2")
-@admin_required
-def admin_deactivate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 0
-    # opzionale: rimuovo anche i dati salvati P2
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    profiles = [p for p in profiles if p.get("key") != "p2"]
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 disattivato.", "success")
-    return redirect(url_for("dashboard"))
-
+# ---------- P2: attiva + edit ----------
 @app.post("/me/activate_p2")
 @login_required
 def me_activate_p2():
@@ -949,7 +973,7 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
-    session["p2_enabled"] = 1
+    session["p2_enabled"] = 1  # ✅ navbar
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
@@ -958,10 +982,57 @@ def me_activate_p2():
 
     db.commit()
     db.close()
-    flash("Profilo 2 attivato.", "success")
+    flash("Profilo 2 attivato (vuoto).", "success")
     return redirect(url_for("me_profile2"))
 
-# ---------- P2 EDIT (immutato, ma aggiungo settings grafici nel profilo p2) ----------
+# ✅ DISATTIVA P2 (CLIENT)
+@app.post("/me/deactivate_p2")
+@login_required
+def me_deactivate_p2():
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    slug = current_client_slug()
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    session["p2_enabled"] = 0
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    profiles = remove_profile(profiles, "p2")
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    flash("Profilo 2 disattivato.", "success")
+    return redirect(url_for("me_edit"))
+
+@app.post("/admin/<slug>/activate_p2")
+@admin_required
+def admin_activate_p2(slug):
+    slug = slugify(slug)
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 1
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    if not select_profile(profiles, "p2"):
+        profiles = upsert_profile(profiles, "p2", {"key": "p2"})
+        ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    flash("Profilo 2 attivato (vuoto).", "success")
+    return redirect(url_for("dashboard"))
+
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
@@ -988,11 +1059,7 @@ def me_profile2():
         if v:
             setattr(view, k, v)
 
-    # settings grafici p2
-    view.p2_logo_spin = int(p2.get("logo_spin", 0) or 0)
-    view.p2_flip_enabled = int(p2.get("flip_enabled", 1) or 1)
-
-    return render_template("profile2_form.html", agent=view)
+    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
 @app.post("/me/profile2")
 @login_required
@@ -1007,17 +1074,13 @@ def me_profile2_post():
         abort(404)
 
     ag.p2_enabled = 1
-    session["p2_enabled"] = 1
+    session["p2_enabled"] = 1  # ✅ navbar
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
-
-    # settings grafici P2
-    payload["logo_spin"] = 1 if request.form.get("p2_logo_spin") == "1" else 0
-    payload["flip_enabled"] = 1 if request.form.get("p2_flip_enabled") == "1" else 0
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -1026,7 +1089,7 @@ def me_profile2_post():
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1034,6 +1097,7 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
+# --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
 def admin_profile2(slug):
@@ -1052,6 +1116,7 @@ def admin_profile2(slug):
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
     view = blank_profile_view_from_agent(ag)
+
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url"]:
@@ -1059,10 +1124,7 @@ def admin_profile2(slug):
         if v:
             setattr(view, k, v)
 
-    view.p2_logo_spin = int(p2.get("logo_spin", 0) or 0)
-    view.p2_flip_enabled = int(p2.get("flip_enabled", 1) or 1)
-
-    return render_template("profile2_form.html", agent=view, is_admin=True, slug=slug)
+    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
 @app.post("/admin/<slug>/profile2")
 @admin_required
@@ -1082,9 +1144,6 @@ def admin_profile2_post(slug):
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
-    payload["logo_spin"] = 1 if request.form.get("p2_logo_spin") == "1" else 0
-    payload["flip_enabled"] = 1 if request.form.get("p2_flip_enabled") == "1" else 0
-
     photo = request.files.get("photo")
     logo = request.files.get("logo")
     if photo and photo.filename:
@@ -1092,7 +1151,7 @@ def admin_profile2_post(slug):
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1112,15 +1171,12 @@ def public_card(slug):
 
     lang = pick_lang_from_request()
     p_key = (request.args.get("p") or "").strip()  # "" o "p2"
+
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2")
 
-    base = get_base_url()
-    qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
-    if p_key:
-        qr_url += f"&p={urllib.parse.quote(p_key)}"
-
+    # ✅ P1
     if p_key != "p2":
         ag_view = agent_to_view(ag)
         ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
@@ -1129,29 +1185,25 @@ def public_card(slug):
         videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
         pdfs = parse_pdfs(ag.pdf1_url or "")
 
-        # ✅ settings grafici per card pubblica
-        ui_logo_spin = int(getattr(ag, "p1_logo_spin", 0) or 0)
-        ui_flip_enabled = int(getattr(ag, "p1_flip_enabled", 1) or 1)
-
+    # ✅ P2: COMPLETAMENTE VUOTO (anche media)
     else:
-        # P2: contenuti solo se presenti in profiles_json (media P2 non gestita qui, rimane vuota)
-        view = blank_profile_view_from_agent(ag)
+        ag_view = blank_profile_view_from_agent(ag)
+
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
                       "photo_url","logo_url"]:
                 v = clean_str(p2.get(k))
                 if v:
-                    setattr(view, k, v)
+                    setattr(ag_view, k, v)
 
-        ag_view = view
         gallery, videos, pdfs = [], [], []
 
-        ui_logo_spin = int((p2 or {}).get("logo_spin", 0) or 0)
-        ui_flip_enabled = int((p2 or {}).get("flip_enabled", 1) or 1)
+    base = get_base_url()
 
     emails = [e.strip() for e in (ag_view.emails or "").split(",") if clean_str(e)]
     pec_email = clean_str(ag_view.pec)
+
     websites = [w.strip() for w in (ag_view.websites or "").split(",") if clean_str(w)]
     raw_addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if clean_str(a)]
     addresses = [{"text": a, "maps": google_maps_link(a)} for a in raw_addresses]
@@ -1163,6 +1215,10 @@ def public_card(slug):
         mobiles.append(ag_view.phone_mobile2.strip())
 
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or ag_view.phone_mobile or "")
+
+    qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
+    if p_key:
+        qr_url += f"&p={urllib.parse.quote(p_key)}"
 
     return render_template(
         "card.html",
@@ -1182,8 +1238,6 @@ def public_card(slug):
         qr_url=qr_url,
         p_key=p_key,
         p2_enabled=p2_enabled,
-        ui_logo_spin=ui_logo_spin,
-        ui_flip_enabled=ui_flip_enabled,
     )
 
 # ---------- VCARD ----------
@@ -1229,7 +1283,8 @@ def vcard(slug):
         lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
 
     base = get_base_url()
-    lines.append(f"URL:{base}/{ag.slug}")
+    card_url = f"{base}/{ag.slug}"
+    lines.append(f"URL:{card_url}")
 
     if ag.piva:
         lines.append(f"X-TAX-ID:{ag.piva}")
