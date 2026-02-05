@@ -22,13 +22,15 @@
         {% if not agent %}
           <div class="field">
             <label>Slug (univoco)</label>
-            <input type="text" name="slug" required>
+            <input type="text" name="slug" required placeholder="es. mario-rossi">
             <div class="hint">IMPORTANTE: non sarà modificabile dopo la creazione.</div>
           </div>
         {% else %}
           <div class="field">
             <label>Slug</label>
             <input type="text" value="{{ agent.slug }}" disabled>
+            {# sicurezza: mantengo lo slug anche se disabilitato #}
+            <input type="hidden" name="slug" value="{{ agent.slug }}">
           </div>
         {% endif %}
 
@@ -49,99 +51,107 @@
 
         <div class="field full">
           <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
+          <textarea name="bio" placeholder="Scrivi una breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
         </div>
 
         <div class="field">
           <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}" placeholder="+39 333 123 4567">
         </div>
 
         <div class="field">
           <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}" placeholder="+39 333 123 4567">
         </div>
 
         <div class="field">
           <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}" placeholder="+39 051 123 456">
         </div>
 
         <div class="field">
           <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}" placeholder="+39 3331234567 oppure https://wa.me/393331234567">
+          <div class="hint">Puoi scrivere anche solo il numero (senza spazi). Il sistema crea il link WhatsApp.</div>
         </div>
 
         <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}" placeholder="info@azienda.it, commerciale@azienda.it">
         </div>
 
         <div class="field">
           <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}" placeholder="www.pay4you.store, www.miosito.it">
         </div>
 
         <div class="field">
-          <label>Instagram (link)</label>
-          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}" placeholder="https://www.instagram.com/nomeutente">
-          <div class="hint">Esempio: https://www.instagram.com/</div>
+          <label>Instagram (username o link)</label>
+          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://instagram.com/nomeutente">
+          <div class="hint">Esempi validi: <b>@pay4you</b> oppure <b>pay4you</b> oppure link completo.</div>
         </div>
 
         <div class="field">
-          <label>Facebook (link)</label>
-          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}" placeholder="https://www.facebook.com/">
+          <label>Facebook (username/pagina o link)</label>
+          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}" placeholder="nomepagina oppure https://facebook.com/nomepagina">
         </div>
 
         <div class="field">
-          <label>LinkedIn (link)</label>
-          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}" placeholder="https://www.linkedin.com/in/nome-cognome-a1234567">
+          <label>LinkedIn (username o link)</label>
+          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}" placeholder="nome-cognome-a1234567 oppure https://linkedin.com/in/...">
+          <div class="hint">Esempio: <b>nome-cognome-a1234567</b> (diventa automaticamente /in/...).</div>
         </div>
 
         <div class="field">
-          <label>TikTok (link)</label>
-          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}" placeholder="https://www.tiktok.com/@nomeutente">
+          <label>TikTok (username o link)</label>
+          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://tiktok.com/@nomeutente">
         </div>
 
         <div class="field">
-          <label>Telegram (link o @user)</label>
-          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}" placeholder="https://t.me/nomeutente">
-          <div class="hint">Esempio: https://t.me/nomeutente oppure https://t.me/s/nomecanale</div>
+          <label>Telegram (username o link)</label>
+          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}" placeholder="@nomeutente oppure https://t.me/nomeutente oppure https://t.me/s/nomecanale">
+          <div class="hint">Esempi: <b>@pay4you</b> oppure <b>pay4you</b> oppure <b>https://t.me/s/nomecanale</b>.</div>
         </div>
 
         <div class="field">
-          <label>YouTube (link)</label>
-          <input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}" placeholder="https://www.youtube.com/@nomeutente">
+          <label>YouTube (username o link)</label>
+          <input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://youtube.com/@nomeutente">
         </div>
 
         <div class="field">
           <label>Foto profilo</label>
           <input type="file" name="photo" accept="image/*">
+          <div class="hint">Consiglio: foto quadrata, ben illuminata.</div>
         </div>
 
         <div class="field">
           <label>Logo</label>
           <input type="file" name="logo" accept="image/*">
+          <div class="hint">Consiglio: PNG trasparente (se possibile).</div>
         </div>
 
-        <!-- ✅ SETTINGS GRAFICI (solo admin area) -->
+        {# ✅ EFFETTI GRAFICI: SOLO ADMIN #}
+        {% if session.get('role') == 'admin' %}
         <div class="field full">
           <div class="sep"></div>
           <h3 style="margin:0 0 8px 0;">Effetti grafici (card)</h3>
-          <div class="hint">Queste impostazioni le decide il cliente (dall’area riservata). Non compaiono come pulsanti sulla card.</div>
+          <div class="hint">Impostazioni “extra” della card (solo admin).</div>
 
           <div class="toggle-row">
             <label class="toggle">
-              <input type="checkbox" name="p1_logo_spin" value="1" {% if agent and (agent.p1_logo_spin or 0)|int == 1 %}checked{% endif %}>
+              <input type="checkbox" name="p1_logo_spin" value="1"
+                     {% if agent and (agent.p1_logo_spin or 0)|int == 1 %}checked{% endif %}>
               <span>Logo dietro che gira (orbit)</span>
             </label>
 
             <label class="toggle">
-              <input type="checkbox" name="p1_flip_enabled" value="1" {% if not agent or (agent.p1_flip_enabled or 0)|int == 1 %}checked{% endif %}>
+              <input type="checkbox" name="p1_flip_enabled" value="1"
+                     {% if not agent or (agent.p1_flip_enabled or 0)|int == 1 %}checked{% endif %}>
               <span>Tap sulla foto: gira e mostra il logo</span>
             </label>
           </div>
         </div>
+        {% endif %}
 
         <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn primary" type="submit">Salva</button>
