@@ -74,7 +74,8 @@
           {% if ag.name %}<div class="name name-center">{{ ag.name }}</div>{% endif %}
 
           {% if ag.company %}
-            <div class="company-badge">{{ ag.company }}</div>
+            <!-- rettangolo colorato per azienda -->
+            <div class="company-badge company-badge--red">{{ ag.company }}</div>
           {% endif %}
 
           {% if ag.role %}<div class="role role-center">{{ ag.role }}</div>{% endif %}
@@ -96,7 +97,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.instagram %}
               <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -111,7 +111,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.linkedin %}
               <a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -119,7 +118,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.tiktok %}
               <a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -129,7 +127,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.telegram %}
               <a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -137,7 +134,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.youtube %}
               <a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -147,7 +143,6 @@
               </a>
             {% endif %}
           </div>
-
         </div>
       </div>
 
@@ -155,11 +150,13 @@
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
-          <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+          <a class="action-btn action-btn--blue" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+
           {% if wa_link %}
-            <a class="action-btn action-wa" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
+            <a class="action-btn action-btn--green" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
           {% endif %}
-          <button class="action-btn action-qr" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
+
+          <button class="action-btn action-btn--cyan" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
@@ -171,7 +168,7 @@
 
         {% if mobiles %}
           <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('mobile_phone') }}</span>
+            <span class="row-tag row-tag--phone">{{ t_func('mobile_phone') }}</span>
             <div style="text-align:right;">
               {% for m in mobiles %}
                 <div><a href="tel:{{ m|replace(' ','') }}">{{ m }}</a></div>
@@ -182,14 +179,14 @@
 
         {% if ag.phone_office %}
           <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
+            <span class="row-tag row-tag--phone">{{ t_func('office_phone') }}</span>
             <a href="tel:{{ ag.phone_office|replace(' ','') }}">{{ ag.phone_office }}</a>
           </div>
         {% endif %}
 
         {% if emails %}
           <div class="row row-email">
-            <span class="row-tag tag-email">Email</span>
+            <span class="row-tag row-tag--email">Email</span>
             <div style="text-align:right;">
               {% for e in emails %}
                 <div><a href="mailto:{{ e }}">{{ e }}</a></div>
@@ -200,14 +197,14 @@
 
         {% if pec_email %}
           <div class="row row-email">
-            <span class="row-tag tag-email">PEC</span>
+            <span class="row-tag row-tag--pec">PEC</span>
             <a href="mailto:{{ pec_email }}">{{ pec_email }}</a>
           </div>
         {% endif %}
 
         {% if websites %}
           <div class="row row-web">
-            <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
+            <span class="row-tag row-tag--web">{{ t_func('open_website') }}</span>
             <div style="text-align:right;">
               {% for w in websites %}
                 <div><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
@@ -223,10 +220,10 @@
       <div class="section">
         <div class="section-title">{{ t_func('data') }}</div>
         {% if ag.piva %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
+          <div class="row"><span class="row-tag row-tag--data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
         {% endif %}
         {% if ag.sdi %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
+          <div class="row"><span class="row-tag row-tag--data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
         {% endif %}
       </div>
       {% endif %}
@@ -263,7 +260,7 @@
         <div class="section-title">{{ t_func('gallery') }}</div>
         <div class="gallery-scroll">
           {% for g in gallery %}
-            <button class="thumb" type="button" onclick="openImg('{{ g }}')">
+            <button class="thumb thumb--click" type="button" onclick="openImg('{{ g }}')">
               <img src="{{ g }}" alt="Foto">
             </button>
           {% endfor %}
@@ -278,9 +275,9 @@
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <video class="video-mini" src="{{ v }}" muted playsinline></video>
+              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
               <div class="video-play">PLAY</div>
-              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
+              <button class="thumb thumb--click" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
             </div>
           {% endfor %}
         </div>
@@ -325,13 +322,26 @@
   </div>
 
 <script>
-  // flip tap
+  // flip tap + auto flip
   (function(){
-    const canFlip = {{ 1 if (ag.allow_flip or 0)|int == 1 else 0 }};
-    if(!canFlip) return;
     const box = document.getElementById('flipBox');
     if(!box) return;
-    box.addEventListener('click', ()=> box.classList.toggle('flipped'));
+
+    const canFlip = {{ 1 if (ag.allow_flip or 0)|int == 1 else 0 }};
+    const autoFlip = {{ 1 if (ag.avatar_spin or 0)|int == 1 else 0 }};
+
+    if(canFlip){
+      box.addEventListener('click', ()=> box.classList.toggle('flipped'));
+    }
+
+    // auto flip (orizzontale) ogni 4.5s
+    if(autoFlip){
+      let state = false;
+      setInterval(() => {
+        state = !state;
+        box.classList.toggle('flipped', state);
+      }, 4500);
+    }
   })();
 
   // theme
@@ -372,11 +382,13 @@
     const pdf = document.getElementById('mPdf');
 
     if(img) img.src = '';
+
     if(vid){
       try{ vid.pause(); }catch(e){}
       vid.removeAttribute('src');
       try{ vid.load(); }catch(e){}
     }
+
     if(pdf) pdf.src = '';
   }
 
