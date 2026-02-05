@@ -56,14 +56,17 @@
         </div>
 
         <!-- ✅ 4 TASTI EFFETTI (come prima) -->
-        <div class="fx-row" aria-label="Effetti foto e logo">
-          {% if the_logo %}
-            <button class="fx-btn" type="button" id="btnLogoSpin">Gira logo</button>
-          {% endif %}
-          <button class="fx-btn" type="button" id="btnFlipOnce">Flip foto</button>
-          <button class="fx-btn" type="button" id="btnPhotoSpin">Gira foto</button>
-          <button class="fx-btn" type="button" id="btnBackMode">Retro: —</button>
-        </div>
+        
+        {% if session.get('username') %}
+  <div class="fx-row" aria-label="Effetti foto e logo">
+    {% if the_logo %}
+      <button class="fx-btn" type="button" id="btnLogoSpin">Gira logo</button>
+    {% endif %}
+    <button class="fx-btn" type="button" id="btnFlipOnce">Flip foto</button>
+    <button class="fx-btn" type="button" id="btnPhotoSpin">Gira foto</button>
+    <button class="fx-btn" type="button" id="btnBackMode">Retro: —</button>
+  </div>
+{% endif %}
 
         <div class="hero-text hero-text-centered">
           {% if ag.name %}<div class="name">{{ ag.name }}</div>{% endif %}
