@@ -167,7 +167,25 @@ body[data-theme="light"] .field textarea{
 .field input:focus, .field textarea:focus{
   border-color: rgba(250,204,21,.40);
 }
-.hint{ font-size:12px; color: var(--muted); }
+
+/* ✅ HINT (ISTRUZIONI SOTTO LE CASELLE) - MIGLIORATE */
+.hint{
+  font-size:12px;
+  color: var(--muted);
+  line-height:1.35;
+  margin-top:2px;
+}
+.hint + .hint{
+  margin-top:4px;
+}
+.field input + .hint,
+.field textarea + .hint,
+.field input + .hint + .hint,
+.field textarea + .hint + .hint{
+  margin-top:6px;
+}
+.hint strong{ color: var(--txt); opacity:.9; }
+
 .sep{ height:1px; background: rgba(148,163,184,.14); margin:8px 0; }
 .grid-3{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; }
 .grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px 16px; }
