@@ -96,8 +96,15 @@
 
         <div class="field">
           <label>Nome</label>
-          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}" required>
-          <div class="hint">Inserisci nome e cognome (o nome attività se preferisci).</div>
+          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}"
+                 {% if not editing_profile2 %}required{% endif %}>
+          <div class="hint">
+            {% if editing_profile2 %}
+              (Profilo 2 può anche rimanere vuoto)
+            {% else %}
+              Inserisci nome e cognome (o nome attività se preferisci).
+            {% endif %}
+          </div>
         </div>
 
         <div class="field">
@@ -212,7 +219,7 @@
           <input type="file" name="logo" accept="image/*">
         </div>
 
-        <!-- ✅ NEW: Back media + switch -->
+        <!-- ✅ Back media + switch -->
         <div class="field full details">
           <details open>
             <summary>Dietro la foto (logo azienda / foto personale)</summary>
@@ -231,15 +238,22 @@
               <div class="field">
                 <label>Cosa mostrare dietro?</label>
                 {% set mode = (D.back_media_mode if D and D.back_media_mode else 'company') %}
+
                 <label class="btn-mini" style="justify-content:flex-start;">
-                  <input type="radio" name="back_media_mode" value="company" {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
+                  <input type="radio" name="back_media_mode" value="company"
+                         {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
                   Logo aziendale
                 </label>
+
                 <label class="btn-mini" style="justify-content:flex-start; margin-top:8px;">
-                  <input type="radio" name="back_media_mode" value="personal" {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
+                  <input type="radio" name="back_media_mode" value="personal"
+                         {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
                   Foto/Logo personale
                 </label>
-                <div class="hint" style="margin-top:8px;">Se scegli “personale” ma non carichi l’immagine, torna al logo aziendale.</div>
+
+                <div class="hint" style="margin-top:8px;">
+                  Se scegli “personale” ma non carichi l’immagine, sulla card useremo automaticamente il logo aziendale.
+                </div>
               </div>
             </div>
           </details>
