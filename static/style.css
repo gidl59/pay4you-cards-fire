@@ -419,3 +419,36 @@ body[data-theme="light"] .soc{ background: rgba(255,255,255,.92); }
   .form-grid{ grid-template-columns: 1fr; }
   .page-title{ font-size:30px; }
 }
+/* ====== FX BUTTONS (4 tasti) ====== */
+.fx-row{
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.fx-btn{
+  border:1px solid rgba(148,163,184,.22);
+  background: rgba(15,23,42,.10);
+  color: var(--txt);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:950;
+  cursor:pointer;
+  font-size:12px;
+}
+body[data-theme="light"] .fx-btn{ background: rgba(255,255,255,.92); }
+.fx-btn:hover{ border-color: rgba(250,204,21,.35); }
+.fx-btn.on{
+  border-color: rgba(250,204,21,.55);
+  background: rgba(250,204,21,.14);
+}
+
+/* Spin "moneta" della foto (gira su se stessa) */
+.flip-inner.coin{
+  animation: coinSpin 1.2s linear infinite;
+}
+@keyframes coinSpin{
+  from{ transform: rotateY(0deg); }
+  to{ transform: rotateY(360deg); }
+}
