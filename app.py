@@ -63,8 +63,6 @@ I18N = {
         "theme_dark": "Scuro",
         "profile_1": "Profilo 1",
         "profile_2": "Profilo 2",
-
-        # new
         "back_media": "Contenuto dietro foto",
         "back_company": "Logo aziendale",
         "back_personal": "Foto/Logo personale",
@@ -93,7 +91,6 @@ I18N = {
         "theme_dark": "Dark",
         "profile_1": "Profile 1",
         "profile_2": "Profile 2",
-
         "back_media": "Back of avatar",
         "back_company": "Company logo",
         "back_personal": "Personal image",
@@ -122,7 +119,6 @@ I18N = {
         "theme_dark": "Sombre",
         "profile_1": "Profil 1",
         "profile_2": "Profil 2",
-
         "back_media": "Derrière l’avatar",
         "back_company": "Logo entreprise",
         "back_personal": "Image personnelle",
@@ -151,7 +147,6 @@ I18N = {
         "theme_dark": "Oscuro",
         "profile_1": "Perfil 1",
         "profile_2": "Perfil 2",
-
         "back_media": "Parte trasera",
         "back_company": "Logo empresa",
         "back_personal": "Imagen personal",
@@ -180,12 +175,12 @@ I18N = {
         "theme_dark": "Dunkel",
         "profile_1": "Profil 1",
         "profile_2": "Profil 2",
-
         "back_media": "Rückseite Avatar",
         "back_company": "Firmenlogo",
         "back_personal": "Persönliches Bild",
     },
 }
+
 
 def t(lang: str, key: str) -> str:
     lang = (lang or "it").lower()
@@ -193,11 +188,14 @@ def t(lang: str, key: str) -> str:
         lang = "it"
     return I18N.get(lang, I18N["it"]).get(key, key)
 
+
 def mb_to_bytes(mb: int) -> int:
     return int(mb) * 1024 * 1024
 
+
 def form_checkbox_int(name: str) -> int:
     return 1 if request.form.get(name) in ("1", "on", "true", "True") else 0
+
 
 def clean_str(v):
     if v is None:
@@ -207,8 +205,9 @@ def clean_str(v):
         return None
     return v
 
+
 app = Flask(__name__)
-app.secret_key = os.getenv("APP_SECRET", "dev_secret")
+app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
 
 DB_URL = "sqlite:////var/data/data.db"
@@ -266,13 +265,14 @@ class Agent(Base):
 
     # Effetti grafici P1 (P2 salva in profiles_json)
     orbit_spin = Column(Integer, nullable=True)     # 0/1
-    avatar_spin = Column(Integer, nullable=True)    # 0/1 (ora: flip 3D auto)
+    avatar_spin = Column(Integer, nullable=True)    # 0/1
     logo_spin = Column(Integer, nullable=True)      # 0/1
     allow_flip = Column(Integer, nullable=True)     # 0/1
 
     # NEW: scelta contenuto "dietro" la foto
     back_media_url = Column(String, nullable=True)   # immagine personale (famiglia/animale)
     back_media_mode = Column(String, nullable=True)  # 'company' | 'personal'
+
 
 class User(Base):
     __tablename__ = "users"
@@ -281,6 +281,7 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="client")  # admin|client
     agent_slug = Column(String, nullable=True)
+
 
 Base.metadata.create_all(engine)
 
@@ -292,6 +293,7 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
         if column not in existing:
             conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
             conn.commit()
+
 
 ensure_sqlite_column("agents", "logo_url", "TEXT")
 ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
@@ -312,11 +314,14 @@ ensure_sqlite_column("agents", "back_media_mode", "TEXT")
 def is_logged_in() -> bool:
     return bool(session.get("username"))
 
+
 def is_admin() -> bool:
     return session.get("role") == "admin"
 
+
 def current_client_slug():
     return session.get("agent_slug")
+
 
 def admin_required(f):
     from functools import wraps
@@ -327,6 +332,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -336,8 +342,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+
 def generate_password(length=10):
     return uuid.uuid4().hex[:length]
+
 
 def slugify(s: str) -> str:
     s = (s or "").strip().lower()
@@ -345,6 +353,7 @@ def slugify(s: str) -> str:
     s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
     s = re.sub(r"\s+", "-", s).strip("-")
     return s
+
 
 def ensure_admin_user():
     db = SessionLocal()
@@ -354,12 +363,15 @@ def ensure_admin_user():
         db.commit()
     db.close()
 
+
 ensure_admin_user()
+
 
 def get_base_url():
     if BASE_URL:
         return BASE_URL
     return request.url_root.strip().rstrip("/")
+
 
 def pick_lang_from_request() -> str:
     q = (request.args.get("lang") or "").strip().lower()
@@ -374,17 +386,21 @@ def pick_lang_from_request() -> str:
             return first
     return "it"
 
+
 def safe_json_load(s: str, default):
     try:
         return json.loads(s) if s else default
     except Exception:
         return default
 
+
 def i18n_get(ag: Agent) -> dict:
     return safe_json_load(getattr(ag, "i18n_json", "") or "", {})
 
+
 def i18n_set(ag: Agent, data: dict):
     ag.i18n_json = json.dumps(data, ensure_ascii=False)
+
 
 def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
     if lang not in SUPPORTED_LANGS or lang == "it":
@@ -398,6 +414,7 @@ def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
         if v:
             setattr(ag_view, k, v)
     return ag_view
+
 
 def upload_file(file_storage, folder="uploads", max_bytes=None):
     if not file_storage or not file_storage.filename:
@@ -420,9 +437,11 @@ def upload_file(file_storage, folder="uploads", max_bytes=None):
 
     return f"/uploads/{folder}/{filename}"
 
+
 @app.get("/uploads/<path:subpath>")
 def serve_uploads(subpath):
     return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
+
 
 def parse_pdfs(raw: str):
     pdfs = []
@@ -445,11 +464,13 @@ def parse_pdfs(raw: str):
             pdfs.append({"name": filename, "url": url})
     return pdfs
 
+
 def parse_media_list(raw: str):
     raw = clean_str(raw)
     if not raw:
         return []
     return [x.strip() for x in raw.split("|") if clean_str(x)]
+
 
 def normalize_whatsapp_link(raw: str) -> str:
     t0 = clean_str(raw)
@@ -466,6 +487,7 @@ def normalize_whatsapp_link(raw: str) -> str:
         return f"https://wa.me/{t2}"
     return ""
 
+
 def safe_url(u: str) -> str:
     u = clean_str(u)
     if not u:
@@ -478,9 +500,11 @@ def safe_url(u: str) -> str:
         return "https://" + u.lstrip("/")
     return ""
 
+
 def google_maps_link(address: str) -> str:
     q = urllib.parse.quote_plus(address)
     return f"https://www.google.com/maps/search/?api=1&query={q}"
+
 
 def parse_profiles_json(raw: str):
     data = safe_json_load(raw, [])
@@ -492,6 +516,7 @@ def parse_profiles_json(raw: str):
             out.append(p)
     return out
 
+
 def upsert_profile(profiles: list, key: str, payload: dict):
     for p in profiles:
         if p.get("key") == key:
@@ -500,6 +525,7 @@ def upsert_profile(profiles: list, key: str, payload: dict):
     profiles.append({"key": key, **payload})
     return profiles
 
+
 def select_profile(profiles: list, key: str):
     if not key:
         return None
@@ -507,6 +533,7 @@ def select_profile(profiles: list, key: str):
         if p.get("key") == key:
             return p
     return None
+
 
 def agent_to_view(ag: Agent):
     # logo "principale"
@@ -544,37 +571,29 @@ def agent_to_view(ag: Agent):
         pdf1_url=clean_str(ag.pdf1_url),
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
         profiles_json=getattr(ag, "profiles_json", None),
-
         orbit_spin=int(getattr(ag, "orbit_spin", 0) or 0),
         avatar_spin=int(getattr(ag, "avatar_spin", 0) or 0),
         logo_spin=int(getattr(ag, "logo_spin", 0) or 0),
         allow_flip=int(getattr(ag, "allow_flip", 0) or 0),
-
-        # new
         back_media_mode=back_mode,
         back_media_url=back_url,
     )
 
+
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    """
-    View per Profilo 2 completamente VUOTO (NON copia P1).
-    """
+    """View per Profilo 2 completamente VUOTO (NON copia P1)."""
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
-
         name="",
         company="",
         role="",
         bio="",
-
         phone_mobile="",
         phone_mobile2="",
         phone_office="",
-
         emails="",
         websites="",
-
         facebook="",
         instagram="",
         linkedin="",
@@ -582,28 +601,21 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         telegram="",
         whatsapp="",
         youtube="",
-
         pec="",
         piva="",
         sdi="",
         addresses="",
-
         photo_url="",
         logo_url="",
-
         gallery_urls="",
         video_urls="",
         pdf1_url="",
-
         p2_enabled=1,
         profiles_json=ag.profiles_json,
-
         orbit_spin=0,
         avatar_spin=0,
         logo_spin=0,
         allow_flip=0,
-
-        # new
         back_media_mode="company",
         back_media_url="",
     )
@@ -616,14 +628,17 @@ def home():
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
+
 @app.get("/health")
 def health():
     return "ok", 200
+
 
 # ---------- LOGIN ----------
 @app.get("/login")
 def login():
     return render_template("login.html", error=None)
+
 
 @app.post("/login")
 def login_post():
@@ -650,10 +665,12 @@ def login_post():
     session["agent_slug"] = u.agent_slug
     return redirect(url_for("dashboard"))
 
+
 @app.get("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
 
 # ---------- DASHBOARD (admin e clienti) ----------
 @app.get("/dashboard")
@@ -672,21 +689,26 @@ def dashboard():
             abort(404)
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
+
 # ---------- ADMIN CRUD ----------
 @app.get("/admin", endpoint="admin_home")
 @admin_required
 def admin_home():
     return redirect(url_for("dashboard"))
 
+
 @app.get("/admin/new")
 @admin_required
 def new_agent():
     return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
 
+
 def _save_common_fields_to_agent(ag: Agent):
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
-              "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
+    for k in [
+        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
+        "emails","websites","pec","piva","sdi","addresses",
+        "facebook","instagram","linkedin","tiktok","telegram","youtube"
+    ]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -697,6 +719,7 @@ def _save_common_fields_to_agent(ag: Agent):
     # scelta dietro foto: company/personal
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     ag.back_media_mode = mode if mode in ("company", "personal") else "company"
+
 
 def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
@@ -709,6 +732,7 @@ def _save_common_uploads_to_agent(ag: Agent):
         ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
     if back_media and back_media.filename:
         ag.back_media_url = upload_file(back_media, "logos", mb_to_bytes(MAX_IMAGE_MB))
+
 
 def _save_media_to_agent(ag: Agent):
     # gallery
@@ -745,6 +769,7 @@ def _save_media_to_agent(ag: Agent):
                 pdf_entries.append(f"{f.filename}||{u}")
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
+
 
 @app.post("/admin/new")
 @admin_required
@@ -806,6 +831,7 @@ def create_agent():
     flash("Card creata.", "success")
     return redirect(url_for("dashboard"))
 
+
 @app.get("/admin/<slug>/edit")
 @admin_required
 def edit_agent(slug):
@@ -816,6 +842,7 @@ def edit_agent(slug):
     if not ag:
         abort(404)
     return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
+
 
 @app.post("/admin/<slug>/edit")
 @admin_required
@@ -832,6 +859,7 @@ def update_agent(slug):
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
         i18n_data = {}
+
     for lang in ("en", "fr", "es", "de"):
         tr = {
             "name": clean_str(request.form.get(f"name_{lang}")),
@@ -843,6 +871,7 @@ def update_agent(slug):
         tr = {k: v for k, v in tr.items() if v}
         if tr:
             i18n_data[lang] = tr
+
     i18n_set(ag, i18n_data)
 
     _save_common_uploads_to_agent(ag)
@@ -852,6 +881,7 @@ def update_agent(slug):
     db.close()
     flash("Profilo 1 salvato.", "success")
     return redirect(url_for("dashboard"))
+
 
 @app.post("/admin/<slug>/delete")
 @admin_required
@@ -866,6 +896,7 @@ def delete_agent(slug):
     flash("Card eliminata.", "success")
     return redirect(url_for("dashboard"))
 
+
 # ---------- CLIENT EDIT P1 ----------
 @app.get("/me/edit")
 @login_required
@@ -879,6 +910,7 @@ def me_edit():
     if not ag:
         abort(404)
     return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
+
 
 @app.post("/me/edit")
 @login_required
@@ -897,6 +929,7 @@ def me_edit_post():
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
         i18n_data = {}
+
     for lang in ("en", "fr", "es", "de"):
         tr = {
             "name": clean_str(request.form.get(f"name_{lang}")),
@@ -908,6 +941,7 @@ def me_edit_post():
         tr = {k: v for k, v in tr.items() if v}
         if tr:
             i18n_data[lang] = tr
+
     i18n_set(ag, i18n_data)
 
     _save_common_uploads_to_agent(ag)
@@ -917,6 +951,7 @@ def me_edit_post():
     db.close()
     flash("Profilo 1 salvato.", "success")
     return redirect(url_for("me_edit"))
+
 
 # ---------- P2: attiva + disattiva + edit ----------
 @app.post("/me/activate_p2")
@@ -944,6 +979,7 @@ def me_activate_p2():
     flash("Profilo 2 attivato (vuoto).", "success")
     return redirect(url_for("me_profile2"))
 
+
 @app.post("/me/deactivate_p2")
 @login_required
 def me_deactivate_p2():
@@ -962,6 +998,7 @@ def me_deactivate_p2():
     db.close()
     flash("Profilo 2 disattivato.", "success")
     return redirect(url_for("me_edit"))
+
 
 @app.post("/admin/<slug>/activate_p2")
 @admin_required
@@ -985,6 +1022,7 @@ def admin_activate_p2(slug):
     flash("Profilo 2 attivato (vuoto).", "success")
     return redirect(url_for("dashboard"))
 
+
 @app.post("/admin/<slug>/deactivate_p2")
 @admin_required
 def admin_deactivate_p2(slug):
@@ -1000,6 +1038,7 @@ def admin_deactivate_p2(slug):
     db.close()
     flash("Profilo 2 disattivato.", "success")
     return redirect(url_for("dashboard"))
+
 
 @app.get("/me/profile2")
 @login_required
@@ -1020,11 +1059,13 @@ def me_profile2():
 
     view = blank_profile_view_from_agent(ag)
 
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-              "orbit_spin","avatar_spin","logo_spin","allow_flip",
-              "back_media_mode","back_media_url"]:
+    for k in [
+        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+        "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+        "orbit_spin","avatar_spin","logo_spin","allow_flip",
+        "back_media_mode","back_media_url"
+    ]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1040,10 +1081,13 @@ def me_profile2():
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
+
 def _save_profile2_payload_from_form():
     payload = {}
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
+    for k in [
+        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"
+    ]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1100,6 +1144,7 @@ def _save_profile2_payload_from_form():
 
     return payload
 
+
 @app.post("/me/profile2")
 @login_required
 def me_profile2_post():
@@ -1128,6 +1173,7 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
+
 # --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
@@ -1148,11 +1194,13 @@ def admin_profile2(slug):
 
     view = blank_profile_view_from_agent(ag)
 
-    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-              "orbit_spin","avatar_spin","logo_spin","allow_flip",
-              "back_media_mode","back_media_url"]:
+    for k in [
+        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+        "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+        "orbit_spin","avatar_spin","logo_spin","allow_flip",
+        "back_media_mode","back_media_url"
+    ]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1167,6 +1215,7 @@ def admin_profile2(slug):
                 setattr(view, k, vv)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
+
 
 @app.post("/admin/<slug>/profile2")
 @admin_required
@@ -1195,19 +1244,11 @@ def admin_profile2_post(slug):
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
 
+
 # ---------- ADMIN: INVIA CODICI (HTML) ----------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
-        return render_template(
-        "credentials.html",
-        username=u.username,
-        password=u.password,
-        login_url=login_url,
-        card_url=card_url,
-        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
-    )
-
     slug = slugify(slug)
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
@@ -1225,8 +1266,10 @@ def admin_credentials_html(slug):
         username=u.username,
         password=u.password,
         login_url=login_url,
-        card_url=card_url
+        card_url=card_url,
+        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
     )
+
 
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
@@ -1255,11 +1298,13 @@ def public_card(slug):
     else:
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
-            for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-                      "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-                      "orbit_spin","avatar_spin","logo_spin","allow_flip",
-                      "back_media_mode","back_media_url"]:
+            for k in [
+                "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+                "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+                "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+                "orbit_spin","avatar_spin","logo_spin","allow_flip",
+                "back_media_mode","back_media_url"
+            ]:
                 v = p2.get(k)
                 if v is None:
                     continue
@@ -1317,6 +1362,7 @@ def public_card(slug):
         p_key=p_key,
         p2_enabled=p2_enabled,
     )
+
 
 # ---------- VCARD ----------
 @app.get("/<slug>.vcf")
@@ -1381,6 +1427,7 @@ def vcard(slug):
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     return resp
 
+
 # ---------- QR ----------
 @app.get("/<slug>/qr.png")
 def qr(slug):
@@ -1399,14 +1446,17 @@ def qr(slug):
     bio.seek(0)
     return send_file(bio, mimetype="image/png")
 
+
 # ---------- ERRORS ----------
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
 
+
 @app.errorhandler(500)
 def server_error(e):
     return render_template("500.html"), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
