@@ -222,7 +222,7 @@ class Agent(Base):
     i18n_json = Column(Text, nullable=True)
 
     # ✅ SETTINGS GRAFICI P1 (admin)
-    p1_logo_spin = Column(Integer, nullable=True)   # 0/1
+    p1_logo_spin = Column(Integer, nullable=True)    # 0/1
     p1_flip_enabled = Column(Integer, nullable=True) # 0/1 (tap flip)
 
 class User(Base):
@@ -496,6 +496,7 @@ def agent_to_view(ag: Agent):
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
+    # PROFILO 2: volutamente "vuoto" (nessuna gallery/video/pdf presi dal P1)
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -537,7 +538,7 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
 
         # settings P2 verranno letti da profiles_json
         p1_logo_spin=0,
-d
+        p1_flip_enabled=1,
     )
 
 # ===================== ROUTES =====================
@@ -763,7 +764,7 @@ def update_agent(slug):
               "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
-    # ✅ settings grafici P1 (salvati da admin o cliente)
+    # ✅ settings grafici P1
     ag.p1_logo_spin = 1 if request.form.get("p1_logo_spin") == "1" else 0
     ag.p1_flip_enabled = 1 if request.form.get("p1_flip_enabled") == "1" else 0
 
@@ -874,7 +875,7 @@ def me_edit_post():
               "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
-    # ✅ settings grafici P1: il cliente può impostare (ma NON sulla card)
+    # ✅ settings grafici P1
     ag.p1_logo_spin = 1 if request.form.get("p1_logo_spin") == "1" else 0
     ag.p1_flip_enabled = 1 if request.form.get("p1_flip_enabled") == "1" else 0
 
@@ -923,7 +924,7 @@ def admin_deactivate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 0
-    # opzionale: rimuovo anche i dati salvati P2
+    # rimuovo anche i dati salvati P2
     profiles = parse_profiles_json(ag.profiles_json or "")
     profiles = [p for p in profiles if p.get("key") != "p2"]
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
@@ -959,7 +960,33 @@ def me_activate_p2():
     flash("Profilo 2 attivato.", "success")
     return redirect(url_for("me_profile2"))
 
-# ---------- P2 EDIT (immutato, ma aggiungo settings grafici nel profilo p2) ----------
+# ✅ DISATTIVA P2 (cliente)
+@app.post("/me/deactivate_p2")
+@login_required
+def me_deactivate_p2():
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    slug = current_client_slug()
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    if not ag:
+        db.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    session["p2_enabled"] = 0
+
+    profiles = parse_profiles_json(ag.profiles_json or "")
+    profiles = [p for p in profiles if p.get("key") != "p2"]
+    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
+
+    db.commit()
+    db.close()
+    flash("Profilo 2 disattivato.", "success")
+    return redirect(url_for("me_edit"))
+
+# ---------- P2 EDIT ----------
 @app.get("/me/profile2")
 @login_required
 def me_profile2():
@@ -1013,7 +1040,6 @@ def me_profile2_post():
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
-    # settings grafici P2
     payload["logo_spin"] = 1 if request.form.get("p2_logo_spin") == "1" else 0
     payload["flip_enabled"] = 1 if request.form.get("p2_flip_enabled") == "1" else 0
 
@@ -1127,12 +1153,11 @@ def public_card(slug):
         videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
         pdfs = parse_pdfs(ag.pdf1_url or "")
 
-        # ✅ settings grafici per card pubblica
         ui_logo_spin = int(getattr(ag, "p1_logo_spin", 0) or 0)
         ui_flip_enabled = int(getattr(ag, "p1_flip_enabled", 1) or 1)
 
     else:
-        # P2: contenuti solo se presenti in profiles_json (media P2 non gestita qui, rimane vuota)
+        # P2: volutamente vuoto come media (no gallery/video/pdf presi dal P1)
         view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
