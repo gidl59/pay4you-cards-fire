@@ -1199,6 +1199,15 @@ def admin_profile2_post(slug):
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
+        return render_template(
+        "credentials.html",
+        username=u.username,
+        password=u.password,
+        login_url=login_url,
+        card_url=card_url,
+        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
+    )
+
     slug = slugify(slug)
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
