@@ -37,27 +37,50 @@
 
           {% if (a.p2_enabled or 0)|int == 1 %}
             <a class="btn-mini" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+
+            {# ✅ DISATTIVA P2 (admin e cliente) #}
+            {% if is_admin %}
+              <form method="post" action="/admin/{{ a.slug }}/deactivate_p2" style="display:inline;">
+                <button class="btn-mini danger" type="submit" onclick="return confirm('Disattivare Profilo 2?')">Disattiva P2</button>
+              </form>
+            {% else %}
+              <form method="post" action="/me/deactivate_p2" style="display:inline;">
+                <button class="btn-mini danger" type="submit" onclick="return confirm('Disattivare Profilo 2?')">Disattiva P2</button>
+              </form>
+            {% endif %}
+
+          {% else %}
+            {% if is_admin %}
+              <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
+                <button class="btn-mini warn" type="submit">Attiva P2</button>
+              </form>
+            {% else %}
+              <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
+                <button class="btn-mini warn" type="submit">Attiva P2</button>
+              </form>
+            {% endif %}
+          {% endif %}
+
+          {% if is_admin %}
+            <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
+          {% else %}
+            <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica P1</a>
           {% endif %}
 
           {% if (a.p2_enabled or 0)|int == 1 %}
-            <a class="btn-mini ghost" href="{{ url_for('admin_profile2', slug=a.slug) }}">Modifica P2</a>
-          {% else %}
-            <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
-              <button class="btn-mini warn" type="submit">Attiva P2</button>
-            </form>
+            {% if is_admin %}
+              <a class="btn-mini ghost" href="{{ url_for('admin_profile2', slug=a.slug) }}">Modifica P2</a>
+            {% else %}
+              <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica P2</a>
+            {% endif %}
           {% endif %}
-
-          <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
 
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR</button>
 
+          {# ✅ INVIA CODICI (solo admin) #}
           {% if is_admin %}
-            <a class="btn-mini" href="{{ url_for('admin_credentials', slug=a.slug) }}">Invia codici</a>
-          {% endif %}
-
-          {% if is_admin and (a.p2_enabled or 0)|int == 1 %}
-            <form method="post" action="{{ url_for('admin_deactivate_p2', slug=a.slug) }}" style="display:inline;" onsubmit="return confirm('Disattivare Profilo 2?')">
-              <button class="btn-mini danger" type="submit">Disattiva P2</button>
+            <form method="post" action="/admin/{{ a.slug }}/send_credentials" style="display:inline;">
+              <button class="btn-mini" type="submit">Invia codici</button>
             </form>
           {% endif %}
 
@@ -71,7 +94,9 @@
       {% endfor %}
     </div>
 
-    <div class="footer">Realizzato © Pay4You da Giuseppe Di Lisio 2026</div>
+    <div class="footer">
+      Realizzato © Pay4You da Giuseppe Di Lisio 2026
+    </div>
   </div>
 </div>
 
