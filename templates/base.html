@@ -17,7 +17,10 @@
     {% if session.get('username') %}
     <header class="app-header">
       <div class="app-header-left">
-        <span class="app-logo-text">Area riservata</span>
+        <div class="admin-brand">
+          <img class="admin-brand-logo" src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You">
+          <span class="app-logo-text">Area riservata</span>
+        </div>
       </div>
 
       <div class="app-header-right">
@@ -27,9 +30,6 @@
         {% else %}
           <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
           <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
-          {% if agent and (agent.p2_enabled or 0)|int == 1 %}
-            <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
-          {% endif %}
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
         {% endif %}
       </div>
