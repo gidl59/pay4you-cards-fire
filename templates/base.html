@@ -18,12 +18,12 @@
     <header class="app-header">
       <div class="app-header-left">
 
-        {# Logo Pay4You in header #}
-        {% set home_href = url_for('dashboard') %}
-        <a href="{{ home_href }}" class="app-brand" aria-label="Pay4You">
+        <!-- LOGO PAY4YOU + TESTO (header area riservata) -->
+        <a class="app-brand" href="{{ url_for('dashboard') }}">
           <img class="app-brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
           <span class="app-logo-text">Area riservata</span>
         </a>
+
       </div>
 
       <div class="app-header-right">
