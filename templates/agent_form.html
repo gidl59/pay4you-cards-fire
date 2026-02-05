@@ -33,6 +33,10 @@
             <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
               <button class="btn primary" type="submit">Attiva Profilo 2</button>
             </form>
+          {% else %}
+            <form method="post" action="{{ url_for('me_deactivate_p2') }}" style="display:inline;">
+              <button class="btn ghost" type="submit">Disattiva Profilo 2</button>
+            </form>
           {% endif %}
         </div>
       {% endif %}
@@ -78,16 +82,23 @@
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
       <div class="form-grid">
 
-        {% if session.get('role') == 'admin' and not editing_profile2 %}
+        {# ======================
+           SLUG: IMPORTANTISSIMO
+           - Admin può inserirlo SOLO quando crea la card (agent == None)
+           - Se agent esiste, slug BLOCCATO (non modificabile)
+           - Client sempre bloccato
+           ====================== #}
+        {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
           <div class="field">
             <label>Slug (univoco)</label>
-            <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
+            <input type="text" name="slug" value="" required>
+            <div class="hint">Una volta creato, lo slug non sarà più modificabile.</div>
           </div>
         {% else %}
           <div class="field">
             <label>Slug</label>
-            <input type="text" value="{{ agent.slug }}" disabled>
-            <div class="hint">Lo slug non è modificabile qui.</div>
+            <input type="text" value="{{ agent.slug if agent else '' }}" readonly>
+            <div class="hint">Lo slug è bloccato e non può essere modificato.</div>
           </div>
         {% endif %}
 
@@ -161,25 +172,43 @@
           <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
         </div>
 
+        {# ======================
+           SOCIAL + ISTRUZIONI
+           ====================== #}
         <div class="field">
-          <label>Facebook (link)</label>
+          <label>Facebook</label>
           <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
+          <div class="hint">Esempio: https://www.facebook.com/pagina</div>
         </div>
+
         <div class="field">
-          <label>Instagram (link)</label>
+          <label>Instagram</label>
           <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
+          <div class="hint">Esempio: https://www.instagram.com/nomeutente/</div>
         </div>
+
         <div class="field">
-          <label>LinkedIn (link)</label>
+          <label>LinkedIn</label>
           <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
+          <div class="hint">Esempio: https://www.linkedin.com/in/nome-cognome-a1234567</div>
         </div>
+
         <div class="field">
-          <label>TikTok (link)</label>
+          <label>TikTok</label>
           <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
+          <div class="hint">Esempio: https://www.tiktok.com/@nomeutente</div>
         </div>
+
         <div class="field">
-          <label>Telegram (link o @user)</label>
+          <label>Telegram</label>
           <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
+          <div class="hint">Esempi: https://t.me/nomeutente &nbsp; oppure &nbsp; https://t.me/s/nomecanale</div>
+        </div>
+
+        <div class="field">
+          <label>YouTube</label>
+          <input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}">
+          <div class="hint">Esempio: https://www.youtube.com/@nomeutente</div>
         </div>
 
         <div class="field">
@@ -234,38 +263,52 @@
           </details>
         </div>
 
-        {% if not editing_profile2 %}
-          <div class="field full"><div class="sep"></div></div>
+        {# ======================
+           MEDIA: ora anche su P2
+           ====================== #}
+        <div class="field full"><div class="sep"></div></div>
 
-          <div class="field">
-            <label>Galleria (max 30 immagini)</label>
-            <input type="file" name="gallery" accept="image/*" multiple>
+        <div class="field full">
+          {% if editing_profile2 %}
+            <h3 style="margin:0 0 8px 0;">Media Profilo 2 (separati da Profilo 1)</h3>
+            <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
+          {% else %}
+            <h3 style="margin:0 0 8px 0;">Media Profilo 1</h3>
+            <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
+          {% endif %}
+        </div>
+
+        <div class="field">
+          <label>Galleria (max 30 immagini)</label>
+          <input type="file" name="gallery" accept="image/*" multiple>
+        </div>
+
+        <div class="field">
+          <label>Video (max 10)</label>
+          <input type="file" name="videos" accept="video/*" multiple>
+        </div>
+
+        <div class="field full">
+          <label>PDF (fino a 12)</label>
+          <div class="grid-3">
+            <input type="file" name="pdf1" accept="application/pdf">
+            <input type="file" name="pdf2" accept="application/pdf">
+            <input type="file" name="pdf3" accept="application/pdf">
+            <input type="file" name="pdf4" accept="application/pdf">
+            <input type="file" name="pdf5" accept="application/pdf">
+            <input type="file" name="pdf6" accept="application/pdf">
+            <input type="file" name="pdf7" accept="application/pdf">
+            <input type="file" name="pdf8" accept="application/pdf">
+            <input type="file" name="pdf9" accept="application/pdf">
+            <input type="file" name="pdf10" accept="application/pdf">
+            <input type="file" name="pdf11" accept="application/pdf">
+            <input type="file" name="pdf12" accept="application/pdf">
           </div>
+        </div>
 
-          <div class="field">
-            <label>Video (max 10)</label>
-            <input type="file" name="videos" accept="video/*" multiple>
-          </div>
-
-          <div class="field full">
-            <label>PDF (fino a 12)</label>
-            <div class="grid-3">
-              <input type="file" name="pdf1" accept="application/pdf">
-              <input type="file" name="pdf2" accept="application/pdf">
-              <input type="file" name="pdf3" accept="application/pdf">
-              <input type="file" name="pdf4" accept="application/pdf">
-              <input type="file" name="pdf5" accept="application/pdf">
-              <input type="file" name="pdf6" accept="application/pdf">
-              <input type="file" name="pdf7" accept="application/pdf">
-              <input type="file" name="pdf8" accept="application/pdf">
-              <input type="file" name="pdf9" accept="application/pdf">
-              <input type="file" name="pdf10" accept="application/pdf">
-              <input type="file" name="pdf11" accept="application/pdf">
-              <input type="file" name="pdf12" accept="application/pdf">
-            </div>
-          </div>
-        {% endif %}
-
+        {# ======================
+           TRADUZIONI: SOLO P1
+           ====================== #}
         {% if not editing_profile2 %}
           <div class="field full">
             <div class="sep"></div>
