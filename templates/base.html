@@ -16,7 +16,12 @@
 
     {% if session.get('username') %}
     <header class="app-header">
-      <div class="app-header-left">
+      <div class="app-header-left" style="display:flex; align-items:center; gap:10px;">
+        <img
+          src="{{ url_for('static', filename='logo.png') }}"
+          alt="Pay4You"
+          style="width:40px;height:40px;border-radius:12px;object-fit:contain;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.25);padding:6px;"
+        >
         <span class="app-logo-text">Area riservata</span>
       </div>
 
