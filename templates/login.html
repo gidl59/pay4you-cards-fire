@@ -6,7 +6,16 @@
   <div class="login-card login-card-pretty">
 
     <div class="login-top">
-      <img class="login-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
+      <img
+        class="login-logo"
+        src="{{ url_for('static', filename='logo.png') }}"
+        alt="Pay4You"
+        loading="eager"
+        decoding="async"
+        width="56"
+        height="56"
+        style="max-width:100%;height:auto;"
+      >
       <a class="btn-back" href="/" onclick="history.back(); return false;">Torna indietro</a>
     </div>
 
@@ -24,6 +33,7 @@
           <input name="username" placeholder="es. mario.rossi" autocomplete="username" required>
           <div class="hint">Di solito coincide con lo slug della card.</div>
         </div>
+
         <div class="field">
           <label>Password</label>
           <input name="password" type="password" autocomplete="current-password" required>
@@ -39,6 +49,7 @@
             <div class="login-mini-title">Suggerimento</div>
             <div class="login-mini-text">Dopo il primo accesso, salva le credenziali in un posto sicuro.</div>
           </div>
+
           <div class="login-mini-box">
             <div class="login-mini-title">Supporto</div>
             <div class="login-mini-text">Per assistenza, scrivici su WhatsApp o email (come da istruzioni ricevute).</div>
