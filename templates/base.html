@@ -16,11 +16,12 @@
 
     {% if session.get('username') %}
     <header class="app-header">
-      <div class="app-header-left">
-        <div class="admin-brand">
-          <img class="admin-brand-logo" src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You">
+      <div class="app-header-left" style="display:flex; align-items:center; gap:10px;">
+        <a href="{{ url_for('dashboard') }}" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+          <img src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You"
+               style="width:42px;height:42px;object-fit:contain; filter: drop-shadow(0 10px 16px rgba(250,204,21,.35));">
           <span class="app-logo-text">Area riservata</span>
-        </div>
+        </a>
       </div>
 
       <div class="app-header-right">
