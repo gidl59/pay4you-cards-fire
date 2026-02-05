@@ -9,31 +9,16 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
-  <!-- ✅ Applica tema prima del render (evita flash) -->
-  <script>
-    (function(){
-      try{
-        var t = localStorage.getItem("p4y_theme") || "auto";
-        document.documentElement.setAttribute("data-theme", (t==="auto") ? "" : t);
-      }catch(e){}
-    })();
-  </script>
 </head>
 
 <body data-theme="">
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- Torna indietro -->
-      <div style="position:absolute; top:12px; right:12px; z-index:6;">
-        <button class="btn-mini" type="button" onclick="history.back()" title="Torna indietro">↩ Torna indietro</button>
-      </div>
-
-      <!-- Top left logo (ruota quando orbit_spin=1) -->
+      <!-- Top left logo -->
       {% if ag.logo_url %}
       <div class="top-left-logo {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-        <img src="{{ ag.logo_url }}" alt="Logo" loading="lazy">
+        <img src="{{ ag.logo_url }}" alt="Logo">
       </div>
       {% endif %}
 
@@ -43,28 +28,38 @@
 
           {% if ag.logo_url %}
           <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-            <img src="{{ ag.logo_url }}" alt="Logo orbit" loading="lazy">
+            <img src="{{ ag.logo_url }}" alt="Logo orbit">
           </div>
           {% endif %}
 
           {% set can_flip = (ag.allow_flip or 0)|int == 1 %}
-          <div class="flip {% if can_flip %}is-flippable{% endif %}" id="flipBox">
+          {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
+
+          {% set back_mode = ag.back_media_mode if ag.back_media_mode else 'company' %}
+          {% set back_url = '' %}
+          {% if back_mode == 'personal' and ag.back_media_url %}
+            {% set back_url = ag.back_media_url %}
+          {% elif ag.logo_url %}
+            {% set back_url = ag.logo_url %}
+          {% endif %}
+
+          <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
             <div class="flip-inner">
               <div class="flip-front">
-                <div class="avatar {% if (ag.avatar_spin or 0)|int == 1 %}spin-self{% endif %}">
+                <div class="avatar">
                   {% if ag.photo_url %}
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto" loading="lazy">
+                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
                 </div>
               </div>
+
               <div class="flip-back">
                 <div class="avatar">
-                  {% if ag.logo_url %}
-                    <img class="avatar-img"
-                         style="object-fit:contain; padding:18px; {% if (ag.logo_spin or 0)|int == 1 %}animation: spin360 10s linear infinite;{% endif %}"
-                         src="{{ ag.logo_url }}" alt="Logo" loading="lazy">
+                  {% if back_url %}
+                    <img class="avatar-img back-img {% if (ag.logo_spin or 0)|int == 1 %}spin-logo{% endif %}"
+                         src="{{ back_url }}" alt="Retro">
                   {% else %}
                     <div class="avatar-placeholder">★</div>
                   {% endif %}
@@ -77,11 +72,14 @@
 
         <div class="hero-text hero-text-center">
           {% if ag.name %}<div class="name name-center">{{ ag.name }}</div>{% endif %}
-          {% if ag.company %}<div class="company company-center">{{ ag.company }}</div>{% endif %}
+
+          {% if ag.company %}
+            <div class="company-badge">{{ ag.company }}</div>
+          {% endif %}
+
           {% if ag.role %}<div class="role role-center">{{ ag.role }}</div>{% endif %}
           {% if ag.bio %}<div class="bio bio-center">{{ ag.bio }}</div>{% endif %}
 
-          <!-- Switch profilo -->
           {% if p2_enabled %}
           <div class="profile-switch profile-switch-center">
             <a class="profile-pill {% if not p_key %}active{% endif %}" href="/{{ ag.slug }}?lang={{ lang }}">{{ t_func('profile_1') }}</a>
@@ -89,7 +87,7 @@
           </div>
           {% endif %}
 
-          <!-- SOCIAL ICONS A COLORI -->
+          <!-- SOCIAL -->
           <div class="social-icons social-icons-center">
             {% if ag.facebook %}
               <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook">
@@ -100,17 +98,16 @@
             {% endif %}
 
             {% if ag.instagram %}
-              {% set ig_id = "ig-" ~ ag.slug ~ "-" ~ (p_key if p_key else "p1") %}
               <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
                   <defs>
-                    <linearGradient id="{{ ig_id }}" x1="0" y1="24" x2="24" y2="0">
+                    <linearGradient id="ig" x1="0" y1="24" x2="24" y2="0">
                       <stop offset="0" stop-color="#F58529"/>
                       <stop offset="0.5" stop-color="#DD2A7B"/>
                       <stop offset="1" stop-color="#515BD4"/>
                     </linearGradient>
                   </defs>
-                  <path fill="url(#{{ ig_id }})" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
+                  <path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
                 </svg>
               </a>
             {% endif %}
@@ -158,11 +155,11 @@
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
-          <a class="action-btn" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+          <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
           {% if wa_link %}
-            <a class="action-btn secondary" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
+            <a class="action-btn action-wa" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
           {% endif %}
-          <button class="action-btn" type="button" onclick="openQrModal({{ qr_url|tojson }})">{{ t_func('scan_qr') }}</button>
+          <button class="action-btn action-qr" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
@@ -173,8 +170,8 @@
         <div class="section-title">{{ t_func('contacts') }}</div>
 
         {% if mobiles %}
-          <div class="row">
-            <span>{{ t_func('mobile_phone') }}</span>
+          <div class="row row-phone">
+            <span class="row-tag tag-phone">{{ t_func('mobile_phone') }}</span>
             <div style="text-align:right;">
               {% for m in mobiles %}
                 <div><a href="tel:{{ m|replace(' ','') }}">{{ m }}</a></div>
@@ -184,15 +181,15 @@
         {% endif %}
 
         {% if ag.phone_office %}
-          <div class="row">
-            <span>{{ t_func('office_phone') }}</span>
+          <div class="row row-phone">
+            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
             <a href="tel:{{ ag.phone_office|replace(' ','') }}">{{ ag.phone_office }}</a>
           </div>
         {% endif %}
 
         {% if emails %}
-          <div class="row">
-            <span>Email</span>
+          <div class="row row-email">
+            <span class="row-tag tag-email">Email</span>
             <div style="text-align:right;">
               {% for e in emails %}
                 <div><a href="mailto:{{ e }}">{{ e }}</a></div>
@@ -202,15 +199,15 @@
         {% endif %}
 
         {% if pec_email %}
-          <div class="row">
-            <span>PEC</span>
+          <div class="row row-email">
+            <span class="row-tag tag-email">PEC</span>
             <a href="mailto:{{ pec_email }}">{{ pec_email }}</a>
           </div>
         {% endif %}
 
         {% if websites %}
-          <div class="row">
-            <span>{{ t_func('open_website') }}</span>
+          <div class="row row-web">
+            <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
             <div style="text-align:right;">
               {% for w in websites %}
                 <div><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
@@ -226,10 +223,10 @@
       <div class="section">
         <div class="section-title">{{ t_func('data') }}</div>
         {% if ag.piva %}
-          <div class="row"><span>{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
+          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
         {% endif %}
         {% if ag.sdi %}
-          <div class="row"><span>{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
+          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
         {% endif %}
       </div>
       {% endif %}
@@ -266,8 +263,8 @@
         <div class="section-title">{{ t_func('gallery') }}</div>
         <div class="gallery-scroll">
           {% for g in gallery %}
-            <button class="thumb" type="button" onclick="openImg({{ g|tojson }})">
-              <img src="{{ g }}" alt="Foto" loading="lazy">
+            <button class="thumb" type="button" onclick="openImg('{{ g }}')">
+              <img src="{{ g }}" alt="Foto">
             </button>
           {% endfor %}
         </div>
@@ -281,9 +278,9 @@
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
+              <video class="video-mini" src="{{ v }}" muted playsinline></video>
               <div class="video-play">PLAY</div>
-              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo({{ v|tojson }})"></button>
+              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
             </div>
           {% endfor %}
         </div>
@@ -296,7 +293,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }})">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}')">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -328,7 +325,7 @@
   </div>
 
 <script>
-  // flip
+  // flip tap
   (function(){
     const canFlip = {{ 1 if (ag.allow_flip or 0)|int == 1 else 0 }};
     if(!canFlip) return;
@@ -341,21 +338,16 @@
   (function(){
     const KEY = "p4y_theme";
     const buttons = document.querySelectorAll(".theme-pill");
-
     function apply(theme){
-      // ✅ allineo html + body
-      document.documentElement.setAttribute("data-theme", theme === "auto" ? "" : theme);
-      document.body.setAttribute("data-theme", theme === "auto" ? "" : theme);
+      const body = document.body;
+      body.setAttribute("data-theme", theme === "auto" ? "" : theme);
       buttons.forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
     }
-
-    let saved = "auto";
-    try{ saved = localStorage.getItem(KEY) || "auto"; }catch(e){}
+    const saved = localStorage.getItem(KEY) || "auto";
     apply(saved);
-
     buttons.forEach(b => {
       b.addEventListener("click", () => {
-        try{ localStorage.setItem(KEY, b.dataset.theme); }catch(e){}
+        localStorage.setItem(KEY, b.dataset.theme);
         apply(b.dataset.theme);
       });
     });
@@ -364,78 +356,67 @@
   // modal helpers
   function openModal(type){
     const modal = document.getElementById('modal');
-    if(!modal) return;
-
-    document.body.style.overflow = 'hidden';
     modal.style.display='flex';
-
-    const img = document.getElementById('mImg');
-    const vid = document.getElementById('mVideo');
-    const pdf = document.getElementById('mPdf');
-
-    if(img) img.style.display = (type==='img') ? 'block' : 'none';
-    if(vid) vid.style.display = (type==='video') ? 'block' : 'none';
-    if(pdf) pdf.style.display = (type==='pdf') ? 'block' : 'none';
+    document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
+    document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
+    document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
   }
 
   function closeModal(){
     const modal = document.getElementById('modal');
-    if(modal) modal.style.display='none';
-    document.body.style.overflow = '';
+    if(!modal) return;
+    modal.style.display='none';
 
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
     const pdf = document.getElementById('mPdf');
 
     if(img) img.src = '';
-
     if(vid){
       try{ vid.pause(); }catch(e){}
       vid.removeAttribute('src');
       try{ vid.load(); }catch(e){}
     }
-
     if(pdf) pdf.src = '';
   }
 
   function openImg(src){
     const img = document.getElementById('mImg');
-    if(!img) return;
     img.src = src;
     openModal('img');
   }
-
   function openVideo(src){
     const v = document.getElementById('mVideo');
-    if(!v) return;
     v.src = src;
     openModal('video');
     v.play().catch(()=>{});
   }
-
   function openPdf(src){
     const f = document.getElementById('mPdf');
-    if(!f) return;
     f.src = src;
     openModal('pdf');
   }
+
+  // click fuori chiude
+  document.getElementById('modal')?.addEventListener('click', function(e){
+    if(e.target === this) closeModal();
+  });
+  document.getElementById('qr-modal')?.addEventListener('click', function(e){
+    if(e.target === this) closeQrModal();
+  });
 
   // QR modal
   function openQrModal(src){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
-    if(!m || !img) return;
     img.src = src;
-    document.body.style.overflow = 'hidden';
     m.style.display = 'flex';
   }
-
   function closeQrModal(){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
-    if(img) img.src = '';
-    if(m) m.style.display = 'none';
-    document.body.style.overflow = '';
+    img.src = '';
+    m.style.display = 'none';
   }
 </script>
 </body>
