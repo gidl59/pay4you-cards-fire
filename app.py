@@ -204,6 +204,9 @@ class Agent(Base):
     telegram = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
 
+    # ✅ NEW: YouTube
+    youtube = Column(String, nullable=True)
+
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
@@ -261,6 +264,9 @@ ensure_sqlite_column("agents", "orbit_spin", "INTEGER")
 ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
 ensure_sqlite_column("agents", "logo_spin", "INTEGER")
 ensure_sqlite_column("agents", "allow_flip", "INTEGER")
+
+# ✅ NEW: colonna youtube
+ensure_sqlite_column("agents", "youtube", "TEXT")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -490,6 +496,8 @@ def agent_to_view(ag: Agent):
         tiktok=safe_url(ag.tiktok),
         telegram=safe_url(ag.telegram),
         whatsapp=clean_str(ag.whatsapp),
+        # ✅ NEW: youtube in view
+        youtube=safe_url(getattr(ag, "youtube", None)),
         pec=clean_str(ag.pec),
         piva=clean_str(ag.piva),
         sdi=clean_str(ag.sdi),
@@ -534,6 +542,9 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         tiktok="",
         telegram="",
         whatsapp="",
+
+        # ✅ NEW: youtube blank
+        youtube="",
 
         pec="",
         piva="",
@@ -656,7 +667,8 @@ def create_agent():
 
     for k in ["company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram",
+              "youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     # i18n
@@ -754,7 +766,8 @@ def update_agent(slug):
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram",
+              "youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -863,7 +876,8 @@ def me_edit_post():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram",
+              "youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -1036,6 +1050,7 @@ def me_profile2():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
@@ -1069,7 +1084,8 @@ def me_profile2_post():
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1151,6 +1167,7 @@ def admin_profile2(slug):
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
@@ -1183,7 +1200,8 @@ def admin_profile2_post(slug):
 
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+              "youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1296,6 +1314,7 @@ def public_card(slug):
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
+                      "youtube",
                       "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
                       "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
                 v = p2.get(k)
