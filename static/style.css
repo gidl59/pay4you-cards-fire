@@ -689,3 +689,62 @@ body[data-theme="light"] .pdf-btn{
   .grid-3{ grid-template-columns: 1fr; }
   .page-title{ font-size:30px; }
 }
+/* ===== ADMIN BRAND (logo Pay4You in header) ===== */
+.admin-brand{ display:flex; align-items:center; gap:10px; }
+.admin-brand-logo{
+  width:34px; height:34px; object-fit:contain;
+  filter: drop-shadow(0 10px 18px rgba(250,204,21,.35));
+}
+
+/* ===== Back button sulla card ===== */
+.back-pill{
+  position:absolute;
+  top:12px;
+  right:12px;
+  z-index:6;
+  border:1px solid rgba(250,204,21,.35);
+  background: rgba(250,204,21,.10);
+  color: var(--txt);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:950;
+  cursor:pointer;
+}
+.back-pill:hover{ border-color: rgba(250,204,21,.55); }
+
+/* ===== Ruota anche logo alto a sinistra quando orbit_spin è ON ===== */
+.top-left-logo img.spin-tl{
+  animation: spin360 8s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+/* ===== SOCIAL A COLORI ===== */
+.soc svg{ opacity:1; }
+
+.soc-wa svg{ fill:#25D366; }
+.soc-fb svg{ fill:#1877F2; }
+.soc-in svg{ fill:#0A66C2; }
+.soc-tg svg{ fill:#229ED9; }
+.soc-yt svg{ fill:#FF0000; }
+
+/* Instagram: look “gradient” */
+.soc-ig{
+  border-color: rgba(233,30,99,.35);
+  background: rgba(233,30,99,.06);
+}
+.soc-ig svg{ fill:#E1306C; }
+
+/* TikTok: leggero contrasto */
+.soc-tt{
+  border-color: rgba(0,0,0,.25);
+}
+.soc-tt svg{ fill: var(--txt); }
+
+/* Rendiamo l’admin un po’ più “vivo” senza cambiare palette */
+.panel{
+  box-shadow: 0 18px 60px rgba(0,0,0,.28);
+}
+.btn.primary{
+  filter: saturate(1.12) contrast(1.03);
+}
+
