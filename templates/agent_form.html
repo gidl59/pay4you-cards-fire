@@ -6,31 +6,88 @@
   <div class="panel" style="width:min(1120px,100%);">
 
     <div class="panel-head">
-      <h1 class="page-title">{% if agent %}Modifica Profilo 1{% else %}Nuova Card{% endif %}</h1>
-      <div class="hint">Lo slug è bloccato dopo la creazione (QR/NFC/credenziali).</div>
+      <h1 class="page-title">
+        {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
+      </h1>
+
+      {# --------------------------
+         TOOLBAR SOLO PER AGENTE (non admin)
+         Profilo 2 e Card P2 SOLO se abilitato
+         Se non abilitato: mostra pulsante "Attiva Profilo 2"
+         -------------------------- #}
+      {% if session.get('role') != 'admin' and agent %}
+        <div class="toolbar">
+          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
+
+          {% if agent.p2_enabled == 1 %}
+            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+          {% endif %}
+
+          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+
+          {% if agent.p2_enabled == 1 %}
+            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+          {% endif %}
+
+          {% if agent.p2_enabled != 1 %}
+            <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
+              <button class="btn primary" type="submit">Attiva Profilo 2</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {# --------------------------
+         TOOLBAR PER ADMIN
+         In admin, se sta modificando P1 e P2 non attivo -> mostra "Attiva Profilo 2"
+         -------------------------- #}
+      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
+        <div class="toolbar">
+          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+
+          {% if agent.p2_enabled == 1 %}
+            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
+            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
+              <button class="btn primary" type="submit">Attiva Profilo 2</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
     </div>
 
-    {% if agent %}
-      {% set form_action = url_for('update_agent', slug=agent.slug) %}
+    {# ACTION URL: admin e agent #}
+    {% if session.get('role') == 'admin' %}
+      {% if agent and not editing_profile2 %}
+        {% set form_action = url_for('update_agent', slug=agent.slug) %}
+      {% elif agent and editing_profile2 %}
+        {% set form_action = url_for('admin_profile2_post', slug=agent.slug) %}
+      {% else %}
+        {% set form_action = url_for('create_agent') %}
+      {% endif %}
     {% else %}
-      {% set form_action = url_for('create_agent') %}
+      {% if editing_profile2 %}
+        {% set form_action = url_for('me_profile2_post') %}
+      {% else %}
+        {% set form_action = url_for('me_edit_post') %}
+      {% endif %}
     {% endif %}
 
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
       <div class="form-grid">
 
-        {% if not agent %}
+        {% if session.get('role') == 'admin' and not editing_profile2 %}
           <div class="field">
             <label>Slug (univoco)</label>
-            <input type="text" name="slug" required placeholder="es. mario-rossi">
-            <div class="hint">IMPORTANTE: non sarà modificabile dopo la creazione.</div>
+            <input type="text" name="slug" value="{{ agent.slug if agent else '' }}" required>
           </div>
         {% else %}
           <div class="field">
             <label>Slug</label>
             <input type="text" value="{{ agent.slug }}" disabled>
-            {# sicurezza: mantengo lo slug anche se disabilitato #}
-            <input type="hidden" name="slug" value="{{ agent.slug }}">
+            <div class="hint">Lo slug non è modificabile qui.</div>
           </div>
         {% endif %}
 
@@ -51,111 +108,211 @@
 
         <div class="field full">
           <label>Bio / Descrizione</label>
-          <textarea name="bio" placeholder="Scrivi una breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
+          <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
         </div>
 
         <div class="field">
           <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}" placeholder="+39 333 123 4567">
+          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
         </div>
 
         <div class="field">
           <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}" placeholder="+39 333 123 4567">
+          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
         </div>
 
         <div class="field">
           <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}" placeholder="+39 051 123 456">
+          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
         </div>
 
         <div class="field">
           <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}" placeholder="+39 3331234567 oppure https://wa.me/393331234567">
-          <div class="hint">Puoi scrivere anche solo il numero (senza spazi). Il sistema crea il link WhatsApp.</div>
+          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
         </div>
 
         <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}" placeholder="info@azienda.it, commerciale@azienda.it">
+          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
         </div>
 
         <div class="field">
           <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}" placeholder="www.pay4you.store, www.miosito.it">
+          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
         </div>
 
         <div class="field">
-          <label>Instagram (username o link)</label>
-          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://instagram.com/nomeutente">
-          <div class="hint">Esempi validi: <b>@pay4you</b> oppure <b>pay4you</b> oppure link completo.</div>
+          <label>PEC</label>
+          <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
         </div>
 
         <div class="field">
-          <label>Facebook (username/pagina o link)</label>
-          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}" placeholder="nomepagina oppure https://facebook.com/nomepagina">
+          <label>P.IVA</label>
+          <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
         </div>
 
         <div class="field">
-          <label>LinkedIn (username o link)</label>
-          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}" placeholder="nome-cognome-a1234567 oppure https://linkedin.com/in/...">
-          <div class="hint">Esempio: <b>nome-cognome-a1234567</b> (diventa automaticamente /in/...).</div>
+          <label>SDI</label>
+          <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
         </div>
 
-        <div class="field">
-          <label>TikTok (username o link)</label>
-          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://tiktok.com/@nomeutente">
-        </div>
-
-        <div class="field">
-          <label>Telegram (username o link)</label>
-          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}" placeholder="@nomeutente oppure https://t.me/nomeutente oppure https://t.me/s/nomecanale">
-          <div class="hint">Esempi: <b>@pay4you</b> oppure <b>pay4you</b> oppure <b>https://t.me/s/nomecanale</b>.</div>
-        </div>
-
-        <div class="field">
-          <label>YouTube (username o link)</label>
-          <input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}" placeholder="@nomeutente oppure nomeutente oppure https://youtube.com/@nomeutente">
-        </div>
-
-        <div class="field">
-          <label>Foto profilo</label>
-          <input type="file" name="photo" accept="image/*">
-          <div class="hint">Consiglio: foto quadrata, ben illuminata.</div>
-        </div>
-
-        <div class="field">
-          <label>Logo</label>
-          <input type="file" name="logo" accept="image/*">
-          <div class="hint">Consiglio: PNG trasparente (se possibile).</div>
-        </div>
-
-        {# ✅ EFFETTI GRAFICI: SOLO ADMIN #}
-        {% if session.get('role') == 'admin' %}
         <div class="field full">
-          <div class="sep"></div>
-          <h3 style="margin:0 0 8px 0;">Effetti grafici (card)</h3>
-          <div class="hint">Impostazioni “extra” della card (solo admin).</div>
-
-          <div class="toggle-row">
-            <label class="toggle">
-              <input type="checkbox" name="p1_logo_spin" value="1"
-                     {% if agent and (agent.p1_logo_spin or 0)|int == 1 %}checked{% endif %}>
-              <span>Logo dietro che gira (orbit)</span>
-            </label>
-
-            <label class="toggle">
-              <input type="checkbox" name="p1_flip_enabled" value="1"
-                     {% if not agent or (agent.p1_flip_enabled or 0)|int == 1 %}checked{% endif %}>
-              <span>Tap sulla foto: gira e mostra il logo</span>
-            </label>
-          </div>
+          <label>Indirizzi (uno per riga)</label>
+          <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
         </div>
+
+        <div class="field">
+          <label>Facebook (link)</label>
+          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
+        </div>
+        <div class="field">
+          <label>Instagram (link)</label>
+          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
+        </div>
+        <div class="field">
+          <label>LinkedIn (link)</label>
+          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
+        </div>
+        <div class="field">
+          <label>TikTok (link)</label>
+          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
+        </div>
+        <div class="field">
+          <label>Telegram (link o @user)</label>
+          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
+        </div>
+
+        <div class="field">
+          <label>Foto profilo (max 8MB)</label>
+          <input type="file" name="photo" accept="image/*">
+        </div>
+
+        <div class="field">
+          <label>Logo azienda (max 8MB)</label>
+          <input type="file" name="logo" accept="image/*">
+        </div>
+
+        <!-- ✅ EFFETTI GRAFICI (rotazioni/flip) -->
+        <div class="field full details">
+          <details open>
+            <summary>Effetti grafici (rotazioni / tap)</summary>
+
+            <div class="grid-3" style="margin-top:10px;">
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="orbit_spin" value="1"
+                       {% if agent and (agent.orbit_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Logo dietro ruota
+              </label>
+
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="avatar_spin" value="1"
+                       {% if agent and (agent.avatar_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Foto ruota su se stessa
+              </label>
+
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="logo_spin" value="1"
+                       {% if agent and (agent.logo_spin or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Logo (dietro) ruota su se stesso
+              </label>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label class="btn-mini" style="justify-content:flex-start;">
+                <input type="checkbox" name="allow_flip" value="1"
+                       {% if agent and (agent.allow_flip or 0)|int == 1 %}checked{% endif %}
+                       style="margin-right:8px;">
+                Tap per flip (tocco sulla foto: mostra il logo)
+              </label>
+              <div class="hint" style="margin-top:6px;">
+                Se disattivo, la foto resta fissa stile concorrenza.
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {% if not editing_profile2 %}
+          <div class="field full"><div class="sep"></div></div>
+
+          <div class="field">
+            <label>Galleria (max 30 immagini)</label>
+            <input type="file" name="gallery" accept="image/*" multiple>
+          </div>
+
+          <div class="field">
+            <label>Video (max 10)</label>
+            <input type="file" name="videos" accept="video/*" multiple>
+          </div>
+
+          <div class="field full">
+            <label>PDF (fino a 12)</label>
+            <div class="grid-3">
+              <input type="file" name="pdf1" accept="application/pdf">
+              <input type="file" name="pdf2" accept="application/pdf">
+              <input type="file" name="pdf3" accept="application/pdf">
+              <input type="file" name="pdf4" accept="application/pdf">
+              <input type="file" name="pdf5" accept="application/pdf">
+              <input type="file" name="pdf6" accept="application/pdf">
+              <input type="file" name="pdf7" accept="application/pdf">
+              <input type="file" name="pdf8" accept="application/pdf">
+              <input type="file" name="pdf9" accept="application/pdf">
+              <input type="file" name="pdf10" accept="application/pdf">
+              <input type="file" name="pdf11" accept="application/pdf">
+              <input type="file" name="pdf12" accept="application/pdf">
+            </div>
+          </div>
+        {% endif %}
+
+        {% if not editing_profile2 %}
+          <div class="field full">
+            <div class="sep"></div>
+            <h3 style="margin:0 0 8px 0;">Traduzioni Profilo 1 (opzionali)</h3>
+            <div class="hint">Se il telefono è in inglese/francese/spagnolo/tedesco, la card userà questi testi (se compilati).</div>
+          </div>
+
+          {% for L in ['en','fr','es','de'] %}
+            <div class="field full details">
+              <details>
+                <summary>{{ L|upper }}</summary>
+
+                <div class="grid-2" style="margin-top:10px;">
+                  <div class="field">
+                    <label>Nome ({{ L|upper }})</label>
+                    <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
+                  </div>
+                  <div class="field">
+                    <label>Azienda ({{ L|upper }})</label>
+                    <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
+                  </div>
+                  <div class="field">
+                    <label>Ruolo ({{ L|upper }})</label>
+                    <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
+                  </div>
+                  <div class="field full">
+                    <label>Bio ({{ L|upper }})</label>
+                    <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
+                  </div>
+                  <div class="field full">
+                    <label>Indirizzi ({{ L|upper }})</label>
+                    <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
+                  </div>
+                </div>
+              </details>
+            </div>
+          {% endfor %}
         {% endif %}
 
         <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn primary" type="submit">Salva</button>
-          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+
+          {% if session.get('role') == 'admin' %}
+            <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+          {% else %}
+            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
+          {% endif %}
         </div>
 
       </div>
