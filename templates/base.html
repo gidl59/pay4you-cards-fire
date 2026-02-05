@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="{{ (lang|default('it')) }}">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Pay4You Cards{% endblock %}</title>
@@ -11,7 +11,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
-<body>
+
+<body data-theme="">
   <div class="app-shell">
 
     {% if session.get('username') %}
@@ -24,7 +25,7 @@
         </a>
       </div>
 
-      <div class="app-header-right">
+      <div class="app-header-right" style="display:flex; gap:10px; flex-wrap:wrap;">
         {% if session.get('role') == 'admin' %}
           <a href="{{ url_for('dashboard') }}" class="header-link">Lista Card</a>
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
@@ -51,5 +52,14 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <!-- ✅ Applica tema salvato (stesso KEY usato nella card) -->
+  <script>
+    (function(){
+      const KEY = "p4y_theme";
+      const saved = localStorage.getItem(KEY) || "auto";
+      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
+    })();
+  </script>
 </body>
 </html>
