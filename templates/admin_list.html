@@ -40,11 +40,11 @@
 
             {% if is_admin %}
               <form method="post" action="{{ url_for('admin_deactivate_p2', slug=a.slug) }}" style="display:inline;">
-                <button class="btn-mini ghost" type="submit">Disattiva P2</button>
+                <button class="btn-mini warn" type="submit">Disattiva P2</button>
               </form>
             {% else %}
               <form method="post" action="{{ url_for('me_deactivate_p2') }}" style="display:inline;">
-                <button class="btn-mini ghost" type="submit">Disattiva P2</button>
+                <button class="btn-mini warn" type="submit">Disattiva P2</button>
               </form>
             {% endif %}
 
@@ -88,7 +88,7 @@
     </div>
 
     <div class="footer">
-      Realizzato © Pay4You da Giuseppe Di Lisio 2026
+      © 2026 Realizzato Pay4You — Giuseppe Di Lisio
     </div>
   </div>
 </div>
