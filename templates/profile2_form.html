@@ -3,191 +3,56 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="panel" style="width:min(1120px,100%);">
+  <div class="agent-form-wrapper">
 
-    <div class="panel-head">
-      <h1 class="page-title">Modifica Profilo 2</h1>
-      <div class="hint">Il Profilo 2 è separato dal Profilo 1: dati e media non vengono copiati automaticamente.</div>
+    <h1 class="agent-form-title">Profilo 2</h1>
+
+    <div style="margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="header-link" href="{{ url_for('me_edit') }}">⬅ Torna al Profilo principale</a>
+      <a class="header-link" href="/{{ agent.slug }}?p=p2&lang={{ lang|default('it') }}" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
     </div>
 
-    <div style="padding:14px 18px; display:flex; gap:10px; flex-wrap:wrap;">
-      {% if is_admin %}
-        <a class="btn-pill" href="{{ url_for('dashboard') }}">⬅ Torna alla lista</a>
-      {% else %}
-        <a class="btn-pill" href="{{ url_for('me_edit') }}">⬅ Torna al Profilo 1</a>
+    <form class="agent-form" method="post" action="{{ url_for('me_profile2_post') }}" enctype="multipart/form-data">
+
+      <label>Nome profilo (IT)</label>
+      <input type="text" name="label_it" value="{{ p2.label_it or 'Profilo 2' }}">
+
+      <label>Profile name (EN)</label>
+      <input type="text" name="label_en" value="{{ p2.label_en or 'Profile 2' }}">
+
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+
+      <label>Nome</label>
+      <input type="text" name="name" value="{{ p2.name or '' }}">
+
+      <label>Azienda</label>
+      <input type="text" name="company" value="{{ p2.company or '' }}">
+
+      <label>Ruolo</label>
+      <input type="text" name="role" value="{{ p2.role or '' }}">
+
+      <label>Bio / Descrizione</label>
+      <textarea name="bio">{{ p2.bio or '' }}</textarea>
+
+      <hr style="border:0; height:1px; background:rgba(148,163,184,0.15); margin:10px 0;">
+
+      <label>Foto profilo (Profilo 2)</label>
+      <input type="file" name="photo" accept="image/*">
+      {% if p2.photo_url %}
+        <div style="font-size:12px; opacity:.75;">Attuale: {{ p2.photo_url }}</div>
       {% endif %}
-      <a class="btn-pill" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Profilo 2 pubblico</a>
-    </div>
 
-    {% if is_admin %}
-      {% set form_action = url_for('admin_profile2_post', slug=slug) %}
-    {% else %}
-      {% set form_action = url_for('me_profile2_post') %}
-    {% endif %}
+      <label>Logo (Profilo 2)</label>
+      <input type="file" name="logo" accept="image/*">
+      {% if p2.logo_url %}
+        <div style="font-size:12px; opacity:.75;">Attuale: {{ p2.logo_url }}</div>
+      {% endif %}
 
-    <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
-      <div class="form-grid">
-
-        <div class="field">
-          <label>Slug (bloccato)</label>
-          <input type="text" value="{{ agent.slug }}" disabled>
-          <div class="hint">Lo slug non è modificabile (QR / NFC / credenziali).</div>
-        </div>
-
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" name="name" value="{{ agent.name or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Azienda</label>
-          <input type="text" name="company" value="{{ agent.company or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Ruolo</label>
-          <input type="text" name="role" value="{{ agent.role or '' }}">
-        </div>
-
-        <div class="field full">
-          <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ agent.bio or '' }}</textarea>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ agent.phone_office or '' }}">
-        </div>
-
-        <div class="field">
-          <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ agent.whatsapp or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ agent.emails or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ agent.websites or '' }}">
-        </div>
-
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" name="instagram" value="{{ agent.instagram or '' }}" placeholder="https://www.instagram.com/ oppure nomeutente">
-          <div class="hint">Esempio: https://www.instagram.com/</div>
-        </div>
-
-        <div class="field">
-          <label>Facebook</label>
-          <input type="text" name="facebook" value="{{ agent.facebook or '' }}" placeholder="https://www.facebook.com/ oppure pagina/username">
-          <div class="hint">Esempio: https://www.facebook.com/</div>
-        </div>
-
-        <div class="field">
-          <label>LinkedIn</label>
-          <input type="text" name="linkedin" value="{{ agent.linkedin or '' }}" placeholder="https://www.linkedin.com/in/nome-cognome-a1234567">
-          <div class="hint">Esempio: https://www.linkedin.com/in/nome-cognome-a1234567</div>
-        </div>
-
-        <div class="field">
-          <label>TikTok</label>
-          <input type="text" name="tiktok" value="{{ agent.tiktok or '' }}" placeholder="https://www.tiktok.com/@nomeutente">
-          <div class="hint">Esempio: https://www.tiktok.com/@nomeutente</div>
-        </div>
-
-        <div class="field">
-          <label>Telegram</label>
-          <input type="text" name="telegram" value="{{ agent.telegram or '' }}" placeholder="https://t.me/nomeutente oppure https://t.me/s/nomecanale">
-          <div class="hint">Esempio: https://t.me/nomeutente oppure https://t.me/s/nomecanale</div>
-        </div>
-
-        <div class="field">
-          <label>YouTube</label>
-          <input type="text" name="youtube" value="{{ agent.youtube or '' }}" placeholder="https://www.youtube.com/@nomeutente">
-          <div class="hint">Esempio: https://www.youtube.com/@nomeutente</div>
-        </div>
-
-        <div class="field">
-          <label>PEC</label>
-          <input type="text" name="pec" value="{{ agent.pec or '' }}">
-        </div>
-
-        <div class="field">
-          <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ agent.piva or '' }}">
-        </div>
-
-        <div class="field">
-          <label>SDI</label>
-          <input type="text" name="sdi" value="{{ agent.sdi or '' }}">
-        </div>
-
-        <div class="field full">
-          <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ agent.addresses or '' }}</textarea>
-        </div>
-
-        <div class="field">
-          <label>Foto profilo (Profilo 2)</label>
-          <input type="file" name="photo" accept="image/*">
-          {% if agent.photo_url %}
-            <div class="hint">Attuale: {{ agent.photo_url }}</div>
-          {% endif %}
-        </div>
-
-        <div class="field">
-          <label>Logo (Profilo 2)</label>
-          <input type="file" name="logo" accept="image/*">
-          {% if agent.logo_url %}
-            <div class="hint">Attuale: {{ agent.logo_url }}</div>
-          {% endif %}
-        </div>
-
-        <!-- ✅ SETTINGS GRAFICI (solo area riservata, non sulla card come pulsanti) -->
-        <div class="field full">
-          <div class="sep"></div>
-          <h3 style="margin:0 0 8px 0;">Effetti grafici (Profilo 2)</h3>
-          <div class="hint">Queste impostazioni si gestiscono da qui. Sulla card NON devono comparire pulsanti on/off.</div>
-
-          <div class="toggle-row">
-            <label class="toggle">
-              <input type="checkbox" name="p2_logo_spin" value="1" {% if (agent.p2_logo_spin or 0)|int == 1 %}checked{% endif %}>
-              <span>Logo dietro che gira (orbit)</span>
-            </label>
-
-            <label class="toggle">
-              <input type="checkbox" name="p2_flip_enabled" value="1" {% if (agent.p2_flip_enabled or 0)|int == 1 %}checked{% endif %}>
-              <span>Tap sulla foto: gira e mostra il logo</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn primary" type="submit">Salva Profilo 2</button>
-
-          {% if is_admin %}
-            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=slug) }}">Ricarica</a>
-          {% else %}
-            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Ricarica</a>
-          {% endif %}
-        </div>
-
+      <div class="agent-form-buttons">
+        <button type="submit">Salva Profilo 2</button>
+        <a class="btn-secondary" href="{{ url_for('me_edit') }}">Torna indietro</a>
       </div>
     </form>
-
   </div>
 </div>
 {% endblock %}
