@@ -9,6 +9,16 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+  <!-- ✅ Applica tema prima del render (evita flash) -->
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem("p4y_theme") || "auto";
+        document.documentElement.setAttribute("data-theme", (t==="auto") ? "" : t);
+      }catch(e){}
+    })();
+  </script>
 </head>
 
 <body data-theme="">
@@ -23,7 +33,7 @@
       <!-- Top left logo (ruota quando orbit_spin=1) -->
       {% if ag.logo_url %}
       <div class="top-left-logo {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-        <img src="{{ ag.logo_url }}" alt="Logo">
+        <img src="{{ ag.logo_url }}" alt="Logo" loading="lazy">
       </div>
       {% endif %}
 
@@ -33,7 +43,7 @@
 
           {% if ag.logo_url %}
           <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-            <img src="{{ ag.logo_url }}" alt="Logo orbit">
+            <img src="{{ ag.logo_url }}" alt="Logo orbit" loading="lazy">
           </div>
           {% endif %}
 
@@ -43,7 +53,7 @@
               <div class="flip-front">
                 <div class="avatar {% if (ag.avatar_spin or 0)|int == 1 %}spin-self{% endif %}">
                   {% if ag.photo_url %}
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
+                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto" loading="lazy">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
@@ -52,8 +62,9 @@
               <div class="flip-back">
                 <div class="avatar">
                   {% if ag.logo_url %}
-                    <img class="avatar-img" style="object-fit:contain; padding:18px; {% if (ag.logo_spin or 0)|int == 1 %}animation: spin360 10s linear infinite;{% endif %}"
-                         src="{{ ag.logo_url }}" alt="Logo">
+                    <img class="avatar-img"
+                         style="object-fit:contain; padding:18px; {% if (ag.logo_spin or 0)|int == 1 %}animation: spin360 10s linear infinite;{% endif %}"
+                         src="{{ ag.logo_url }}" alt="Logo" loading="lazy">
                   {% else %}
                     <div class="avatar-placeholder">★</div>
                   {% endif %}
@@ -89,16 +100,17 @@
             {% endif %}
 
             {% if ag.instagram %}
+              {% set ig_id = "ig-" ~ ag.slug ~ "-" ~ (p_key if p_key else "p1") %}
               <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
                   <defs>
-                    <linearGradient id="ig" x1="0" y1="24" x2="24" y2="0">
+                    <linearGradient id="{{ ig_id }}" x1="0" y1="24" x2="24" y2="0">
                       <stop offset="0" stop-color="#F58529"/>
                       <stop offset="0.5" stop-color="#DD2A7B"/>
                       <stop offset="1" stop-color="#515BD4"/>
                     </linearGradient>
                   </defs>
-                  <path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
+                  <path fill="url(#{{ ig_id }})" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
                 </svg>
               </a>
             {% endif %}
@@ -150,7 +162,7 @@
           {% if wa_link %}
             <a class="action-btn secondary" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
           {% endif %}
-          <button class="action-btn" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
+          <button class="action-btn" type="button" onclick="openQrModal({{ qr_url|tojson }})">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
@@ -237,7 +249,7 @@
       </div>
       {% endif %}
 
-      <!-- THEME TOGGLE (spostato QUI) -->
+      <!-- THEME TOGGLE -->
       <div class="section">
         <div class="section-title">{{ t_func('theme') }}</div>
         <div class="theme-toggle theme-toggle-compact">
@@ -254,8 +266,8 @@
         <div class="section-title">{{ t_func('gallery') }}</div>
         <div class="gallery-scroll">
           {% for g in gallery %}
-            <button class="thumb" type="button" onclick="openImg('{{ g }}')">
-              <img src="{{ g }}" alt="Foto">
+            <button class="thumb" type="button" onclick="openImg({{ g|tojson }})">
+              <img src="{{ g }}" alt="Foto" loading="lazy">
             </button>
           {% endfor %}
         </div>
@@ -269,9 +281,9 @@
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <video class="video-mini" src="{{ v }}" muted playsinline></video>
+              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
               <div class="video-play">PLAY</div>
-              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
+              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo({{ v|tojson }})"></button>
             </div>
           {% endfor %}
         </div>
@@ -284,7 +296,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}')">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }})">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -329,16 +341,21 @@
   (function(){
     const KEY = "p4y_theme";
     const buttons = document.querySelectorAll(".theme-pill");
+
     function apply(theme){
-      const body = document.body;
-      body.setAttribute("data-theme", theme === "auto" ? "" : theme);
+      // ✅ allineo html + body
+      document.documentElement.setAttribute("data-theme", theme === "auto" ? "" : theme);
+      document.body.setAttribute("data-theme", theme === "auto" ? "" : theme);
       buttons.forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
     }
-    const saved = localStorage.getItem(KEY) || "auto";
+
+    let saved = "auto";
+    try{ saved = localStorage.getItem(KEY) || "auto"; }catch(e){}
     apply(saved);
+
     buttons.forEach(b => {
       b.addEventListener("click", () => {
-        localStorage.setItem(KEY, b.dataset.theme);
+        try{ localStorage.setItem(KEY, b.dataset.theme); }catch(e){}
         apply(b.dataset.theme);
       });
     });
@@ -346,33 +363,59 @@
 
   // modal helpers
   function openModal(type){
-    document.getElementById('modal').style.display='flex';
-    document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
-    document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
-    document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
-  }
-  function closeModal(){
-    document.getElementById('modal').style.display='none';
+    const modal = document.getElementById('modal');
+    if(!modal) return;
+
+    document.body.style.overflow = 'hidden';
+    modal.style.display='flex';
+
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
     const pdf = document.getElementById('mPdf');
-    img.src='';
-    vid.pause(); vid.removeAttribute('src'); vid.load();
-    pdf.src='';
+
+    if(img) img.style.display = (type==='img') ? 'block' : 'none';
+    if(vid) vid.style.display = (type==='video') ? 'block' : 'none';
+    if(pdf) pdf.style.display = (type==='pdf') ? 'block' : 'none';
   }
+
+  function closeModal(){
+    const modal = document.getElementById('modal');
+    if(modal) modal.style.display='none';
+    document.body.style.overflow = '';
+
+    const img = document.getElementById('mImg');
+    const vid = document.getElementById('mVideo');
+    const pdf = document.getElementById('mPdf');
+
+    if(img) img.src = '';
+
+    if(vid){
+      try{ vid.pause(); }catch(e){}
+      vid.removeAttribute('src');
+      try{ vid.load(); }catch(e){}
+    }
+
+    if(pdf) pdf.src = '';
+  }
+
   function openImg(src){
     const img = document.getElementById('mImg');
+    if(!img) return;
     img.src = src;
     openModal('img');
   }
+
   function openVideo(src){
     const v = document.getElementById('mVideo');
+    if(!v) return;
     v.src = src;
     openModal('video');
     v.play().catch(()=>{});
   }
+
   function openPdf(src){
     const f = document.getElementById('mPdf');
+    if(!f) return;
     f.src = src;
     openModal('pdf');
   }
@@ -381,14 +424,18 @@
   function openQrModal(src){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
+    if(!m || !img) return;
     img.src = src;
+    document.body.style.overflow = 'hidden';
     m.style.display = 'flex';
   }
+
   function closeQrModal(){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
-    img.src = '';
-    m.style.display = 'none';
+    if(img) img.src = '';
+    if(m) m.style.display = 'none';
+    document.body.style.overflow = '';
   }
 </script>
 </body>
