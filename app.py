@@ -417,7 +417,7 @@ def normalize_whatsapp_link(raw: str) -> str:
 
 def safe_url(u: str) -> str:
     """
-    Accetta link anche senza https se sembrano domini.
+    Accetta link anche senza https se sembrano domini (instagram.com/.., www.., ecc).
     Se non sembra un link valido -> non pubblichiamo.
     """
     u = clean_str(u)
@@ -427,6 +427,7 @@ def safe_url(u: str) -> str:
         return u
     if u.startswith("@"):
         return f"https://t.me/{u[1:]}"
+    # se contiene un dominio (punto) e nessuno spazio -> prepend https://
     if "." in u and " " not in u and not u.startswith("mailto:"):
         return "https://" + u.lstrip("/")
     return ""
@@ -460,11 +461,6 @@ def select_profile(profiles: list, key: str):
         if p.get("key") == key:
             return p
     return None
-
-def remove_profile(profiles: list, key: str):
-    if not isinstance(profiles, list):
-        return []
-    return [p for p in profiles if not (isinstance(p, dict) and p.get("key") == key)]
 
 def agent_to_view(ag: Agent):
     logo = clean_str(getattr(ag, "logo_url", None)) or clean_str(getattr(ag, "extra_logo_url", None))
@@ -586,6 +582,7 @@ def login_post():
     session["role"] = u.role
     session["agent_slug"] = u.agent_slug
 
+    # ✅ salva se P2 è attivo (per navbar)
     p2_enabled = 0
     if u.agent_slug:
         ag = db.query(Agent).filter_by(slug=u.agent_slug).first()
@@ -821,52 +818,6 @@ def delete_agent(slug):
     flash("Card eliminata.", "success")
     return redirect(url_for("dashboard"))
 
-# ✅ RIPRISTINO: pagina "Invia codici" (NO JSON)
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    u = db.query(User).filter_by(username=slug).first()
-    db.close()
-    if not ag or not u:
-        abort(404)
-
-    base = get_base_url()
-    login_url = f"{base}/login"
-    card_url = f"{base}/{ag.slug}"
-
-    return render_template(
-        "credentials.html",
-        agent=ag,
-        username=u.username,
-        password=u.password,
-        login_url=login_url,
-        card_url=card_url
-    )
-
-# ✅ DISATTIVA P2 (ADMIN)
-@app.post("/admin/<slug>/deactivate_p2")
-@admin_required
-def admin_deactivate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 0
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    profiles = remove_profile(profiles, "p2")
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 disattivato.", "success")
-    return redirect(url_for("dashboard"))
-
 # ---------- CLIENT EDIT P1 ----------
 @app.get("/me/edit")
 @login_required
@@ -975,6 +926,7 @@ def me_activate_p2():
     ag.p2_enabled = 1
     session["p2_enabled"] = 1  # ✅ navbar
 
+    # ✅ P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -984,32 +936,6 @@ def me_activate_p2():
     db.close()
     flash("Profilo 2 attivato (vuoto).", "success")
     return redirect(url_for("me_profile2"))
-
-# ✅ DISATTIVA P2 (CLIENT)
-@app.post("/me/deactivate_p2")
-@login_required
-def me_deactivate_p2():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 0
-    session["p2_enabled"] = 0
-
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    profiles = remove_profile(profiles, "p2")
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 disattivato.", "success")
-    return redirect(url_for("me_edit"))
 
 @app.post("/admin/<slug>/activate_p2")
 @admin_required
@@ -1023,6 +949,7 @@ def admin_activate_p2(slug):
 
     ag.p2_enabled = 1
 
+    # ✅ P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -1197,6 +1124,7 @@ def public_card(slug):
                 if v:
                     setattr(ag_view, k, v)
 
+        # ✅ media P2 vuoti
         gallery, videos, pdfs = [], [], []
 
     base = get_base_url()
