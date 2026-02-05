@@ -61,6 +61,7 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Chiaro",
         "theme_dark": "Scuro",
+        "youtube": "YouTube",
     },
     "en": {
         "save_contact": "Save contact",
@@ -84,6 +85,7 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Light",
         "theme_dark": "Dark",
+        "youtube": "YouTube",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
@@ -107,6 +109,7 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Clair",
         "theme_dark": "Sombre",
+        "youtube": "YouTube",
     },
     "es": {
         "save_contact": "Guardar contacto",
@@ -130,6 +133,7 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Claro",
         "theme_dark": "Oscuro",
+        "youtube": "YouTube",
     },
     "de": {
         "save_contact": "Kontakt speichern",
@@ -153,6 +157,7 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Hell",
         "theme_dark": "Dunkel",
+        "youtube": "YouTube",
     },
 }
 
@@ -165,12 +170,8 @@ def t(lang: str, key: str) -> str:
 def mb_to_bytes(mb: int) -> int:
     return int(mb) * 1024 * 1024
 
-def form_checkbox_int(name: str) -> int:
-    # checkbox: se presente => "1"
-    return 1 if request.form.get(name) in ("1", "on", "true", "True") else 0
-
 app = Flask(__name__)
-app.secret_key = os.getenv("APP_SECRET", "dev_secret")
+app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # limite request complessiva
 
 DB_URL = "sqlite:////var/data/data.db"
@@ -203,6 +204,7 @@ class Agent(Base):
     linkedin = Column(String, nullable=True)
     tiktok = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
+    youtube = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
 
     pec = Column(String, nullable=True)
@@ -224,12 +226,6 @@ class Agent(Base):
 
     # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
-
-    # Effetti grafici P1 (P2 salva in profiles_json)
-    orbit_spin = Column(Integer, nullable=True)     # 0/1
-    avatar_spin = Column(Integer, nullable=True)    # 0/1
-    logo_spin = Column(Integer, nullable=True)      # 0/1
-    allow_flip = Column(Integer, nullable=True)     # 0/1
 
 class User(Base):
     __tablename__ = "users"
@@ -257,11 +253,7 @@ ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
-
-ensure_sqlite_column("agents", "orbit_spin", "INTEGER")
-ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
-ensure_sqlite_column("agents", "logo_spin", "INTEGER")
-ensure_sqlite_column("agents", "allow_flip", "INTEGER")
+ensure_sqlite_column("agents", "youtube", "TEXT")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -424,6 +416,10 @@ def normalize_whatsapp_link(raw: str) -> str:
     return ""
 
 def safe_url(u: str) -> str:
+    """
+    Accetta link anche senza https se sembrano domini (instagram.com/.., www.., ecc).
+    Se non sembra un link valido -> non pubblichiamo.
+    """
     u = clean_str(u)
     if not u:
         return ""
@@ -431,6 +427,7 @@ def safe_url(u: str) -> str:
         return u
     if u.startswith("@"):
         return f"https://t.me/{u[1:]}"
+    # se contiene un dominio (punto) e nessuno spazio -> prepend https://
     if "." in u and " " not in u and not u.startswith("mailto:"):
         return "https://" + u.lstrip("/")
     return ""
@@ -484,6 +481,7 @@ def agent_to_view(ag: Agent):
         linkedin=safe_url(ag.linkedin),
         tiktok=safe_url(ag.tiktok),
         telegram=safe_url(ag.telegram),
+        youtube=safe_url(getattr(ag, "youtube", None)),
         whatsapp=clean_str(ag.whatsapp),
         pec=clean_str(ag.pec),
         piva=clean_str(ag.piva),
@@ -496,16 +494,11 @@ def agent_to_view(ag: Agent):
         pdf1_url=clean_str(ag.pdf1_url),
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
         profiles_json=getattr(ag, "profiles_json", None),
-
-        orbit_spin=int(getattr(ag, "orbit_spin", 0) or 0),
-        avatar_spin=int(getattr(ag, "avatar_spin", 0) or 0),
-        logo_spin=int(getattr(ag, "logo_spin", 0) or 0),
-        allow_flip=int(getattr(ag, "allow_flip", 0) or 0),
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
     """
-    View per Profilo 2 completamente VUOTO (NON copia P1).
+    ✅ View per Profilo 2 completamente VUOTO (NON copia P1)
     """
     return SimpleNamespace(
         id=ag.id,
@@ -528,6 +521,7 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         linkedin="",
         tiktok="",
         telegram="",
+        youtube="",
         whatsapp="",
 
         pec="",
@@ -544,11 +538,6 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
 
         p2_enabled=1,
         profiles_json=ag.profiles_json,
-
-        orbit_spin=0,
-        avatar_spin=0,
-        logo_spin=0,
-        allow_flip=0,
     )
 
 # ===================== ROUTES =====================
@@ -580,17 +569,28 @@ def login_post():
         session["username"] = "admin"
         session["role"] = "admin"
         session["agent_slug"] = None
+        session["p2_enabled"] = 0
         return redirect(url_for("dashboard"))
 
     db = SessionLocal()
     u = db.query(User).filter_by(username=username, password=password).first()
-    db.close()
     if not u:
+        db.close()
         return render_template("login.html", error="Credenziali errate")
 
     session["username"] = u.username
     session["role"] = u.role
     session["agent_slug"] = u.agent_slug
+
+    # ✅ salva se P2 è attivo (per navbar)
+    p2_enabled = 0
+    if u.agent_slug:
+        ag = db.query(Agent).filter_by(slug=u.agent_slug).first()
+        if ag and int(getattr(ag, "p2_enabled", 0) or 0) == 1:
+            p2_enabled = 1
+    session["p2_enabled"] = p2_enabled
+
+    db.close()
     return redirect(url_for("dashboard"))
 
 @app.get("/logout")
@@ -639,19 +639,11 @@ def create_agent():
         db.close()
         return "Slug già esistente", 400
 
-    ag = Agent(
-        slug=slug,
-        name=name,
-        p2_enabled=0,
-        orbit_spin=form_checkbox_int("orbit_spin"),
-        avatar_spin=form_checkbox_int("avatar_spin"),
-        logo_spin=form_checkbox_int("logo_spin"),
-        allow_flip=form_checkbox_int("allow_flip"),
-    )
+    ag = Agent(slug=slug, name=name, p2_enabled=0)
 
     for k in ["company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     # i18n
@@ -735,7 +727,7 @@ def edit_agent(slug):
     db.close()
     if not ag:
         abort(404)
-    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/admin/<slug>/edit")
 @admin_required
@@ -747,15 +739,11 @@ def update_agent(slug):
         db.close()
         abort(404)
 
+    # ✅ SLUG NON SI MODIFICA MAI (anche se qualcuno lo manda nel form)
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
-
-    ag.orbit_spin = form_checkbox_int("orbit_spin")
-    ag.avatar_spin = form_checkbox_int("avatar_spin")
-    ag.logo_spin = form_checkbox_int("logo_spin")
-    ag.allow_flip = form_checkbox_int("allow_flip")
 
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
@@ -842,7 +830,7 @@ def me_edit():
     db.close()
     if not ag:
         abort(404)
-    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
+    return render_template("agent_form.html", agent=ag, i18n_data=i18n_get(ag), editing_profile2=False)
 
 @app.post("/me/edit")
 @login_required
@@ -858,13 +846,8 @@ def me_edit_post():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
-
-    ag.orbit_spin = form_checkbox_int("orbit_spin")
-    ag.avatar_spin = form_checkbox_int("avatar_spin")
-    ag.logo_spin = form_checkbox_int("logo_spin")
-    ag.allow_flip = form_checkbox_int("allow_flip")
 
     i18n_data = i18n_get(ag)
     if not isinstance(i18n_data, dict):
@@ -941,8 +924,9 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
+    session["p2_enabled"] = 1  # ✅ navbar
 
-    # P2 deve partire VUOTO (nessuna copia da P1)
+    # ✅ P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -965,6 +949,7 @@ def admin_activate_p2(slug):
 
     ag.p2_enabled = 1
 
+    # ✅ P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -995,20 +980,11 @@ def me_profile2():
     view = blank_profile_view_from_agent(ag)
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
-        v = p2.get(k)
-        if v is None:
-            continue
-        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
-            try:
-                setattr(view, k, int(v))
-            except Exception:
-                pass
-        else:
-            vv = clean_str(v)
-            if vv:
-                setattr(view, k, vv)
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "photo_url","logo_url"]:
+        v = clean_str(p2.get(k))
+        if v:
+            setattr(view, k, v)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
@@ -1023,18 +999,15 @@ def me_profile2_post():
     if not ag:
         db.close()
         abort(404)
+
     ag.p2_enabled = 1
+    session["p2_enabled"] = 1  # ✅ navbar
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
-
-    payload["orbit_spin"] = form_checkbox_int("orbit_spin")
-    payload["avatar_spin"] = form_checkbox_int("avatar_spin")
-    payload["logo_spin"] = form_checkbox_int("logo_spin")
-    payload["allow_flip"] = form_checkbox_int("allow_flip")
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -1043,7 +1016,7 @@ def me_profile2_post():
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1072,20 +1045,11 @@ def admin_profile2(slug):
     view = blank_profile_view_from_agent(ag)
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
-        v = p2.get(k)
-        if v is None:
-            continue
-        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
-            try:
-                setattr(view, k, int(v))
-            except Exception:
-                pass
-        else:
-            vv = clean_str(v)
-            if vv:
-                setattr(view, k, vv)
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "photo_url","logo_url"]:
+        v = clean_str(p2.get(k))
+        if v:
+            setattr(view, k, v)
 
     return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
 
@@ -1104,13 +1068,8 @@ def admin_profile2_post(slug):
 
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
-
-    payload["orbit_spin"] = form_checkbox_int("orbit_spin")
-    payload["avatar_spin"] = form_checkbox_int("avatar_spin")
-    payload["logo_spin"] = form_checkbox_int("logo_spin")
-    payload["allow_flip"] = form_checkbox_int("allow_flip")
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -1119,37 +1078,13 @@ def admin_profile2_post(slug):
     if logo and logo.filename:
         payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
     db.close()
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
-
-# ---------- ADMIN: INVIA CODICI (HTML) ----------
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials_html(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    u = db.query(User).filter_by(username=slug).first()
-    db.close()
-    if not ag or not u:
-        abort(404)
-
-    base = get_base_url()
-    login_url = f"{base}/login"
-    card_url = f"{base}/{slug}"
-
-    return render_template(
-        "credentials.html",
-        username=u.username,
-        password=u.password,
-        login_url=login_url,
-        card_url=card_url
-    )
 
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
@@ -1168,31 +1103,29 @@ def public_card(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2")
 
+    # ✅ P1
     if p_key != "p2":
         ag_view = agent_to_view(ag)
         ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
+
+        gallery = (ag.gallery_urls.split("|") if clean_str(ag.gallery_urls) else [])
+        videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
+        pdfs = parse_pdfs(ag.pdf1_url or "")
+
+    # ✅ P2: COMPLETAMENTE VUOTO (anche media)
     else:
         ag_view = blank_profile_view_from_agent(ag)
+
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-                      "photo_url","logo_url","orbit_spin","avatar_spin","logo_spin","allow_flip"]:
-                v = p2.get(k)
-                if v is None:
-                    continue
-                if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
-                    try:
-                        setattr(ag_view, k, int(v))
-                    except Exception:
-                        pass
-                else:
-                    vv = clean_str(v)
-                    if vv:
-                        setattr(ag_view, k, vv)
+                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+                      "photo_url","logo_url"]:
+                v = clean_str(p2.get(k))
+                if v:
+                    setattr(ag_view, k, v)
 
-    gallery = (ag.gallery_urls.split("|") if clean_str(ag.gallery_urls) else [])
-    videos = (ag.video_urls.split("|") if clean_str(ag.video_urls) else [])
-    pdfs = parse_pdfs(ag.pdf1_url or "")
+        # ✅ media P2 vuoti
+        gallery, videos, pdfs = [], [], []
 
     base = get_base_url()
 
