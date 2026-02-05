@@ -17,13 +17,7 @@
     {% if session.get('username') %}
     <header class="app-header">
       <div class="app-header-left">
-
-        <!-- LOGO PAY4YOU + TESTO (header area riservata) -->
-        <a class="app-brand" href="{{ url_for('dashboard') }}">
-          <img class="app-brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You">
-          <span class="app-logo-text">Area riservata</span>
-        </a>
-
+        <span class="app-logo-text">Area riservata</span>
       </div>
 
       <div class="app-header-right">
@@ -33,11 +27,6 @@
         {% else %}
           <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
           <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
-
-          {% if (session.get('p2_enabled') or 0)|int == 1 %}
-            <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
-          {% endif %}
-
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
         {% endif %}
       </div>
