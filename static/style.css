@@ -758,3 +758,44 @@ body[data-theme="light"] .pdf-btn{
   .grid-3{ grid-template-columns: 1fr; }
   .page-title{ font-size:30px; }
 }
+/* --- BADGE AZIENDA COLORATO --- */
+.company-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 14px;
+  border-radius:14px;
+  margin-top:10px;
+  font-weight:950;
+  letter-spacing:.2px;
+  border:1px solid rgba(148,163,184,.18);
+  background: rgba(15,23,42,.18);
+}
+.company-badge--red{
+  background: rgba(239,68,68,.18);
+  border-color: rgba(239,68,68,.35);
+}
+
+/* --- BOTTONI AZIONI COLORATI --- */
+.action-btn--blue{ background: rgba(56,189,248,.16); border-color: rgba(56,189,248,.45); }
+.action-btn--green{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.45); }
+.action-btn--cyan{ background: rgba(56,189,248,.12); border-color: rgba(56,189,248,.35); }
+
+/* --- TAG COLORATI NELLE RIGHE --- */
+.row-tag{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:950;
+  border:1px solid rgba(148,163,184,.18);
+  background: rgba(15,23,42,.12);
+}
+.row-tag--phone{ background: rgba(56,189,248,.14); border-color: rgba(56,189,248,.30); }
+.row-tag--email{ background: rgba(250,204,21,.14); border-color: rgba(250,204,21,.30); }
+.row-tag--pec{ background: rgba(168,85,247,.14); border-color: rgba(168,85,247,.30); }
+.row-tag--web{ background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.30); }
+.row-tag--data{ background: rgba(249,115,22,.14); border-color: rgba(249,115,22,.30); }
+
+/* --- CLICK SICURO SU THUMB --- */
+.thumb--click{ cursor:pointer; }
