@@ -27,6 +27,16 @@
         {% else %}
           <a href="{{ url_for('dashboard') }}" class="header-link">Dashboard</a>
           <a href="{{ url_for('me_edit') }}" class="header-link">Profilo 1</a>
+
+          <!-- ✅ Profilo 2 (se non attivo, la route ti rimanda a Profilo 1) -->
+          <a href="{{ url_for('me_profile2') }}" class="header-link">Profilo 2</a>
+
+          <!-- ✅ Link rapidi alla card pubblica -->
+          {% if session.get('agent_slug') %}
+            <a href="/{{ session.get('agent_slug') }}" target="_blank" rel="noopener" class="header-link">Apri Card</a>
+            <a href="/{{ session.get('agent_slug') }}?p=p2" target="_blank" rel="noopener" class="header-link">Apri Card P2</a>
+          {% endif %}
+
           <a href="{{ url_for('logout') }}" class="header-link">Logout</a>
         {% endif %}
       </div>
