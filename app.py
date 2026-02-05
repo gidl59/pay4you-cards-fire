@@ -496,6 +496,7 @@ def agent_to_view(ag: Agent):
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
+    # profilo P2 vuoto (non eredita media/gal/video/pdf dal P1)
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -533,12 +534,13 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         pdf1_url="",
 
         p2_enabled=1,
-        profiles_json=ag.profiles_json,
+        profiles_json=getattr(ag, "profiles_json", None),
 
-        # settings P2 verranno letti da profiles_json
-        p1_logo_spin=0,
-d
+        # settings P2 vengono letti da profiles_json (qui default)
+        p2_logo_spin=0,
+        p2_flip_enabled=1,
     )
+
 
 # ===================== ROUTES =====================
 
