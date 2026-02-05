@@ -10,6 +10,17 @@
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
       </h1>
 
+      {# =========================================================
+         Sorgente dati:
+         - P1 => agent
+         - P2 => p2 (se passato dal backend). Fallback: agent
+         ========================================================= #}
+      {% if editing_profile2 %}
+        {% set D = (p2 if p2 is defined and p2 else agent) %}
+      {% else %}
+        {% set D = agent %}
+      {% endif %}
+
       {# --------------------------
          TOOLBAR SOLO PER AGENTE (non admin)
          -------------------------- #}
@@ -100,86 +111,86 @@
 
         <div class="field">
           <label>Nome</label>
-          <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}" required>
           <div class="hint">Inserisci nome e cognome (o nome attività se preferisci).</div>
         </div>
 
         <div class="field">
           <label>Azienda</label>
-          <input type="text" name="company" value="{{ agent.company if agent else '' }}">
+          <input type="text" name="company" value="{{ D.company if D and D.company else '' }}">
           <div class="hint">Esempio: Pay4You / Bar Centrale / Studio Rossi.</div>
         </div>
 
         <div class="field">
           <label>Ruolo</label>
-          <input type="text" name="role" value="{{ agent.role if agent else '' }}">
+          <input type="text" name="role" value="{{ D.role if D and D.role else '' }}">
           <div class="hint">Esempio: Consulente Pagamenti / Titolare / Agente.</div>
         </div>
 
         <div class="field full">
           <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ agent.bio if agent else '' }}</textarea>
+          <textarea name="bio">{{ D.bio if D and D.bio else '' }}</textarea>
           <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti (evita testi lunghissimi).</div>
         </div>
 
         <div class="field">
           <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+          <input type="text" name="phone_mobile" value="{{ D.phone_mobile if D and D.phone_mobile else '' }}">
           <div class="hint">Esempio: +39 333 123 4567 (consigliato con prefisso internazionale).</div>
         </div>
 
         <div class="field">
           <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+          <input type="text" name="phone_mobile2" value="{{ D.phone_mobile2 if D and D.phone_mobile2 else '' }}">
           <div class="hint">Opzionale: secondo numero/numero assistenza.</div>
         </div>
 
         <div class="field">
           <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+          <input type="text" name="phone_office" value="{{ D.phone_office if D and D.phone_office else '' }}">
           <div class="hint">Opzionale: numero fisso o centralino.</div>
         </div>
 
         <div class="field">
           <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+          <input type="text" name="whatsapp" value="{{ D.whatsapp if D and D.whatsapp else '' }}">
           <div class="hint">Inserisci un numero (es. +39...) oppure un link wa.me / chat WhatsApp.</div>
           <div class="hint">Se lo lasci vuoto, il sistema proverà a usare il cellulare principale.</div>
         </div>
 
         <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+          <input type="text" name="emails" value="{{ D.emails if D and D.emails else '' }}">
           <div class="hint">Esempio: info@azienda.it, commerciale@azienda.it</div>
         </div>
 
         <div class="field">
           <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+          <input type="text" name="websites" value="{{ D.websites if D and D.websites else '' }}">
           <div class="hint">Esempio: https://www.sito.it, https://shop.sito.it</div>
         </div>
 
         <div class="field">
           <label>PEC</label>
-          <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+          <input type="text" name="pec" value="{{ D.pec if D and D.pec else '' }}">
           <div class="hint">Inserisci la PEC se vuoi mostrarla nella card (opzionale).</div>
         </div>
 
         <div class="field">
           <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+          <input type="text" name="piva" value="{{ D.piva if D and D.piva else '' }}">
           <div class="hint">Inserisci solo numeri (11 cifre). Opzionale.</div>
         </div>
 
         <div class="field">
           <label>SDI</label>
-          <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+          <input type="text" name="sdi" value="{{ D.sdi if D and D.sdi else '' }}">
           <div class="hint">Codice destinatario SDI (7 caratteri). Opzionale.</div>
         </div>
 
         <div class="field full">
           <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
+          <textarea name="addresses">{{ D.addresses if D and D.addresses else '' }}</textarea>
           <div class="hint">Un indirizzo per riga. Verrà generato automaticamente il link “Apri Maps”.</div>
         </div>
 
@@ -188,42 +199,42 @@
            ====================== #}
         <div class="field">
           <label>Facebook</label>
-          <input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
+          <input type="text" name="facebook" value="{{ D.facebook if D and D.facebook else '' }}">
           <div class="hint">Esempio: https://www.facebook.com/pagina</div>
           <div class="hint">Consiglio: incolla sempre il link completo (non solo nome pagina).</div>
         </div>
 
         <div class="field">
           <label>Instagram</label>
-          <input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
+          <input type="text" name="instagram" value="{{ D.instagram if D and D.instagram else '' }}">
           <div class="hint">Esempio: https://www.instagram.com/nomeutente/</div>
           <div class="hint">Suggerito: link del profilo (non link di un singolo post).</div>
         </div>
 
         <div class="field">
           <label>LinkedIn</label>
-          <input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
+          <input type="text" name="linkedin" value="{{ D.linkedin if D and D.linkedin else '' }}">
           <div class="hint">Esempio: https://www.linkedin.com/in/nome-cognome-a1234567</div>
           <div class="hint">Inserisci il profilo personale o la pagina aziendale.</div>
         </div>
 
         <div class="field">
           <label>TikTok</label>
-          <input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
+          <input type="text" name="tiktok" value="{{ D.tiktok if D and D.tiktok else '' }}">
           <div class="hint">Esempio: https://www.tiktok.com/@nomeutente</div>
           <div class="hint">Se hai solo lo username, scrivi: @nomeutente</div>
         </div>
 
         <div class="field">
           <label>Telegram</label>
-          <input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
+          <input type="text" name="telegram" value="{{ D.telegram if D and D.telegram else '' }}">
           <div class="hint">Esempi: https://t.me/nomeutente &nbsp; oppure &nbsp; https://t.me/s/nomecanale</div>
           <div class="hint">Puoi anche inserire solo: @nomeutente</div>
         </div>
 
         <div class="field">
           <label>YouTube</label>
-          <input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}">
+          <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
           <div class="hint">Esempio: https://www.youtube.com/@nomeutente</div>
           <div class="hint">Oppure canale: https://www.youtube.com/channel/ID</div>
         </div>
@@ -290,7 +301,7 @@
         </div>
 
         {# ======================
-           MEDIA: P1 e P2 (sempre visibili)
+           MEDIA: P1 e P2
            ====================== #}
         <div class="field full"><div class="sep"></div></div>
 
