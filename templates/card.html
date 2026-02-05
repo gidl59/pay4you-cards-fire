@@ -13,8 +13,6 @@
     <div class="card-outer card-theme">
 
       {% set the_logo = ag.logo_url %}
-      {% set alt_back = (gallery[0] if gallery and gallery|length > 0 else '') %}
-
       {% if the_logo %}
         <div class="top-left-logo">
           <img src="{{ the_logo }}" alt="Logo">
@@ -31,14 +29,9 @@
             </div>
           {% endif %}
 
-          <!-- flip: tap = gira orizzontale e mostra il retro -->
-          <div class="flip is-flippable"
-               id="flipCard"
-               data-logo="{{ the_logo or '' }}"
-               data-photo="{{ ag.photo_url or '' }}"
-               data-alt="{{ alt_back or '' }}"
-               onclick="toggleFlip()">
-            <div class="flip-inner" id="flipInner">
+          <!-- flip: tap = gira orizzontale e mostra il logo -->
+          <div class="flip is-flippable" onclick="toggleFlip()">
+            <div class="flip-inner">
               <div class="flip-front avatar">
                 {% if ag.photo_url %}
                   <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto profilo">
@@ -48,25 +41,15 @@
               </div>
 
               <div class="flip-back avatar">
-                <!-- retro dinamico (Logo / Foto / Gallery) -->
-                <img class="avatar-img" id="backImg" src="" alt="Retro">
+                {% if the_logo %}
+                  <img class="avatar-img" src="{{ the_logo }}" alt="Logo">
+                {% else %}
+                  <div class="avatar-placeholder">★</div>
+                {% endif %}
               </div>
             </div>
           </div>
         </div>
-
-        <!-- ✅ 4 TASTI EFFETTI (come prima) -->
-        
-        {% if session.get('username') %}
-  <div class="fx-row" aria-label="Effetti foto e logo">
-    {% if the_logo %}
-      <button class="fx-btn" type="button" id="btnLogoSpin">Gira logo</button>
-    {% endif %}
-    <button class="fx-btn" type="button" id="btnFlipOnce">Flip foto</button>
-    <button class="fx-btn" type="button" id="btnPhotoSpin">Gira foto</button>
-    <button class="fx-btn" type="button" id="btnBackMode">Retro: —</button>
-  </div>
-{% endif %}
 
         <div class="hero-text hero-text-centered">
           {% if ag.name %}<div class="name">{{ ag.name }}</div>{% endif %}
@@ -146,7 +129,7 @@
           </button>
         </div>
 
-        <!-- ✅ SOLO TEMA (tolto “Logo gira”) -->
+        <!-- Tema + toggle rotazione logo -->
         <div class="actions-mini-row">
           <div class="theme-toggle">
             <div class="theme-label">{{ t_func('theme') }}:</div>
@@ -154,12 +137,18 @@
             <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
             <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
           </div>
+
+          {% if the_logo %}
+          <div class="mini-toggle">
+            <span class="mini-toggle-label">Logo gira</span>
+            <button class="mini-toggle-btn" type="button" id="spinToggle">Off</button>
+          </div>
+          {% endif %}
         </div>
 
         <div class="actions-hint">Suggerimento: salva il contatto e condividi la card ai tuoi clienti.</div>
       </div>
 
-      <!-- RESTO IDENTICO (contatti / dati / gallery / video / pdf) -->
       <div class="section">
         <div class="section-title">{{ t_func('contacts') }}</div>
 
@@ -354,130 +343,30 @@
     });
     applyTheme(getStoredTheme());
 
-    // ====== EFFETTI (4 TASTI) ======
-    const flip = document.getElementById('flipCard');
-    const flipInner = document.getElementById('flipInner');
-    const backImg = document.getElementById('backImg');
-
+    // Toggle rotazione logo orbit
+    const SPIN_KEY = 'pay4you_spin_logo';
     const orbit = document.getElementById('orbitLogo');
-    const btnLogoSpin = document.getElementById('btnLogoSpin');
-    const btnFlipOnce = document.getElementById('btnFlipOnce');
-    const btnPhotoSpin = document.getElementById('btnPhotoSpin');
-    const btnBackMode = document.getElementById('btnBackMode');
+    const spinBtn = document.getElementById('spinToggle');
 
-    const LOGO_SPIN_KEY  = 'pay4you_fx_logo_spin';   // on/off
-    const PHOTO_SPIN_KEY = 'pay4you_fx_photo_spin';  // on/off
-    const BACK_MODE_KEY  = 'pay4you_fx_back_mode';   // logo/photo/alt
-
-    function getBackUrls(){
-      const logo = (flip?.dataset.logo || '').trim();
-      const photo = (flip?.dataset.photo || '').trim();
-      const alt = (flip?.dataset.alt || '').trim();
-      return { logo, photo, alt };
+    function applySpin(v){
+      if(!orbit || !spinBtn) return;
+      orbit.classList.toggle('spin', v === 'on');
+      spinBtn.textContent = (v === 'on') ? 'On' : 'Off';
+      spinBtn.classList.toggle('on', v === 'on');
     }
-
-    function pickDefaultBackMode(){
-      const { logo, photo, alt } = getBackUrls();
-      if(logo) return 'logo';
-      if(alt)  return 'alt';
-      if(photo) return 'photo';
-      return 'photo';
+    function getSpin(){
+      return localStorage.getItem(SPIN_KEY) || 'off';
     }
-
-    function setBackMode(mode){
-      const { logo, photo, alt } = getBackUrls();
-      let label = '—';
-      let src = '';
-
-      if(mode === 'logo' && logo){
-        src = logo; label = 'Logo';
-      }else if(mode === 'alt' && alt){
-        src = alt; label = 'Gallery';
-      }else if(mode === 'photo' && photo){
-        src = photo; label = 'Foto';
-      }else{
-        // fallback
-        const def = pickDefaultBackMode();
-        return setBackMode(def);
-      }
-
-      if(backImg){
-        backImg.src = src || '';
-      }
-      if(btnBackMode){
-        btnBackMode.textContent = 'Retro: ' + label;
-      }
-      localStorage.setItem(BACK_MODE_KEY, mode);
-    }
-
-    function cycleBackMode(){
-      const { logo, photo, alt } = getBackUrls();
-      const options = [];
-      if(logo) options.push('logo');
-      if(photo) options.push('photo');
-      if(alt) options.push('alt');
-
-      if(options.length === 0) return;
-
-      const cur = localStorage.getItem(BACK_MODE_KEY) || pickDefaultBackMode();
-      const idx = options.indexOf(cur);
-      const next = options[(idx + 1) % options.length];
-      setBackMode(next);
-    }
-
-    // Logo spin (orbita)
-    function applyLogoSpin(v){
-      if(!orbit || !btnLogoSpin) return;
-      const on = (v === 'on');
-      orbit.classList.toggle('spin', on);
-      btnLogoSpin.classList.toggle('on', on);
-      btnLogoSpin.textContent = on ? 'Logo: ON' : 'Gira logo';
-    }
-    function getLogoSpin(){ return localStorage.getItem(LOGO_SPIN_KEY) || 'off'; }
-
-    // Photo spin (moneta)
-    function applyPhotoSpin(v){
-      if(!flipInner || !btnPhotoSpin) return;
-      const on = (v === 'on');
-      flipInner.classList.toggle('coin', on);
-      btnPhotoSpin.classList.toggle('on', on);
-      btnPhotoSpin.textContent = on ? 'Foto: ON' : 'Gira foto';
-    }
-    function getPhotoSpin(){ return localStorage.getItem(PHOTO_SPIN_KEY) || 'off'; }
-
-    // Bind pulsanti
-    if(btnLogoSpin){
-      btnLogoSpin.addEventListener('click', ()=>{
-        const next = (getLogoSpin()==='on') ? 'off' : 'on';
-        localStorage.setItem(LOGO_SPIN_KEY, next);
-        applyLogoSpin(next);
+    if(spinBtn){
+      spinBtn.addEventListener('click', ()=>{
+        const next = (getSpin() === 'on') ? 'off' : 'on';
+        localStorage.setItem(SPIN_KEY, next);
+        applySpin(next);
       });
-      applyLogoSpin(getLogoSpin());
+      applySpin(getSpin());
     }
 
-    if(btnFlipOnce){
-      btnFlipOnce.addEventListener('click', ()=>{
-        toggleFlip();
-      });
-    }
-
-    if(btnPhotoSpin){
-      btnPhotoSpin.addEventListener('click', ()=>{
-        const next = (getPhotoSpin()==='on') ? 'off' : 'on';
-        localStorage.setItem(PHOTO_SPIN_KEY, next);
-        applyPhotoSpin(next);
-      });
-      applyPhotoSpin(getPhotoSpin());
-    }
-
-    if(btnBackMode){
-      btnBackMode.addEventListener('click', cycleBackMode);
-    }
-
-    // init retro
-    setBackMode(localStorage.getItem(BACK_MODE_KEY) || pickDefaultBackMode());
-
-    // Video thumbs: iOS incostante
+    // Video thumbs: iOS è incostante, proviamo a forzare frame iniziale
     function initVideoThumbs(){
       document.querySelectorAll('video.video-mini').forEach(v=>{
         try{
