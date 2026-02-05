@@ -10,20 +10,12 @@
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
       </h1>
 
-      {# =========================================================
-         Sorgente dati:
-         - P1 => agent
-         - P2 => p2 (se passato dal backend). Fallback: agent
-         ========================================================= #}
       {% if editing_profile2 %}
         {% set D = (p2 if p2 is defined and p2 else agent) %}
       {% else %}
         {% set D = agent %}
       {% endif %}
 
-      {# --------------------------
-         TOOLBAR SOLO PER AGENTE (non admin)
-         -------------------------- #}
       {% if session.get('role') != 'admin' and agent %}
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
@@ -50,9 +42,6 @@
         </div>
       {% endif %}
 
-      {# --------------------------
-         TOOLBAR PER ADMIN
-         -------------------------- #}
       {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
@@ -70,7 +59,6 @@
       {% endif %}
     </div>
 
-    {# ACTION URL: admin e agent #}
     {% if session.get('role') == 'admin' %}
       {% if agent and not editing_profile2 %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
@@ -90,14 +78,11 @@
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
       <div class="form-grid">
 
-        {# ======================
-           SLUG
-           ====================== #}
         {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
           <div class="field">
             <label>Slug (univoco)</label>
             <input type="text" name="slug" value="" required>
-            <div class="hint">Esempio: nomecognome / negozio-roma. Solo lettere/numeri e trattini (senza spazi).</div>
+            <div class="hint">Esempio: nomecognome / negozio-roma. Solo lettere/numeri e trattini.</div>
             <div class="hint">Una volta creato, lo slug non sarà più modificabile.</div>
           </div>
         {% else %}
@@ -130,13 +115,13 @@
         <div class="field full">
           <label>Bio / Descrizione</label>
           <textarea name="bio">{{ D.bio if D and D.bio else '' }}</textarea>
-          <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti (evita testi lunghissimi).</div>
+          <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti.</div>
         </div>
 
         <div class="field">
           <label>Telefono mobile</label>
           <input type="text" name="phone_mobile" value="{{ D.phone_mobile if D and D.phone_mobile else '' }}">
-          <div class="hint">Esempio: +39 333 123 4567 (consigliato con prefisso internazionale).</div>
+          <div class="hint">Esempio: +39 333 123 4567</div>
         </div>
 
         <div class="field">
@@ -154,130 +139,135 @@
         <div class="field">
           <label>WhatsApp (numero o link)</label>
           <input type="text" name="whatsapp" value="{{ D.whatsapp if D and D.whatsapp else '' }}">
-          <div class="hint">Inserisci un numero (es. +39...) oppure un link wa.me / chat WhatsApp.</div>
-          <div class="hint">Se lo lasci vuoto, il sistema proverà a usare il cellulare principale.</div>
+          <div class="hint">Numero +39... oppure link wa.me.</div>
         </div>
 
         <div class="field">
           <label>Email (separate da virgola)</label>
           <input type="text" name="emails" value="{{ D.emails if D and D.emails else '' }}">
-          <div class="hint">Esempio: info@azienda.it, commerciale@azienda.it</div>
         </div>
 
         <div class="field">
           <label>Siti web (separati da virgola)</label>
           <input type="text" name="websites" value="{{ D.websites if D and D.websites else '' }}">
-          <div class="hint">Esempio: https://www.sito.it, https://shop.sito.it</div>
         </div>
 
         <div class="field">
           <label>PEC</label>
           <input type="text" name="pec" value="{{ D.pec if D and D.pec else '' }}">
-          <div class="hint">Inserisci la PEC se vuoi mostrarla nella card (opzionale).</div>
         </div>
 
         <div class="field">
           <label>P.IVA</label>
           <input type="text" name="piva" value="{{ D.piva if D and D.piva else '' }}">
-          <div class="hint">Inserisci solo numeri (11 cifre). Opzionale.</div>
         </div>
 
         <div class="field">
           <label>SDI</label>
           <input type="text" name="sdi" value="{{ D.sdi if D and D.sdi else '' }}">
-          <div class="hint">Codice destinatario SDI (7 caratteri). Opzionale.</div>
         </div>
 
         <div class="field full">
           <label>Indirizzi (uno per riga)</label>
           <textarea name="addresses">{{ D.addresses if D and D.addresses else '' }}</textarea>
-          <div class="hint">Un indirizzo per riga. Verrà generato automaticamente il link “Apri Maps”.</div>
         </div>
 
-        {# ======================
-           SOCIAL + ISTRUZIONI
-           ====================== #}
         <div class="field">
           <label>Facebook</label>
           <input type="text" name="facebook" value="{{ D.facebook if D and D.facebook else '' }}">
-          <div class="hint">Esempio: https://www.facebook.com/pagina</div>
-          <div class="hint">Consiglio: incolla sempre il link completo (non solo nome pagina).</div>
         </div>
 
         <div class="field">
           <label>Instagram</label>
           <input type="text" name="instagram" value="{{ D.instagram if D and D.instagram else '' }}">
-          <div class="hint">Esempio: https://www.instagram.com/nomeutente/</div>
-          <div class="hint">Suggerito: link del profilo (non link di un singolo post).</div>
         </div>
 
         <div class="field">
           <label>LinkedIn</label>
           <input type="text" name="linkedin" value="{{ D.linkedin if D and D.linkedin else '' }}">
-          <div class="hint">Esempio: https://www.linkedin.com/in/nome-cognome-a1234567</div>
-          <div class="hint">Inserisci il profilo personale o la pagina aziendale.</div>
         </div>
 
         <div class="field">
           <label>TikTok</label>
           <input type="text" name="tiktok" value="{{ D.tiktok if D and D.tiktok else '' }}">
-          <div class="hint">Esempio: https://www.tiktok.com/@nomeutente</div>
-          <div class="hint">Se hai solo lo username, scrivi: @nomeutente</div>
         </div>
 
         <div class="field">
           <label>Telegram</label>
           <input type="text" name="telegram" value="{{ D.telegram if D and D.telegram else '' }}">
-          <div class="hint">Esempi: https://t.me/nomeutente &nbsp; oppure &nbsp; https://t.me/s/nomecanale</div>
-          <div class="hint">Puoi anche inserire solo: @nomeutente</div>
         </div>
 
         <div class="field">
           <label>YouTube</label>
           <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
-          <div class="hint">Esempio: https://www.youtube.com/@nomeutente</div>
-          <div class="hint">Oppure canale: https://www.youtube.com/channel/ID</div>
         </div>
 
         <div class="field">
           <label>Foto profilo (max 8MB)</label>
           <input type="file" name="photo" accept="image/*">
-          <div class="hint">Consiglio: foto luminosa e frontale (anche in verticale va bene).</div>
         </div>
 
         <div class="field">
           <label>Logo azienda (max 8MB)</label>
           <input type="file" name="logo" accept="image/*">
-          <div class="hint">Consiglio: PNG con sfondo trasparente per un risultato migliore.</div>
         </div>
 
-        <!-- ✅ EFFETTI GRAFICI (rotazioni/flip) -->
+        <!-- ✅ NEW: Back media + switch -->
         <div class="field full details">
           <details open>
-            <summary>Effetti grafici (rotazioni / tap)</summary>
+            <summary>Dietro la foto (logo azienda / foto personale)</summary>
 
             <div class="hint" style="margin-top:8px;">
-              Queste opzioni cambiano l’animazione della card. Puoi attivarle o lasciarle fisse.
+              Puoi caricare una seconda immagine (famiglia/animale) e scegliere cosa mostrare sul retro dell’avatar.
             </div>
+
+            <div class="grid-2" style="margin-top:10px;">
+              <div class="field">
+                <label>Foto/Logo personale (dietro avatar)</label>
+                <input type="file" name="back_media" accept="image/*">
+                <div class="hint">Esempio: famiglia, animale, logo personale. (opzionale)</div>
+              </div>
+
+              <div class="field">
+                <label>Cosa mostrare dietro?</label>
+                {% set mode = (D.back_media_mode if D and D.back_media_mode else 'company') %}
+                <label class="btn-mini" style="justify-content:flex-start;">
+                  <input type="radio" name="back_media_mode" value="company" {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
+                  Logo aziendale
+                </label>
+                <label class="btn-mini" style="justify-content:flex-start; margin-top:8px;">
+                  <input type="radio" name="back_media_mode" value="personal" {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
+                  Foto/Logo personale
+                </label>
+                <div class="hint" style="margin-top:8px;">Se scegli “personale” ma non carichi l’immagine, torna al logo aziendale.</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ✅ EFFETTI -->
+        <div class="field full details">
+          <details open>
+            <summary>Effetti grafici</summary>
 
             <div class="grid-3" style="margin-top:10px;">
               <label class="btn-mini" style="justify-content:flex-start;">
                 <input type="checkbox" name="orbit_spin" value="1"
-                       {% if agent and (agent.orbit_spin or 0)|int == 1 %}checked{% endif %}
+                       {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo dietro ruota
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
                 <input type="checkbox" name="avatar_spin" value="1"
-                       {% if agent and (agent.avatar_spin or 0)|int == 1 %}checked{% endif %}
+                       {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
-                Foto ruota su se stessa
+                Foto ruota (flip 3D orizzontale)
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
                 <input type="checkbox" name="logo_spin" value="1"
-                       {% if agent and (agent.logo_spin or 0)|int == 1 %}checked{% endif %}
+                       {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo (dietro) ruota su se stesso
               </label>
@@ -286,49 +276,37 @@
             <div style="margin-top:10px;">
               <label class="btn-mini" style="justify-content:flex-start;">
                 <input type="checkbox" name="allow_flip" value="1"
-                       {% if agent and (agent.allow_flip or 0)|int == 1 %}checked{% endif %}
+                       {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
-                Tap per flip (tocco sulla foto: mostra il logo)
+                Tap per flip
               </label>
               <div class="hint" style="margin-top:6px;">
-                Se disattivo, la foto resta fissa.
-              </div>
-              <div class="hint">
-                Suggerimento: il flip è “effetto wow”, ma puoi lasciarlo off per stile più professionale.
+                Se disattivo, la foto resta fissa (ma se attivi “Foto ruota”, l’auto-flip resta).
               </div>
             </div>
           </details>
         </div>
 
-        {# ======================
-           MEDIA: P1 e P2
-           ====================== #}
         <div class="field full"><div class="sep"></div></div>
 
         <div class="field full">
           {% if editing_profile2 %}
-            <h3 style="margin:0 0 8px 0;">Media Profilo 2 (separati da Profilo 1)</h3>
+            <h3 style="margin:0 0 8px 0;">Media Profilo 2</h3>
             <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
-            <div class="hint">Se non carichi nulla, la card P2 resta pulita e minimal.</div>
           {% else %}
             <h3 style="margin:0 0 8px 0;">Media Profilo 1</h3>
             <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
-            <div class="hint">Consiglio: 10–15 foto “forti” + pochi PDF utili (listini, brochure, ecc.).</div>
           {% endif %}
         </div>
 
         <div class="field">
           <label>Galleria (max 30 immagini)</label>
           <input type="file" name="gallery" accept="image/*" multiple>
-          <div class="hint">Puoi selezionare più immagini insieme.</div>
-          <div class="hint">Se ricarichi nuove foto, il sistema salva le nuove (sostituisce la lista precedente).</div>
         </div>
 
         <div class="field">
           <label>Video (max 10)</label>
           <input type="file" name="videos" accept="video/*" multiple>
-          <div class="hint">Consiglio: video brevi (10–30s). Video lunghi rallentano la card.</div>
-          <div class="hint">Meglio pochi video ma belli.</div>
         </div>
 
         <div class="field full">
@@ -347,50 +325,39 @@
             <input type="file" name="pdf11" accept="application/pdf">
             <input type="file" name="pdf12" accept="application/pdf">
           </div>
-          <div class="hint" style="margin-top:8px;">Carica solo PDF utili (brochure, listini, certificazioni). Evita PDF troppo pesanti.</div>
         </div>
 
-        {# ======================
-           TRADUZIONI: SOLO P1
-           ====================== #}
         {% if not editing_profile2 %}
           <div class="field full">
             <div class="sep"></div>
             <h3 style="margin:0 0 8px 0;">Traduzioni Profilo 1 (opzionali)</h3>
-            <div class="hint">Se il telefono è in inglese/francese/spagnolo/tedesco, la card userà questi testi (se compilati).</div>
-            <div class="hint">Se lasci vuoto, la card mostra il testo italiano.</div>
+            <div class="hint">Se il telefono è in EN/FR/ES/DE, la card userà questi testi (se compilati).</div>
           </div>
 
           {% for L in ['en','fr','es','de'] %}
             <div class="field full details">
               <details>
                 <summary>{{ L|upper }}</summary>
-
                 <div class="grid-2" style="margin-top:10px;">
                   <div class="field">
                     <label>Nome ({{ L|upper }})</label>
                     <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
-                    <div class="hint">Opzionale: di solito si lascia uguale.</div>
                   </div>
                   <div class="field">
                     <label>Azienda ({{ L|upper }})</label>
                     <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
-                    <div class="hint">Opzionale: variante per lingua.</div>
                   </div>
                   <div class="field">
                     <label>Ruolo ({{ L|upper }})</label>
                     <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
-                    <div class="hint">Esempio EN: Sales Consultant / Business Owner.</div>
                   </div>
                   <div class="field full">
                     <label>Bio ({{ L|upper }})</label>
                     <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                    <div class="hint">Consiglio: poche righe chiare (2–3 max).</div>
                   </div>
                   <div class="field full">
                     <label>Indirizzi ({{ L|upper }})</label>
                     <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                    <div class="hint">Di solito non servono: puoi lasciarli vuoti.</div>
                   </div>
                 </div>
               </details>
@@ -400,9 +367,7 @@
 
         <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <button class="btn primary" type="submit">Salva</button>
-          <div class="hint" style="margin:0;">
-            Dopo il salvataggio, apri la card per controllare che tutto sia corretto.
-          </div>
+          <div class="hint" style="margin:0;">Dopo il salvataggio, apri la card per controllare che tutto sia corretto.</div>
 
           {% if session.get('role') == 'admin' %}
             <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
