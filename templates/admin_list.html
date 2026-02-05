@@ -51,7 +51,6 @@
 
           {% if is_admin %}
             <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
-            <a class="btn-mini ghost" href="{{ url_for('admin_credentials_html', slug=a.slug) }}">Invia codici</a>
           {% else %}
             <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica P1</a>
           {% endif %}
