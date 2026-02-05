@@ -12,51 +12,49 @@
   {% macro norm_social(kind, raw) -%}
     {# Normalizza input utente (username o link) senza toccare app.py #}
     {%- set v = (raw or '').strip() -%}
-    {%- if not v -%}{{ '' }}{%- endif -%}
-
-    {%- if v.startswith('http://') or v.startswith('https://') -%}
-      {{ v }}
+    {%- if not v -%}
+      {{ '' }}
     {%- else -%}
-      {%- if kind == 'instagram' -%}
-        {{ 'https://www.instagram.com/' ~ v.lstrip('@').lstrip('/') }}
-      {%- elif kind == 'facebook' -%}
-        {{ 'https://www.facebook.com/' ~ v.lstrip('/') }}
-      {%- elif kind == 'tiktok' -%}
-        {# accetta @nomeutente oppure nomeutente #}
-        {%- set u = v.lstrip('/') -%}
-        {%- if u.startswith('@') -%}
-          {{ 'https://www.tiktok.com/' ~ u }}
-        {%- else -%}
-          {{ 'https://www.tiktok.com/@' ~ u }}
-        {%- endif -%}
-      {%- elif kind == 'youtube' -%}
-        {# accetta @nomeutente oppure nomeutente #}
-        {%- set u = v.lstrip('/') -%}
-        {%- if u.startswith('@') -%}
-          {{ 'https://www.youtube.com/' ~ u }}
-        {%- else -%}
-          {{ 'https://www.youtube.com/@' ~ u }}
-        {%- endif -%}
-      {%- elif kind == 'telegram' -%}
-        {# regola richiesta: https://t.me/nomeutente oppure https://t.me/s/nomecanale #}
-        {%- set u = v.lstrip('@').lstrip('/') -%}
-        {%- if u.startswith('s/') -%}
-          {{ 'https://t.me/' ~ u }}
-        {%- else -%}
-          {{ 'https://t.me/' ~ u }}
-        {%- endif -%}
-      {%- elif kind == 'linkedin' -%}
-        {# es: nome-cognome-a1234567 -> /in/... #}
-        {%- set u = v.lstrip('/') -%}
-        {%- if u.startswith('in/') -%}
-          {{ 'https://www.linkedin.com/' ~ u }}
-        {%- elif u.startswith('company/') -%}
-          {{ 'https://www.linkedin.com/' ~ u }}
-        {%- else -%}
-          {{ 'https://www.linkedin.com/in/' ~ u }}
-        {%- endif -%}
-      {%- else -%}
+      {%- if v.startswith('http://') or v.startswith('https://') -%}
         {{ v }}
+      {%- else -%}
+        {%- if kind == 'instagram' -%}
+          {{ 'https://www.instagram.com/' ~ v.lstrip('@').lstrip('/') }}
+        {%- elif kind == 'facebook' -%}
+          {{ 'https://www.facebook.com/' ~ v.lstrip('/') }}
+        {%- elif kind == 'tiktok' -%}
+          {# accetta @nomeutente oppure nomeutente #}
+          {%- set u = v.lstrip('/') -%}
+          {%- if u.startswith('@') -%}
+            {{ 'https://www.tiktok.com/' ~ u }}
+          {%- else -%}
+            {{ 'https://www.tiktok.com/@' ~ u }}
+          {%- endif -%}
+        {%- elif kind == 'youtube' -%}
+          {# accetta @nomeutente oppure nomeutente #}
+          {%- set u = v.lstrip('/') -%}
+          {%- if u.startswith('@') -%}
+            {{ 'https://www.youtube.com/' ~ u }}
+          {%- else -%}
+            {{ 'https://www.youtube.com/@' ~ u }}
+          {%- endif -%}
+        {%- elif kind == 'telegram' -%}
+          {# regola richiesta: https://t.me/nomeutente oppure https://t.me/s/nomecanale #}
+          {%- set u = v.lstrip('@').lstrip('/') -%}
+          {{ 'https://t.me/' ~ u }}
+        {%- elif kind == 'linkedin' -%}
+          {# es: nome-cognome-a1234567 -> /in/... #}
+          {%- set u = v.lstrip('/') -%}
+          {%- if u.startswith('in/') -%}
+            {{ 'https://www.linkedin.com/' ~ u }}
+          {%- elif u.startswith('company/') -%}
+            {{ 'https://www.linkedin.com/' ~ u }}
+          {%- else -%}
+            {{ 'https://www.linkedin.com/in/' ~ u }}
+          {%- endif -%}
+        {%- else -%}
+          {{ v }}
+        {%- endif -%}
       {%- endif -%}
     {%- endif -%}
   {%- endmacro %}
