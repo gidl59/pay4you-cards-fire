@@ -37,18 +37,6 @@
 
           {% if (a.p2_enabled or 0)|int == 1 %}
             <a class="btn-mini" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-
-            {# ✅ DISATTIVA P2 (admin e cliente) #}
-            {% if is_admin %}
-              <form method="post" action="/admin/{{ a.slug }}/deactivate_p2" style="display:inline;">
-                <button class="btn-mini danger" type="submit" onclick="return confirm('Disattivare Profilo 2?')">Disattiva P2</button>
-              </form>
-            {% else %}
-              <form method="post" action="/me/deactivate_p2" style="display:inline;">
-                <button class="btn-mini danger" type="submit" onclick="return confirm('Disattivare Profilo 2?')">Disattiva P2</button>
-              </form>
-            {% endif %}
-
           {% else %}
             {% if is_admin %}
               <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
@@ -76,13 +64,6 @@
           {% endif %}
 
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR</button>
-
-          {# ✅ INVIA CODICI (solo admin) #}
-          {% if is_admin %}
-            <form method="post" action="/admin/{{ a.slug }}/send_credentials" style="display:inline;">
-              <button class="btn-mini" type="submit">Invia codici</button>
-            </form>
-          {% endif %}
 
           {% if is_admin %}
             <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
