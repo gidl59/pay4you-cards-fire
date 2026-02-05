@@ -61,6 +61,8 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Chiaro",
         "theme_dark": "Scuro",
+        "profile_1": "Profilo 1",
+        "profile_2": "Profilo 2",
     },
     "en": {
         "save_contact": "Save contact",
@@ -84,6 +86,8 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Light",
         "theme_dark": "Dark",
+        "profile_1": "Profile 1",
+        "profile_2": "Profile 2",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
@@ -107,6 +111,8 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Clair",
         "theme_dark": "Sombre",
+        "profile_1": "Profil 1",
+        "profile_2": "Profil 2",
     },
     "es": {
         "save_contact": "Guardar contacto",
@@ -130,6 +136,8 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Claro",
         "theme_dark": "Oscuro",
+        "profile_1": "Perfil 1",
+        "profile_2": "Perfil 2",
     },
     "de": {
         "save_contact": "Kontakt speichern",
@@ -153,6 +161,8 @@ I18N = {
         "theme_auto": "Auto",
         "theme_light": "Hell",
         "theme_dark": "Dunkel",
+        "profile_1": "Profil 1",
+        "profile_2": "Profil 2",
     },
 }
 
@@ -203,9 +213,7 @@ class Agent(Base):
     tiktok = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
     whatsapp = Column(String, nullable=True)
-
-    # ✅ NEW: YouTube
-    youtube = Column(String, nullable=True)
+    youtube = Column(String, nullable=True)  # ✅ NEW
 
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
@@ -259,14 +267,11 @@ ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
 ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
 ensure_sqlite_column("agents", "profiles_json", "TEXT")
 ensure_sqlite_column("agents", "i18n_json", "TEXT")
-
 ensure_sqlite_column("agents", "orbit_spin", "INTEGER")
 ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
 ensure_sqlite_column("agents", "logo_spin", "INTEGER")
 ensure_sqlite_column("agents", "allow_flip", "INTEGER")
-
-# ✅ NEW: colonna youtube
-ensure_sqlite_column("agents", "youtube", "TEXT")
+ensure_sqlite_column("agents", "youtube", "TEXT")  # ✅ NEW
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -496,8 +501,7 @@ def agent_to_view(ag: Agent):
         tiktok=safe_url(ag.tiktok),
         telegram=safe_url(ag.telegram),
         whatsapp=clean_str(ag.whatsapp),
-        # ✅ NEW: youtube in view
-        youtube=safe_url(getattr(ag, "youtube", None)),
+        youtube=safe_url(getattr(ag, "youtube", None)),  # ✅ NEW
         pec=clean_str(ag.pec),
         piva=clean_str(ag.piva),
         sdi=clean_str(ag.sdi),
@@ -542,9 +546,7 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         tiktok="",
         telegram="",
         whatsapp="",
-
-        # ✅ NEW: youtube blank
-        youtube="",
+        youtube="",  # ✅ NEW
 
         pec="",
         piva="",
@@ -667,8 +669,7 @@ def create_agent():
 
     for k in ["company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram",
-              "youtube"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     # i18n
@@ -766,8 +767,7 @@ def update_agent(slug):
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram",
-              "youtube"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -876,8 +876,7 @@ def me_edit_post():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram",
-              "youtube"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -961,7 +960,6 @@ def me_activate_p2():
 
     ag.p2_enabled = 1
 
-    # P2 deve partire VUOTO (nessuna copia da P1)
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -1049,8 +1047,7 @@ def me_profile2():
     view = blank_profile_view_from_agent(ag)
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "youtube",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
@@ -1084,8 +1081,7 @@ def me_profile2_post():
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "youtube"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1166,8 +1162,7 @@ def admin_profile2(slug):
     view = blank_profile_view_from_agent(ag)
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "youtube",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
         v = p2.get(k)
@@ -1200,8 +1195,7 @@ def admin_profile2_post(slug):
 
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-              "youtube"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1313,8 +1307,7 @@ def public_card(slug):
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram",
-                      "youtube",
+                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
                       "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
                       "orbit_spin","avatar_spin","logo_spin","allow_flip"]:
                 v = p2.get(k)
@@ -1330,7 +1323,6 @@ def public_card(slug):
                     if vv is not None:
                         setattr(ag_view, k, vv)
 
-        # MEDIA DI P2 (vuoti se non caricati)
         gallery = parse_media_list(getattr(ag_view, "gallery_urls", "") or "")
         videos = parse_media_list(getattr(ag_view, "video_urls", "") or "")
         pdfs = parse_pdfs(getattr(ag_view, "pdf1_url", "") or "")
@@ -1421,6 +1413,11 @@ def vcard(slug):
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
     lines.append(f"URL:{card_url}")
+
+    if getattr(ag, "youtube", None):
+        y = safe_url(getattr(ag, "youtube", None))
+        if y:
+            lines.append(f"X-SOCIALPROFILE;TYPE=YOUTUBE:{y}")
 
     if ag.piva:
         lines.append(f"X-TAX-ID:{ag.piva}")
