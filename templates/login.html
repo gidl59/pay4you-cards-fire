@@ -3,24 +3,44 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="login-card login-card-pretty">
+  <div class="login-card" style="position:relative; overflow:hidden;">
 
-    <div class="login-top">
-      <img
-        class="login-logo"
-        src="{{ url_for('static', filename='logo.png') }}"
-        alt="Pay4You"
-        loading="eager"
-        decoding="async"
-        width="56"
-        height="56"
-        style="max-width:100%;height:auto;"
-      >
-      <a class="btn-back" href="/" onclick="history.back(); return false;">Torna indietro</a>
+    {# decor light: non invasivo #}
+    <div style="
+      position:absolute; inset:-120px -120px auto auto; width:260px; height:260px;
+      background: radial-gradient(circle at 30% 30%, rgba(250,204,21,.22), transparent 60%),
+                  radial-gradient(circle at 70% 60%, rgba(56,189,248,.18), transparent 60%);
+      filter: blur(0px);
+      pointer-events:none;
+    "></div>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        {# Se hai un logo, mettilo in /static/logo-pay4you.png (o cambia path qui) #}
+        <div style="
+          width:56px; height:56px; border-radius:16px;
+          border:1px solid rgba(250,204,21,.22);
+          background: rgba(250,204,21,.08);
+          display:flex; align-items:center; justify-content:center;
+          overflow:hidden;
+          box-shadow: 0 14px 30px rgba(0,0,0,.18);
+        ">
+          <img
+            src="{{ url_for('static', filename='logo-pay4you.png') }}"
+            alt="Pay4You"
+            style="width:44px; height:44px; object-fit:contain;"
+            onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=&quot;font-weight:950; font-size:16px; letter-spacing:.2px;&quot;>Pay4You</div>';"
+          >
+        </div>
+
+        <div>
+          <div style="font-weight:950; font-size:22px; line-height:1.1;">Area riservata</div>
+          <div class="hint" style="margin-top:4px;">Accedi per gestire la tua card digitale.</div>
+        </div>
+      </div>
+
+      <a class="btn ghost" href="javascript:history.back()" style="padding:9px 12px;">Torna indietro</a>
     </div>
-
-    <h1 class="page-title" style="margin-bottom:6px;">Area riservata</h1>
-    <div class="hint" style="margin-bottom:12px;">Accedi per gestire la tua card digitale.</div>
 
     {% if error %}
       <div class="flash" style="margin:10px 0;">{{ error }}</div>
@@ -28,37 +48,57 @@
 
     <form method="post" action="{{ url_for('login_post') }}">
       <div class="form-grid" style="padding:0; grid-template-columns:1fr; gap:12px;">
+
         <div class="field">
           <label>Username</label>
-          <input name="username" placeholder="es. mario.rossi" autocomplete="username" required>
+          <input name="username" autocomplete="username" required placeholder="es. mario.rossi">
           <div class="hint">Di solito coincide con lo slug della card.</div>
         </div>
 
         <div class="field">
           <label>Password</label>
-          <input name="password" type="password" autocomplete="current-password" required>
+          <input name="password" type="password" autocomplete="current-password" required placeholder="••••••••••">
         </div>
 
-        <div class="login-actions">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px;">
           <button class="btn primary" type="submit">Entra</button>
-          <div class="hint" style="align-self:center;">Se non hai le credenziali, contatta Pay4You.</div>
+          <span class="hint">Se non hai le credenziali, contatta Pay4You.</span>
         </div>
 
-        <div class="login-boxes">
-          <div class="login-mini-box">
-            <div class="login-mini-title">Suggerimento</div>
-            <div class="login-mini-text">Dopo il primo accesso, salva le credenziali in un posto sicuro.</div>
-          </div>
-
-          <div class="login-mini-box">
-            <div class="login-mini-title">Supporto</div>
-            <div class="login-mini-text">Per assistenza, scrivici su WhatsApp o email (come da istruzioni ricevute).</div>
-          </div>
-        </div>
       </div>
     </form>
 
-    <div class="footer">Realizzato © Pay4You da Giuseppe Di Lisio 2026</div>
+    <div class="sep" style="margin:14px 0;"></div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div style="
+        flex:1;
+        border:1px solid rgba(148,163,184,.14);
+        background: rgba(15,23,42,.10);
+        border-radius:16px;
+        padding:12px;
+      ">
+        <div style="font-weight:950; margin-bottom:6px;">Suggerimento</div>
+        <div class="hint">
+          Dopo il primo accesso, salva le credenziali in un posto sicuro.
+        </div>
+      </div>
+
+      <div style="
+        flex:1;
+        border:1px solid rgba(148,163,184,.14);
+        background: rgba(15,23,42,.10);
+        border-radius:16px;
+        padding:12px;
+      ">
+        <div style="font-weight:950; margin-bottom:6px;">Supporto</div>
+        <div class="hint">
+          Per assistenza, scrivici su WhatsApp o email (come da istruzioni ricevute).
+        </div>
+      </div>
+    </div>
+
+    <div class="footer" style="margin-top:14px;">Realizzato © Pay4You da Giuseppe Di Lisio 2026</div>
   </div>
 </div>
 {% endblock %}
