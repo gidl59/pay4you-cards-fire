@@ -3,270 +3,332 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}</title>
+  <meta name="color-scheme" content="light dark">
+  <title>{% if editing_profile2 %}Modifica P2{% else %}Modifica P1{% endif %} | Pay4You</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
-<body data-theme="dark">
+<body data-theme="">
+  <div class="dash-page">
 
-  <div class="page-main">
-    <div class="card-outer">
-
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div style="font-size:34px; font-weight:900;">
-          {% if agent %}
-            {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
-          {% else %}
-            Nuova Card
-          {% endif %}
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a class="action-btn" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-
-          {% if agent %}
-            {% if not editing_profile2 %}
-              <a class="action-btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-              {% if agent.p2_enabled %}
-                <a class="action-btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-              {% endif %}
-            {% else %}
-              <a class="action-btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-            {% endif %}
-          {% endif %}
+    <header class="dash-topbar">
+      <div class="dash-left">
+        <div class="dash-brand">
+          <img class="dash-brand-logo" src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You"
+               onerror="this.style.display='none';">
+          <div>
+            <div class="dash-brand-title">Area riservata</div>
+            <div class="dash-brand-sub">{% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}</div>
+          </div>
         </div>
       </div>
+      <div class="dash-right">
+        <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
+        <a class="btn btn-ghost" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+    </header>
 
-      <div class="section" style="margin-top:14px;">
-        <div class="section-title">Dati principali</div>
-
-        <form method="post" enctype="multipart/form-data">
-
-          {% if not agent %}
-            <div class="row">
-              <span class="row-tag tag-data">Slug</span>
-              <input name="slug" required style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-          {% else %}
-            <div class="row">
-              <span class="row-tag tag-data">Slug</span>
-              <div style="text-align:right; width:100%;">
-                <div style="font-weight:900;">{{ agent.slug }}</div>
-                <div style="color:var(--muted); font-size:13px;">Lo slug è bloccato e non può essere modificato.</div>
-              </div>
-            </div>
-          {% endif %}
-
-          <div class="row">
-            <span class="row-tag tag-data">Nome</span>
-            <input name="name" value="{{ agent.name if agent else '' }}" required
-                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-          </div>
-
-          <div class="row">
-            <span class="row-tag tag-data">Azienda</span>
-            <input name="company" value="{{ agent.company if agent else '' }}"
-                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-          </div>
-
-          <div class="row">
-            <span class="row-tag tag-data">Ruolo</span>
-            <input name="role" value="{{ agent.role if agent else '' }}"
-                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-          </div>
-
-          <div class="row">
-            <span class="row-tag tag-data">Bio</span>
-            <textarea name="bio" rows="3"
-                      style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ agent.bio if agent else '' }}</textarea>
-          </div>
-
-          <div class="section" style="margin-top:14px;">
-            <div class="section-title">Contatti</div>
-
-            <div class="row">
-              <span class="row-tag tag-phone">Telefono mobile</span>
-              <input name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-phone">Telefono mobile 2</span>
-              <input name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-phone">Telefono ufficio</span>
-              <input name="phone_office" value="{{ agent.phone_office if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-email">Email (separate da virgola)</span>
-              <input name="emails" value="{{ agent.emails if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-email">PEC</span>
-              <input name="pec" value="{{ agent.pec if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-web">Siti (separati da virgola)</span>
-              <input name="websites" value="{{ agent.websites if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Indirizzi (uno per riga)</span>
-              <textarea name="addresses" rows="3"
-                        style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ agent.addresses if agent else '' }}</textarea>
-            </div>
-          </div>
-
-          <div class="section" style="margin-top:14px;">
-            <div class="section-title">Social</div>
-
-            <div class="row"><span class="row-tag tag-data">WhatsApp</span>
-              <input name="whatsapp" value="{{ agent.whatsapp if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">Facebook</span>
-              <input name="facebook" value="{{ agent.facebook if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">Instagram</span>
-              <input name="instagram" value="{{ agent.instagram if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">LinkedIn</span>
-              <input name="linkedin" value="{{ agent.linkedin if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">TikTok</span>
-              <input name="tiktok" value="{{ agent.tiktok if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">Telegram</span>
-              <input name="telegram" value="{{ agent.telegram if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-            <div class="row"><span class="row-tag tag-data">YouTube</span>
-              <input name="youtube" value="{{ agent.youtube if agent else '' }}"
-                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-            </div>
-          </div>
-
-          <div class="section" style="margin-top:14px;">
-            <div class="section-title">Immagini & media</div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Foto profilo</span>
-              <input type="file" name="photo" accept="image/*">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Logo</span>
-              <input type="file" name="logo" accept="image/*">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Immagine retro</span>
-              <input type="file" name="back_media" accept="image/*">
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Retro: company/personal</span>
-              <select name="back_media_mode" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-                <option value="company" {% if agent and agent.back_media_mode=='company' %}selected{% endif %}>company</option>
-                <option value="personal" {% if agent and agent.back_media_mode=='personal' %}selected{% endif %}>personal</option>
-              </select>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Galleria (max 30)</span>
-              <input type="file" name="gallery" accept="image/*" multiple>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Video (max 10)</span>
-              <input type="file" name="videos" accept="video/*" multiple>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">PDF (fino a 12)</span>
-              <div style="width:100%; display:grid; gap:10px;">
-                {% for i in range(1,13) %}
-                  <input type="file" name="pdf{{ i }}" accept="application/pdf">
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-
-          <div class="section" style="margin-top:14px;">
-            <div class="section-title">Effetti grafici</div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Orbit logo (angolo)</span>
-              <input type="checkbox" name="orbit_spin" value="1" {% if agent and agent.orbit_spin %}checked{% endif %}>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Auto flip 3D</span>
-              <input type="checkbox" name="avatar_spin" value="1" {% if agent and agent.avatar_spin %}checked{% endif %}>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Logo retro ruota</span>
-              <input type="checkbox" name="logo_spin" value="1" {% if agent and agent.logo_spin %}checked{% endif %}>
-            </div>
-
-            <div class="row">
-              <span class="row-tag tag-data">Tap per flip</span>
-              <input type="checkbox" name="allow_flip" value="1" {% if agent and agent.allow_flip %}checked{% endif %}>
-              <div style="color:var(--muted); font-size:13px; margin-left:10px;">(se auto-flip è attivo, il tap viene disabilitato)</div>
-            </div>
-          </div>
-
-          <!-- ✅ LINGUE: sempre visibili -->
-          <div class="section" style="margin-top:14px;">
-            <div class="section-title">Traduzioni Profilo 1</div>
-            <div style="color:var(--muted); font-weight:700; margin-bottom:10px;">
-              Se il telefono è in EN/FR/ES/DE verranno mostrate queste traduzioni.
-            </div>
-
-            {% for L in ['en','fr','es','de'] %}
-              <div class="row">
-                <span class="row-tag tag-data">{{ L|upper }}</span>
-                <div style="width:100%; display:grid; gap:10px;">
-                  <input name="name_{{L}}" placeholder="Nome" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}"
-                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-                  <input name="company_{{L}}" placeholder="Azienda" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}"
-                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-                  <input name="role_{{L}}" placeholder="Ruolo" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}"
-                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
-                  <textarea name="bio_{{L}}" rows="2" placeholder="Bio"
-                            style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                  <textarea name="addresses_{{L}}" rows="2" placeholder="Indirizzi"
-                            style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                </div>
+    <main class="dash-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="toast-wrap">
+            {% for category, msg in messages %}
+              <div class="toast {% if category == 'success' %}toast-ok{% elif category == 'warning' %}toast-warn{% else %}toast-info{% endif %}">
+                {{ msg }}
               </div>
             {% endfor %}
           </div>
+        {% endif %}
+      {% endwith %}
 
-          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-            <button class="action-btn action-qr" type="submit">Salva</button>
-            <a class="action-btn" href="{{ url_for('dashboard') }}">Annulla</a>
+      <div class="dash-card">
+        <div class="dash-card-title">
+          {% if agent %}Slug: <span class="mono">{{ agent.slug }}</span>{% endif %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="form-grid">
+          {% if not agent %}
+            <label class="field">
+              <span>Slug (es. giuseppe)</span>
+              <input class="input" type="text" name="slug" required>
+            </label>
+          {% else %}
+            <div class="field">
+              <span>Slug</span>
+              <div class="mono muted">{{ agent.slug }} (bloccato)</div>
+            </div>
+          {% endif %}
+
+          <label class="field">
+            <span>Nome</span>
+            <input class="input" type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+          </label>
+
+          <label class="field">
+            <span>Azienda</span>
+            <input class="input" type="text" name="company" value="{{ agent.company if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>Ruolo</span>
+            <input class="input" type="text" name="role" value="{{ agent.role if agent else '' }}">
+          </label>
+
+          <label class="field field-full">
+            <span>Bio / Descrizione</span>
+            <textarea class="textarea" name="bio" rows="3">{{ agent.bio if agent else '' }}</textarea>
+          </label>
+
+          <label class="field">
+            <span>Telefono mobile</span>
+            <input class="input" type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>Telefono mobile 2</span>
+            <input class="input" type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>Telefono ufficio</span>
+            <input class="input" type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>WhatsApp (numero o link wa.me)</span>
+            <input class="input" type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>Email (separate da virgola)</span>
+            <input class="input" type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>Siti web (separati da virgola)</span>
+            <input class="input" type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>PEC</span>
+            <input class="input" type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>P.IVA</span>
+            <input class="input" type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+          </label>
+
+          <label class="field">
+            <span>SDI</span>
+            <input class="input" type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+          </label>
+
+          <label class="field field-full">
+            <span>Indirizzi (uno per riga)</span>
+            <textarea class="textarea" name="addresses" rows="3">{{ agent.addresses if agent else '' }}</textarea>
+          </label>
+
+          <div class="hr"></div>
+
+          <label class="field">
+            <span>Facebook</span>
+            <input class="input" type="text" name="facebook" value="{{ agent.facebook if agent else '' }}">
+          </label>
+          <label class="field">
+            <span>Instagram</span>
+            <input class="input" type="text" name="instagram" value="{{ agent.instagram if agent else '' }}">
+          </label>
+          <label class="field">
+            <span>LinkedIn</span>
+            <input class="input" type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}">
+          </label>
+          <label class="field">
+            <span>TikTok</span>
+            <input class="input" type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}">
+          </label>
+          <label class="field">
+            <span>Telegram</span>
+            <input class="input" type="text" name="telegram" value="{{ agent.telegram if agent else '' }}">
+          </label>
+          <label class="field">
+            <span>YouTube</span>
+            <input class="input" type="text" name="youtube" value="{{ agent.youtube if agent else '' }}">
+          </label>
+
+          <div class="hr"></div>
+
+          <div class="upload-grid field-full">
+            <label class="upload">
+              <span>Foto profilo</span>
+              <input type="file" name="photo" accept="image/*">
+              {% if agent and agent.photo_url %}<div class="muted small">Caricata</div>{% endif %}
+            </label>
+
+            <label class="upload">
+              <span>Logo aziendale</span>
+              <input type="file" name="logo" accept="image/*">
+              {% if agent and agent.logo_url %}<div class="muted small">Caricato</div>{% endif %}
+            </label>
+
+            <label class="upload">
+              <span>Immagine retro (foto/logo personale)</span>
+              <input type="file" name="back_media" accept="image/*">
+              {% if agent and agent.back_media_url %}<div class="muted small">Caricata</div>{% endif %}
+            </label>
+
+            <label class="field">
+              <span>Retro foto</span>
+              <select class="input" name="back_media_mode">
+                <option value="company" {% if agent and agent.back_media_mode == 'company' %}selected{% endif %}>Logo aziendale</option>
+                <option value="personal" {% if agent and agent.back_media_mode == 'personal' %}selected{% endif %}>Foto/Logo personale</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field field-full">
+            <div class="check-row">
+              <label class="check"><input type="checkbox" name="orbit_spin" value="1" {% if agent and agent.orbit_spin %}checked{% endif %}> Orbita logo</label>
+              <label class="check"><input type="checkbox" name="avatar_spin" value="1" {% if agent and agent.avatar_spin %}checked{% endif %}> Flip automatico (3D)</label>
+              <label class="check"><input type="checkbox" name="logo_spin" value="1" {% if agent and agent.logo_spin %}checked{% endif %}> Logo retro ruota</label>
+              <label class="check"><input type="checkbox" name="allow_flip" value="1" {% if agent and agent.allow_flip %}checked{% endif %}> Tap per flip</label>
+            </div>
+            <div class="muted small">Nota: se attivi “Flip automatico”, il tap viene disattivato automaticamente per evitare vibrazioni/bug.</div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field field-full">
+            <span class="section-h">Media</span>
+            <div class="muted small">Foto: fino a 30 — Video: fino a 10 — PDF: fino a 12</div>
+          </div>
+
+          <div class="upload-grid field-full">
+            <label class="upload">
+              <span>Galleria foto</span>
+              <input type="file" name="gallery" accept="image/*" multiple>
+            </label>
+
+            <label class="upload">
+              <span>Video</span>
+              <input type="file" name="videos" accept="video/*" multiple>
+            </label>
+
+            <label class="upload">
+              <span>PDF (1)</span>
+              <input type="file" name="pdf1" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (2)</span>
+              <input type="file" name="pdf2" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (3)</span>
+              <input type="file" name="pdf3" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (4)</span>
+              <input type="file" name="pdf4" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (5)</span>
+              <input type="file" name="pdf5" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (6)</span>
+              <input type="file" name="pdf6" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (7)</span>
+              <input type="file" name="pdf7" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (8)</span>
+              <input type="file" name="pdf8" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (9)</span>
+              <input type="file" name="pdf9" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (10)</span>
+              <input type="file" name="pdf10" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (11)</span>
+              <input type="file" name="pdf11" accept="application/pdf">
+            </label>
+            <label class="upload">
+              <span>PDF (12)</span>
+              <input type="file" name="pdf12" accept="application/pdf">
+            </label>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="field field-full">
+            <div class="section-h">Traduzioni Profilo 1</div>
+            <div class="muted small">Compila solo se vuoi che la card si traduca automaticamente (EN/FR/ES/DE).</div>
+          </div>
+
+          <div class="tabs field-full">
+            <details open class="langbox">
+              <summary>EN</summary>
+              <div class="langgrid">
+                <input class="input" type="text" name="name_en" placeholder="Name" value="{{ (i18n_data.en.name if i18n_data and i18n_data.en) if false else '' }}">
+                <input class="input" type="text" name="company_en" placeholder="Company" value="">
+                <input class="input" type="text" name="role_en" placeholder="Role" value="">
+                <textarea class="textarea" name="bio_en" rows="2" placeholder="Bio"></textarea>
+                <textarea class="textarea" name="addresses_en" rows="2" placeholder="Addresses"></textarea>
+              </div>
+            </details>
+
+            <details class="langbox">
+              <summary>FR</summary>
+              <div class="langgrid">
+                <input class="input" type="text" name="name_fr" placeholder="Nom" value="">
+                <input class="input" type="text" name="company_fr" placeholder="Entreprise" value="">
+                <input class="input" type="text" name="role_fr" placeholder="Rôle" value="">
+                <textarea class="textarea" name="bio_fr" rows="2" placeholder="Bio"></textarea>
+                <textarea class="textarea" name="addresses_fr" rows="2" placeholder="Adresses"></textarea>
+              </div>
+            </details>
+
+            <details class="langbox">
+              <summary>ES</summary>
+              <div class="langgrid">
+                <input class="input" type="text" name="name_es" placeholder="Nombre" value="">
+                <input class="input" type="text" name="company_es" placeholder="Empresa" value="">
+                <input class="input" type="text" name="role_es" placeholder="Rol" value="">
+                <textarea class="textarea" name="bio_es" rows="2" placeholder="Bio"></textarea>
+                <textarea class="textarea" name="addresses_es" rows="2" placeholder="Direcciones"></textarea>
+              </div>
+            </details>
+
+            <details class="langbox">
+              <summary>DE</summary>
+              <div class="langgrid">
+                <input class="input" type="text" name="name_de" placeholder="Name" value="">
+                <input class="input" type="text" name="company_de" placeholder="Firma" value="">
+                <input class="input" type="text" name="role_de" placeholder="Rolle" value="">
+                <textarea class="textarea" name="bio_de" rows="2" placeholder="Bio"></textarea>
+                <textarea class="textarea" name="addresses_de" rows="2" placeholder="Adressen"></textarea>
+              </div>
+            </details>
+          </div>
+
+          <div class="form-actions field-full">
+            <button class="btn btn-primary" type="submit">Salva</button>
+            <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Annulla</a>
           </div>
 
         </form>
       </div>
+    </main>
 
-      <div class="footer">© 2026 Pay4You</div>
-    </div>
+    <footer class="dash-footer">© 2026 Realizzato Pay4You — Giuseppe Di Lisio</footer>
   </div>
-
 </body>
 </html>
