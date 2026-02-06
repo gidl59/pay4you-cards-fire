@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="table-card">
+    <div class="table-card table-colorful">
       <div class="table-row table-head">
         <div>Nome</div>
         <div>Slug</div>
@@ -29,8 +29,13 @@
 
       {% for a in agents %}
       <div class="table-row">
-        <div class="name-cell">{{ a.name }}</div>
-        <div class="slug-cell">{{ a.slug }}</div>
+        <div class="name-cell">
+          <span class="badge badge-name">{{ a.name }}</span>
+        </div>
+
+        <div class="slug-cell">
+          <span class="badge badge-slug">{{ a.slug }}</span>
+        </div>
 
         <div class="actions-cell">
           <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
@@ -47,7 +52,6 @@
                 <button class="btn-mini warn" type="submit">Disattiva P2</button>
               </form>
             {% endif %}
-
           {% else %}
             {% if is_admin %}
               <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}" style="display:inline;">
@@ -75,15 +79,10 @@
             {% endif %}
           {% endif %}
 
-          <!-- ✅ QR per P1 e (se attivo) anche P2 -->
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR P1</button>
-          {% if (a.p2_enabled or 0)|int == 1 %}
-            <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png?p=p2')">QR P2</button>
-          {% endif %}
 
           {% if is_admin %}
-            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
-                  onsubmit="return confirm('Eliminare?')" style="display:inline;">
+            <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
               <button class="btn-mini danger" type="submit">Elimina</button>
             </form>
           {% endif %}
@@ -98,12 +97,11 @@
   </div>
 </div>
 
-<!-- QR modal (stesso stile card) -->
+<!-- QR modal -->
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
-    <img id="qr-img" src="" alt="QR"
-         style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
+    <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
     <button class="modal-close" type="button" onclick="closeQrModal()">Chiudi</button>
   </div>
 </div>
@@ -121,15 +119,5 @@
     img.src = '';
     m.style.display = 'none';
   }
-
-  // ✅ click fuori chiude (come sulla card)
-  document.getElementById('qr-modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeQrModal();
-  });
-
-  // ✅ ESC chiude
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closeQrModal();
-  });
 </script>
 {% endblock %}
