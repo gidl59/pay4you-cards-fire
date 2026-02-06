@@ -64,9 +64,13 @@ I18N = {
         "profile_1": "Profilo 1",
         "profile_2": "Profilo 2",
 
+        # new
         "back_media": "Contenuto dietro foto",
         "back_company": "Logo aziendale",
         "back_personal": "Foto/Logo personale",
+
+        # new vcard
+        "digital_card_label": "Card digitale Pay4You",
     },
     "en": {
         "save_contact": "Save contact",
@@ -96,6 +100,8 @@ I18N = {
         "back_media": "Back of avatar",
         "back_company": "Company logo",
         "back_personal": "Personal image",
+
+        "digital_card_label": "Pay4You Digital Card",
     },
     "fr": {
         "save_contact": "Enregistrer le contact",
@@ -125,6 +131,8 @@ I18N = {
         "back_media": "Derrière l’avatar",
         "back_company": "Logo entreprise",
         "back_personal": "Image personnelle",
+
+        "digital_card_label": "Carte digitale Pay4You",
     },
     "es": {
         "save_contact": "Guardar contacto",
@@ -154,6 +162,8 @@ I18N = {
         "back_media": "Parte trasera",
         "back_company": "Logo empresa",
         "back_personal": "Imagen personal",
+
+        "digital_card_label": "Tarjeta digital Pay4You",
     },
     "de": {
         "save_contact": "Kontakt speichern",
@@ -183,6 +193,8 @@ I18N = {
         "back_media": "Rückseite Avatar",
         "back_company": "Firmenlogo",
         "back_personal": "Persönliches Bild",
+
+        "digital_card_label": "Pay4You Digitale Karte",
     },
 }
 
@@ -206,19 +218,17 @@ def clean_str(v):
         return None
     return v
 
-def safe_json_load(s: str, default):
-    try:
-        return json.loads(s) if s else default
-    except Exception:
-        return default
+def is_email_like(s: str) -> bool:
+    s = (s or "").strip()
+    return bool(s) and ("@" in s) and (" " not in s)
 
-def esc_vcard(s: str) -> str:
-    s = (s or "")
-    s = s.replace("\\", "\\\\")
-    s = s.replace("\n", "\\n")
-    s = s.replace(";", "\\;")
-    s = s.replace(",", "\\,")
-    return s
+def digits_only(s: str) -> str:
+    return re.sub(r"\D+", "", (s or ""))
+
+def is_phone_like(s: str) -> bool:
+    # evita valori tipo "D"
+    d = digits_only(s)
+    return len(d) >= 7
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -279,11 +289,11 @@ class Agent(Base):
 
     # Effetti grafici P1 (P2 salva in profiles_json)
     orbit_spin = Column(Integer, nullable=True)     # 0/1
-    avatar_spin = Column(Integer, nullable=True)    # 0/1 (auto flip 3D)
+    avatar_spin = Column(Integer, nullable=True)    # 0/1 (flip 3D auto)
     logo_spin = Column(Integer, nullable=True)      # 0/1
     allow_flip = Column(Integer, nullable=True)     # 0/1
 
-    # Back media
+    # NEW: scelta contenuto "dietro" la foto
     back_media_url = Column(String, nullable=True)   # immagine personale (famiglia/animale)
     back_media_mode = Column(String, nullable=True)  # 'company' | 'personal'
 
@@ -386,6 +396,12 @@ def pick_lang_from_request() -> str:
         if first in SUPPORTED_LANGS:
             return first
     return "it"
+
+def safe_json_load(s: str, default):
+    try:
+        return json.loads(s) if s else default
+    except Exception:
+        return default
 
 def i18n_get(ag: Agent) -> dict:
     return safe_json_load(getattr(ag, "i18n_json", "") or "", {})
@@ -609,16 +625,6 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         back_media_url="",
     )
 
-def normalize_phone(v: str):
-    v = clean_str(v)
-    if not v:
-        return None
-    vv = re.sub(r"[^\d+]", "", v)          # lascia solo cifre e +
-    digits = re.sub(r"\D", "", vv)
-    if len(digits) < 6:
-        return None
-    return vv
-
 # ===================== ROUTES =====================
 
 @app.get("/")
@@ -748,7 +754,7 @@ def _save_media_to_agent(ag: Agent):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
             u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
-            if u := u:
+            if u:
                 pdf_entries.append(f"{f.filename}||{u}")
     if pdf_entries:
         ag.pdf1_url = "|".join(pdf_entries)
@@ -938,6 +944,7 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
+
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -978,6 +985,7 @@ def admin_activate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 1
+
     profiles = parse_profiles_json(ag.profiles_json or "")
     if not select_profile(profiles, "p2"):
         profiles = upsert_profile(profiles, "p2", {"key": "p2"})
@@ -1020,6 +1028,7 @@ def me_profile2():
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
+
     view = blank_profile_view_from_agent(ag)
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
@@ -1129,6 +1138,7 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
+# --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
 def admin_profile2(slug):
@@ -1180,6 +1190,7 @@ def admin_profile2_post(slug):
 
     ag.p2_enabled = 1
     profiles = parse_profiles_json(ag.profiles_json or "")
+
     payload = _save_profile2_payload_from_form()
 
     profiles = upsert_profile(
@@ -1194,7 +1205,7 @@ def admin_profile2_post(slug):
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
 
-# ---------- ADMIN: CREDENZIALI (HTML) ----------
+# ---------- ADMIN: INVIA CODICI (HTML) ----------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
@@ -1230,7 +1241,7 @@ def public_card(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    p_key = (request.args.get("p") or "").strip()
+    p_key = (request.args.get("p") or "").strip()  # "" o "p2"
 
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
     profiles = parse_profiles_json(ag.profiles_json or "")
@@ -1269,22 +1280,23 @@ def public_card(slug):
 
     base = get_base_url()
 
-    emails = [e.strip() for e in (ag_view.emails or "").split(",") if clean_str(e)]
-    pec_email = clean_str(ag_view.pec)
+    # emails: solo validi
+    emails = [e.strip() for e in (ag_view.emails or "").split(",") if is_email_like(e)]
+    pec_email = clean_str(ag_view.pec) if is_email_like(clean_str(ag_view.pec) or "") else None
 
-    websites = [w.strip() for w in (ag_view.websites or "").split(",") if clean_str(w)]
-    websites = [safe_url(w) for w in websites if safe_url(w)]
+    websites = [safe_url(w.strip()) for w in (ag_view.websites or "").split(",") if clean_str(w)]
+    websites = [w for w in websites if w]
 
     raw_addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if clean_str(a)]
     addresses = [{"text": a, "maps": google_maps_link(a)} for a in raw_addresses]
 
     mobiles = []
-    p1 = normalize_phone(getattr(ag_view, "phone_mobile", ""))
-    p2n = normalize_phone(getattr(ag_view, "phone_mobile2", ""))
-    if p1: mobiles.append(p1)
-    if p2n: mobiles.append(p2n)
+    if is_phone_like(getattr(ag_view, "phone_mobile", "") or ""):
+        mobiles.append((ag_view.phone_mobile or "").strip())
+    if is_phone_like(getattr(ag_view, "phone_mobile2", "") or ""):
+        mobiles.append((ag_view.phone_mobile2 or "").strip())
 
-    office_phone = normalize_phone(getattr(ag_view, "phone_office", "")) or ""
+    phone_office = (ag_view.phone_office or "").strip() if is_phone_like(ag_view.phone_office or "") else ""
 
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or (mobiles[0] if mobiles else ""))
 
@@ -1306,7 +1318,7 @@ def public_card(slug):
         websites=websites,
         addresses=addresses,
         mobiles=mobiles,
-        office_phone=office_phone,
+        phone_office=phone_office,
         wa_link=wa_link,
         qr_url=qr_url,
         p_key=p_key,
@@ -1323,8 +1335,11 @@ def vcard(slug):
     if not ag:
         abort(404)
 
-    full_name = (ag.name or "").strip() or "Contatto"
-    parts = full_name.split(" ", 1)
+    lang = pick_lang_from_request()
+    label_card = t(lang, "digital_card_label")
+
+    full_name = ag.name or ""
+    parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
         first_name, last_name = parts[0], parts[1]
     else:
@@ -1333,87 +1348,82 @@ def vcard(slug):
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
-    # websites reali
-    real_sites = []
-    if ag.websites:
-        for w in [x.strip() for x in ag.websites.split(",") if x.strip()]:
-            u = safe_url(w)
-            if u:
-                real_sites.append(u)
-
-    # WhatsApp
-    wa = normalize_whatsapp_link(ag.whatsapp or ag.phone_mobile or "")
-
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{esc_vcard(full_name)}",
-        f"N:{esc_vcard(last_name)};{esc_vcard(first_name)};;;",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
     ]
 
     if ag.role:
-        lines.append(f"TITLE:{esc_vcard(ag.role)}")
+        lines.append(f"TITLE:{ag.role}")
     if ag.company:
-        lines.append(f"ORG:{esc_vcard(ag.company)}")
+        lines.append(f"ORG:{ag.company}")
 
-    # telefoni
-    p1 = normalize_phone(ag.phone_mobile or "")
-    p2 = normalize_phone(ag.phone_mobile2 or "")
-    pf = normalize_phone(ag.phone_office or "")
-    if p1:
-        lines.append(f"TEL;TYPE=CELL:{esc_vcard(p1)}")
-    if p2:
-        lines.append(f"TEL;TYPE=CELL:{esc_vcard(p2)}")
-    if pf:
-        lines.append(f"TEL;TYPE=WORK:{esc_vcard(pf)}")
+    # TEL: solo se phone-like
+    if is_phone_like(ag.phone_mobile or ""):
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+    if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile2}")
+    if is_phone_like(getattr(ag, "phone_office", "") or ""):
+        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
 
-    # email (multiple)
+    # EMAIL: solo email-like
     if ag.emails:
-        for e in [x.strip() for x in ag.emails.split(",") if x.strip()]:
-            lines.append(f"EMAIL;TYPE=INTERNET:{esc_vcard(e)}")
-    if ag.pec:
-        lines.append(f"EMAIL;TYPE=INTERNET:{esc_vcard(ag.pec)}")
+        for e in [x.strip() for x in ag.emails.split(",") if is_email_like(x)]:
+            lines.append(f"EMAIL;TYPE=WORK:{e}")
+    if is_email_like(getattr(ag, "pec", "") or ""):
+        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
 
-    # indirizzi (uno per riga)
-    if ag.addresses:
-        for addr in [x.strip() for x in ag.addresses.split("\n") if x.strip()]:
-            # ADR: PO Box;Extended;Street;Locality;Region;PostalCode;Country
-            # Noi mettiamo tutto nello "Street"
-            lines.append(f"ADR;TYPE=WORK:;;{esc_vcard(addr)};;;;")
+    # ADR (uno solo: il primo indirizzo)
+    addr = clean_str(getattr(ag, "addresses", "") or "")
+    if addr:
+        first_addr = addr.split("\n", 1)[0].strip()
+        if first_addr:
+            # ADR: ;;street;city;region;postal;country (qui mettiamo tutto in street per compatibilità)
+            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL card (standard) + etichetta iPhone "Card digitale Pay4You"
-    lines.append(f"URL:{esc_vcard(card_url)}")
-    lines.append(f"item1.URL:{esc_vcard(card_url)}")
-    lines.append("item1.X-ABLabel:Card digitale Pay4You")
+    # URL: prima il sito reale (se presente), poi la card
+    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
+    websites = [w for w in websites if w]
+    if websites:
+        lines.append(f"URL:{websites[0]}")
+        if len(websites) > 1:
+            lines.append(f"URL:{websites[1]}")
+    lines.append(f"URL:{card_url}")
 
-    # sito reale etichettato
-    if real_sites:
-        lines.append(f"item2.URL:{esc_vcard(real_sites[0])}")
-        lines.append("item2.X-ABLabel:Sito web")
-    if len(real_sites) > 1:
-        lines.append(f"item3.URL:{esc_vcard(real_sites[1])}")
-        lines.append("item3.X-ABLabel:Sito web 2")
-
-    # WhatsApp come URL etichettato (molto compatibile)
-    if wa:
-        lines.append(f"item4.URL:{esc_vcard(wa)}")
-        lines.append("item4.X-ABLabel:WhatsApp")
-
-    # NOTE utile (P.IVA + link card)
+    # NOTE: voce “Card digitale Pay4You …”
     note_parts = []
     if ag.piva:
         note_parts.append(f"Partita IVA: {ag.piva}")
-    note_parts.append(f"Card digitale: {card_url}")
-    lines.append(f"NOTE:{esc_vcard(' | '.join(note_parts))}")
+    note_parts.append(f"{label_card}: {card_url}")
+    lines.append("NOTE:" + " | ".join(note_parts))
 
-    # SDI
+    # WhatsApp (IMPP + SOCIALPROFILE)
+    wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
+    if wa:
+        # IMPP: alcuni lo leggono, altri no
+        lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
+        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
+
+    # Social
+    for typ, raw in [
+        ("facebook", getattr(ag, "facebook", None)),
+        ("instagram", getattr(ag, "instagram", None)),
+        ("linkedin", getattr(ag, "linkedin", None)),
+        ("tiktok", getattr(ag, "tiktok", None)),
+        ("telegram", getattr(ag, "telegram", None)),
+        ("youtube", getattr(ag, "youtube", None)),
+    ]:
+        u = safe_url(raw or "")
+        if u:
+            lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
+
+    # PIVA/SDI
+    if ag.piva:
+        lines.append(f"X-TAX-ID:{ag.piva}")
     if ag.sdi:
-        lines.append(f"X-SDI-CODE:{esc_vcard(ag.sdi)}")
-
-    # YouTube
-    y = safe_url(getattr(ag, "youtube", None))
-    if y:
-        lines.append(f"X-SOCIALPROFILE;TYPE=YOUTUBE:{esc_vcard(y)}")
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
