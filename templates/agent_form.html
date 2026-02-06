@@ -1,404 +1,272 @@
-{% extends "base.html" %}
-{% block title %}Modifica | Pay4You{% endblock %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-theme="dark">
 
-{% block content %}
-<div class="page-main">
-  <div class="panel" style="width:min(1120px,100%);">
+  <div class="page-main">
+    <div class="card-outer">
 
-    <div class="panel-head">
-      <h1 class="page-title">
-        {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
-      </h1>
-
-      {% if editing_profile2 %}
-        {% set D = agent %}
-      {% else %}
-        {% set D = agent %}
-      {% endif %}
-
-      {% if session.get('role') != 'admin' and agent %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-          {% endif %}
-
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% endif %}
-
-          {% if (agent.p2_enabled or 0)|int != 1 %}
-            <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div style="font-size:34px; font-weight:900;">
+          {% if agent %}
+            {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
           {% else %}
-            <form method="post" action="{{ url_for('me_deactivate_p2') }}" style="display:inline;">
-              <button class="btn ghost" type="submit">Disattiva Profilo 2</button>
-            </form>
-          {% endif %}
-        </div>
-      {% endif %}
-
-      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% else %}
-            <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
-          {% endif %}
-        </div>
-      {% endif %}
-    </div>
-
-    {% if session.get('role') == 'admin' %}
-      {% if agent and not editing_profile2 %}
-        {% set form_action = url_for('update_agent', slug=agent.slug) %}
-      {% elif agent and editing_profile2 %}
-        {% set form_action = url_for('admin_profile2_post', slug=agent.slug) %}
-      {% else %}
-        {% set form_action = url_for('create_agent') %}
-      {% endif %}
-    {% else %}
-      {% if editing_profile2 %}
-        {% set form_action = url_for('me_profile2_post') %}
-      {% else %}
-        {% set form_action = url_for('me_edit_post') %}
-      {% endif %}
-    {% endif %}
-
-    <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
-      <div class="form-grid">
-
-        {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
-          <div class="field">
-            <label>Slug (univoco)</label>
-            <input type="text" name="slug" value="" required>
-            <div class="hint">Esempio: nomecognome / negozio-roma. Solo lettere/numeri e trattini.</div>
-            <div class="hint">Una volta creato, lo slug non sarà più modificabile.</div>
-          </div>
-        {% else %}
-          <div class="field">
-            <label>Slug</label>
-            <input type="text" value="{{ agent.slug if agent else '' }}" readonly>
-            <div class="hint">Lo slug è bloccato e non può essere modificato.</div>
-            <div class="hint">La tua card pubblica sarà: https://TUODOMINIO/{{ agent.slug if agent else 'slug' }}</div>
-          </div>
-        {% endif %}
-
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}" required>
-          <div class="hint">Inserisci nome e cognome (o nome attività se preferisci).</div>
-        </div>
-
-        <div class="field">
-          <label>Azienda</label>
-          <input type="text" name="company" value="{{ D.company if D and D.company else '' }}">
-          <div class="hint">Esempio: Pay4You / Bar Centrale / Studio Rossi.</div>
-        </div>
-
-        <div class="field">
-          <label>Ruolo</label>
-          <input type="text" name="role" value="{{ D.role if D and D.role else '' }}">
-          <div class="hint">Esempio: Consulente Pagamenti / Titolare / Agente.</div>
-        </div>
-
-        <div class="field full">
-          <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ D.bio if D and D.bio else '' }}</textarea>
-          <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti.</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ D.phone_mobile if D and D.phone_mobile else '' }}">
-          <div class="hint">Esempio: +39 333 123 4567</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ D.phone_mobile2 if D and D.phone_mobile2 else '' }}">
-          <div class="hint">Opzionale: secondo numero/numero assistenza.</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ D.phone_office if D and D.phone_office else '' }}">
-          <div class="hint">Opzionale: numero fisso o centralino.</div>
-        </div>
-
-        <div class="field">
-          <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ D.whatsapp if D and D.whatsapp else '' }}">
-          <div class="hint">Numero +39... oppure link wa.me.</div>
-        </div>
-
-        <div class="field">
-          <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ D.emails if D and D.emails else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ D.websites if D and D.websites else '' }}">
-        </div>
-
-        <div class="field">
-          <label>PEC</label>
-          <input type="text" name="pec" value="{{ D.pec if D and D.pec else '' }}">
-        </div>
-
-        <div class="field">
-          <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ D.piva if D and D.piva else '' }}">
-        </div>
-
-        <div class="field">
-          <label>SDI</label>
-          <input type="text" name="sdi" value="{{ D.sdi if D and D.sdi else '' }}">
-        </div>
-
-        <div class="field full">
-          <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ D.addresses if D and D.addresses else '' }}</textarea>
-        </div>
-
-        <div class="field">
-          <label>Facebook</label>
-          <input type="text" name="facebook" value="{{ D.facebook if D and D.facebook else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" name="instagram" value="{{ D.instagram if D and D.instagram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>LinkedIn</label>
-          <input type="text" name="linkedin" value="{{ D.linkedin if D and D.linkedin else '' }}">
-        </div>
-
-        <div class="field">
-          <label>TikTok</label>
-          <input type="text" name="tiktok" value="{{ D.tiktok if D and D.tiktok else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Telegram</label>
-          <input type="text" name="telegram" value="{{ D.telegram if D and D.telegram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>YouTube</label>
-          <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Foto profilo (max 8MB)</label>
-          <input type="file" name="photo" accept="image/*">
-        </div>
-
-        <div class="field">
-          <label>Logo azienda (max 8MB)</label>
-          <input type="file" name="logo" accept="image/*">
-        </div>
-
-        <div class="field full details">
-          <details open>
-            <summary>Dietro la foto (logo azienda / foto personale)</summary>
-
-            <div class="hint" style="margin-top:8px;">
-              Puoi caricare una seconda immagine (famiglia/animale) e scegliere cosa mostrare sul retro dell’avatar.
-            </div>
-
-            <div class="grid-2" style="margin-top:10px;">
-              <div class="field">
-                <label>Foto/Logo personale (dietro avatar)</label>
-                <input type="file" name="back_media" accept="image/*">
-                <div class="hint">Esempio: famiglia, animale, logo personale. (opzionale)</div>
-              </div>
-
-              <div class="field">
-                <label>Cosa mostrare dietro?</label>
-                {% set mode = (D.back_media_mode if D and D.back_media_mode else 'company') %}
-                <label class="btn-mini" style="justify-content:flex-start;">
-                  <input type="radio" name="back_media_mode" value="company" {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
-                  Logo aziendale
-                </label>
-                <label class="btn-mini" style="justify-content:flex-start; margin-top:8px;">
-                  <input type="radio" name="back_media_mode" value="personal" {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
-                  Foto/Logo personale
-                </label>
-                <div class="hint" style="margin-top:8px;">Se scegli “personale” ma non carichi l’immagine, torna al logo aziendale.</div>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <div class="field full details">
-          <details open>
-            <summary>Effetti grafici</summary>
-
-            <div class="grid-3" style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="orbit_spin" type="checkbox" name="orbit_spin" value="1"
-                       {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo dietro ruota
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="avatar_spin" type="checkbox" name="avatar_spin" value="1"
-                       {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Foto ruota (flip 3D orizzontale)
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="logo_spin" type="checkbox" name="logo_spin" value="1"
-                       {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo (dietro) ruota su se stesso
-              </label>
-            </div>
-
-            <div style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="allow_flip" type="checkbox" name="allow_flip" value="1"
-                       {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Tap per flip
-              </label>
-              <div class="hint" style="margin-top:6px;">
-                Nota: se attivi “Foto ruota (flip 3D orizzontale)”, “Tap per flip” viene disabilitato (o l’uno o l’altro).
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <div class="field full"><div class="sep"></div></div>
-
-        <div class="field full">
-          {% if editing_profile2 %}
-            <h3 style="margin:0 0 8px 0;">Media Profilo 2</h3>
-            <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
-          {% else %}
-            <h3 style="margin:0 0 8px 0;">Media Profilo 1</h3>
-            <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
+            Nuova Card
           {% endif %}
         </div>
 
-        <div class="field">
-          <label>Galleria (max 30 immagini)</label>
-          <input type="file" name="gallery" accept="image/*" multiple>
-        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="action-btn" href="{{ url_for('dashboard') }}">Torna alla lista</a>
 
-        <div class="field">
-          <label>Video (max 10)</label>
-          <input type="file" name="videos" accept="video/*" multiple>
-        </div>
-
-        <div class="field full">
-          <label>PDF (fino a 12)</label>
-          <div class="grid-3">
-            <input type="file" name="pdf1" accept="application/pdf">
-            <input type="file" name="pdf2" accept="application/pdf">
-            <input type="file" name="pdf3" accept="application/pdf">
-            <input type="file" name="pdf4" accept="application/pdf">
-            <input type="file" name="pdf5" accept="application/pdf">
-            <input type="file" name="pdf6" accept="application/pdf">
-            <input type="file" name="pdf7" accept="application/pdf">
-            <input type="file" name="pdf8" accept="application/pdf">
-            <input type="file" name="pdf9" accept="application/pdf">
-            <input type="file" name="pdf10" accept="application/pdf">
-            <input type="file" name="pdf11" accept="application/pdf">
-            <input type="file" name="pdf12" accept="application/pdf">
-          </div>
-        </div>
-
-        {% if not editing_profile2 %}
-          <div class="field full">
-            <div class="sep"></div>
-            <h3 style="margin:0 0 8px 0;">Traduzioni Profilo 1 (opzionali)</h3>
-            <div class="hint">Se il telefono è in EN/FR/ES/DE, la card userà questi testi (se compilati).</div>
-          </div>
-
-          {% for L in ['en','fr','es','de'] %}
-            <div class="field full details">
-              <details>
-                <summary>{{ L|upper }}</summary>
-                <div class="grid-2" style="margin-top:10px;">
-                  <div class="field">
-                    <label>Nome ({{ L|upper }})</label>
-                    <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Azienda ({{ L|upper }})</label>
-                    <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Ruolo ({{ L|upper }})</label>
-                    <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
-                  </div>
-                  <div class="field full">
-                    <label>Bio ({{ L|upper }})</label>
-                    <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                  </div>
-                  <div class="field full">
-                    <label>Indirizzi ({{ L|upper }})</label>
-                    <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                  </div>
-                </div>
-              </details>
-            </div>
-          {% endfor %}
-        {% endif %}
-
-        <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <button class="btn primary" type="submit">Salva</button>
-          <div class="hint" style="margin:0;">Dopo il salvataggio, apri la card per controllare che tutto sia corretto.</div>
-
-          {% if session.get('role') == 'admin' %}
-            <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          {% else %}
-            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
+          {% if agent %}
+            {% if not editing_profile2 %}
+              <a class="action-btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
+              {% if agent.p2_enabled %}
+                <a class="action-btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+              {% endif %}
+            {% else %}
+              <a class="action-btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
+            {% endif %}
           {% endif %}
         </div>
-
       </div>
-    </form>
 
+      <div class="section" style="margin-top:14px;">
+        <div class="section-title">Dati principali</div>
+
+        <form method="post" enctype="multipart/form-data">
+
+          {% if not agent %}
+            <div class="row">
+              <span class="row-tag tag-data">Slug</span>
+              <input name="slug" required style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+          {% else %}
+            <div class="row">
+              <span class="row-tag tag-data">Slug</span>
+              <div style="text-align:right; width:100%;">
+                <div style="font-weight:900;">{{ agent.slug }}</div>
+                <div style="color:var(--muted); font-size:13px;">Lo slug è bloccato e non può essere modificato.</div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="row">
+            <span class="row-tag tag-data">Nome</span>
+            <input name="name" value="{{ agent.name if agent else '' }}" required
+                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+          </div>
+
+          <div class="row">
+            <span class="row-tag tag-data">Azienda</span>
+            <input name="company" value="{{ agent.company if agent else '' }}"
+                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+          </div>
+
+          <div class="row">
+            <span class="row-tag tag-data">Ruolo</span>
+            <input name="role" value="{{ agent.role if agent else '' }}"
+                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+          </div>
+
+          <div class="row">
+            <span class="row-tag tag-data">Bio</span>
+            <textarea name="bio" rows="3"
+                      style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ agent.bio if agent else '' }}</textarea>
+          </div>
+
+          <div class="section" style="margin-top:14px;">
+            <div class="section-title">Contatti</div>
+
+            <div class="row">
+              <span class="row-tag tag-phone">Telefono mobile</span>
+              <input name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-phone">Telefono mobile 2</span>
+              <input name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-phone">Telefono ufficio</span>
+              <input name="phone_office" value="{{ agent.phone_office if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-email">Email (separate da virgola)</span>
+              <input name="emails" value="{{ agent.emails if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-email">PEC</span>
+              <input name="pec" value="{{ agent.pec if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-web">Siti (separati da virgola)</span>
+              <input name="websites" value="{{ agent.websites if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Indirizzi (uno per riga)</span>
+              <textarea name="addresses" rows="3"
+                        style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ agent.addresses if agent else '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:14px;">
+            <div class="section-title">Social</div>
+
+            <div class="row"><span class="row-tag tag-data">WhatsApp</span>
+              <input name="whatsapp" value="{{ agent.whatsapp if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">Facebook</span>
+              <input name="facebook" value="{{ agent.facebook if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">Instagram</span>
+              <input name="instagram" value="{{ agent.instagram if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">LinkedIn</span>
+              <input name="linkedin" value="{{ agent.linkedin if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">TikTok</span>
+              <input name="tiktok" value="{{ agent.tiktok if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">Telegram</span>
+              <input name="telegram" value="{{ agent.telegram if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+            <div class="row"><span class="row-tag tag-data">YouTube</span>
+              <input name="youtube" value="{{ agent.youtube if agent else '' }}"
+                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:14px;">
+            <div class="section-title">Immagini & media</div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Foto profilo</span>
+              <input type="file" name="photo" accept="image/*">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Logo</span>
+              <input type="file" name="logo" accept="image/*">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Immagine retro</span>
+              <input type="file" name="back_media" accept="image/*">
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Retro: company/personal</span>
+              <select name="back_media_mode" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+                <option value="company" {% if agent and agent.back_media_mode=='company' %}selected{% endif %}>company</option>
+                <option value="personal" {% if agent and agent.back_media_mode=='personal' %}selected{% endif %}>personal</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Galleria (max 30)</span>
+              <input type="file" name="gallery" accept="image/*" multiple>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Video (max 10)</span>
+              <input type="file" name="videos" accept="video/*" multiple>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">PDF (fino a 12)</span>
+              <div style="width:100%; display:grid; gap:10px;">
+                {% for i in range(1,13) %}
+                  <input type="file" name="pdf{{ i }}" accept="application/pdf">
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="section" style="margin-top:14px;">
+            <div class="section-title">Effetti grafici</div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Orbit logo (angolo)</span>
+              <input type="checkbox" name="orbit_spin" value="1" {% if agent and agent.orbit_spin %}checked{% endif %}>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Auto flip 3D</span>
+              <input type="checkbox" name="avatar_spin" value="1" {% if agent and agent.avatar_spin %}checked{% endif %}>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Logo retro ruota</span>
+              <input type="checkbox" name="logo_spin" value="1" {% if agent and agent.logo_spin %}checked{% endif %}>
+            </div>
+
+            <div class="row">
+              <span class="row-tag tag-data">Tap per flip</span>
+              <input type="checkbox" name="allow_flip" value="1" {% if agent and agent.allow_flip %}checked{% endif %}>
+              <div style="color:var(--muted); font-size:13px; margin-left:10px;">(se auto-flip è attivo, il tap viene disabilitato)</div>
+            </div>
+          </div>
+
+          <!-- ✅ LINGUE: sempre visibili -->
+          <div class="section" style="margin-top:14px;">
+            <div class="section-title">Traduzioni Profilo 1</div>
+            <div style="color:var(--muted); font-weight:700; margin-bottom:10px;">
+              Se il telefono è in EN/FR/ES/DE verranno mostrate queste traduzioni.
+            </div>
+
+            {% for L in ['en','fr','es','de'] %}
+              <div class="row">
+                <span class="row-tag tag-data">{{ L|upper }}</span>
+                <div style="width:100%; display:grid; gap:10px;">
+                  <input name="name_{{L}}" placeholder="Nome" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}"
+                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+                  <input name="company_{{L}}" placeholder="Azienda" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}"
+                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+                  <input name="role_{{L}}" placeholder="Ruolo" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}"
+                         style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt);">
+                  <textarea name="bio_{{L}}" rows="2" placeholder="Bio"
+                            style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
+                  <textarea name="addresses_{{L}}" rows="2" placeholder="Indirizzi"
+                            style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--stroke); background:var(--pill-bg); color:var(--txt); resize:vertical;">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+            <button class="action-btn action-qr" type="submit">Salva</button>
+            <a class="action-btn" href="{{ url_for('dashboard') }}">Annulla</a>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="footer">© 2026 Pay4You</div>
+    </div>
   </div>
-</div>
 
-<script>
-  // ✅ O l'uno o l'altro: se "Foto ruota" è attivo -> disabilita "Tap per flip"
-  (function(){
-    const avatarSpin = document.getElementById('avatar_spin');
-    const allowFlip = document.getElementById('allow_flip');
-    if(!avatarSpin || !allowFlip) return;
-
-    function sync(){
-      if(avatarSpin.checked){
-        allowFlip.checked = false;
-        allowFlip.disabled = true;
-        allowFlip.closest('label')?.classList.add('is-disabled');
-      }else{
-        allowFlip.disabled = false;
-        allowFlip.closest('label')?.classList.remove('is-disabled');
-      }
-    }
-    avatarSpin.addEventListener('change', sync);
-    sync();
-  })();
-</script>
-{% endblock %}
+</body>
+</html>
