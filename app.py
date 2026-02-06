@@ -1398,99 +1398,83 @@ def vcard(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    base = get_base_url()
-
     label_card = t(lang, "digital_card_label")  # "Card digitale Pay4You"
-    full_name = clean_str(getattr(ag, "name", "")) or ""
 
-    # ✅ Nome contatto: SOLO la dicitura che vuoi tu
-    display_name = f"{label_card}"
-
-    # N: cognome/nome (se esiste)
-    parts = full_name.strip().split(" ", 1) if full_name else []
+    full_name = ag.name or ""
+    parts = full_name.strip().split(" ", 1)
     if len(parts) == 2:
         first_name, last_name = parts[0], parts[1]
-    elif len(parts) == 1:
-        first_name, last_name = parts[0], ""
     else:
-        first_name, last_name = "", ""
+        first_name, last_name = full_name, ""
 
+    base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{_vcard_escape(display_name)}",
-        f"N:{_vcard_escape(last_name)};{_vcard_escape(first_name)};;;",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
     ]
 
-    if clean_str(getattr(ag, "role", None)):
-        lines.append(f"TITLE:{_vcard_escape(ag.role)}")
-    if clean_str(getattr(ag, "company", None)):
-        lines.append(f"ORG:{_vcard_escape(ag.company)}")
+    if ag.role:
+        lines.append(f"TITLE:{ag.role}")
+    if ag.company:
+        lines.append(f"ORG:{ag.company}")
 
-    # ✅ FOTO: prova base64 embed (molto più compatibile iOS)
-    photo_b64, photo_type = _try_embed_photo_as_base64(clean_str(getattr(ag, "photo_url", "")) or "")
-    if photo_b64 and photo_type:
-        lines.append(f"PHOTO;ENCODING=b;TYPE={photo_type}:{photo_b64}")
-    else:
-        # fallback URL
-        abs_photo = _abs_url(base, clean_str(getattr(ag, "photo_url", "")) or "")
-        if abs_photo:
-            lines.append(f"PHOTO;VALUE=URI:{_vcard_escape(abs_photo)}")
+    # FOTO (molto importante per iPhone/Android)
+    # Usa URL pubblico della foto (Render /uploads/... va bene)
+    if ag.photo_url:
+        photo_url = ag.photo_url
+        if photo_url.startswith("/"):
+            photo_url = base + photo_url
+        lines.append(f"PHOTO;VALUE=URI:{photo_url}")
 
     # TEL
-    if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        tel = (ag.phone_mobile or "").strip()
-        lines.append(f"TEL;TYPE=CELL:{_vcard_escape(tel)}")
+    if is_phone_like(ag.phone_mobile or ""):
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        tel2 = (ag.phone_mobile2 or "").strip()
-        lines.append(f"TEL;TYPE=CELL:{_vcard_escape(tel2)}")
+        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile2}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        telw = (ag.phone_office or "").strip()
-        lines.append(f"TEL;TYPE=WORK:{_vcard_escape(telw)}")
+        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
 
-    # ✅ EMAIL: solo se è email-like (così non finiscono nei telefoni)
-    emails_raw = clean_str(getattr(ag, "emails", "")) or ""
-    if emails_raw:
-        for e in [x.strip() for x in emails_raw.split(",") if is_email_like(x)]:
-            lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{_vcard_escape(e)}")
+    # EMAIL (sempre EMAIL, mai TEL)
+    if ag.emails:
+        for e in [x.strip() for x in ag.emails.split(",") if is_email_like(x)]:
+            lines.append(f"EMAIL;TYPE=WORK:{e}")
+    if is_email_like(getattr(ag, "pec", "") or ""):
+        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
 
-    pec = clean_str(getattr(ag, "pec", "")) or ""
-    if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=HOME:{_vcard_escape(pec)}")
-
-    # ADR: primo indirizzo
-    addr_raw = clean_str(getattr(ag, "addresses", "")) or ""
-    if addr_raw:
-        first_addr = addr_raw.split("\n", 1)[0].strip()
+    # ADR (primo indirizzo)
+    addr = clean_str(getattr(ag, "addresses", "") or "")
+    if addr:
+        first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
-            lines.append(f"ADR;TYPE=WORK:;;{_vcard_escape(first_addr)};;;;")
+            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL: prima sito(i), poi sempre card
-    websites = [safe_url(w.strip()) for w in (clean_str(getattr(ag, "websites", "")) or "").split(",") if clean_str(w)]
+    # URL: prima sito reale (se presente), poi card
+    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
     websites = [w for w in websites if w]
     if websites:
-        lines.append(f"URL:{_vcard_escape(websites[0])}")
+        lines.append(f"URL:{websites[0]}")
         if len(websites) > 1:
-            lines.append(f"URL:{_vcard_escape(websites[1])}")
-    lines.append(f"URL:{_vcard_escape(card_url)}")
+            lines.append(f"URL:{websites[1]}")
+    lines.append(f"URL:{card_url}")
 
-    # NOTE con dicitura “Card digitale Pay4You: link”
+    # NOTE: dicitura che ti piace (Card digitale Pay4You)
     note_parts = []
-    piva = clean_str(getattr(ag, "piva", "")) or ""
-    if piva:
-        note_parts.append(f"Partita IVA: {piva}")
+    if ag.piva:
+        note_parts.append(f"Partita IVA: {ag.piva}")
     note_parts.append(f"{label_card}: {card_url}")
-    lines.append("NOTE:" + _vcard_escape(" | ".join(note_parts)))
+    lines.append("NOTE:" + " | ".join(note_parts))
 
     # WhatsApp
-    wa = normalize_whatsapp_link(clean_str(getattr(ag, "whatsapp", "")) or clean_str(getattr(ag, "phone_mobile", "")) or "")
+    wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
-        lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{_vcard_escape(wa)}")
-        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{_vcard_escape(wa)}")
+        lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
+        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
-    # Social
+    # Social (salvati come X-SOCIALPROFILE)
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1499,20 +1483,18 @@ def vcard(slug):
         ("telegram", getattr(ag, "telegram", None)),
         ("youtube", getattr(ag, "youtube", None)),
     ]:
-        u = safe_url(clean_str(raw) or "")
+        u = safe_url(raw or "")
         if u:
-            lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{_vcard_escape(u)}")
+            lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
-    # Extra
-    if piva:
-        lines.append(f"X-TAX-ID:{_vcard_escape(piva)}")
-    sdi = clean_str(getattr(ag, "sdi", "")) or ""
-    if sdi:
-        lines.append(f"X-SDI-CODE:{_vcard_escape(sdi)}")
+    if ag.piva:
+        lines.append(f"X-TAX-ID:{ag.piva}")
+    if ag.sdi:
+        lines.append(f"X-SDI-CODE:{ag.sdi}")
 
     lines.append("END:VCARD")
-    content = "\r\n".join(lines)
 
+    content = "\r\n".join(lines)
     resp = Response(content, mimetype="text/vcard; charset=utf-8")
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     return resp
