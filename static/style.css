@@ -256,36 +256,45 @@ summary{
 
 .avatar-wrap{position:relative; display:flex; justify-content:center; margin-top:10px; margin-bottom:14px;}
 
-/* ✅ top-left logo (più grande + sempre fixed) */
+/* ✅ LOGO TOP-LEFT più grande e sempre visibile */
 .top-left-logo{
   position:fixed;
-  left:14px; top:14px;
-  width:62px; height:62px;
-  z-index:999;
-  border-radius:22px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.18);
+  left:16px;
+  top:16px;
+  width:92px;
+  height:92px;
+  z-index:9999;
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.22);
   backdrop-filter:var(--glass);
-  display:flex; align-items:center; justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   box-shadow:var(--shadow2);
 }
-.top-left-logo img{width:88%; height:88%; object-fit:contain;}
+.top-left-logo img{
+  width:92%;
+  height:92%;
+  object-fit:contain;
+}
 
-/* orbit */
+/* ✅ orbit più piccolo */
 .orbit{
   position:absolute;
-  width:250px; height:250px;
+  width:210px;
+  height:210px;
   border-radius:50%;
   background:radial-gradient(circle at 35% 25%, rgba(53,199,255,.18), rgba(243,198,43,.12) 55%, rgba(255,255,255,.06));
   border:1px solid rgba(255,255,255,.10);
   display:flex; align-items:center; justify-content:center;
-  filter:blur(.0px);
 }
 .orbit img{width:46%; height:46%; object-fit:contain; opacity:.95; filter:drop-shadow(0 16px 30px rgba(0,0,0,.45));}
 
 /* Flip */
 .flip{
-  width:190px; height:190px;
+  width:220px;
+  height:220px;
   perspective:1200px;
   position:relative;
   z-index:2;
@@ -305,7 +314,8 @@ summary{
 .flip-back{transform:rotateY(180deg);}
 
 .avatar{
-  width:190px; height:190px;
+  width:220px;
+  height:220px;
   border-radius:50%;
   border:3px solid rgba(243,198,43,.55);
   background:rgba(0,0,0,.25);
@@ -350,7 +360,14 @@ summary{
 .spin{animation:spinOrbit 8s linear infinite;}
 
 /* hero text */
-.name{font-size:34px; font-weight:950; letter-spacing:.2px;}
+.name{
+  font-size:34px;
+  font-weight:950;
+  letter-spacing:.2px;
+  margin-top:6px;
+  margin-bottom:0;
+  line-height:1.05;
+}
 .company-badge{
   display:inline-flex;
   padding:8px 14px;
@@ -361,7 +378,7 @@ summary{
   background:rgba(243,198,43,.12);
   color:#ffe9a9;
 }
-.role{color:rgba(255,255,255,.82); font-weight:800; margin-top:2px;}
+.role{color:rgba(255,255,255,.82); font-weight:800; margin-top:6px;}
 .bio{color:rgba(255,255,255,.70); margin-top:8px; line-height:1.35}
 
 .profile-switch{display:flex; gap:10px; justify-content:center; margin-top:14px;}
@@ -600,7 +617,7 @@ summary{
 
 #mImg{
   width:100%;
-  max-height:90vh; /* ✅ più grande */
+  max-height:90vh;
   object-fit:contain;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.10);
@@ -651,7 +668,6 @@ body[data-theme="light"] .soc{background:rgba(255,255,255,.92); border-color:rgb
 body[data-theme="light"] .modal-overlay{background:rgba(15,23,42,.45)}
 body[data-theme="light"] .modal-x{background:rgba(255,255,255,.92); color:#0f172a; border-color:rgba(15,23,42,.14)}
 
-/* ✅ FIX LEGGIBILITÀ SU CHIARO (Tema/PDF/Buttons/Testi) */
 body[data-theme="light"] .section-title,
 body[data-theme="light"] .page-title,
 body[data-theme="light"] .admin-title,
@@ -672,7 +688,7 @@ body[data-theme="light"] .action-btn,
 body[data-theme="light"] .theme-pill,
 body[data-theme="light"] .profile-pill,
 body[data-theme="light"] .pdf-btn{
-  color:#0f172a; /* ✅ prima era bianco */
+  color:#0f172a;
   background:rgba(15,23,42,.06);
   border-color:rgba(15,23,42,.14);
 }
@@ -694,8 +710,8 @@ body[data-theme="light"] #mPdf{
 /* Small screens */
 @media (max-width: 520px){
   .name{font-size:30px}
-  .avatar, .flip{width:175px; height:175px}
+  .avatar, .flip{width:200px; height:200px}
   .thumb img{width:150px; height:112px}
   .video-thumb{width:175px}
-  .top-left-logo{width:58px; height:58px}
+  .top-left-logo{width:78px; height:78px; left:12px; top:12px; border-radius:22px}
 }
