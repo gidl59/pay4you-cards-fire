@@ -3,17 +3,16 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="panel" style="width:min(520px,100%);">
+  <div class="panel panel-login">
 
-    <div class="panel-head" style="text-align:center;">
+    <div class="panel-head panel-head-center">
       <img src="{{ url_for('static', filename='pay4you-logo.png') }}"
-           alt="Pay4You"
-           style="width:88px;height:88px;object-fit:contain; filter: drop-shadow(0 10px 18px rgba(250,204,21,.35)); margin-top:6px;">
-      <div style="font-weight:950; font-size:20px; margin-top:8px;">Area riservata</div>
-      <div class="hint" style="margin-top:6px;">Inserisci le credenziali per gestire la tua card.</div>
+           alt="Pay4You" class="login-logo">
+      <div class="login-title">Area riservata</div>
+      <div class="hint">Inserisci le credenziali per gestire la tua card.</div>
     </div>
 
-    <form method="post" style="padding:18px;">
+    <form method="post" class="panel-body">
       <div class="field">
         <label>Username</label>
         <input type="text" name="username" autocomplete="username" required>
@@ -25,13 +24,13 @@
       </div>
 
       {% if error %}
-        <div class="flash" style="margin-top:12px; border-color: rgba(239,68,68,.35);">
+        <div class="flash flash-error" style="margin-top:12px;">
           {{ error }}
         </div>
       {% endif %}
 
-      <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
-        <button class="btn primary" type="submit" style="flex:1;">Accedi</button>
+      <div style="margin-top:14px;">
+        <button class="btn primary" type="submit" style="width:100%;">Accedi</button>
       </div>
     </form>
 
