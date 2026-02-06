@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-main">
-  <div class="panel panel-wide">
+  <div class="panel" style="width:min(1120px,100%);">
 
     <div class="panel-head">
       <h1 class="page-title">
@@ -59,7 +59,6 @@
       {% endif %}
     </div>
 
-    {# ===== FORM ACTION ===== #}
     {% if session.get('role') == 'admin' %}
       {% if agent and not editing_profile2 %}
         {% set form_action = url_for('update_agent', slug=agent.slug) %}
@@ -79,7 +78,6 @@
     <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
       <div class="form-grid">
 
-        {# ===== SLUG ===== #}
         {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
           <div class="field">
             <label>Slug (univoco)</label>
@@ -214,7 +212,6 @@
           <input type="file" name="logo" accept="image/*">
         </div>
 
-        <!-- BACK MEDIA -->
         <div class="field full details">
           <details open>
             <summary>Dietro la foto (logo azienda / foto personale)</summary>
@@ -247,28 +244,27 @@
           </details>
         </div>
 
-        <!-- EFFETTI -->
         <div class="field full details">
           <details open>
             <summary>Effetti grafici</summary>
 
             <div class="grid-3" style="margin-top:10px;">
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="orbit_spin" value="1"
+                <input id="orbit_spin" type="checkbox" name="orbit_spin" value="1"
                        {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo dietro ruota
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="avatar_spin" value="1"
+                <input id="avatar_spin" type="checkbox" name="avatar_spin" value="1"
                        {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Foto ruota (flip 3D orizzontale)
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="logo_spin" value="1"
+                <input id="logo_spin" type="checkbox" name="logo_spin" value="1"
                        {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo (dietro) ruota su se stesso
@@ -277,13 +273,13 @@
 
             <div style="margin-top:10px;">
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="allow_flip" value="1"
+                <input id="allow_flip" type="checkbox" name="allow_flip" value="1"
                        {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Tap per flip
               </label>
               <div class="hint" style="margin-top:6px;">
-                Nota: se attivi “Foto ruota”, allora il tap per flip viene disattivato automaticamente nella card (evita vibrazioni/casini).
+                Nota: se attivi “Foto ruota (flip 3D orizzontale)”, “Tap per flip” viene disabilitato (o l’uno o l’altro).
               </div>
             </div>
           </details>
@@ -293,10 +289,10 @@
 
         <div class="field full">
           {% if editing_profile2 %}
-            <h3 class="h3">Media Profilo 2</h3>
+            <h3 style="margin:0 0 8px 0;">Media Profilo 2</h3>
             <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
           {% else %}
-            <h3 class="h3">Media Profilo 1</h3>
+            <h3 style="margin:0 0 8px 0;">Media Profilo 1</h3>
             <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
           {% endif %}
         </div>
@@ -332,7 +328,7 @@
         {% if not editing_profile2 %}
           <div class="field full">
             <div class="sep"></div>
-            <h3 class="h3">Traduzioni Profilo 1 (opzionali)</h3>
+            <h3 style="margin:0 0 8px 0;">Traduzioni Profilo 1 (opzionali)</h3>
             <div class="hint">Se il telefono è in EN/FR/ES/DE, la card userà questi testi (se compilati).</div>
           </div>
 
@@ -367,7 +363,7 @@
           {% endfor %}
         {% endif %}
 
-        <div class="field full actions-footer">
+        <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <button class="btn primary" type="submit">Salva</button>
           <div class="hint" style="margin:0;">Dopo il salvataggio, apri la card per controllare che tutto sia corretto.</div>
 
@@ -380,6 +376,29 @@
 
       </div>
     </form>
+
   </div>
 </div>
+
+<script>
+  // ✅ O l'uno o l'altro: se "Foto ruota" è attivo -> disabilita "Tap per flip"
+  (function(){
+    const avatarSpin = document.getElementById('avatar_spin');
+    const allowFlip = document.getElementById('allow_flip');
+    if(!avatarSpin || !allowFlip) return;
+
+    function sync(){
+      if(avatarSpin.checked){
+        allowFlip.checked = false;
+        allowFlip.disabled = true;
+        allowFlip.closest('label')?.classList.add('is-disabled');
+      }else{
+        allowFlip.disabled = false;
+        allowFlip.closest('label')?.classList.remove('is-disabled');
+      }
+    }
+    avatarSpin.addEventListener('change', sync);
+    sync();
+  })();
+</script>
 {% endblock %}
