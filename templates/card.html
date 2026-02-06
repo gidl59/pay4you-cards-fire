@@ -16,7 +16,7 @@
     <div class="card-outer">
 
       {% if ag.logo_url %}
-      <!-- LOGO: più grande + fixed + sempre visibile -->
+      <!-- ✅ sticky + bigger -->
       <a class="top-left-logo sticky {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}"
          href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo">
@@ -28,6 +28,7 @@
 
           {% set can_flip = (ag.allow_flip or 0)|int == 1 %}
           {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
+          {# ✅ se auto_flip attivo, disabilita tap flip #}
           {% if auto_flip %}{% set can_flip = false %}{% endif %}
 
           {% set back_mode = ag.back_media_mode if ag.back_media_mode else 'company' %}
@@ -82,7 +83,7 @@
           </div>
           {% endif %}
 
-          <!-- SOCIAL ICONS colorate -->
+          <!-- ✅ SOCIAL ICONS (colorate, no lettere) -->
           <div class="social-icons social-icons-center">
             {% if ag.facebook %}
               <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook">
@@ -211,6 +212,42 @@
       </div>
       {% endif %}
 
+      {% if ag.piva or ag.sdi %}
+      <div class="section">
+        <div class="section-title">{{ t_func('data') }}</div>
+        {% if ag.piva %}
+          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
+        {% endif %}
+        {% if ag.sdi %}
+          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if addresses %}
+      <div class="section">
+        <div class="section-title">{{ t_func('open_maps') }}</div>
+        <div class="addr-list">
+          {% for a in addresses %}
+            <a class="addr-item" href="{{ a.maps }}" target="_blank" rel="noopener">
+              <div>{{ a.text }}</div>
+              <div class="addr-mini">{{ t_func('open_maps') }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section">
+        <div class="section-title">{{ t_func('theme') }}</div>
+        <div class="theme-toggle theme-toggle-compact">
+          <span class="theme-label">{{ t_func('theme') }}:</span>
+          <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
+          <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
+          <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
+        </div>
+      </div>
+
       {% if gallery %}
       <div class="section">
         <div class="section-title">{{ t_func('gallery') }}</div>
@@ -230,9 +267,7 @@
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <!-- poster: foto agente -->
-              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"
-                     poster="{{ ag.photo_url if ag.photo_url else '' }}"></video>
+              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
             </div>
