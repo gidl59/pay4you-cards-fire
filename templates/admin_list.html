@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="table-card table-colorful">
+    <div class="table-card colorful">
       <div class="table-row table-head">
         <div>Nome</div>
         <div>Slug</div>
@@ -29,13 +29,8 @@
 
       {% for a in agents %}
       <div class="table-row">
-        <div class="name-cell">
-          <span class="badge badge-name">{{ a.name }}</span>
-        </div>
-
-        <div class="slug-cell">
-          <span class="badge badge-slug">{{ a.slug }}</span>
-        </div>
+        <div class="name-cell"><span class="name-badge">{{ a.name }}</span></div>
+        <div class="slug-cell"><span class="slug-badge">{{ a.slug }}</span></div>
 
         <div class="actions-cell">
           <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
@@ -80,6 +75,10 @@
           {% endif %}
 
           <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png')">QR P1</button>
+
+          {% if (a.p2_enabled or 0)|int == 1 %}
+            <button class="btn-mini" type="button" onclick="openQrModal('/{{ a.slug }}/qr.png?p=p2')">QR P2</button>
+          {% endif %}
 
           {% if is_admin %}
             <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}" onsubmit="return confirm('Eliminare?')" style="display:inline;">
