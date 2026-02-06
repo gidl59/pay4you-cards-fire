@@ -15,25 +15,25 @@
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- Top left logo (più grande) -->
+      <!-- ✅ Top-left logo: fisso, grande, cliccabile, NON ruota -->
       {% if ag.logo_url %}
-      <div class="top-left-logo big {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-        <img src="{{ ag.logo_url }}" alt="Logo">
-      </div>
+      <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
+        <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
+      </a>
       {% endif %}
 
       <!-- HERO -->
       <div class="hero hero-center">
         <div class="avatar-wrap">
 
-          {# ORBIT (dietro): ok se vuoi, ma NON mostrare loghetti extra vicino foto #}
+          <!-- ✅ ORBIT dietro (se attivo) -->
           {% if ag.logo_url %}
           <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
             <img src="{{ ag.logo_url }}" alt="Logo orbit">
           </div>
           {% endif %}
 
-          {# LOGICA FLIP: se avatar_spin attivo, DISATTIVA tap per flip (evita vibrazioni) #}
+          {# LOGICA FLIP: se avatar_spin attivo, DISATTIVA tap per flip #}
           {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
           {% set can_flip  = ((ag.allow_flip or 0)|int == 1) and (not auto_flip) %}
 
@@ -47,26 +47,34 @@
 
           <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
             <div class="flip-inner">
+
+              <!-- FRONT -->
               <div class="flip-front">
-                <div class="avatar">
+                <button class="avatar avatar-btn" type="button"
+                        onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
+                        aria-label="Apri foto">
                   {% if ag.photo_url %}
                     <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
-                </div>
+                </button>
               </div>
 
+              <!-- BACK -->
               <div class="flip-back">
-                <div class="avatar">
+                <button class="avatar avatar-btn" type="button"
+                        onclick="event.stopPropagation(); openImg('{{ back_url }}')"
+                        aria-label="Apri immagine retro">
                   {% if back_url %}
                     <img class="avatar-img back-img {% if (ag.logo_spin or 0)|int == 1 %}spin-logo{% endif %}"
                          src="{{ back_url }}" alt="Retro">
                   {% else %}
                     <div class="avatar-placeholder">★</div>
                   {% endif %}
-                </div>
+                </button>
               </div>
+
             </div>
           </div>
 
@@ -280,7 +288,13 @@
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
+              <video class="video-mini"
+                     src="{{ v }}"
+                     muted
+                     playsinline
+                     preload="metadata"
+                     poster=""
+                     aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
             </div>
@@ -392,6 +406,7 @@
   }
 
   function openImg(src){
+    if(!src) return;
     const img = document.getElementById('mImg');
     img.src = src;
     openModal('img');
@@ -430,17 +445,20 @@
     m.style.display = 'none';
   }
 
-  // Video thumbs: mostra primo frame (poster) dopo metadata
+  // ✅ Video thumbs: forza un frame "neutro" e stabile (niente poster immagini)
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
-      // prova a “catturare” il primo frame posizionandoti a 0.01s
       v.addEventListener('loadedmetadata', ()=>{
         try{
           if(v.duration && v.duration > 0.2){
             v.currentTime = 0.05;
           }
         }catch(e){}
+      });
+      // alcuni browser rendono meglio dopo seeked
+      v.addEventListener('seeked', ()=>{
+        try{ v.pause(); }catch(e){}
       });
     });
   })();
