@@ -1325,7 +1325,7 @@ def public_card(slug):
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD ----------
+# ---------- VCARD (FIX COMPLETO: FOTO + LABEL CARD + EMAIL OK) ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1338,15 +1338,35 @@ def vcard(slug):
     lang = pick_lang_from_request()
     label_card = t(lang, "digital_card_label")
 
-    full_name = ag.name or ""
-    parts = full_name.strip().split(" ", 1)
-    if len(parts) == 2:
-        first_name, last_name = parts[0], parts[1]
-    else:
-        first_name, last_name = full_name, ""
+    def abs_url(u: str) -> str:
+        u = clean_str(u) or ""
+        if not u:
+            return ""
+        if u.startswith("http://") or u.startswith("https://"):
+            return u
+        base = get_base_url()
+        return base + (u if u.startswith("/") else ("/" + u))
+
+    full_name = (ag.name or "").strip()
+
+    # N: cognome;nome;;; (best effort)
+    first_name, last_name = "", ""
+    if full_name:
+        parts = full_name.split(" ", 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0].strip(), parts[1].strip()
+        else:
+            first_name, last_name = full_name, ""
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
+
+    # Sito web (se presente)
+    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
+    websites = [w for w in websites if w]
+
+    # Foto profilo (URL assoluto) -> così iOS/Android la salvano
+    photo_abs = abs_url(getattr(ag, "photo_url", "") or "")
 
     lines = [
         "BEGIN:VCARD",
@@ -1355,54 +1375,59 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    if ag.role:
-        lines.append(f"TITLE:{ag.role}")
-    if ag.company:
-        lines.append(f"ORG:{ag.company}")
+    # PHOTO (URI)
+    if photo_abs:
+        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+
+    if clean_str(getattr(ag, "role", None)):
+        lines.append(f"TITLE:{clean_str(ag.role)}")
+    if clean_str(getattr(ag, "company", None)):
+        lines.append(f"ORG:{clean_str(ag.company)}")
 
     # TEL: solo se phone-like
-    if is_phone_like(ag.phone_mobile or ""):
-        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile}")
+    if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
+        lines.append(f"TEL;TYPE=CELL:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL:{ag.phone_mobile2}")
+        lines.append(f"TEL;TYPE=CELL:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK:{ag.phone_office}")
+        lines.append(f"TEL;TYPE=WORK:{clean_str(ag.phone_office)}")
 
-    # EMAIL: solo email-like
-    if ag.emails:
-        for e in [x.strip() for x in ag.emails.split(",") if is_email_like(x)]:
-            lines.append(f"EMAIL;TYPE=WORK:{e}")
-    if is_email_like(getattr(ag, "pec", "") or ""):
-        lines.append(f"EMAIL;TYPE=INTERNET:{ag.pec}")
+    # EMAIL: formattazione compatibile (evita interpretazioni strane)
+    raw_emails = getattr(ag, "emails", "") or ""
+    for e in [x.strip() for x in raw_emails.split(",") if is_email_like(x)]:
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
 
-    # ADR (uno solo: il primo indirizzo)
+    pec = clean_str(getattr(ag, "pec", "") or "")
+    if is_email_like(pec):
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
+
+    # ADR: primo indirizzo
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
-            # ADR: ;;street;city;region;postal;country (qui mettiamo tutto in street per compatibilità)
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL: prima il sito reale (se presente), poi la card
-    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
-    websites = [w for w in websites if w]
-    if websites:
-        lines.append(f"URL:{websites[0]}")
-        if len(websites) > 1:
-            lines.append(f"URL:{websites[1]}")
-    lines.append(f"URL:{card_url}")
+    # URL etichettati (Apple Contacts):
+    # item1 = Card digitale Pay4You
+    lines.append(f"item1.URL:{card_url}")
+    lines.append(f"item1.X-ABLABEL:{label_card}")
 
-    # NOTE: voce “Card digitale Pay4You …”
+    # item2 = Sito web (se presente)
+    if websites:
+        lines.append(f"item2.URL:{websites[0]}")
+        lines.append("item2.X-ABLABEL:Sito web")
+
+    # NOTE: info utile
     note_parts = []
-    if ag.piva:
-        note_parts.append(f"Partita IVA: {ag.piva}")
+    if clean_str(getattr(ag, "piva", None)):
+        note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
     lines.append("NOTE:" + " | ".join(note_parts))
 
-    # WhatsApp (IMPP + SOCIALPROFILE)
+    # WhatsApp
     wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
-        # IMPP: alcuni lo leggono, altri no
         lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
         lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
@@ -1420,10 +1445,10 @@ def vcard(slug):
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
     # PIVA/SDI
-    if ag.piva:
-        lines.append(f"X-TAX-ID:{ag.piva}")
-    if ag.sdi:
-        lines.append(f"X-SDI-CODE:{ag.sdi}")
+    if clean_str(getattr(ag, "piva", None)):
+        lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
+    if clean_str(getattr(ag, "sdi", None)):
+        lines.append(f"X-SDI-CODE:{clean_str(ag.sdi)}")
 
     lines.append("END:VCARD")
     content = "\r\n".join(lines)
