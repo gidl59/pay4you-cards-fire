@@ -1,43 +1,39 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>Area riservata | Pay4You</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<body data-theme="">
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-brand">
-        <img class="auth-logo" src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You"
-             onerror="this.style.display='none';">
-        <div class="auth-title">Area riservata</div>
-        <div class="auth-subtitle">Inserisci le credenziali per gestire la tua card.</div>
+{% extends "base.html" %}
+{% block title %}Login | Pay4You{% endblock %}
+
+{% block content %}
+<div class="page-main">
+  <div class="panel panel-login">
+
+    <div class="panel-head panel-head-center">
+      <img src="{{ url_for('static', filename='pay4you-logo.png') }}"
+           alt="Pay4You" class="login-logo">
+      <div class="login-title">Area riservata</div>
+      <div class="hint">Inserisci le credenziali per gestire la tua card.</div>
+    </div>
+
+    <form method="post" class="panel-body">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>Password</label>
+        <input type="password" name="password" autocomplete="current-password" required>
       </div>
 
       {% if error %}
-        <div class="alert alert-error">{{ error }}</div>
+        <div class="flash flash-error" style="margin-top:12px;">
+          {{ error }}
+        </div>
       {% endif %}
 
-      <form method="post" class="auth-form">
-        <label class="field">
-          <span>Username</span>
-          <input class="input" type="text" name="username" autocomplete="username" required>
-        </label>
+      <div style="margin-top:14px;">
+        <button class="btn primary" type="submit" style="width:100%;">Accedi</button>
+      </div>
+    </form>
 
-        <label class="field">
-          <span>Password</span>
-          <input class="input" type="password" name="password" autocomplete="current-password" required>
-        </label>
-
-        <button class="btn btn-primary btn-full" type="submit">Accedi</button>
-      </form>
-
-      <div class="auth-footer">© 2026 Pay4You</div>
-    </div>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}
