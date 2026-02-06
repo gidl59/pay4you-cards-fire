@@ -12,8 +12,6 @@ from flask import (
     send_from_directory, flash
 )
 
-from werkzeug.middleware.proxy_fix import ProxyFix
-
 from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -222,10 +220,6 @@ def is_phone_like(s: str) -> bool:
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
-app.config["PREFERRED_URL_SCHEME"] = "https"
-
-# ✅ FIX Render/Reverse-proxy: schema + host corretti
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 DB_URL = "sqlite:////var/data/data.db"
 engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
@@ -373,30 +367,15 @@ def ensure_admin_user():
 ensure_admin_user()
 
 def get_base_url():
-    """
-    ✅ Base URL affidabile:
-    - se BASE_URL in env -> usa quello (consigliato)
-    - altrimenti usa request.url_root (corretto con ProxyFix)
-    """
     if BASE_URL:
         return BASE_URL
     return request.url_root.strip().rstrip("/")
-
-def abs_url(u: str) -> str:
-    u = clean_str(u) or ""
-    if not u:
-        return ""
-    if u.startswith("http://") or u.startswith("https://"):
-        return u
-    base = get_base_url()
-    return base + (u if u.startswith("/") else ("/" + u))
 
 def pick_lang_from_request() -> str:
     q = (request.args.get("lang") or "").strip().lower()
     if q:
         q = q.split("-", 1)[0]
         return q if q in SUPPORTED_LANGS else "it"
-
     al = (request.headers.get("Accept-Language") or "").lower()
     if al:
         first = al.split(",", 1)[0].strip().split("-", 1)[0]
@@ -587,15 +566,19 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
+
         name="",
         company="",
         role="",
         bio="",
+
         phone_mobile="",
         phone_mobile2="",
         phone_office="",
+
         emails="",
         websites="",
+
         facebook="",
         instagram="",
         linkedin="",
@@ -603,21 +586,27 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         telegram="",
         whatsapp="",
         youtube="",
+
         pec="",
         piva="",
         sdi="",
         addresses="",
+
         photo_url="",
         logo_url="",
+
         gallery_urls="",
         video_urls="",
         pdf1_url="",
+
         p2_enabled=1,
         profiles_json=ag.profiles_json,
+
         orbit_spin=0,
         avatar_spin=0,
         logo_spin=0,
         allow_flip=0,
+
         back_media_mode="company",
         back_media_url="",
     )
@@ -769,7 +758,13 @@ def create_agent():
         db.close()
         return "Slug già esistente", 400
 
-    ag = Agent(slug=slug, name=name, p2_enabled=0, back_media_mode="company")
+    ag = Agent(
+        slug=slug,
+        name=name,
+        p2_enabled=0,
+        back_media_mode="company",
+    )
+
     _save_common_fields_to_agent(ag)
 
     i18n_data = {}
@@ -926,6 +921,7 @@ def me_edit_post():
 def me_activate_p2():
     if is_admin():
         return redirect(url_for("dashboard"))
+
     slug = current_client_slug()
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
@@ -949,6 +945,7 @@ def me_activate_p2():
 def me_deactivate_p2():
     if is_admin():
         return redirect(url_for("dashboard"))
+
     slug = current_client_slug()
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
@@ -1112,7 +1109,11 @@ def me_profile2_post():
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(
+        profiles,
+        "p2",
+        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
+    )
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1129,6 +1130,7 @@ def admin_profile2(slug):
     db.close()
     if not ag:
         abort(404)
+
     if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
         flash("Prima attiva il Profilo 2.", "warning")
         return redirect(url_for("dashboard"))
@@ -1171,7 +1173,11 @@ def admin_profile2_post(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
+    profiles = upsert_profile(
+        profiles,
+        "p2",
+        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
+    )
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1179,7 +1185,7 @@ def admin_profile2_post(slug):
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
 
-# ---------- ADMIN: INVIA CODICI (HTML) ----------
+# ---------- ADMIN: INVIA CODICI ----------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
@@ -1188,10 +1194,8 @@ def admin_credentials_html(slug):
     ag = db.query(Agent).filter_by(slug=slug).first()
     u = db.query(User).filter_by(username=slug).first()
     db.close()
-
     if not ag or not u:
-        flash("Utente/Agente non trovato per questi codici.", "error")
-        return redirect(url_for("dashboard"))
+        abort(404)
 
     base = get_base_url()
     login_url = f"{base}/login"
@@ -1206,17 +1210,6 @@ def admin_credentials_html(slug):
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
     )
 
-# ✅ Route alias extra (così “Invia codici” non fallisce mai anche se cambia URL)
-@app.get("/admin/<slug>/codici")
-@admin_required
-def admin_credentials_alias_codici(slug):
-    return redirect(url_for("admin_credentials_html", slug=slugify(slug)))
-
-@app.get("/admin/<slug>/credentials.html")
-@admin_required
-def admin_credentials_alias_html(slug):
-    return redirect(url_for("admin_credentials_html", slug=slugify(slug)))
-
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
 def public_card(slug):
@@ -1228,7 +1221,7 @@ def public_card(slug):
         abort(404)
 
     lang = pick_lang_from_request()
-    p_key = (request.args.get("p") or "").strip()  # "" o "p2"
+    p_key = (request.args.get("p") or "").strip()
 
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
     profiles = parse_profiles_json(ag.profiles_json or "")
@@ -1267,6 +1260,7 @@ def public_card(slug):
 
     base = get_base_url()
 
+    # ✅ emails: solo validi
     emails = [e.strip() for e in (ag_view.emails or "").split(",") if is_email_like(e)]
     pec_email = clean_str(ag_view.pec) if is_email_like(clean_str(ag_view.pec) or "") else None
 
@@ -1283,7 +1277,6 @@ def public_card(slug):
         mobiles.append((ag_view.phone_mobile2 or "").strip())
 
     phone_office = (ag_view.phone_office or "").strip() if is_phone_like(ag_view.phone_office or "") else ""
-
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or (mobiles[0] if mobiles else ""))
 
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
@@ -1311,7 +1304,7 @@ def public_card(slug):
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD (FIX FOTO + EMAIL) ----------
+# ---------- VCARD (FOTO + EMAIL OK) ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1324,26 +1317,41 @@ def vcard(slug):
     lang = pick_lang_from_request()
     label_card = t(lang, "digital_card_label")
 
+    def abs_url(u: str) -> str:
+        u = clean_str(u) or ""
+        if not u:
+            return ""
+        if u.startswith("http://") or u.startswith("https://"):
+            return u
+        base = get_base_url()
+        return base + (u if u.startswith("/") else ("/" + u))
+
     full_name = (ag.name or "").strip()
-    parts = full_name.split(" ", 1)
-    if len(parts) == 2:
-        first_name, last_name = parts[0], parts[1]
-    else:
-        first_name, last_name = full_name, ""
+
+    first_name, last_name = "", ""
+    if full_name:
+        parts = full_name.split(" ", 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0].strip(), parts[1].strip()
+        else:
+            first_name, last_name = full_name, ""
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
+    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
+    websites = [w for w in websites if w]
+
+    # ✅ FOTO profilo assoluta (per salvarla in rubrica)
+    photo_abs = abs_url(getattr(ag, "photo_url", "") or "")
+
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        "KIND:individual",
         f"FN:{full_name}",
         f"N:{last_name};{first_name};;;",
     ]
 
-    # ✅ FOTO (URI assoluto) -> così iOS/Android possono scaricarla
-    photo_abs = abs_url(getattr(ag, "photo_url", "") or "")
     if photo_abs:
         lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
@@ -1360,27 +1368,30 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK:{clean_str(ag.phone_office)}")
 
-    # ✅ EMAIL formato compatibile (evita “email scambiate per telefono”)
+    # ✅ EMAIL super-compatibile (non scambiate per TEL)
     raw_emails = getattr(ag, "emails", "") or ""
     for e in [x.strip() for x in raw_emails.split(",") if is_email_like(x)]:
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
+        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
+        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{pec}")
 
-    # ADR (primo indirizzo)
+    # ADR (primo)
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL: card (etichettata)
+    # URL etichettate (Apple Contacts)
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
-    # NOTE
+    if websites:
+        lines.append(f"item2.URL:{websites[0]}")
+        lines.append("item2.X-ABLABEL:Sito web")
+
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
