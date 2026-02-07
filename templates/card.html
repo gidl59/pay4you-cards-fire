@@ -51,7 +51,7 @@
               <!-- FRONT -->
               <div class="flip-front">
                 <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
+                        onclick="event.stopPropagation(); openImg({{ (ag.photo_url if ag.photo_url else '')|tojson }})"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
                     <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
@@ -64,7 +64,7 @@
               <!-- BACK -->
               <div class="flip-back">
                 <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg('{{ back_url }}')"
+                        onclick="event.stopPropagation(); openImg({{ back_url|tojson }})"
                         aria-label="Apri immagine retro">
                   {% if back_url %}
                     <img class="avatar-img back-img {% if (ag.logo_spin or 0)|int == 1 %}spin-logo{% endif %}"
@@ -169,7 +169,7 @@
           {% if wa_link %}
             <a class="action-btn action-wa" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
           {% endif %}
-          <button class="action-btn action-qr" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
+          <button class="action-btn action-qr" type="button" onclick="openQrModal({{ qr_url|tojson }})">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
@@ -273,7 +273,7 @@
         <div class="section-title">{{ t_func('gallery') }}</div>
         <div class="gallery-scroll">
           {% for g in gallery %}
-            <button class="thumb" type="button" onclick="openImg('{{ g }}')">
+            <button class="thumb" type="button" onclick="openImg({{ g|tojson }})">
               <img src="{{ g }}" alt="Foto">
             </button>
           {% endfor %}
@@ -295,7 +295,7 @@
                      preload="metadata"
                      aria-label="Video"></video>
               <div class="video-play">PLAY</div>
-              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
+              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo({{ v|tojson }})"></button>
             </div>
           {% endfor %}
         </div>
@@ -308,7 +308,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-           <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }}, {{ p.name|tojson }})">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }}, {{ p.name|tojson }})">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -363,8 +363,8 @@
 
 <script>
   // ====== URLs utili ======
-  const CARD_PUBLIC_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}";
-  const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or ""))|tojson }};
+  const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang))) | tojson }};
+  const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or "")) | tojson }};
 
   // ====== stato share del modal principale ======
   let CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
