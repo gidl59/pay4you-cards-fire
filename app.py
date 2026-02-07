@@ -1,3 +1,6 @@
+from io import BytesIO
+from PIL import Image
+from werkzeug.datastructures import FileStorage
 import os
 import re
 import uuid
@@ -713,6 +716,52 @@ def _save_common_fields_to_agent(ag: Agent):
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     ag.back_media_mode = mode if mode in ("company", "personal") else "company"
+
+def _crop_center_square_filestorage(fs: FileStorage, out_size: int = 900, quality: int = 92) -> FileStorage:
+    """
+    Prende un FileStorage (foto) e restituisce un nuovo FileStorage:
+    - crop quadrato centrato
+    - resize out_size x out_size
+    - salva in JPEG ottimizzato
+    """
+    # Leggo il file (senza perderlo per upload_file)
+    fs.stream.seek(0)
+    im = Image.open(fs.stream)
+
+    # Gestisco trasparenza / formati strani
+    if im.mode not in ("RGB", "L"):
+        im = im.convert("RGBA")
+    # Converto a RGB (JPEG)
+    if im.mode != "RGB":
+        bg = Image.new("RGB", im.size, (255, 255, 255))
+        if im.mode == "RGBA":
+            bg.paste(im, mask=im.split()[-1])
+        else:
+            bg.paste(im)
+        im = bg
+
+    w, h = im.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    im = im.crop((left, top, left + side, top + side))
+
+    # Resize
+    im = im.resize((out_size, out_size), Image.LANCZOS)
+
+    # Output su memoria
+    out = BytesIO()
+    im.save(out, format="JPEG", quality=quality, optimize=True)
+    out.seek(0)
+
+    # Creo un nuovo FileStorage "compatibile" con upload_file()
+    new_name = (fs.filename.rsplit(".", 1)[0] if fs.filename else "photo") + ".jpg"
+    return FileStorage(
+        stream=out,
+        filename=new_name,
+        content_type="image/jpeg",
+        name=fs.name
+    )
 
 def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
