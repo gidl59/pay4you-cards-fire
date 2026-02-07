@@ -767,12 +767,24 @@ def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
     logo = request.files.get("logo")
     back_media = request.files.get("back_media")
+
+    # ✅ FOTO AGENTE: crop centrato + resize (solo se caricata)
     if photo and photo.filename:
-        ag.photo_url = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
+        try:
+            photo_cropped = _crop_center_square_filestorage(photo, out_size=900, quality=92)
+            ag.photo_url = upload_file(photo_cropped, "photos", mb_to_bytes(MAX_IMAGE_MB))
+        except Exception:
+            # fallback: se qualcosa va storto, carico l'originale (non rompiamo nulla)
+            ag.photo_url = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
+
+    # ✅ LOGO: invariato
     if logo and logo.filename:
         ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
+
+    # ✅ BACK MEDIA: invariato (di solito è logo/foto, non forzo crop qui)
     if back_media and back_media.filename:
         ag.back_media_url = upload_file(back_media, "logos", mb_to_bytes(MAX_IMAGE_MB))
+
 
 def _save_media_to_agent(ag: Agent):
     gallery_files = request.files.getlist("gallery")
