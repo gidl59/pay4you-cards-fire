@@ -1,3 +1,4 @@
+<!-- templates/card.html (COMPLETO) -->
 <!doctype html>
 <html lang="{{ lang|default('it') }}">
 <head>
@@ -19,10 +20,7 @@
     <div class="card-outer">
 
       {% if ag.logo_url %}
-      <!-- ✅ LOGO: torna SEMPRE alla card (non alla home/dashboard) -->
-      <a class="top-left-logo"
-         href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}"
-         aria-label="Torna alla card">
+      <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
       </a>
       {% endif %}
@@ -55,8 +53,8 @@
                         onclick="event.stopPropagation(); openImg({{ (ag.photo_url or '')|tojson }})"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <!-- ✅ niente photo_pos_x/y (non esistono): centratura stabile -->
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto" style="object-position: 50% 35%;">
+                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto"
+                         style="object-position: {{ (ag.photo_pos_x or 50)|int }}% {{ (ag.photo_pos_y or 35)|int }}%;">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
@@ -99,12 +97,12 @@
           {% endif %}
 
           <div class="social-icons social-icons-center">
-            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">…</a>{% endif %}
-            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">…</a>{% endif %}
-            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">…</a>{% endif %}
-            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">…</a>{% endif %}
-            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">…</a>{% endif %}
-            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">…</a>{% endif %}
+            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">F</a>{% endif %}
+            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">I</a>{% endif %}
+            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">in</a>{% endif %}
+            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">TT</a>{% endif %}
+            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">TG</a>{% endif %}
+            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">YT</a>{% endif %}
           </div>
 
         </div>
@@ -113,7 +111,7 @@
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
-          <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+          <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf{% if p_key %}?p={{ p_key }}{% endif %}">{{ t_func('save_contact') }}</a>
           {% if wa_link %}
             <a class="action-btn action-wa" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
           {% endif %}
@@ -167,7 +165,9 @@
             <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
             <div class="right-stack">
               {% for w in websites %}
-                <div class="stack-item"><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
+                <div class="stack-item">
+                  <a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a>
+                </div>
               {% endfor %}
             </div>
           </div>
@@ -256,6 +256,7 @@
     </div>
   </div>
 
+  <!-- ===== MODAL MEDIA ===== -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
       <button class="modal-back" type="button" onclick="closeModal()" aria-label="Torna alla card">←</button>
@@ -278,6 +279,7 @@
     </div>
   </div>
 
+  <!-- ===== MODAL QR ===== -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <button class="modal-back" type="button" onclick="closeQrModal()" aria-label="Torna alla card">←</button>
@@ -295,7 +297,7 @@
   </div>
 
 <script>
-  // ✅ safe strings (no apostrofi che rompono JS)
+  // ✅ questi due sono "safe" (niente apostrofi che rompono JS)
   const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang)))|tojson }};
   const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or ""))|tojson }};
 
@@ -413,22 +415,10 @@
     v.play().catch(()=>{});
   }
 
-  // ✅ PDF: iOS in nuova scheda (iframe spesso non funziona)
-  function isIOS(){
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  }
   function openPdf(src, name){
     if(!src) return;
-
-    if(isIOS()){
-      window.open(src, "_blank");
-      return;
-    }
-
     const f = document.getElementById('mPdf');
     f.src = src;
-
     const t = (name && String(name).trim()) ? (CARD_TITLE + " - " + name) : (CARD_TITLE + " (Documento)");
     CURRENT_SHARE = { url: src, title: t };
     openModal('pdf');
@@ -454,6 +444,7 @@
     m.style.display = 'none';
   }
 
+  // anteprima mini frame video (aiuta su mobile)
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
