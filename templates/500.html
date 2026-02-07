@@ -1,14 +1,34 @@
-{% extends "base.html" %}
-{% block title %}Errore | Pay4You{% endblock %}
-{% block content %}
-<div class="page-main">
-  <div class="panel" style="width:min(700px,100%); padding:18px;">
-    <h1 class="page-title">Errore interno</h1>
-    <p class="hint">Il server ha riscontrato un problema. Riprova tra poco.</p>
-    <div style="margin-top:12px;">
-      <a class="btn primary" href="{{ url_for('dashboard') }}">Torna alla dashboard</a>
-      <a class="btn ghost" href="{{ url_for('login') }}">Login</a>
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Errore | Pay4You</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-theme="">
+  <div class="page-main" style="padding:26px 16px;">
+    <div class="panel panel-login">
+      <div class="panel-head panel-head-center">
+        <div class="page-title" style="font-size:26px;">Errore server</div>
+        <div class="hint">Riprova tra poco. Se continua, controlla i log.</div>
+      </div>
+      <div class="panel-body">
+        <div class="actions-footer" style="margin-top:10px;">
+          <a class="btn primary" href="{{ url_for('login') }}">Vai al login</a>
+          <a class="btn ghost" href="{{ url_for('dashboard') }}">Dashboard</a>
+        </div>
+        <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
+      </div>
     </div>
   </div>
-</div>
-{% endblock %}
+  <script>
+    (function(){
+      const KEY="p4y_theme";
+      const saved = localStorage.getItem(KEY) || "auto";
+      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
+    })();
+  </script>
+</body>
+</html>
