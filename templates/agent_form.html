@@ -254,21 +254,21 @@
 
             <div class="grid-3" style="margin-top:10px;">
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="orbit_spin" value="1"
+                <input id="orbit_spin" type="checkbox" name="orbit_spin" value="1"
                        {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo dietro ruota
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="avatar_spin" value="1"
+                <input id="avatar_spin" type="checkbox" name="avatar_spin" value="1"
                        {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Foto ruota (flip 3D orizzontale)
               </label>
 
               <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="logo_spin" value="1"
+                <input id="logo_spin" type="checkbox" name="logo_spin" value="1"
                        {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Logo (dietro) ruota su se stesso
@@ -276,8 +276,8 @@
             </div>
 
             <div style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="allow_flip" value="1"
+              <label class="btn-mini" id="allow_flip_label" style="justify-content:flex-start;">
+                <input id="allow_flip" type="checkbox" name="allow_flip" value="1"
                        {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
                        style="margin-right:8px;">
                 Tap per flip
@@ -382,4 +382,30 @@
     </form>
   </div>
 </div>
+
+<script>
+(function(){
+  const avatar = document.getElementById('avatar_spin');
+  const flip   = document.getElementById('allow_flip');
+  const flipLabel = document.getElementById('allow_flip_label');
+
+  if(!avatar || !flip) return;
+
+  function sync(){
+    if(avatar.checked){
+      flip.checked = false;
+      flip.disabled = true;
+      if(flipLabel) flipLabel.classList.add('is-disabled');
+      flip.title = "Disattivato perché è attivo: Foto ruota";
+    } else {
+      flip.disabled = false;
+      if(flipLabel) flipLabel.classList.remove('is-disabled');
+      flip.title = "";
+    }
+  }
+
+  avatar.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% endblock %}
