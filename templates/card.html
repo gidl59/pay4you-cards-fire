@@ -19,7 +19,10 @@
     <div class="card-outer">
 
       {% if ag.logo_url %}
-      <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
+      <!-- ✅ LOGO: torna SEMPRE alla card (non alla home/dashboard) -->
+      <a class="top-left-logo"
+         href="/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}"
+         aria-label="Torna alla card">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
       </a>
       {% endif %}
@@ -52,8 +55,8 @@
                         onclick="event.stopPropagation(); openImg({{ (ag.photo_url or '')|tojson }})"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto"
-                         style="object-position: {{ (ag.photo_pos_x or 50)|int }}% {{ (ag.photo_pos_y or 35)|int }}%;">
+                    <!-- ✅ niente photo_pos_x/y (non esistono): centratura stabile -->
+                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto" style="object-position: 50% 35%;">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
@@ -292,7 +295,7 @@
   </div>
 
 <script>
-  // ✅ questi due sono "safe" (niente apostrofi che rompono JS)
+  // ✅ safe strings (no apostrofi che rompono JS)
   const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang)))|tojson }};
   const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or ""))|tojson }};
 
@@ -410,10 +413,22 @@
     v.play().catch(()=>{});
   }
 
+  // ✅ PDF: iOS in nuova scheda (iframe spesso non funziona)
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
   function openPdf(src, name){
     if(!src) return;
+
+    if(isIOS()){
+      window.open(src, "_blank");
+      return;
+    }
+
     const f = document.getElementById('mPdf');
     f.src = src;
+
     const t = (name && String(name).trim()) ? (CARD_TITLE + " - " + name) : (CARD_TITLE + " (Documento)");
     CURRENT_SHARE = { url: src, title: t };
     openModal('pdf');
