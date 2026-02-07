@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 import json
+import base64
 from io import BytesIO
 from types import SimpleNamespace
 import urllib.parse
@@ -12,7 +13,7 @@ from flask import (
     send_from_directory, flash
 )
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text
+from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
@@ -28,6 +29,9 @@ APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 # Upload persistenti (Render Disk su /var/data/uploads)
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
 
+# Backup
+BACKUP_DIR = os.getenv("BACKUP_DIR", "/var/data/backups")
+
 # Limiti upload
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
@@ -36,6 +40,14 @@ MAX_VIDEO_MB = 60
 MAX_PDF_MB = 15
 
 SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
+
+# ===== SQLITE TUNING =====
+SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))  # connect timeout
+SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))  # busy_timeout pragma
+
+# Se vuoi forzare WAL sempre:
+SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")  # WAL
+SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")  # NORMAL è ok in WAL
 
 # ===== UI I18N (etichette fisse) =====
 I18N = {
@@ -222,7 +234,29 @@ app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
 
 DB_URL = "sqlite:////var/data/data.db"
-engine = create_engine(DB_URL, echo=False, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DB_URL,
+    echo=False,
+    connect_args={
+        "check_same_thread": False,
+        "timeout": SQLITE_TIMEOUT_SECONDS,  # connect timeout (seconds)
+    },
+    pool_pre_ping=True,
+)
+
+# ✅ PRAGMA robusti su ogni connessione
+@event.listens_for(engine, "connect")
+def _sqlite_pragmas(dbapi_conn, connection_record):
+    try:
+        cur = dbapi_conn.cursor()
+        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")      # WAL
+        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")        # NORMAL (ok su WAL)
+        cur.execute("PRAGMA foreign_keys=ON;")
+        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")   # ms
+        cur.close()
+    except Exception:
+        pass
+
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -261,35 +295,31 @@ class Agent(Base):
 
     photo_url = Column(String, nullable=True)
     logo_url = Column(String, nullable=True)
-    extra_logo_url = Column(String, nullable=True)  # legacy/optional
+    extra_logo_url = Column(String, nullable=True)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
 
-    # Multi-utente
-    p2_enabled = Column(Integer, nullable=True)     # 0/1
-    profiles_json = Column(Text, nullable=True)     # salva profilo 2
+    p2_enabled = Column(Integer, nullable=True)
+    profiles_json = Column(Text, nullable=True)
 
-    # Traduzioni profilo 1
     i18n_json = Column(Text, nullable=True)
 
-    # Effetti grafici P1 (P2 salva in profiles_json)
-    orbit_spin = Column(Integer, nullable=True)     # 0/1
-    avatar_spin = Column(Integer, nullable=True)    # 0/1 (flip 3D auto)
-    logo_spin = Column(Integer, nullable=True)      # 0/1
-    allow_flip = Column(Integer, nullable=True)     # 0/1
+    orbit_spin = Column(Integer, nullable=True)
+    avatar_spin = Column(Integer, nullable=True)
+    logo_spin = Column(Integer, nullable=True)
+    allow_flip = Column(Integer, nullable=True)
 
-    # NEW: scelta contenuto "dietro" la foto
     back_media_url = Column(String, nullable=True)
-    back_media_mode = Column(String, nullable=True)  # 'company' | 'personal'
+    back_media_mode = Column(String, nullable=True)
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="client")  # admin|client
+    role = Column(String, nullable=False, default="client")
     agent_slug = Column(String, nullable=True)
 
 Base.metadata.create_all(engine)
@@ -411,22 +441,18 @@ def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
 def upload_file(file_storage, folder="uploads", max_bytes=None):
     if not file_storage or not file_storage.filename:
         return None
-
     if max_bytes is not None:
         file_storage.stream.seek(0, os.SEEK_END)
         size = file_storage.stream.tell()
         file_storage.stream.seek(0)
         if size > max_bytes:
             raise ValueError("file too large")
-
     ext = os.path.splitext(file_storage.filename or "")[1].lower()
     uploads_folder = os.path.join(PERSIST_UPLOADS_DIR, folder)
     os.makedirs(uploads_folder, exist_ok=True)
-
     filename = f"{uuid.uuid4().hex}{ext}"
     fullpath = os.path.join(uploads_folder, filename)
     file_storage.save(fullpath)
-
     return f"/uploads/{folder}/{filename}"
 
 @app.get("/uploads/<path:subpath>")
@@ -566,19 +592,15 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
-
         name="",
         company="",
         role="",
         bio="",
-
         phone_mobile="",
         phone_mobile2="",
         phone_office="",
-
         emails="",
         websites="",
-
         facebook="",
         instagram="",
         linkedin="",
@@ -586,27 +608,21 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         telegram="",
         whatsapp="",
         youtube="",
-
         pec="",
         piva="",
         sdi="",
         addresses="",
-
         photo_url="",
         logo_url="",
-
         gallery_urls="",
         video_urls="",
         pdf1_url="",
-
         p2_enabled=1,
         profiles_json=ag.profiles_json,
-
         orbit_spin=0,
         avatar_spin=0,
         logo_spin=0,
         allow_flip=0,
-
         back_media_mode="company",
         back_media_url="",
     )
@@ -704,7 +720,6 @@ def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
     logo = request.files.get("logo")
     back_media = request.files.get("back_media")
-
     if photo and photo.filename:
         ag.photo_url = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
     if logo and logo.filename:
@@ -758,13 +773,7 @@ def create_agent():
         db.close()
         return "Slug già esistente", 400
 
-    ag = Agent(
-        slug=slug,
-        name=name,
-        p2_enabled=0,
-        back_media_mode="company",
-    )
-
+    ag = Agent(slug=slug, name=name, p2_enabled=0, back_media_mode="company")
     _save_common_fields_to_agent(ag)
 
     i18n_data = {}
@@ -915,13 +924,12 @@ def me_edit_post():
     flash("Profilo 1 salvato.", "success")
     return redirect(url_for("me_edit"))
 
-# ---------- P2 ----------
+# ---------- P2: attiva + disattiva + edit ----------
 @app.post("/me/activate_p2")
 @login_required
 def me_activate_p2():
     if is_admin():
         return redirect(url_for("dashboard"))
-
     slug = current_client_slug()
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
@@ -945,14 +953,12 @@ def me_activate_p2():
 def me_deactivate_p2():
     if is_admin():
         return redirect(url_for("dashboard"))
-
     slug = current_client_slug()
     db = SessionLocal()
     ag = db.query(Agent).filter_by(slug=slug).first()
     if not ag:
         db.close()
         abort(404)
-
     ag.p2_enabled = 0
     db.commit()
     db.close()
@@ -989,7 +995,6 @@ def admin_deactivate_p2(slug):
     if not ag:
         db.close()
         abort(404)
-
     ag.p2_enabled = 0
     db.commit()
     db.close()
@@ -1104,16 +1109,12 @@ def me_profile2_post():
     if not ag:
         db.close()
         abort(404)
-    ag.p2_enabled = 1
 
+    ag.p2_enabled = 1
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    profiles = upsert_profile(
-        profiles,
-        "p2",
-        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
-    )
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1121,6 +1122,7 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
+# --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
 def admin_profile2(slug):
@@ -1137,8 +1139,8 @@ def admin_profile2(slug):
 
     profiles = parse_profiles_json(ag.profiles_json or "")
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
-    view = blank_profile_view_from_agent(ag)
 
+    view = blank_profile_view_from_agent(ag)
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
@@ -1173,11 +1175,7 @@ def admin_profile2_post(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    profiles = upsert_profile(
-        profiles,
-        "p2",
-        {"key": "p2", **{k: v for k, v in payload.items() if v is not None}}
-    )
+    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
     db.commit()
@@ -1185,7 +1183,7 @@ def admin_profile2_post(slug):
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("admin_profile2", slug=slug))
 
-# ---------- ADMIN: INVIA CODICI ----------
+# ---------- ADMIN: INVIA CODICI (HTML) ----------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
@@ -1260,7 +1258,6 @@ def public_card(slug):
 
     base = get_base_url()
 
-    # ✅ emails: solo validi
     emails = [e.strip() for e in (ag_view.emails or "").split(",") if is_email_like(e)]
     pec_email = clean_str(ag_view.pec) if is_email_like(clean_str(ag_view.pec) or "") else None
 
@@ -1304,7 +1301,7 @@ def public_card(slug):
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD (FOTO + EMAIL OK) ----------
+# ---------- VCARD: FOTO + EMAIL OK + evitare “email come telefono” ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1326,24 +1323,49 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
-    full_name = (ag.name or "").strip()
+    def try_embed_photo_b64(photo_url: str, max_bytes: int = 250_000):
+        """
+        iPhone a volte NON salva la foto se è solo URL.
+        Se è un file locale /uploads/... e piccolo, lo embeddiamo in base64.
+        """
+        if not photo_url or not photo_url.startswith("/uploads/"):
+            return None
 
-    first_name, last_name = "", ""
-    if full_name:
-        parts = full_name.split(" ", 1)
-        if len(parts) == 2:
-            first_name, last_name = parts[0].strip(), parts[1].strip()
-        else:
-            first_name, last_name = full_name, ""
+        # path reale sul disco
+        rel = photo_url.replace("/uploads/", "", 1)
+        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
+
+        if not os.path.isfile(disk_path):
+            return None
+
+        try:
+            size = os.path.getsize(disk_path)
+            if size <= 0 or size > max_bytes:
+                return None
+            with open(disk_path, "rb") as f:
+                blob = f.read()
+            ext = os.path.splitext(disk_path)[1].lower().lstrip(".")
+            if ext in ("jpg", "jpeg"):
+                mime = "JPEG"
+            elif ext == "png":
+                mime = "PNG"
+            else:
+                return None
+            b64 = base64.b64encode(blob).decode("ascii")
+            return (mime, b64)
+        except Exception:
+            return None
+
+    full_name = (ag.name or "").strip()
+    parts = full_name.split(" ", 1)
+    first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
+    # Siti
     websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
     websites = [w for w in websites if w]
-
-    # ✅ FOTO profilo assoluta (per salvarla in rubrica)
-    photo_abs = abs_url(getattr(ag, "photo_url", "") or "")
 
     lines = [
         "BEGIN:VCARD",
@@ -1352,39 +1374,50 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    if photo_abs:
-        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+    # FOTO: prova embed (più affidabile), altrimenti URL
+    photo_url = clean_str(getattr(ag, "photo_url", "") or "")
+    embedded = try_embed_photo_b64(photo_url)
+    if embedded:
+        mime, b64 = embedded
+        lines.append(f"PHOTO;ENCODING=b;TYPE={mime}:{b64}")
+    else:
+        photo_abs = abs_url(photo_url)
+        if photo_abs:
+            lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
     if clean_str(getattr(ag, "role", None)):
         lines.append(f"TITLE:{clean_str(ag.role)}")
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL
+    # TEL: SOLO numeri
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL:{clean_str(ag.phone_mobile)}")
+        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL:{clean_str(ag.phone_mobile2)}")
+        lines.append(f"TEL;TYPE=CELL,VOICE:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK:{clean_str(ag.phone_office)}")
+        lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
 
-    # ✅ EMAIL super-compatibile (non scambiate per TEL)
-    raw_emails = getattr(ag, "emails", "") or ""
-    for e in [x.strip() for x in raw_emails.split(",") if is_email_like(x)]:
-        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{e}")
+    # EMAIL: SOLO email valide (così iPhone non le scambia)
+    raw_emails = (getattr(ag, "emails", "") or "").strip()
+    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
+    if valid_emails:
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
+        for e in valid_emails[1:]:
+            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{pec}")
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
 
-    # ADR (primo)
+    # ADR: primo indirizzo
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL etichettate (Apple Contacts)
+    # URL etichettati (Apple Contacts)
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1392,6 +1425,7 @@ def vcard(slug):
         lines.append(f"item2.URL:{websites[0]}")
         lines.append("item2.X-ABLABEL:Sito web")
 
+    # NOTE
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
@@ -1417,6 +1451,7 @@ def vcard(slug):
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
+    # PIVA/SDI
     if clean_str(getattr(ag, "piva", None)):
         lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
