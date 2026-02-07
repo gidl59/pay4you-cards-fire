@@ -15,7 +15,7 @@
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- ✅ Top-left logo: fisso, grande, cliccabile, NON ruota -->
+      <!-- ✅ Top-left logo: grande, scontornato, NON quadrato, cliccabile -->
       {% if ag.logo_url %}
       <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
@@ -97,7 +97,7 @@
           </div>
           {% endif %}
 
-          <!-- SOCIAL (SVG colorati) -->
+          <!-- SOCIAL -->
           <div class="social-icons social-icons-center">
             {% if ag.facebook %}
               <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
@@ -293,7 +293,6 @@
                      muted
                      playsinline
                      preload="metadata"
-                     poster=""
                      aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
@@ -309,7 +308,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}')">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}', '{{ (p.name|replace(\"'\",\"\\'\") ) }}')">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -323,6 +322,8 @@
   <!-- MODAL (immagine/video/pdf) -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
+      <!-- ✅ back arrow -->
+      <button class="modal-back" type="button" onclick="closeModal()" aria-label="Torna alla card">←</button>
       <button class="modal-x" type="button" onclick="closeModal()">✕</button>
 
       <img id="mImg" src="" alt="" style="display:none;">
@@ -330,6 +331,10 @@
       <iframe id="mPdf" src="" style="display:none;"></iframe>
 
       <div class="modal-actions">
+        <button class="btn ghost" type="button" onclick="shareCurrent('native')">Condividi</button>
+        <button class="btn ghost" type="button" onclick="shareCurrent('wa')">Invia WhatsApp</button>
+        <button class="btn ghost" type="button" onclick="shareCurrent('email')">Invia Email</button>
+
         {% if websites and websites|length > 0 %}
           <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
         {% endif %}
@@ -341,15 +346,29 @@
   <!-- QR MODAL -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
+      <!-- ✅ back arrow -->
+      <button class="modal-back" type="button" onclick="closeQrModal()" aria-label="Torna alla card">←</button>
       <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
+
       <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
+
       <div class="modal-actions">
+        <button class="btn ghost" type="button" onclick="shareQr('native')">Condividi</button>
+        <button class="btn ghost" type="button" onclick="shareQr('wa')">Invia WhatsApp</button>
+        <button class="btn ghost" type="button" onclick="shareQr('email')">Invia Email</button>
         <button class="btn primary" type="button" onclick="closeQrModal()">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
 
 <script>
+  // ====== URLs utili ======
+  const CARD_PUBLIC_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}";
+  const CARD_TITLE = "Card digitale Pay4You - {{ ag.name|replace(\"'\",\"\\'\") }}";
+
+  // ====== stato share del modal principale ======
+  let CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
+
   // flip tap (solo se canFlip)
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
@@ -378,6 +397,51 @@
     });
   })();
 
+  // ====== share helpers ======
+  function shareNative(title, url){
+    const text = title + "\n" + url;
+    if (navigator.share){
+      navigator.share({ title, text, url }).catch(()=>{});
+      return true;
+    }
+    return false;
+  }
+  function shareWA(title, url){
+    const text = title + "\n" + url;
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  }
+  function shareEmail(title, url){
+    const subject = title;
+    const body = title + "\n" + url;
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+
+  // condividi quello che è aperto nel MODAL principale
+  function shareCurrent(mode){
+    const title = CURRENT_SHARE?.title || CARD_TITLE;
+    const url = CURRENT_SHARE?.url || CARD_PUBLIC_URL;
+
+    if(mode === 'native'){
+      if(!shareNative(title, url)) shareWA(title, url);
+      return;
+    }
+    if(mode === 'wa'){ shareWA(title, url); return; }
+    if(mode === 'email'){ shareEmail(title, url); return; }
+  }
+
+  // QR condivide SEMPRE la card
+  function shareQr(mode){
+    const title = CARD_TITLE;
+    const url = CARD_PUBLIC_URL;
+
+    if(mode === 'native'){
+      if(!shareNative(title, url)) shareWA(title, url);
+      return;
+    }
+    if(mode === 'wa'){ shareWA(title, url); return; }
+    if(mode === 'email'){ shareEmail(title, url); return; }
+  }
+
   // modal helpers
   function openModal(type){
     const modal = document.getElementById('modal');
@@ -403,23 +467,32 @@
       try{ vid.load(); }catch(e){}
     }
     if(pdf) pdf.src = '';
+
+    // reset share
+    CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
   }
 
   function openImg(src){
     if(!src) return;
     const img = document.getElementById('mImg');
     img.src = src;
+    CURRENT_SHARE = { url: src, title: CARD_TITLE + " (Foto)" };
     openModal('img');
   }
+
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
+    CURRENT_SHARE = { url: src, title: CARD_TITLE + " (Video)" };
     openModal('video');
     v.play().catch(()=>{});
   }
-  function openPdf(src){
+
+  function openPdf(src, name){
     const f = document.getElementById('mPdf');
     f.src = src;
+    const t = (name && String(name).trim()) ? (CARD_TITLE + " - " + name) : (CARD_TITLE + " (Documento)");
+    CURRENT_SHARE = { url: src, title: t };
     openModal('pdf');
   }
 
@@ -445,7 +518,7 @@
     m.style.display = 'none';
   }
 
-  // ✅ Video thumbs: forza un frame "neutro" e stabile (niente poster immagini)
+  // ✅ Video thumbs: tenta di mostrare un frame stabile
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
@@ -456,7 +529,6 @@
           }
         }catch(e){}
       });
-      // alcuni browser rendono meglio dopo seeked
       v.addEventListener('seeked', ()=>{
         try{ v.pause(); }catch(e){}
       });
