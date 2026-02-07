@@ -239,20 +239,19 @@ engine = create_engine(
     echo=False,
     connect_args={
         "check_same_thread": False,
-        "timeout": SQLITE_TIMEOUT_SECONDS,  # connect timeout (seconds)
+        "timeout": SQLITE_TIMEOUT_SECONDS,
     },
     pool_pre_ping=True,
 )
 
-# ✅ PRAGMA robusti su ogni connessione
 @event.listens_for(engine, "connect")
 def _sqlite_pragmas(dbapi_conn, connection_record):
     try:
         cur = dbapi_conn.cursor()
-        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")      # WAL
-        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")        # NORMAL (ok su WAL)
+        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")
+        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")
         cur.execute("PRAGMA foreign_keys=ON;")
-        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")   # ms
+        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")
         cur.close()
     except Exception:
         pass
@@ -267,7 +266,6 @@ class Agent(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String, unique=True, nullable=False)
 
-    # Profilo 1
     name = Column(String, nullable=False)
     company = Column(String, nullable=True)
     role = Column(String, nullable=True)
@@ -1301,7 +1299,27 @@ def public_card(slug):
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD: FOTO + EMAIL OK + evitare “email come telefono” ----------
+# ---------- VCARD: helper fold line ----------
+def fold_line(line: str, limit: int = 74):
+    """
+    vCard folding: iOS vuole righe max ~75 chars.
+    Line folding: CRLF + spazio all'inizio della riga successiva.
+    """
+    out = []
+    s = line
+    while len(s) > limit:
+        out.append(s[:limit])
+        s = " " + s[limit:]
+    out.append(s)
+    return out
+
+# ---------- VCARD: alias .vfc -> .vcf ----------
+@app.get("/<slug>.vfc")
+def vcard_alias(slug):
+    # se sbagli estensione, non 404: ti porta alla .vcf
+    return redirect(f"/{slugify(slug)}.vcf", code=302)
+
+# ---------- VCARD: FOTO + EMAIL OK ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1323,24 +1341,10 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
-    def fold_line(line: str, limit: int = 74) -> list:
+    def try_embed_photo_b64(photo_url: str, max_bytes: int = 350_000):
         """
-        vCard folding: righe lunghe -> spezza e continua con spazio iniziale.
-        Apple è molto più stabile con folding corretto.
-        """
-        if len(line) <= limit:
-            return [line]
-        out = []
-        while len(line) > limit:
-            out.append(line[:limit])
-            line = " " + line[limit:]
-        out.append(line)
-        return out
-
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 400_000):
-        """
-        iPhone a volte NON salva la foto se è solo URL.
-        Se è un file locale /uploads/... e piccolo, lo embeddiamo in base64 (con folding).
+        Embed base64: più affidabile su iPhone.
+        Se il file è locale /uploads/... e piccolo, lo embeddiamo.
         """
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
@@ -1386,43 +1390,44 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # FOTO: embed base64 (con folding) se possibile; altrimenti URL
+    # FOTO: DOPPIO metodo (BASE64 + URL fallback)
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
+    photo_abs = abs_url(photo_url)
     embedded = try_embed_photo_b64(photo_url)
+
     if embedded:
         mime, b64 = embedded
         base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
         for fl in fold_line(base_line, 74):
             lines.append(fl)
-    else:
-        photo_abs = abs_url(photo_url)
-        if photo_abs:
-            lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+
+    if photo_abs:
+        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
     if clean_str(getattr(ag, "role", None)):
         lines.append(f"TITLE:{clean_str(ag.role)}")
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL: SOLO numeri + TYPE con ;TYPE= (no virgole)
+    # TEL: SOLO numeri
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
+        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE:{clean_str(ag.phone_mobile2)}")
+        lines.append(f"TEL;TYPE=CELL,VOICE:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
+        lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
 
-    # EMAIL: SOLO email valide (così iPhone non le scambia per telefoni)
+    # EMAIL: SOLO email valide
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
         for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{e}")
+            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
 
     # ADR: primo indirizzo
     addr = clean_str(getattr(ag, "addresses", "") or "")
@@ -1431,7 +1436,7 @@ def vcard(slug):
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL etichettati (Apple Contacts)
+    # URL etichettati
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1475,8 +1480,8 @@ def vcard(slug):
 
     content = "\r\n".join(lines)
 
-    # Response + no-cache (iPhone altrimenti prende la vCard vecchia)
-    resp = Response(content, mimetype="text/x-vcard; charset=utf-8")
+    resp = Response(content)
+    resp.headers["Content-Type"] = "text/vcard; charset=utf-8"
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"
