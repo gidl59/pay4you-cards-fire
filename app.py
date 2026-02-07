@@ -334,6 +334,7 @@ def ensure_sqlite_column(table: str, column: str, coltype: str):
             conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
             conn.commit()
 
+# --- quelle che avevi già ---
 ensure_sqlite_column("agents", "logo_url", "TEXT")
 ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
 ensure_sqlite_column("agents", "phone_office", "TEXT")
@@ -348,6 +349,32 @@ ensure_sqlite_column("agents", "allow_flip", "INTEGER")
 ensure_sqlite_column("agents", "youtube", "TEXT")
 ensure_sqlite_column("agents", "back_media_url", "TEXT")
 ensure_sqlite_column("agents", "back_media_mode", "TEXT")
+
+# ✅ PATCH SICURA: colonne base (se il DB è vecchio, possono mancare e sembrano "sparite")
+ensure_sqlite_column("agents", "company", "TEXT")
+ensure_sqlite_column("agents", "role", "TEXT")
+ensure_sqlite_column("agents", "bio", "TEXT")
+
+ensure_sqlite_column("agents", "phone_mobile", "TEXT")
+ensure_sqlite_column("agents", "emails", "TEXT")
+ensure_sqlite_column("agents", "websites", "TEXT")
+ensure_sqlite_column("agents", "whatsapp", "TEXT")
+
+ensure_sqlite_column("agents", "facebook", "TEXT")
+ensure_sqlite_column("agents", "instagram", "TEXT")
+ensure_sqlite_column("agents", "linkedin", "TEXT")
+ensure_sqlite_column("agents", "tiktok", "TEXT")
+ensure_sqlite_column("agents", "telegram", "TEXT")
+
+ensure_sqlite_column("agents", "pec", "TEXT")
+ensure_sqlite_column("agents", "piva", "TEXT")
+ensure_sqlite_column("agents", "sdi", "TEXT")
+ensure_sqlite_column("agents", "addresses", "TEXT")
+
+ensure_sqlite_column("agents", "photo_url", "TEXT")
+ensure_sqlite_column("agents", "gallery_urls", "TEXT")
+ensure_sqlite_column("agents", "video_urls", "TEXT")
+ensure_sqlite_column("agents", "pdf1_url", "TEXT")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -724,14 +751,11 @@ def _crop_center_square_filestorage(fs: FileStorage, out_size: int = 900, qualit
     - resize out_size x out_size
     - salva in JPEG ottimizzato
     """
-    # Leggo il file (senza perderlo per upload_file)
     fs.stream.seek(0)
     im = Image.open(fs.stream)
 
-    # Gestisco trasparenza / formati strani
     if im.mode not in ("RGB", "L"):
         im = im.convert("RGBA")
-    # Converto a RGB (JPEG)
     if im.mode != "RGB":
         bg = Image.new("RGB", im.size, (255, 255, 255))
         if im.mode == "RGBA":
@@ -746,15 +770,12 @@ def _crop_center_square_filestorage(fs: FileStorage, out_size: int = 900, qualit
     top = (h - side) // 2
     im = im.crop((left, top, left + side, top + side))
 
-    # Resize
     im = im.resize((out_size, out_size), Image.LANCZOS)
 
-    # Output su memoria
     out = BytesIO()
     im.save(out, format="JPEG", quality=quality, optimize=True)
     out.seek(0)
 
-    # Creo un nuovo FileStorage "compatibile" con upload_file()
     new_name = (fs.filename.rsplit(".", 1)[0] if fs.filename else "photo") + ".jpg"
     return FileStorage(
         stream=out,
@@ -768,20 +789,16 @@ def _save_common_uploads_to_agent(ag: Agent):
     logo = request.files.get("logo")
     back_media = request.files.get("back_media")
 
-    # ✅ FOTO AGENTE: crop centrato + resize (solo se caricata)
     if photo and photo.filename:
         try:
             photo_cropped = _crop_center_square_filestorage(photo, out_size=900, quality=92)
             ag.photo_url = upload_file(photo_cropped, "photos", mb_to_bytes(MAX_IMAGE_MB))
         except Exception:
-            # fallback: se qualcosa va storto, carico l'originale (non rompiamo nulla)
             ag.photo_url = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
 
-    # ✅ LOGO: invariato
     if logo and logo.filename:
         ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
-    # ✅ BACK MEDIA: invariato (di solito è logo/foto, non forzo crop qui)
     if back_media and back_media.filename:
         ag.back_media_url = upload_file(back_media, "logos", mb_to_bytes(MAX_IMAGE_MB))
 
@@ -1377,7 +1394,6 @@ def fold_line(line: str, limit: int = 74):
 # ---------- VCARD: alias .vfc -> .vcf ----------
 @app.get("/<slug>.vfc")
 def vcard_alias(slug):
-    # se sbagli estensione, non 404: ti porta alla .vcf
     return redirect(f"/{slugify(slug)}.vcf", code=302)
 
 # ---------- VCARD: FOTO + EMAIL OK ----------
@@ -1403,10 +1419,6 @@ def vcard(slug):
         return base + (u if u.startswith("/") else ("/" + u))
 
     def try_embed_photo_b64(photo_url: str, max_bytes: int = 350_000):
-        """
-        Embed base64: più affidabile su iPhone.
-        Se il file è locale /uploads/... e piccolo, lo embeddiamo.
-        """
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
@@ -1451,7 +1463,6 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # ===== FOTO: UNA SOLA STRATEGIA (NO doppio PHOTO) =====
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     embedded = try_embed_photo_b64(photo_url)
     if embedded:
@@ -1462,7 +1473,6 @@ def vcard(slug):
     else:
         photo_abs = abs_url(photo_url)
         if photo_abs:
-            # vCard 3.0 + iOS/Android: VALUE=URI ok
             lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
     if clean_str(getattr(ag, "role", None)):
@@ -1470,7 +1480,6 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # ===== TEL: solo numeri (già ok) =====
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
         lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;PREF=1:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
@@ -1478,32 +1487,25 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
-    # ===== EMAIL: sintassi più compatibile (NO comma list) =====
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
-        # pref 1 per la prima
         lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET;PREF=1:{valid_emails[0]}")
-        # le altre senza pref
         for e in valid_emails[1:]:
             lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        # PEC come WORK (o HOME se preferisci)
         lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{pec}")
 
-    # ===== ADR: primo indirizzo =====
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # ===== URL standard (molto compatibile) =====
     lines.append(f"URL:{card_url}")
 
-    # (opzionale) Etichetta Apple: non rompe, ma non obbligatoria
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1511,20 +1513,17 @@ def vcard(slug):
         lines.append(f"item2.URL:{websites[0]}")
         lines.append("item2.X-ABLABEL:Sito web")
 
-    # ===== NOTE =====
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
     lines.append("NOTE:" + " | ".join(note_parts))
 
-    # ===== WhatsApp =====
     wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
         lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
         lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
-    # ===== Social =====
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1537,7 +1536,6 @@ def vcard(slug):
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
-    # ===== PIVA/SDI =====
     if clean_str(getattr(ag, "piva", None)):
         lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
