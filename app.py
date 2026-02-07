@@ -42,12 +42,12 @@ MAX_PDF_MB = 15
 SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
 
 # ===== SQLITE TUNING =====
-SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))      # connect timeout
-SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))   # busy_timeout pragma
+SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))  # connect timeout
+SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))  # busy_timeout pragma
 
 # Se vuoi forzare WAL sempre:
-SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")     # WAL
-SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")    # NORMAL è ok in WAL
+SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")  # WAL
+SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")  # NORMAL è ok in WAL
 
 # ===== UI I18N (etichette fisse) =====
 I18N = {
@@ -239,7 +239,7 @@ engine = create_engine(
     echo=False,
     connect_args={
         "check_same_thread": False,
-        "timeout": SQLITE_TIMEOUT_SECONDS,
+        "timeout": SQLITE_TIMEOUT_SECONDS,  # connect timeout (seconds)
     },
     pool_pre_ping=True,
 )
@@ -249,10 +249,10 @@ engine = create_engine(
 def _sqlite_pragmas(dbapi_conn, connection_record):
     try:
         cur = dbapi_conn.cursor()
-        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")
-        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")
+        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")      # WAL
+        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")        # NORMAL (ok su WAL)
         cur.execute("PRAGMA foreign_keys=ON;")
-        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")
+        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")   # ms
         cur.close()
     except Exception:
         pass
@@ -703,11 +703,9 @@ def new_agent():
     return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
 
 def _save_common_fields_to_agent(ag: Agent):
-    for k in [
-        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
-        "emails","websites","pec","piva","sdi","addresses",
-        "facebook","instagram","linkedin","tiktok","telegram","youtube"
-    ]:
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
+              "emails","websites","pec","piva","sdi","addresses",
+              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -1021,13 +1019,11 @@ def me_profile2():
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
     view = blank_profile_view_from_agent(ag)
 
-    for k in [
-        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-        "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-        "orbit_spin","avatar_spin","logo_spin","allow_flip",
-        "back_media_mode","back_media_url"
-    ]:
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+              "orbit_spin","avatar_spin","logo_spin","allow_flip",
+              "back_media_mode","back_media_url"]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1045,10 +1041,8 @@ def me_profile2():
 
 def _save_profile2_payload_from_form():
     payload = {}
-    for k in [
-        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"
-    ]:
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1147,13 +1141,11 @@ def admin_profile2(slug):
     p2 = select_profile(profiles, "p2") or {"key": "p2"}
 
     view = blank_profile_view_from_agent(ag)
-    for k in [
-        "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-        "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-        "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-        "orbit_spin","avatar_spin","logo_spin","allow_flip",
-        "back_media_mode","back_media_url"
-    ]:
+    for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+              "orbit_spin","avatar_spin","logo_spin","allow_flip",
+              "back_media_mode","back_media_url"]:
         v = p2.get(k)
         if v is None:
             continue
@@ -1242,13 +1234,11 @@ def public_card(slug):
     else:
         ag_view = blank_profile_view_from_agent(ag)
         if p2_enabled and p2:
-            for k in [
-                "name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-                "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
-                "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
-                "orbit_spin","avatar_spin","logo_spin","allow_flip",
-                "back_media_mode","back_media_url"
-            ]:
+            for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
+                      "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+                      "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
+                      "orbit_spin","avatar_spin","logo_spin","allow_flip",
+                      "back_media_mode","back_media_url"]:
                 v = p2.get(k)
                 if v is None:
                     continue
@@ -1311,13 +1301,7 @@ def public_card(slug):
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD: alias anti-errore (.vfc -> .vcf) ----------
-# ---------- VCARD: alias anti-errore (.vfc -> .vcf) ----------
-@app.get("/<slug>.vfc")
-def vcard_typo(slug):
-    return redirect(url_for("vcard", slug=slugify(slug)), code=302)
-
-# ---------- VCARD: MAX compatibilità iPhone (email ok + photo ok) ----------
+# ---------- VCARD: FOTO + EMAIL OK + evitare “email come telefono” ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1337,31 +1321,31 @@ def vcard(slug):
         if u.startswith("http://") or u.startswith("https://"):
             return u
         base = get_base_url()
-        if not u.startswith("/"):
-            u = "/" + u
-        return base + u
+        return base + (u if u.startswith("/") else ("/" + u))
 
-    def normalize_upload_path(photo_url: str) -> str:
+    def fold_line(line: str, limit: int = 74) -> list:
         """
-        Supporta: "/uploads/.." e "uploads/.."
+        vCard folding: righe lunghe -> spezza e continua con spazio iniziale.
+        Apple è molto più stabile con folding corretto.
         """
-        if not photo_url:
-            return ""
-        pu = photo_url.strip()
-        if pu.startswith("uploads/"):
-            pu = "/" + pu
-        return pu
+        if len(line) <= limit:
+            return [line]
+        out = []
+        while len(line) > limit:
+            out.append(line[:limit])
+            line = " " + line[limit:]
+        out.append(line)
+        return out
 
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 1_500_000):
+    def try_embed_photo_b64(photo_url: str, max_bytes: int = 400_000):
         """
-        Apple salva la foto più spesso se la embeddiamo in base64.
-        Accettiamo sia /uploads/... che uploads/...
+        iPhone a volte NON salva la foto se è solo URL.
+        Se è un file locale /uploads/... e piccolo, lo embeddiamo in base64 (con folding).
         """
-        photo_url = normalize_upload_path(photo_url)
-        if not photo_url or not (photo_url.startswith("/uploads/")):
+        if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
-        rel = photo_url.replace("/uploads/", "", 1)  # es: photos/xxx.jpg
+        rel = photo_url.replace("/uploads/", "", 1)
         disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
 
         if not os.path.isfile(disk_path):
@@ -1371,66 +1355,19 @@ def vcard(slug):
             size = os.path.getsize(disk_path)
             if size <= 0 or size > max_bytes:
                 return None
-
             with open(disk_path, "rb") as f:
                 blob = f.read()
-
-            ext = os.path.splitext(disk_path)[1].lower()
-            if ext in (".jpg", ".jpeg"):
+            ext = os.path.splitext(disk_path)[1].lower().lstrip(".")
+            if ext in ("jpg", "jpeg"):
                 mime = "JPEG"
-            elif ext == ".png":
+            elif ext == "png":
                 mime = "PNG"
             else:
                 return None
-
             b64 = base64.b64encode(blob).decode("ascii")
             return (mime, b64)
         except Exception:
             return None
-
-    def fold_lines_for_vcard(lines, maxlen: int = 72):
-        """
-        Folding RFC: linee lunghe spezzate con CRLF + spazio.
-        72 è una soglia spesso più compatibile con iOS rispetto a 73.
-        """
-        out = []
-        for line in lines:
-            if line is None:
-                continue
-            s = str(line)
-            if len(s) <= maxlen:
-                out.append(s)
-                continue
-            out.append(s[:maxlen])
-            rest = s[maxlen:]
-            while rest:
-                out.append(" " + rest[:maxlen])
-                rest = rest[maxlen:]
-        return out
-
-    def esc_text(s: str) -> str:
-        """
-        Escape minimo vCard 3.0: virgole, punto e virgola, newline.
-        """
-        s = (s or "")
-        s = s.replace("\\", "\\\\")
-        s = s.replace("\r\n", "\n").replace("\r", "\n")
-        s = s.replace("\n", "\\n")
-        s = s.replace(";", "\\;")
-        s = s.replace(",", "\\,")
-        return s
-
-    def tel_clean(s: str) -> str:
-        """
-        TEL solo + e numeri, senza spazi: aiuta iOS a non confondere campi.
-        """
-        s = (s or "").strip()
-        if not s:
-            return ""
-        d = re.sub(r"[^\d+]", "", s)
-        # evita "++"
-        d = re.sub(r"^\+{2,}", "+", d)
-        return d
 
     full_name = (ag.name or "").strip()
     parts = full_name.split(" ", 1)
@@ -1439,92 +1376,83 @@ def vcard(slug):
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
-    # EMAIL: SOLO email valide
-    raw_emails = (getattr(ag, "emails", "") or "").strip()
-    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
-
-    pec = clean_str(getattr(ag, "pec", "") or "")
-    pec_valid = pec if is_email_like(pec or "") else ""
-
-    # TEL: solo se phone_like
-    phones = []
-    if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        phones.append(("CELL", tel_clean(clean_str(ag.phone_mobile) or "")))
-    if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        phones.append(("CELL", tel_clean(clean_str(ag.phone_mobile2) or "")))
-    if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        phones.append(("WORK", tel_clean(clean_str(ag.phone_office) or "")))
-
-    # URL sito (opzionale)
     websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
     websites = [w for w in websites if w]
 
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"N:{esc_text(last_name)};{esc_text(first_name)};;;",
-        f"FN:{esc_text(full_name)}",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
     ]
 
-    # ORG / TITLE
-    if clean_str(getattr(ag, "company", None)):
-        lines.append(f"ORG:{esc_text(clean_str(ag.company))}")
-    if clean_str(getattr(ag, "role", None)):
-        lines.append(f"TITLE:{esc_text(clean_str(ag.role))}")
-
-    # TEL (prima, puliti)
-    for idx, (typ, num) in enumerate(phones):
-        if not num:
-            continue
-        if idx == 0:
-            lines.append(f"TEL;TYPE={typ},VOICE,PREF:{num}")
-        else:
-            lines.append(f"TEL;TYPE={typ},VOICE:{num}")
-
-    # EMAIL (sempre EMAIL, mai finisce in TEL se vCard è pulita)
-    if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
-        for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
-    if pec_valid:
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec_valid}")
-
-    # ADR (primo indirizzo)
-    addr = clean_str(getattr(ag, "addresses", "") or "")
-    if addr:
-        first_addr = addr.split("\n", 1)[0].strip()
-        if first_addr:
-            lines.append(f"ADR;TYPE=WORK:;;{esc_text(first_addr)};;;;")
-
-    # PHOTO: embed base64 se possibile, altrimenti URL assoluto
-    photo_url = normalize_upload_path(clean_str(getattr(ag, "photo_url", "") or "") or "")
+    # FOTO: embed base64 (con folding) se possibile; altrimenti URL
+    photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     embedded = try_embed_photo_b64(photo_url)
     if embedded:
         mime, b64 = embedded
-        # Variante più compatibile iOS:
-        # (ENCODING=b ok, TYPE=JPEG/PNG ok, folding gestito dopo)
-        lines.append(f"PHOTO;ENCODING=b;TYPE={mime}:{b64}")
+        base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
+        for fl in fold_line(base_line, 74):
+            lines.append(fl)
     else:
         photo_abs = abs_url(photo_url)
         if photo_abs:
             lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
-    # URL (card) etichettato
+    if clean_str(getattr(ag, "role", None)):
+        lines.append(f"TITLE:{clean_str(ag.role)}")
+    if clean_str(getattr(ag, "company", None)):
+        lines.append(f"ORG:{clean_str(ag.company)}")
+
+    # TEL: SOLO numeri + TYPE con ;TYPE= (no virgole)
+    if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
+    if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE:{clean_str(ag.phone_mobile2)}")
+    if is_phone_like(getattr(ag, "phone_office", "") or ""):
+        lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
+
+    # EMAIL: SOLO email valide (così iPhone non le scambia per telefoni)
+    raw_emails = (getattr(ag, "emails", "") or "").strip()
+    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
+    if valid_emails:
+        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
+        for e in valid_emails[1:]:
+            lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{e}")
+
+    pec = clean_str(getattr(ag, "pec", "") or "")
+    if is_email_like(pec):
+        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
+
+    # ADR: primo indirizzo
+    addr = clean_str(getattr(ag, "addresses", "") or "")
+    if addr:
+        first_addr = addr.split("\n", 1)[0].strip()
+        if first_addr:
+            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
+
+    # URL etichettati (Apple Contacts)
     lines.append(f"item1.URL:{card_url}")
-    lines.append(f"item1.X-ABLABEL:{esc_text(label_card)}")
+    lines.append(f"item1.X-ABLABEL:{label_card}")
 
     if websites:
         lines.append(f"item2.URL:{websites[0]}")
         lines.append("item2.X-ABLABEL:Sito web")
 
-    # NOTE (pulita)
+    # NOTE
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
-    lines.append("NOTE:" + esc_text(" | ".join(note_parts)))
+    lines.append("NOTE:" + " | ".join(note_parts))
 
-    # Social: SOLO X-SOCIALPROFILE (NO IMPP -> può sballare iOS)
+    # WhatsApp
+    wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
+    if wa:
+        lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
+        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
+
+    # Social
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1537,25 +1465,22 @@ def vcard(slug):
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
-    # WhatsApp come socialprofile (NO IMPP)
-    wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
-    if wa:
-        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
-
-    # PIVA/SDI custom
+    # PIVA/SDI
     if clean_str(getattr(ag, "piva", None)):
-        lines.append(f"X-TAX-ID:{esc_text(clean_str(ag.piva))}")
+        lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
-        lines.append(f"X-SDI-CODE:{esc_text(clean_str(ag.sdi))}")
+        lines.append(f"X-SDI-CODE:{clean_str(ag.sdi)}")
 
     lines.append("END:VCARD")
 
-    # ✅ Folding finale (fondamentale per PHOTO base64)
-    folded = fold_lines_for_vcard(lines, maxlen=72)
-    content = "\r\n".join(folded) + "\r\n"
+    content = "\r\n".join(lines)
 
-    resp = Response(content, mimetype="text/vcard; charset=utf-8")
+    # Response + no-cache (iPhone altrimenti prende la vCard vecchia)
+    resp = Response(content, mimetype="text/x-vcard; charset=utf-8")
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
     return resp
 
 # ---------- QR ----------
