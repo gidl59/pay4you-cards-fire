@@ -1304,6 +1304,7 @@ def public_card(slug):
 # ---------- VCARD: FOTO + EMAIL OK + evitare “email come telefono” ----------
 # ---------- VCARD: FOTO (iPhone OK) + EMAIL (campi dedicati, etichettati) ----------
 # ---------- VCARD: FOTO (iPhone OK con conversione JPEG) + EMAIL (campi dedicati) ----------
+# ---------- VCARD: FOTO + EMAIL OK + evitare “email come telefono” ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1325,187 +1326,129 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
-    def v_escape(s: str) -> str:
-        s = (s or "")
-        s = s.replace("\\", "\\\\")
-        s = s.replace("\r\n", "\n").replace("\r", "\n")
-        s = s.replace("\n", "\\n")
-        s = s.replace(";", "\\;")
-        s = s.replace(",", "\\,")
-        return s
-
-    def fold_line(line: str, limit: int = 75) -> str:
-        if len(line) <= limit:
-            return line
-        out = []
-        while len(line) > limit:
-            out.append(line[:limit])
-            line = " " + line[limit:]
-        out.append(line)
-        return "\r\n".join(out)
-
-    def embed_photo_lines(photo_url: str, max_bytes: int = 220_000):
+    def embed_photo_lines(photo_url: str, max_bytes: int = 350_000):
         """
-        STRATEGIA iPhone:
-        - Convertiamo SEMPRE in JPEG (RGB)
-        - Ridimensioniamo (max 640px lato lungo)
-        - Comprimiamo (quality 72)
-        - Target base64 < ~220KB (molto più affidabile in iOS)
+        Prova a embeddare la foto in base64 se è un file locale /uploads/...
+        iPhone spesso la salva meglio così.
         """
-        if not photo_url or not photo_url.startswith("/uploads/"):
-            return None
-
-        rel = photo_url.replace("/uploads/", "", 1)
-        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-        if not os.path.isfile(disk_path):
-            return None
-
         try:
-            from PIL import Image  # Pillow
+            if not photo_url or not photo_url.startswith("/uploads/"):
+                return []
 
-            # carica immagine
-            with Image.open(disk_path) as im:
-                im = im.convert("RGB")  # anche PNG con trasparenza -> fondo nero/bianco? qui RGB standard
+            rel = photo_url.replace("/uploads/", "", 1)
+            disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
+            if not os.path.isfile(disk_path):
+                return []
 
-                # resize: max 640px lato lungo
-                max_side = 640
-                w, h = im.size
-                if max(w, h) > max_side:
-                    if w >= h:
-                        new_w = max_side
-                        new_h = int(h * (max_side / w))
-                    else:
-                        new_h = max_side
-                        new_w = int(w * (max_side / h))
-                    im = im.resize((new_w, new_h), Image.LANCZOS)
+            size = os.path.getsize(disk_path)
+            if size <= 0 or size > max_bytes:
+                return []
 
-                # prova compressione progressiva per stare sotto max_bytes
-                best = None
-                for q in (78, 74, 70, 66, 62, 58):
-                    buf = BytesIO()
-                    im.save(buf, format="JPEG", quality=q, optimize=True, progressive=True)
-                    data = buf.getvalue()
-                    if len(data) <= max_bytes:
-                        best = data
-                        break
-                    best = data  # tieni comunque l'ultima
+            ext = os.path.splitext(disk_path)[1].lower().lstrip(".")
+            if ext in ("jpg", "jpeg"):
+                mime = "JPEG"
+            elif ext == "png":
+                mime = "PNG"
+            else:
+                return []
 
-            if not best:
-                return None
+            with open(disk_path, "rb") as f:
+                blob = f.read()
 
-            b64 = base64.b64encode(best).decode("ascii")
-
-            # chunk base64 (60 char) + folding con spazio iniziale
-            chunks = [b64[i:i+60] for i in range(0, len(b64), 60)]
-            if not chunks:
-                return None
-
-            lines = []
-            lines.append(f"PHOTO;ENCODING=b;TYPE=JPEG:{chunks[0]}")
-            for c in chunks[1:]:
-                lines.append(" " + c)
-            return lines
-
+            b64 = base64.b64encode(blob).decode("ascii")
+            # vCard 3.0: ENC=b (base64) + TYPE
+            return [f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"]
         except Exception:
-            # se Pillow non c'è o errore: fallback a "niente embed"
-            return None
+            return []
 
     full_name = (ag.name or "").strip()
-    parts = [p for p in full_name.split(" ") if p.strip()]
-    first_name = parts[0] if parts else full_name
-    last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+    parts = full_name.split(" ", 1)
+    first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
 
     base = get_base_url()
     card_url = f"{base}/{ag.slug}"
 
+    # Siti
     websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
     websites = [w for w in websites if w]
-
-    raw_emails = (getattr(ag, "emails", "") or "").strip()
-    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
-
-    pec = clean_str(getattr(ag, "pec", "") or "")
-    pec_ok = pec if is_email_like(pec) else ""
 
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{v_escape(full_name)}",
-        f"N:{v_escape(last_name)};{v_escape(first_name)};;;",
+        f"FN:{full_name}",
+        f"N:{last_name};{first_name};;;",
     ]
 
-    # FOTO: Piano B => mettiamo SEMPRE sia URL che EMBED (se possibile)
-photo_url = clean_str(getattr(ag, "photo_url", "") or "")
-photo_abs = abs_url(photo_url)
+    # FOTO: Piano B => inseriamo sia URL che EMBED (se possibile)
+    photo_url = clean_str(getattr(ag, "photo_url", "") or "")
+    photo_abs = abs_url(photo_url)
 
-# 1) URI (molti iPhone la preferiscono)
-if photo_abs:
-    lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+    # 1) URI
+    if photo_abs:
+        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
-# 2) EMBED (per altri iPhone è più affidabile)
-photo_embedded_lines = embed_photo_lines(photo_url)
-if photo_embedded_lines:
-    lines.extend(photo_embedded_lines)
+    # 2) EMBED
+    embedded_lines = embed_photo_lines(photo_url)
+    if embedded_lines:
+        lines.extend(embedded_lines)
 
-# piccolo hint Apple (non sempre serve, ma non rompe nulla)
-lines.append("X-ABShowAs:PERSON")
-
+    # (non rompe nulla, a volte aiuta su Apple)
+    lines.append("X-ABShowAs:PERSON")
 
     if clean_str(getattr(ag, "role", None)):
-        lines.append(f"TITLE:{v_escape(clean_str(ag.role))}")
+        lines.append(f"TITLE:{clean_str(ag.role)}")
     if clean_str(getattr(ag, "company", None)):
-        lines.append(f"ORG:{v_escape(clean_str(ag.company))}")
+        lines.append(f"ORG:{clean_str(ag.company)}")
 
+    # TEL: SOLO numeri
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{v_escape(clean_str(ag.phone_mobile))}")
+        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE:{v_escape(clean_str(ag.phone_mobile2))}")
+        lines.append(f"TEL;TYPE=CELL,VOICE:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK,VOICE:{v_escape(clean_str(ag.phone_office))}")
+        lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
 
+    # EMAIL: SOLO email valide (così iPhone non le scambia per telefono)
+    raw_emails = (getattr(ag, "emails", "") or "").strip()
+    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
+    if valid_emails:
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
+        for e in valid_emails[1:]:
+            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
+
+    pec = clean_str(getattr(ag, "pec", "") or "")
+    if is_email_like(pec):
+        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
+
+    # ADR: primo indirizzo
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
-            lines.append(f"ADR;TYPE=WORK:;;{v_escape(first_addr)};;;;")
+            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL etichettati
+    # URL etichettati (Apple Contacts)
     lines.append(f"item1.URL:{card_url}")
-    lines.append(f"item1.X-ABLABEL:{v_escape(label_card)}")
+    lines.append(f"item1.X-ABLABEL:{label_card}")
 
-    next_item = 2
     if websites:
-        lines.append(f"item{next_item}.URL:{websites[0]}")
-        lines.append(f"item{next_item}.X-ABLABEL:Sito web")
-        next_item += 1
+        lines.append(f"item2.URL:{websites[0]}")
+        lines.append("item2.X-ABLABEL:Sito web")
 
-    # EMAIL: itemX.EMAIL + label
-    if valid_emails:
-        lines.append(f"item{next_item}.EMAIL;TYPE=INTERNET:{valid_emails[0]}")
-        lines.append(f"item{next_item}.X-ABLABEL:Email")
-        next_item += 1
-
-        for idx, e in enumerate(valid_emails[1:], start=2):
-            lines.append(f"item{next_item}.EMAIL;TYPE=INTERNET:{e}")
-            lines.append(f"item{next_item}.X-ABLABEL:Email {idx}")
-            next_item += 1
-
-    if pec_ok:
-        lines.append(f"item{next_item}.EMAIL;TYPE=INTERNET:{pec_ok}")
-        lines.append(f"item{next_item}.X-ABLABEL:PEC")
-        next_item += 1
-
+    # NOTE
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
-    lines.append("NOTE:" + v_escape(" | ".join(note_parts)))
+    lines.append("NOTE:" + " | ".join(note_parts))
 
+    # WhatsApp
     wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
         lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
         lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
+    # Social
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1518,25 +1461,20 @@ lines.append("X-ABShowAs:PERSON")
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
+    # PIVA/SDI
     if clean_str(getattr(ag, "piva", None)):
-        lines.append(f"X-TAX-ID:{v_escape(clean_str(ag.piva))}")
+        lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
-        lines.append(f"X-SDI-CODE:{v_escape(clean_str(ag.sdi))}")
+        lines.append(f"X-SDI-CODE:{clean_str(ag.sdi)}")
 
     lines.append("END:VCARD")
+    content = "\r\n".join(lines)
 
-    out_lines = []
-    for l in lines:
-        if l.startswith(" "):
-            out_lines.append(l)
-        else:
-            out_lines.append(fold_line(l))
-
-    content = "\r\n".join(out_lines) + "\r\n"
-
-    resp = Response(content, mimetype="text/vcard; charset=utf-8")
+    # iOS spesso preferisce text/x-vcard
+    resp = Response(content, mimetype="text/x-vcard; charset=utf-8")
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     return resp
+
 
 
 # ---------- QR ----------
