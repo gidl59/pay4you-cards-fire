@@ -1434,15 +1434,22 @@ def vcard(slug):
         f"N:{v_escape(last_name)};{v_escape(first_name)};;;",
     ]
 
-    # FOTO: embed JPEG compresso (iPhone top), altrimenti URL
-    photo_url = clean_str(getattr(ag, "photo_url", "") or "")
-    photo_embedded_lines = embed_photo_lines(photo_url)
-    if photo_embedded_lines:
-        lines.extend(photo_embedded_lines)
-    else:
-        photo_abs = abs_url(photo_url)
-        if photo_abs:
-            lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+    # FOTO: Piano B => mettiamo SEMPRE sia URL che EMBED (se possibile)
+photo_url = clean_str(getattr(ag, "photo_url", "") or "")
+photo_abs = abs_url(photo_url)
+
+# 1) URI (molti iPhone la preferiscono)
+if photo_abs:
+    lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+
+# 2) EMBED (per altri iPhone è più affidabile)
+photo_embedded_lines = embed_photo_lines(photo_url)
+if photo_embedded_lines:
+    lines.extend(photo_embedded_lines)
+
+# piccolo hint Apple (non sempre serve, ma non rompe nulla)
+lines.append("X-ABShowAs:PERSON")
+
 
     if clean_str(getattr(ag, "role", None)):
         lines.append(f"TITLE:{v_escape(clean_str(ag.role))}")
