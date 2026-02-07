@@ -15,25 +15,29 @@
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- ✅ Top-left logo: grande, scontornato, NON quadrato, cliccabile -->
       {% if ag.logo_url %}
       <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
       </a>
       {% endif %}
 
+      <!-- ✅ Back to admin (compare solo se arrivi da /area/) -->
+      <button id="backAdminBtn" type="button"
+              style="display:none; position:fixed; left:14px; bottom:14px; z-index:9999;"
+              class="btn ghost">
+        ← Area riservata
+      </button>
+
       <!-- HERO -->
       <div class="hero hero-center">
         <div class="avatar-wrap">
 
-          <!-- ✅ ORBIT dietro (se attivo) -->
           {% if ag.logo_url %}
           <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
             <img src="{{ ag.logo_url }}" alt="Logo orbit">
           </div>
           {% endif %}
 
-          {# LOGICA FLIP: se avatar_spin attivo, DISATTIVA tap per flip #}
           {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
           {% set can_flip  = ((ag.allow_flip or 0)|int == 1) and (not auto_flip) %}
 
@@ -106,7 +110,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.instagram %}
               <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -121,7 +124,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.linkedin %}
               <a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -129,7 +131,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.tiktok %}
               <a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -139,7 +140,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.telegram %}
               <a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -147,7 +147,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.youtube %}
               <a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -157,7 +156,6 @@
               </a>
             {% endif %}
           </div>
-
         </div>
       </div>
 
@@ -172,99 +170,6 @@
           <button class="action-btn action-qr" type="button" onclick="openQrModal({{ qr_url|tojson }})">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
-      </div>
-
-      <!-- CONTATTI -->
-      {% if mobiles or phone_office or emails or pec_email or websites %}
-      <div class="section">
-        <div class="section-title">{{ t_func('contacts') }}</div>
-
-        {% if mobiles %}
-          <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('mobile_phone') }}</span>
-            <div class="right-stack">
-              {% for m in mobiles %}
-                <div class="stack-item"><a href="tel:{{ m|replace(' ','') }}">{{ m }}</a></div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if phone_office %}
-          <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
-            <a href="tel:{{ phone_office|replace(' ','') }}">{{ phone_office }}</a>
-          </div>
-        {% endif %}
-
-        {% if emails %}
-          <div class="row row-email">
-            <span class="row-tag tag-email">Email</span>
-            <div class="right-stack">
-              {% for e in emails %}
-                <div class="stack-item"><a href="mailto:{{ e }}">{{ e }}</a></div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if pec_email %}
-          <div class="row row-email">
-            <span class="row-tag tag-email">PEC</span>
-            <a href="mailto:{{ pec_email }}">{{ pec_email }}</a>
-          </div>
-        {% endif %}
-
-        {% if websites %}
-          <div class="row row-web">
-            <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
-            <div class="right-stack">
-              {% for w in websites %}
-                <div class="stack-item"><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- DATI -->
-      {% if ag.piva or ag.sdi %}
-      <div class="section">
-        <div class="section-title">{{ t_func('data') }}</div>
-        {% if ag.piva %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
-        {% endif %}
-        {% if ag.sdi %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- INDIRIZZI -->
-      {% if addresses %}
-      <div class="section">
-        <div class="section-title">{{ t_func('open_maps') }}</div>
-        <div class="addr-list">
-          {% for a in addresses %}
-            <a class="addr-item" href="{{ a.maps }}" target="_blank" rel="noopener">
-              <div>{{ a.text }}</div>
-              <div class="addr-mini">{{ t_func('open_maps') }}</div>
-            </a>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- THEME TOGGLE -->
-      <div class="section">
-        <div class="section-title">{{ t_func('theme') }}</div>
-        <div class="theme-toggle theme-toggle-compact">
-          <span class="theme-label">{{ t_func('theme') }}:</span>
-          <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
-          <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
-          <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
-        </div>
       </div>
 
       <!-- FOTO -->
@@ -322,9 +227,8 @@
   <!-- MODAL (immagine/video/pdf) -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
-      <!-- ✅ back arrow -->
-      <button class="modal-back" type="button" onclick="closeModal()" aria-label="Torna alla card">←</button>
-      <button class="modal-x" type="button" onclick="closeModal()">✕</button>
+      <button class="modal-back" type="button" onclick="closeModal(true)" aria-label="Torna alla card">←</button>
+      <button class="modal-x" type="button" onclick="closeModal(true)">✕</button>
 
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
@@ -334,11 +238,7 @@
         <button class="btn ghost" type="button" onclick="shareCurrent('native')">Condividi</button>
         <button class="btn ghost" type="button" onclick="shareCurrent('wa')">Invia WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareCurrent('email')">Invia Email</button>
-
-        {% if websites and websites|length > 0 %}
-          <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
-        {% endif %}
-        <button class="btn primary" type="button" onclick="closeModal()">{{ t_func('close') }}</button>
+        <button class="btn primary" type="button" onclick="closeModal(true)">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
@@ -346,9 +246,8 @@
   <!-- QR MODAL -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <!-- ✅ back arrow -->
-      <button class="modal-back" type="button" onclick="closeQrModal()" aria-label="Torna alla card">←</button>
-      <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
+      <button class="modal-back" type="button" onclick="closeQrModal(true)" aria-label="Torna alla card">←</button>
+      <button class="modal-x" type="button" onclick="closeQrModal(true)">✕</button>
 
       <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
 
@@ -356,18 +255,29 @@
         <button class="btn ghost" type="button" onclick="shareQr('native')">Condividi</button>
         <button class="btn ghost" type="button" onclick="shareQr('wa')">Invia WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareQr('email')">Invia Email</button>
-        <button class="btn primary" type="button" onclick="closeQrModal()">{{ t_func('close') }}</button>
+        <button class="btn primary" type="button" onclick="closeQrModal(true)">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
 
 <script>
-  // ====== URLs utili ======
   const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang))) | tojson }};
   const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or "")) | tojson }};
 
-  // ====== stato share del modal principale ======
   let CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
+  let MODAL_OPEN = false;
+  let QR_OPEN = false;
+
+  // ✅ Mostra "torna ad area riservata" solo se arrivi da /area/
+  (function(){
+    const ref = document.referrer || "";
+    const btn = document.getElementById("backAdminBtn");
+    if(!btn) return;
+    if(ref.includes("/area/")){
+      btn.style.display = "inline-flex";
+      btn.addEventListener("click", ()=> { window.location.href = ref; });
+    }
+  })();
 
   // flip tap (solo se canFlip)
   (function(){
@@ -416,45 +326,53 @@
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
-  // condividi quello che è aperto nel MODAL principale
   function shareCurrent(mode){
     const title = CURRENT_SHARE?.title || CARD_TITLE;
     const url = CURRENT_SHARE?.url || CARD_PUBLIC_URL;
 
-    if(mode === 'native'){
-      if(!shareNative(title, url)) shareWA(title, url);
-      return;
-    }
+    if(mode === 'native'){ if(!shareNative(title, url)) shareWA(title, url); return; }
     if(mode === 'wa'){ shareWA(title, url); return; }
     if(mode === 'email'){ shareEmail(title, url); return; }
   }
 
-  // QR condivide SEMPRE la card
   function shareQr(mode){
     const title = CARD_TITLE;
     const url = CARD_PUBLIC_URL;
 
-    if(mode === 'native'){
-      if(!shareNative(title, url)) shareWA(title, url);
-      return;
-    }
+    if(mode === 'native'){ if(!shareNative(title, url)) shareWA(title, url); return; }
     if(mode === 'wa'){ shareWA(title, url); return; }
     if(mode === 'email'){ shareEmail(title, url); return; }
   }
 
-  // modal helpers
+  // ✅ History: quando apro un modal, aggiungo uno state.
+  function pushModalState(kind){
+    try{
+      history.pushState({ modal: kind }, "", window.location.href);
+    }catch(e){}
+  }
+
+  window.addEventListener("popstate", function(){
+    // se l'utente fa "indietro", chiudo prima i modal invece di uscire dalla card
+    if(QR_OPEN){ closeQrModal(false); return; }
+    if(MODAL_OPEN){ closeModal(false); return; }
+  });
+
   function openModal(type){
     const modal = document.getElementById('modal');
     modal.style.display='flex';
+    MODAL_OPEN = true;
+    pushModalState("media");
+
     document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
     document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
   }
 
-  function closeModal(){
+  function closeModal(goBack){
     const modal = document.getElementById('modal');
     if(!modal) return;
     modal.style.display='none';
+    MODAL_OPEN = false;
 
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
@@ -468,8 +386,12 @@
     }
     if(pdf) pdf.src = '';
 
-    // reset share
     CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
+
+    // se chiudo dal bottone X o freccia, torno indietro di 1 state
+    if(goBack){
+      try{ history.back(); }catch(e){}
+    }
   }
 
   function openImg(src){
@@ -481,6 +403,7 @@
   }
 
   function openVideo(src){
+    if(!src) return;
     const v = document.getElementById('mVideo');
     v.src = src;
     CURRENT_SHARE = { url: src, title: CARD_TITLE + " (Video)" };
@@ -489,6 +412,7 @@
   }
 
   function openPdf(src, name){
+    if(!src) return;
     const f = document.getElementById('mPdf');
     f.src = src;
     const t = (name && String(name).trim()) ? (CARD_TITLE + " - " + name) : (CARD_TITLE + " (Documento)");
@@ -496,37 +420,43 @@
     openModal('pdf');
   }
 
-  // click fuori chiude
   document.getElementById('modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeModal();
-  });
-  document.getElementById('qr-modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeQrModal();
+    if(e.target === this) closeModal(true);
   });
 
-  // QR modal
   function openQrModal(src){
+    if(!src) return;
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
     img.src = src;
     m.style.display = 'flex';
-  }
-  function closeQrModal(){
-    const m = document.getElementById('qr-modal');
-    const img = document.getElementById('qr-img');
-    img.src = '';
-    m.style.display = 'none';
+    QR_OPEN = true;
+    pushModalState("qr");
   }
 
-  // ✅ Video thumbs: tenta di mostrare un frame stabile
+  function closeQrModal(goBack){
+    const m = document.getElementById('qr-modal');
+    const img = document.getElementById('qr-img');
+    if(img) img.src = '';
+    if(m) m.style.display = 'none';
+    QR_OPEN = false;
+
+    if(goBack){
+      try{ history.back(); }catch(e){}
+    }
+  }
+
+  document.getElementById('qr-modal')?.addEventListener('click', function(e){
+    if(e.target === this) closeQrModal(true);
+  });
+
+  // ✅ Video thumbs: frame stabile
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
       v.addEventListener('loadedmetadata', ()=>{
         try{
-          if(v.duration && v.duration > 0.2){
-            v.currentTime = 0.05;
-          }
+          if(v.duration && v.duration > 0.2) v.currentTime = 0.05;
         }catch(e){}
       });
       v.addEventListener('seeked', ()=>{
