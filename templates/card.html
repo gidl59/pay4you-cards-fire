@@ -308,7 +308,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}', '{{ (p.name|replace(\"'\",\"\\'\") ) }}')">{{ p.name }}</button>
+           <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }}, {{ p.name|tojson }})">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
