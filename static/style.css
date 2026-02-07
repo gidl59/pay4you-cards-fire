@@ -256,30 +256,35 @@ summary{
 
 .avatar-wrap{position:relative; display:flex; justify-content:center; margin-top:10px; margin-bottom:14px;}
 
-/* ✅ LOGO TOP-LEFT più grande e sempre visibile */
+/* ✅ LOGO TOP-LEFT: grande, scontornato, NO quadrato */
 .top-left-logo{
   position:fixed;
   left:16px;
   top:16px;
-  width:92px;
-  height:92px;
+  width:98px;
+  height:98px;
   z-index:9999;
-  border-radius:26px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.22);
-  backdrop-filter:var(--glass);
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:var(--shadow2);
+  background:transparent;
+  border:none;
+  border-radius:0;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-tap-highlight-color: transparent;
 }
 .top-left-logo img{
-  width:92%;
-  height:92%;
+  width:100%;
+  height:100%;
   object-fit:contain;
+  background:transparent;
+  border-radius:0;
+  box-shadow:none;
+  filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));
 }
 
-/* ✅ orbit più piccolo */
+/* ✅ orbit */
 .orbit{
   position:absolute;
   width:210px;
@@ -325,6 +330,7 @@ summary{
 .avatar-img{
   width:100%; height:100%;
   object-fit:cover;
+  object-position:50% 35%; /* ✅ centra meglio il volto */
   display:block;
 }
 .avatar-placeholder{
@@ -607,6 +613,23 @@ summary{
   cursor:pointer;
   font-weight:950;
 }
+
+/* ✅ FRECCIA “TORNA ALLA CARD” */
+.modal-back{
+  position:absolute;
+  left:10px; top:10px;
+  width:42px; height:42px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.25);
+  color:#fff;
+  cursor:pointer;
+  font-weight:950;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
 .modal-actions{
   display:flex;
   justify-content:flex-end;
@@ -666,7 +689,16 @@ body[data-theme="light"] .row{background:rgba(255,255,255,.70); border-color:rgb
 body[data-theme="light"] .row a{color:#0f172a}
 body[data-theme="light"] .soc{background:rgba(255,255,255,.92); border-color:rgba(15,23,42,.12)}
 body[data-theme="light"] .modal-overlay{background:rgba(15,23,42,.45)}
-body[data-theme="light"] .modal-x{background:rgba(255,255,255,.92); color:#0f172a; border-color:rgba(15,23,42,.14)}
+body[data-theme="light"] .modal-x{
+  background:rgba(255,255,255,.92);
+  color:#0f172a;
+  border-color:rgba(15,23,42,.14);
+}
+body[data-theme="light"] .modal-back{
+  background:rgba(255,255,255,.92);
+  color:#0f172a;
+  border-color:rgba(15,23,42,.14);
+}
 
 body[data-theme="light"] .section-title,
 body[data-theme="light"] .page-title,
@@ -713,5 +745,5 @@ body[data-theme="light"] #mPdf{
   .avatar, .flip{width:200px; height:200px}
   .thumb img{width:150px; height:112px}
   .video-thumb{width:175px}
-  .top-left-logo{width:78px; height:78px; left:12px; top:12px; border-radius:22px}
+  .top-left-logo{width:82px; height:82px; left:12px; top:12px;}
 }
