@@ -1373,7 +1373,7 @@ def vcard(slug):
         except Exception:
             return None
 
-    full_name = (ag.name or "").strip()
+    full_name = (ag.name or "").strip() or ag.slug
     parts = full_name.split(" ", 1)
     first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
 
@@ -1390,53 +1390,59 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # FOTO: DOPPIO metodo (BASE64 + URL fallback)
+    # ===== FOTO: UNA SOLA STRATEGIA (NO doppio PHOTO) =====
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
-    photo_abs = abs_url(photo_url)
     embedded = try_embed_photo_b64(photo_url)
-
     if embedded:
         mime, b64 = embedded
         base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
         for fl in fold_line(base_line, 74):
             lines.append(fl)
-
-    if photo_abs:
-        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
+    else:
+        photo_abs = abs_url(photo_url)
+        if photo_abs:
+            # vCard 3.0 + iOS/Android: VALUE=URI ok
+            lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
     if clean_str(getattr(ag, "role", None)):
         lines.append(f"TITLE:{clean_str(ag.role)}")
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL: SOLO numeri
+    # ===== TEL: solo numeri (già ok) =====
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;PREF=1:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE:{clean_str(ag.phone_mobile2)}")
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
+        lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
-    # EMAIL: SOLO email valide
+    # ===== EMAIL: sintassi più compatibile (NO comma list) =====
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
+        # pref 1 per la prima
+        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET;PREF=1:{valid_emails[0]}")
+        # le altre senza pref
         for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
+            lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
+        # PEC come WORK (o HOME se preferisci)
+        lines.append(f"EMAIL;TYPE=WORK;TYPE=INTERNET:{pec}")
 
-    # ADR: primo indirizzo
+    # ===== ADR: primo indirizzo =====
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL etichettati
+    # ===== URL standard (molto compatibile) =====
+    lines.append(f"URL:{card_url}")
+
+    # (opzionale) Etichetta Apple: non rompe, ma non obbligatoria
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1444,20 +1450,20 @@ def vcard(slug):
         lines.append(f"item2.URL:{websites[0]}")
         lines.append("item2.X-ABLABEL:Sito web")
 
-    # NOTE
+    # ===== NOTE =====
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
     lines.append("NOTE:" + " | ".join(note_parts))
 
-    # WhatsApp
+    # ===== WhatsApp =====
     wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
         lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
         lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
-    # Social
+    # ===== Social =====
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1470,7 +1476,7 @@ def vcard(slug):
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
-    # PIVA/SDI
+    # ===== PIVA/SDI =====
     if clean_str(getattr(ag, "piva", None)):
         lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
@@ -1487,6 +1493,7 @@ def vcard(slug):
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+
 
 # ---------- QR ----------
 @app.get("/<slug>/qr.png")
