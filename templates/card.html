@@ -12,6 +12,9 @@
 </head>
 
 <body data-theme="">
+  <!-- ✅ Freccia "Torna" sempre visibile -->
+  <button class="floating-back" type="button" onclick="goBackSafe()" aria-label="Torna indietro">←</button>
+
   <div class="page-main">
     <div class="card-outer">
 
@@ -21,14 +24,6 @@
       </a>
       {% endif %}
 
-      <!-- ✅ Back to admin (compare solo se arrivi da /area/) -->
-      <button id="backAdminBtn" type="button"
-              style="display:none; position:fixed; left:14px; bottom:14px; z-index:9999;"
-              class="btn ghost">
-        ← Area riservata
-      </button>
-
-      <!-- HERO -->
       <div class="hero hero-center">
         <div class="avatar-wrap">
 
@@ -52,23 +47,22 @@
           <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
             <div class="flip-inner">
 
-              <!-- FRONT -->
               <div class="flip-front">
                 <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg({{ (ag.photo_url if ag.photo_url else '')|tojson }})"
+                        onclick="event.stopPropagation(); openImg({{ (ag.photo_url or '')|tojson }})"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
+                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto"
+                         style="object-position: {{ (ag.photo_pos_x or 50)|int }}% {{ (ag.photo_pos_y or 35)|int }}%;">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
                 </button>
               </div>
 
-              <!-- BACK -->
               <div class="flip-back">
                 <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg({{ back_url|tojson }})"
+                        onclick="event.stopPropagation(); openImg({{ (back_url or '')|tojson }})"
                         aria-label="Apri immagine retro">
                   {% if back_url %}
                     <img class="avatar-img back-img {% if (ag.logo_spin or 0)|int == 1 %}spin-logo{% endif %}"
@@ -101,65 +95,18 @@
           </div>
           {% endif %}
 
-          <!-- SOCIAL -->
           <div class="social-icons social-icons-center">
-            {% if ag.facebook %}
-              <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.87v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.25c-1.23 0-1.61.77-1.61 1.55V12h2.74l-.44 2.88h-2.3v6.99A10 10 0 0 0 22 12z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.instagram %}
-              <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="ig" x1="0" y1="24" x2="24" y2="0">
-                      <stop offset="0" stop-color="#F58529"/>
-                      <stop offset="0.5" stop-color="#DD2A7B"/>
-                      <stop offset="1" stop-color="#515BD4"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.linkedin %}
-              <a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#0A66C2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.86-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.31V9h3.41v1.56h.05c.47-.9 1.62-1.86 3.34-1.86 3.57 0 4.23 2.35 4.23 5.4v6.35zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.tiktok %}
-              <a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#25F4EE" d="M14.5 3v11.1a3.6 3.6 0 1 1-3.1-3.6V7.6a7.3 7.3 0 1 0 6.6 7.3V9.2a6.1 6.1 0 0 1-3.5-1.7V3z"/>
-                  <path fill="#FE2C55" d="M14.5 3v3.5a6.1 6.1 0 0 0 3.5 1.7V6.1A6.8 6.8 0 0 1 14.5 3z"/>
-                  <path fill="#111111" d="M11.4 7.6v2.9a3.6 3.6 0 1 0 3.1 3.6V3h-2.1v4.6z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.telegram %}
-              <a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#2AABEE" d="M21.9 4.6 19 20.2c-.2 1.1-.8 1.4-1.6.9l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.8.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2l-10.6 6.7-4.6-1.4c-1-.3-1-1 .2-1.5L20 3.8c.9-.3 1.7.2 1.4.8z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.youtube %}
-              <a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#FF0000" d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.7 4.6 12 4.6 12 4.6s-5.7 0-7.5.5A3 3 0 0 0 2.4 7.2 31 31 0 0 0 2 12a31 31 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.8.5 7.5.5 7.5.5s5.7 0 7.5-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.4-4.8z"/>
-                  <path fill="#fff" d="M10 15.5V8.5L16 12l-6 3.5z"/>
-                </svg>
-              </a>
-            {% endif %}
+            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">…</a>{% endif %}
+            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">…</a>{% endif %}
+            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">…</a>{% endif %}
+            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">…</a>{% endif %}
+            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">…</a>{% endif %}
+            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">…</a>{% endif %}
           </div>
+
         </div>
       </div>
 
-      <!-- AZIONI -->
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
@@ -172,7 +119,95 @@
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
 
-      <!-- FOTO -->
+      {% if mobiles or phone_office or emails or pec_email or websites %}
+      <div class="section">
+        <div class="section-title">{{ t_func('contacts') }}</div>
+
+        {% if mobiles %}
+          <div class="row row-phone">
+            <span class="row-tag tag-phone">{{ t_func('mobile_phone') }}</span>
+            <div class="right-stack">
+              {% for m in mobiles %}
+                <div class="stack-item"><a href="tel:{{ m|replace(' ','') }}">{{ m }}</a></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if phone_office %}
+          <div class="row row-phone">
+            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
+            <a href="tel:{{ phone_office|replace(' ','') }}">{{ phone_office }}</a>
+          </div>
+        {% endif %}
+
+        {% if emails %}
+          <div class="row row-email">
+            <span class="row-tag tag-email">Email</span>
+            <div class="right-stack">
+              {% for e in emails %}
+                <div class="stack-item"><a href="mailto:{{ e }}">{{ e }}</a></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if pec_email %}
+          <div class="row row-email">
+            <span class="row-tag tag-email">PEC</span>
+            <a href="mailto:{{ pec_email }}">{{ pec_email }}</a>
+          </div>
+        {% endif %}
+
+        {% if websites %}
+          <div class="row row-web">
+            <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
+            <div class="right-stack">
+              {% for w in websites %}
+                <div class="stack-item"><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if ag.piva or ag.sdi %}
+      <div class="section">
+        <div class="section-title">{{ t_func('data') }}</div>
+        {% if ag.piva %}
+          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
+        {% endif %}
+        {% if ag.sdi %}
+          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if addresses %}
+      <div class="section">
+        <div class="section-title">{{ t_func('open_maps') }}</div>
+        <div class="addr-list">
+          {% for a in addresses %}
+            <a class="addr-item" href="{{ a.maps }}" target="_blank" rel="noopener">
+              <div>{{ a.text }}</div>
+              <div class="addr-mini">{{ t_func('open_maps') }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section">
+        <div class="section-title">{{ t_func('theme') }}</div>
+        <div class="theme-toggle theme-toggle-compact">
+          <span class="theme-label">{{ t_func('theme') }}:</span>
+          <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
+          <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
+          <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
+        </div>
+      </div>
+
       {% if gallery %}
       <div class="section">
         <div class="section-title">{{ t_func('gallery') }}</div>
@@ -186,19 +221,13 @@
       </div>
       {% endif %}
 
-      <!-- VIDEO -->
       {% if videos %}
       <div class="section">
         <div class="section-title">{{ t_func('videos') }}</div>
         <div class="gallery-scroll">
           {% for v in videos %}
             <div class="video-thumb">
-              <video class="video-mini"
-                     src="{{ v }}"
-                     muted
-                     playsinline
-                     preload="metadata"
-                     aria-label="Video"></video>
+              <video class="video-mini" src="{{ v }}" muted playsinline preload="metadata" aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo({{ v|tojson }})"></button>
             </div>
@@ -207,13 +236,13 @@
       </div>
       {% endif %}
 
-      <!-- PDF -->
       {% if pdfs %}
       <div class="section">
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf({{ p.url|tojson }}, {{ p.name|tojson }})">{{ p.name }}</button>
+            <button class="pdf-btn" type="button"
+                    onclick="openPdf({{ p.url|tojson }}, {{ p.name|tojson }})">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -224,11 +253,10 @@
     </div>
   </div>
 
-  <!-- MODAL (immagine/video/pdf) -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
-      <button class="modal-back" type="button" onclick="closeModal(true)" aria-label="Torna alla card">←</button>
-      <button class="modal-x" type="button" onclick="closeModal(true)">✕</button>
+      <button class="modal-back" type="button" onclick="closeModal()" aria-label="Torna alla card">←</button>
+      <button class="modal-x" type="button" onclick="closeModal()">✕</button>
 
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
@@ -238,16 +266,19 @@
         <button class="btn ghost" type="button" onclick="shareCurrent('native')">Condividi</button>
         <button class="btn ghost" type="button" onclick="shareCurrent('wa')">Invia WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareCurrent('email')">Invia Email</button>
-        <button class="btn primary" type="button" onclick="closeModal(true)">{{ t_func('close') }}</button>
+
+        {% if websites and websites|length > 0 %}
+          <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
+        {% endif %}
+        <button class="btn primary" type="button" onclick="closeModal()">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
 
-  <!-- QR MODAL -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <button class="modal-back" type="button" onclick="closeQrModal(true)" aria-label="Torna alla card">←</button>
-      <button class="modal-x" type="button" onclick="closeQrModal(true)">✕</button>
+      <button class="modal-back" type="button" onclick="closeQrModal()" aria-label="Torna alla card">←</button>
+      <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
 
       <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
 
@@ -255,31 +286,27 @@
         <button class="btn ghost" type="button" onclick="shareQr('native')">Condividi</button>
         <button class="btn ghost" type="button" onclick="shareQr('wa')">Invia WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareQr('email')">Invia Email</button>
-        <button class="btn primary" type="button" onclick="closeQrModal(true)">{{ t_func('close') }}</button>
+        <button class="btn primary" type="button" onclick="closeQrModal()">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
 
 <script>
-  const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang))) | tojson }};
-  const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or "")) | tojson }};
+  // ✅ questi due sono "safe" (niente apostrofi che rompono JS)
+  const CARD_PUBLIC_URL = {{ (base_url ~ '/' ~ ag.slug ~ (('?p=' ~ p_key ~ '&lang=' ~ lang) if p_key else ('?lang=' ~ lang)))|tojson }};
+  const CARD_TITLE = {{ ("Card digitale Pay4You - " ~ (ag.name or ""))|tojson }};
 
   let CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
-  let MODAL_OPEN = false;
-  let QR_OPEN = false;
 
-  // ✅ Mostra "torna ad area riservata" solo se arrivi da /area/
-  (function(){
-    const ref = document.referrer || "";
-    const btn = document.getElementById("backAdminBtn");
-    if(!btn) return;
-    if(ref.includes("/area/")){
-      btn.style.display = "inline-flex";
-      btn.addEventListener("click", ()=> { window.location.href = ref; });
-    }
-  })();
+  // ✅ back "intelligente": se non c’è history, resta sulla card P1
+  function goBackSafe(){
+    try{
+      if (window.history.length > 1) { window.history.back(); return; }
+    }catch(e){}
+    window.location.href = {{ (base_url ~ '/' ~ ag.slug)|tojson }};
+  }
 
-  // flip tap (solo se canFlip)
+  // flip tap
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
     if(!canFlip) return;
@@ -293,21 +320,17 @@
     const KEY = "p4y_theme";
     const buttons = document.querySelectorAll(".theme-pill");
     function apply(theme){
-      const body = document.body;
-      body.setAttribute("data-theme", theme === "auto" ? "" : theme);
+      document.body.setAttribute("data-theme", theme === "auto" ? "" : theme);
       buttons.forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
     }
     const saved = localStorage.getItem(KEY) || "auto";
     apply(saved);
-    buttons.forEach(b => {
-      b.addEventListener("click", () => {
-        localStorage.setItem(KEY, b.dataset.theme);
-        apply(b.dataset.theme);
-      });
-    });
+    buttons.forEach(b => b.addEventListener("click", () => {
+      localStorage.setItem(KEY, b.dataset.theme);
+      apply(b.dataset.theme);
+    }));
   })();
 
-  // ====== share helpers ======
   function shareNative(title, url){
     const text = title + "\n" + url;
     if (navigator.share){
@@ -329,7 +352,6 @@
   function shareCurrent(mode){
     const title = CURRENT_SHARE?.title || CARD_TITLE;
     const url = CURRENT_SHARE?.url || CARD_PUBLIC_URL;
-
     if(mode === 'native'){ if(!shareNative(title, url)) shareWA(title, url); return; }
     if(mode === 'wa'){ shareWA(title, url); return; }
     if(mode === 'email'){ shareEmail(title, url); return; }
@@ -338,41 +360,23 @@
   function shareQr(mode){
     const title = CARD_TITLE;
     const url = CARD_PUBLIC_URL;
-
     if(mode === 'native'){ if(!shareNative(title, url)) shareWA(title, url); return; }
     if(mode === 'wa'){ shareWA(title, url); return; }
     if(mode === 'email'){ shareEmail(title, url); return; }
   }
 
-  // ✅ History: quando apro un modal, aggiungo uno state.
-  function pushModalState(kind){
-    try{
-      history.pushState({ modal: kind }, "", window.location.href);
-    }catch(e){}
-  }
-
-  window.addEventListener("popstate", function(){
-    // se l'utente fa "indietro", chiudo prima i modal invece di uscire dalla card
-    if(QR_OPEN){ closeQrModal(false); return; }
-    if(MODAL_OPEN){ closeModal(false); return; }
-  });
-
   function openModal(type){
     const modal = document.getElementById('modal');
     modal.style.display='flex';
-    MODAL_OPEN = true;
-    pushModalState("media");
-
     document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
     document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
   }
 
-  function closeModal(goBack){
+  function closeModal(){
     const modal = document.getElementById('modal');
     if(!modal) return;
     modal.style.display='none';
-    MODAL_OPEN = false;
 
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
@@ -387,11 +391,6 @@
     if(pdf) pdf.src = '';
 
     CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
-
-    // se chiudo dal bottone X o freccia, torno indietro di 1 state
-    if(goBack){
-      try{ history.back(); }catch(e){}
-    }
   }
 
   function openImg(src){
@@ -421,42 +420,33 @@
   }
 
   document.getElementById('modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeModal(true);
+    if(e.target === this) closeModal();
+  });
+  document.getElementById('qr-modal')?.addEventListener('click', function(e){
+    if(e.target === this) closeQrModal();
   });
 
   function openQrModal(src){
-    if(!src) return;
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
     img.src = src;
     m.style.display = 'flex';
-    QR_OPEN = true;
-    pushModalState("qr");
   }
-
-  function closeQrModal(goBack){
+  function closeQrModal(){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
-    if(img) img.src = '';
-    if(m) m.style.display = 'none';
-    QR_OPEN = false;
-
-    if(goBack){
-      try{ history.back(); }catch(e){}
-    }
+    img.src = '';
+    m.style.display = 'none';
   }
 
-  document.getElementById('qr-modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeQrModal(true);
-  });
-
-  // ✅ Video thumbs: frame stabile
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
       v.addEventListener('loadedmetadata', ()=>{
         try{
-          if(v.duration && v.duration > 0.2) v.currentTime = 0.05;
+          if(v.duration && v.duration > 0.2){
+            v.currentTime = 0.05;
+          }
         }catch(e){}
       });
       v.addEventListener('seeked', ()=>{
