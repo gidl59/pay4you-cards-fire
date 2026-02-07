@@ -1,411 +1,412 @@
-{% extends "base.html" %}
-{% block title %}Modifica | Pay4You{% endblock %}
+<!-- templates/agent_form.html (COMPLETO) -->
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo{% endif %} | Pay4You</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
 
-{% block content %}
-<div class="page-main">
-  <div class="panel panel-wide">
+<div class="app-shell">
+  <header class="app-header">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <img class="brand-logo" src="{{ url_for('static', filename='logo-pay4you.png') }}" alt="Pay4You">
+      <div class="brand-title">Pay4You Cards</div>
+    </a>
 
-    <div class="panel-head">
-      <h1 class="page-title">
-        {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
-      </h1>
-
-      {% if editing_profile2 %}
-        {% set D = agent %}
-      {% else %}
-        {% set D = agent %}
-      {% endif %}
-
-      {% if session.get('role') != 'admin' and agent %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-          {% endif %}
-
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% endif %}
-
-          {% if (agent.p2_enabled or 0)|int != 1 %}
-            <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
-          {% else %}
-            <form method="post" action="{{ url_for('me_deactivate_p2') }}" style="display:inline;">
-              <button class="btn ghost" type="submit">Disattiva Profilo 2</button>
-            </form>
-          {% endif %}
-        </div>
-      {% endif %}
-
-      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% else %}
-            <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
-          {% endif %}
-        </div>
-      {% endif %}
+    <div class="app-header-right">
+      <a class="header-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a class="header-link" href="{{ url_for('logout') }}">Logout</a>
     </div>
+  </header>
 
-    {# ===== FORM ACTION ===== #}
-    {% if session.get('role') == 'admin' %}
-      {% if agent and not editing_profile2 %}
-        {% set form_action = url_for('update_agent', slug=agent.slug) %}
-      {% elif agent and editing_profile2 %}
-        {% set form_action = url_for('admin_profile2_post', slug=agent.slug) %}
-      {% else %}
-        {% set form_action = url_for('create_agent') %}
-      {% endif %}
-    {% else %}
-      {% if editing_profile2 %}
-        {% set form_action = url_for('me_profile2_post') %}
-      {% else %}
-        {% set form_action = url_for('me_edit_post') %}
-      {% endif %}
-    {% endif %}
-
-    <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
-      <div class="form-grid">
-
-        {# ===== SLUG ===== #}
-        {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
-          <div class="field">
-            <label>Slug (univoco)</label>
-            <input type="text" name="slug" value="" required>
-            <div class="hint">Esempio: nomecognome / negozio-roma. Solo lettere/numeri e trattini.</div>
-            <div class="hint">Una volta creato, lo slug non sarà più modificabile.</div>
-          </div>
-        {% else %}
-          <div class="field">
-            <label>Slug</label>
-            <input type="text" value="{{ agent.slug if agent else '' }}" readonly>
-            <div class="hint">Lo slug è bloccato e non può essere modificato.</div>
-            <div class="hint">La tua card pubblica sarà: https://TUODOMINIO/{{ agent.slug if agent else 'slug' }}</div>
-          </div>
-        {% endif %}
-
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}" required>
-          <div class="hint">Inserisci nome e cognome (o nome attività se preferisci).</div>
-        </div>
-
-        <div class="field">
-          <label>Azienda</label>
-          <input type="text" name="company" value="{{ D.company if D and D.company else '' }}">
-          <div class="hint">Esempio: Pay4You / Bar Centrale / Studio Rossi.</div>
-        </div>
-
-        <div class="field">
-          <label>Ruolo</label>
-          <input type="text" name="role" value="{{ D.role if D and D.role else '' }}">
-          <div class="hint">Esempio: Consulente Pagamenti / Titolare / Agente.</div>
-        </div>
-
-        <div class="field full">
-          <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ D.bio if D and D.bio else '' }}</textarea>
-          <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti.</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ D.phone_mobile if D and D.phone_mobile else '' }}">
-          <div class="hint">Esempio: +39 333 123 4567</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ D.phone_mobile2 if D and D.phone_mobile2 else '' }}">
-          <div class="hint">Opzionale: secondo numero/numero assistenza.</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ D.phone_office if D and D.phone_office else '' }}">
-          <div class="hint">Opzionale: numero fisso o centralino.</div>
-        </div>
-
-        <div class="field">
-          <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ D.whatsapp if D and D.whatsapp else '' }}">
-          <div class="hint">Numero +39... oppure link wa.me.</div>
-        </div>
-
-        <div class="field">
-          <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ D.emails if D and D.emails else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ D.websites if D and D.websites else '' }}">
-        </div>
-
-        <div class="field">
-          <label>PEC</label>
-          <input type="text" name="pec" value="{{ D.pec if D and D.pec else '' }}">
-        </div>
-
-        <div class="field">
-          <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ D.piva if D and D.piva else '' }}">
-        </div>
-
-        <div class="field">
-          <label>SDI</label>
-          <input type="text" name="sdi" value="{{ D.sdi if D and D.sdi else '' }}">
-        </div>
-
-        <div class="field full">
-          <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ D.addresses if D and D.addresses else '' }}</textarea>
-        </div>
-
-        <div class="field">
-          <label>Facebook</label>
-          <input type="text" name="facebook" value="{{ D.facebook if D and D.facebook else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" name="instagram" value="{{ D.instagram if D and D.instagram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>LinkedIn</label>
-          <input type="text" name="linkedin" value="{{ D.linkedin if D and D.linkedin else '' }}">
-        </div>
-
-        <div class="field">
-          <label>TikTok</label>
-          <input type="text" name="tiktok" value="{{ D.tiktok if D and D.tiktok else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Telegram</label>
-          <input type="text" name="telegram" value="{{ D.telegram if D and D.telegram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>YouTube</label>
-          <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Foto profilo (max 8MB)</label>
-          <input type="file" name="photo" accept="image/*">
-        </div>
-
-        <div class="field">
-          <label>Logo azienda (max 8MB)</label>
-          <input type="file" name="logo" accept="image/*">
-        </div>
-
-        <!-- BACK MEDIA -->
-        <div class="field full details">
-          <details open>
-            <summary>Dietro la foto (logo azienda / foto personale)</summary>
-
-            <div class="hint" style="margin-top:8px;">
-              Puoi caricare una seconda immagine (famiglia/animale) e scegliere cosa mostrare sul retro dell’avatar.
-            </div>
-
-            <div class="grid-2" style="margin-top:10px;">
-              <div class="field">
-                <label>Foto/Logo personale (dietro avatar)</label>
-                <input type="file" name="back_media" accept="image/*">
-                <div class="hint">Esempio: famiglia, animale, logo personale. (opzionale)</div>
-              </div>
-
-              <div class="field">
-                <label>Cosa mostrare dietro?</label>
-                {% set mode = (D.back_media_mode if D and D.back_media_mode else 'company') %}
-                <label class="btn-mini" style="justify-content:flex-start;">
-                  <input type="radio" name="back_media_mode" value="company" {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
-                  Logo aziendale
-                </label>
-                <label class="btn-mini" style="justify-content:flex-start; margin-top:8px;">
-                  <input type="radio" name="back_media_mode" value="personal" {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
-                  Foto/Logo personale
-                </label>
-                <div class="hint" style="margin-top:8px;">Se scegli “personale” ma non carichi l’immagine, torna al logo aziendale.</div>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <!-- EFFETTI -->
-        <div class="field full details">
-          <details open>
-            <summary>Effetti grafici</summary>
-
-            <div class="grid-3" style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="orbit_spin" type="checkbox" name="orbit_spin" value="1"
-                       {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo dietro ruota
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="avatar_spin" type="checkbox" name="avatar_spin" value="1"
-                       {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Foto ruota (flip 3D orizzontale)
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input id="logo_spin" type="checkbox" name="logo_spin" value="1"
-                       {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo (dietro) ruota su se stesso
-              </label>
-            </div>
-
-            <div style="margin-top:10px;">
-              <label class="btn-mini" id="allow_flip_label" style="justify-content:flex-start;">
-                <input id="allow_flip" type="checkbox" name="allow_flip" value="1"
-                       {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Tap per flip
-              </label>
-              <div class="hint" style="margin-top:6px;">
-                Nota: se attivi “Foto ruota”, allora il tap per flip viene disattivato automaticamente nella card (evita vibrazioni/casini).
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <div class="field full"><div class="sep"></div></div>
-
-        <div class="field full">
-          {% if editing_profile2 %}
-            <h3 class="h3">Media Profilo 2</h3>
-            <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
-          {% else %}
-            <h3 class="h3">Media Profilo 1</h3>
-            <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
-          {% endif %}
-        </div>
-
-        <div class="field">
-          <label>Galleria (max 30 immagini)</label>
-          <input type="file" name="gallery" accept="image/*" multiple>
-        </div>
-
-        <div class="field">
-          <label>Video (max 10)</label>
-          <input type="file" name="videos" accept="video/*" multiple>
-        </div>
-
-        <div class="field full">
-          <label>PDF (fino a 12)</label>
-          <div class="grid-3">
-            <input type="file" name="pdf1" accept="application/pdf">
-            <input type="file" name="pdf2" accept="application/pdf">
-            <input type="file" name="pdf3" accept="application/pdf">
-            <input type="file" name="pdf4" accept="application/pdf">
-            <input type="file" name="pdf5" accept="application/pdf">
-            <input type="file" name="pdf6" accept="application/pdf">
-            <input type="file" name="pdf7" accept="application/pdf">
-            <input type="file" name="pdf8" accept="application/pdf">
-            <input type="file" name="pdf9" accept="application/pdf">
-            <input type="file" name="pdf10" accept="application/pdf">
-            <input type="file" name="pdf11" accept="application/pdf">
-            <input type="file" name="pdf12" accept="application/pdf">
-          </div>
-        </div>
-
-        {% if not editing_profile2 %}
-          <div class="field full">
-            <div class="sep"></div>
-            <h3 class="h3">Traduzioni Profilo 1 (opzionali)</h3>
-            <div class="hint">Se il telefono è in EN/FR/ES/DE, la card userà questi testi (se compilati).</div>
-          </div>
-
-          {% for L in ['en','fr','es','de'] %}
-            <div class="field full details">
-              <details>
-                <summary>{{ L|upper }}</summary>
-                <div class="grid-2" style="margin-top:10px;">
-                  <div class="field">
-                    <label>Nome ({{ L|upper }})</label>
-                    <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Azienda ({{ L|upper }})</label>
-                    <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Ruolo ({{ L|upper }})</label>
-                    <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
-                  </div>
-                  <div class="field full">
-                    <label>Bio ({{ L|upper }})</label>
-                    <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                  </div>
-                  <div class="field full">
-                    <label>Indirizzi ({{ L|upper }})</label>
-                    <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                  </div>
-                </div>
-              </details>
-            </div>
+  <main class="app-main">
+    <div class="flash-wrap">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
           {% endfor %}
         {% endif %}
+      {% endwith %}
+    </div>
 
-        <div class="field full actions-footer">
-          <button class="btn primary" type="submit">Salva</button>
-          <div class="hint" style="margin:0;">Dopo il salvataggio, apri la card per controllare che tutto sia corretto.</div>
+    <div class="page-main">
+      <section class="panel panel-wide">
 
-          {% if session.get('role') == 'admin' %}
-            <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          {% else %}
-            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
-          {% endif %}
+        <div class="panel-head">
+          <div>
+            <h1 class="page-title">
+              {% if agent %}
+                {% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}
+              {% else %}
+                Nuova Card
+              {% endif %}
+            </h1>
+            <div class="hint">
+              {% if agent %}
+                Slug: <span class="mono">{{ agent.slug }}</span>
+              {% else %}
+                Crea una nuova card e i dati di accesso verranno generati automaticamente.
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="toolbar">
+            {% if agent and not editing_profile2 %}
+              {% if is_admin %}
+                <a class="btn-mini ghost" target="_blank" href="{{ url_for('public_card', slug=agent.slug) }}">Apri card</a>
+                <a class="btn-mini ghost" target="_blank" href="{{ url_for('admin_credentials_html', slug=agent.slug) }}">Credenziali</a>
+              {% else %}
+                <a class="btn-mini ghost" target="_blank" href="{{ url_for('public_card', slug=agent.slug) }}">Apri card</a>
+              {% endif %}
+            {% endif %}
+
+            {% if agent %}
+              {% if editing_profile2 %}
+                <a class="btn-mini ghost" href="{{ url_for('me_edit') if not is_admin else url_for('edit_agent', slug=agent.slug) }}">← Profilo 1</a>
+              {% else %}
+                {% if agent.p2_enabled|int == 1 %}
+                  {% if is_admin %}
+                    <a class="btn-mini warn" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
+                  {% else %}
+                    <a class="btn-mini warn" href="{{ url_for('me_profile2') }}">Modifica Profilo 2</a>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+          </div>
         </div>
 
-      </div>
-    </form>
-  </div>
+        <div class="sep"></div>
+
+        <!-- ===== FORM ===== -->
+        {% if not agent %}
+          <form method="post" action="{{ url_for('create_agent') }}" enctype="multipart/form-data">
+        {% else %}
+          {% if is_admin %}
+            {% if editing_profile2 %}
+              <form method="post" action="{{ url_for('admin_profile2_post', slug=agent.slug) }}" enctype="multipart/form-data">
+            {% else %}
+              <form method="post" action="{{ url_for('update_agent', slug=agent.slug) }}" enctype="multipart/form-data">
+            {% endif %}
+          {% else %}
+            {% if editing_profile2 %}
+              <form method="post" action="{{ url_for('me_profile2_post') }}" enctype="multipart/form-data">
+            {% else %}
+              <form method="post" action="{{ url_for('me_edit_post') }}" enctype="multipart/form-data">
+            {% endif %}
+          {% endif %}
+        {% endif %}
+
+          <div class="form-grid">
+
+            {% if not agent %}
+              <div class="field">
+                <label>Slug (unico)</label>
+                <input type="text" name="slug" placeholder="es. giuseppe-di-lisio" required>
+              </div>
+            {% endif %}
+
+            <div class="field">
+              <label>Nome e Cognome</label>
+              <input type="text" name="name" value="{{ agent.name if agent else '' }}" required>
+            </div>
+
+            <div class="field">
+              <label>Azienda</label>
+              <input type="text" name="company" value="{{ agent.company if agent else '' }}">
+            </div>
+
+            <div class="field">
+              <label>Ruolo</label>
+              <input type="text" name="role" value="{{ agent.role if agent else '' }}">
+            </div>
+
+            <div class="field full">
+              <label>Bio</label>
+              <textarea name="bio" placeholder="Breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
+            </div>
+
+            <div class="field">
+              <label>Cellulare</label>
+              <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}" placeholder="+39 ...">
+            </div>
+
+            <div class="field">
+              <label>Cellulare 2</label>
+              <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}" placeholder="+39 ...">
+            </div>
+
+            <div class="field">
+              <label>Telefono Ufficio</label>
+              <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+            </div>
+
+            <div class="field">
+              <label>WhatsApp (numero o link)</label>
+              <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}" placeholder="+39 ... oppure https://wa.me/...">
+            </div>
+
+            <div class="field">
+              <label>Email (separate da virgola)</label>
+              <input type="text" name="emails" value="{{ agent.emails if agent else '' }}" placeholder="a@b.it, c@d.it">
+            </div>
+
+            <div class="field">
+              <label>Siti web (separati da virgola)</label>
+              <input type="text" name="websites" value="{{ agent.websites if agent else '' }}" placeholder="pay4you.store, ...">
+            </div>
+
+            <div class="field">
+              <label>PEC</label>
+              <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+            </div>
+
+            <div class="field">
+              <label>P.IVA</label>
+              <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+            </div>
+
+            <div class="field">
+              <label>SDI</label>
+              <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+            </div>
+
+            <div class="field full">
+              <label>Indirizzi (uno per riga)</label>
+              <textarea name="addresses" placeholder="Via..., Città...">{{ agent.addresses if agent else '' }}</textarea>
+            </div>
+
+          </div>
+
+          <div class="section" style="margin-top:16px;">
+            <div class="section-title">Social</div>
+            <div class="form-grid">
+              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}"></div>
+              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}"></div>
+              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}"></div>
+              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}"></div>
+              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}"></div>
+              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Foto & Loghi</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Foto profilo (quadrata)</label>
+                <input type="file" name="photo" accept="image/*">
+                {% if agent and agent.photo_url %}
+                  <div class="hint">Attuale: <span class="mono">{{ agent.photo_url }}</span></div>
+                {% endif %}
+              </div>
+
+              <div class="field">
+                <label>Logo aziendale</label>
+                <input type="file" name="logo" accept="image/*">
+                {% if agent and agent.logo_url %}
+                  <div class="hint">Attuale: <span class="mono">{{ agent.logo_url }}</span></div>
+                {% endif %}
+              </div>
+
+              <div class="field full">
+                <label>Contenuto dietro foto (back media)</label>
+                <input type="file" name="back_media" accept="image/*">
+                {% if agent and agent.back_media_url %}
+                  <div class="hint">Attuale: <span class="mono">{{ agent.back_media_url }}</span></div>
+                {% endif %}
+              </div>
+
+              <div class="field full">
+                <label>Back media mode</label>
+                <div class="btn-row">
+                  <label class="btn-mini">
+                    <input type="radio" name="back_media_mode" value="company"
+                      {% if not agent or agent.back_media_mode == 'company' %}checked{% endif %}>
+                    Company
+                  </label>
+                  <label class="btn-mini">
+                    <input type="radio" name="back_media_mode" value="personal"
+                      {% if agent and agent.back_media_mode == 'personal' %}checked{% endif %}>
+                    Personal
+                  </label>
+                </div>
+                <div class="hint">Scegli cosa mostrare dietro l’avatar (flip).</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Media</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label>Galleria (max {{ 30 }})</label>
+                <input type="file" name="gallery" accept="image/*" multiple>
+                {% if agent and agent.gallery_urls %}
+                  <div class="hint">Caricate: <span class="mono">{{ agent.gallery_urls }}</span></div>
+                {% endif %}
+              </div>
+
+              <div class="field full">
+                <label>Video (max {{ 10 }})</label>
+                <input type="file" name="videos" accept="video/*" multiple>
+                {% if agent and agent.video_urls %}
+                  <div class="hint">Caricati: <span class="mono">{{ agent.video_urls }}</span></div>
+                {% endif %}
+              </div>
+
+              <div class="field full">
+                <label>PDF (fino a 12)</label>
+                <div class="grid-3">
+                  {% for i in range(1,13) %}
+                    <div class="field">
+                      <label>PDF {{ i }}</label>
+                      <input type="file" name="pdf{{ i }}" accept="application/pdf">
+                    </div>
+                  {% endfor %}
+                </div>
+                {% if agent and agent.pdf1_url %}
+                  <div class="hint">Attuali: <span class="mono">{{ agent.pdf1_url }}</span></div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Effetti</div>
+            <div class="grid-3">
+              <label class="btn-mini">
+                <input type="checkbox" name="orbit_spin" value="1" {% if agent and agent.orbit_spin|int==1 %}checked{% endif %}>
+                Orbit spin
+              </label>
+              <label class="btn-mini">
+                <input type="checkbox" name="avatar_spin" value="1" {% if agent and agent.avatar_spin|int==1 %}checked{% endif %}>
+                Avatar spin
+              </label>
+              <label class="btn-mini">
+                <input type="checkbox" name="logo_spin" value="1" {% if agent and agent.logo_spin|int==1 %}checked{% endif %}>
+                Logo spin
+              </label>
+              <label class="btn-mini">
+                <input type="checkbox" name="allow_flip" value="1" {% if agent and agent.allow_flip|int==1 %}checked{% endif %}>
+                Abilita flip
+              </label>
+            </div>
+          </div>
+
+          {% if not editing_profile2 and agent %}
+            <div class="section">
+              <div class="section-title">Profilo 2</div>
+              {% if agent.p2_enabled|int == 1 %}
+                <div class="hint">Profilo 2 è attivo.</div>
+                <div class="actions-footer" style="margin-top:10px;">
+                  {% if is_admin %}
+                    <form method="post" action="{{ url_for('admin_deactivate_p2', slug=agent.slug) }}">
+                      <button class="btn-mini danger" type="submit">Disattiva Profilo 2</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}">
+                      <button class="btn-mini warn" type="submit">Rigenera/Attiva (vuoto)</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('me_deactivate_p2') }}">
+                      <button class="btn-mini danger" type="submit">Disattiva Profilo 2</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="hint">Profilo 2 non è attivo.</div>
+                <div class="actions-footer" style="margin-top:10px;">
+                  {% if is_admin %}
+                    <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}">
+                      <button class="btn-mini warn" type="submit">Attiva Profilo 2 (vuoto)</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('me_activate_p2') }}">
+                      <button class="btn-mini warn" type="submit">Attiva Profilo 2 (vuoto)</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if not editing_profile2 %}
+            <details style="margin-top:16px;">
+              <summary>Traduzioni (EN/FR/ES/DE)</summary>
+              <div class="hint" style="margin-top:6px;">Compila solo se vuoi testi diversi dalla lingua italiana.</div>
+
+              <div class="section" style="margin-top:12px;">
+                <div class="section-title">English</div>
+                <div class="form-grid">
+                  <div class="field"><label>Name (EN)</label><input type="text" name="name_en" value="{{ i18n_data.en.name if i18n_data and i18n_data.en and i18n_data.en.name else '' }}"></div>
+                  <div class="field"><label>Company (EN)</label><input type="text" name="company_en" value="{{ i18n_data.en.company if i18n_data and i18n_data.en and i18n_data.en.company else '' }}"></div>
+                  <div class="field"><label>Role (EN)</label><input type="text" name="role_en" value="{{ i18n_data.en.role if i18n_data and i18n_data.en and i18n_data.en.role else '' }}"></div>
+                  <div class="field full"><label>Bio (EN)</label><textarea name="bio_en">{{ i18n_data.en.bio if i18n_data and i18n_data.en and i18n_data.en.bio else '' }}</textarea></div>
+                  <div class="field full"><label>Addresses (EN)</label><textarea name="addresses_en">{{ i18n_data.en.addresses if i18n_data and i18n_data.en and i18n_data.en.addresses else '' }}</textarea></div>
+                </div>
+              </div>
+
+              <div class="section" style="margin-top:12px;">
+                <div class="section-title">Français</div>
+                <div class="form-grid">
+                  <div class="field"><label>Nom (FR)</label><input type="text" name="name_fr" value="{{ i18n_data.fr.name if i18n_data and i18n_data.fr and i18n_data.fr.name else '' }}"></div>
+                  <div class="field"><label>Entreprise (FR)</label><input type="text" name="company_fr" value="{{ i18n_data.fr.company if i18n_data and i18n_data.fr and i18n_data.fr.company else '' }}"></div>
+                  <div class="field"><label>Rôle (FR)</label><input type="text" name="role_fr" value="{{ i18n_data.fr.role if i18n_data and i18n_data.fr and i18n_data.fr.role else '' }}"></div>
+                  <div class="field full"><label>Bio (FR)</label><textarea name="bio_fr">{{ i18n_data.fr.bio if i18n_data and i18n_data.fr and i18n_data.fr.bio else '' }}</textarea></div>
+                  <div class="field full"><label>Adresses (FR)</label><textarea name="addresses_fr">{{ i18n_data.fr.addresses if i18n_data and i18n_data.fr and i18n_data.fr.addresses else '' }}</textarea></div>
+                </div>
+              </div>
+
+              <div class="section" style="margin-top:12px;">
+                <div class="section-title">Español</div>
+                <div class="form-grid">
+                  <div class="field"><label>Nombre (ES)</label><input type="text" name="name_es" value="{{ i18n_data.es.name if i18n_data and i18n_data.es and i18n_data.es.name else '' }}"></div>
+                  <div class="field"><label>Empresa (ES)</label><input type="text" name="company_es" value="{{ i18n_data.es.company if i18n_data and i18n_data.es and i18n_data.es.company else '' }}"></div>
+                  <div class="field"><label>Rol (ES)</label><input type="text" name="role_es" value="{{ i18n_data.es.role if i18n_data and i18n_data.es and i18n_data.es.role else '' }}"></div>
+                  <div class="field full"><label>Bio (ES)</label><textarea name="bio_es">{{ i18n_data.es.bio if i18n_data and i18n_data.es and i18n_data.es.bio else '' }}</textarea></div>
+                  <div class="field full"><label>Direcciones (ES)</label><textarea name="addresses_es">{{ i18n_data.es.addresses if i18n_data and i18n_data.es and i18n_data.es.addresses else '' }}</textarea></div>
+                </div>
+              </div>
+
+              <div class="section" style="margin-top:12px;">
+                <div class="section-title">Deutsch</div>
+                <div class="form-grid">
+                  <div class="field"><label>Name (DE)</label><input type="text" name="name_de" value="{{ i18n_data.de.name if i18n_data and i18n_data.de and i18n_data.de.name else '' }}"></div>
+                  <div class="field"><label>Firma (DE)</label><input type="text" name="company_de" value="{{ i18n_data.de.company if i18n_data and i18n_data.de and i18n_data.de.company else '' }}"></div>
+                  <div class="field"><label>Rolle (DE)</label><input type="text" name="role_de" value="{{ i18n_data.de.role if i18n_data and i18n_data.de and i18n_data.de.role else '' }}"></div>
+                  <div class="field full"><label>Bio (DE)</label><textarea name="bio_de">{{ i18n_data.de.bio if i18n_data and i18n_data.de and i18n_data.de.bio else '' }}</textarea></div>
+                  <div class="field full"><label>Adressen (DE)</label><textarea name="addresses_de">{{ i18n_data.de.addresses if i18n_data and i18n_data.de and i18n_data.de.addresses else '' }}</textarea></div>
+                </div>
+              </div>
+
+            </details>
+          {% endif %}
+
+          <div class="actions-footer" style="margin-top:18px;">
+            <button class="btn primary" type="submit">
+              {% if editing_profile2 %}Salva Profilo 2{% else %}Salva{% endif %}
+            </button>
+
+            {% if agent and not editing_profile2 and is_admin %}
+              <form method="post" action="{{ url_for('delete_agent', slug=agent.slug) }}"
+                    onsubmit="return confirm('Sicuro di eliminare questa card?');">
+                <button class="btn-mini danger" type="submit">Elimina</button>
+              </form>
+            {% endif %}
+
+            <a class="btn ghost" href="{{ url_for('dashboard') }}">Annulla</a>
+          </div>
+
+        </form>
+
+      </section>
+    </div>
+  </main>
 </div>
 
-<script>
-(function(){
-  const avatar = document.getElementById('avatar_spin');
-  const flip   = document.getElementById('allow_flip');
-  const flipLabel = document.getElementById('allow_flip_label');
-
-  if(!avatar || !flip) return;
-
-  function sync(){
-    if(avatar.checked){
-      flip.checked = false;
-      flip.disabled = true;
-      if(flipLabel) flipLabel.classList.add('is-disabled');
-      flip.title = "Disattivato perché è attivo: Foto ruota";
-    } else {
-      flip.disabled = false;
-      if(flipLabel) flipLabel.classList.remove('is-disabled');
-      flip.title = "";
-    }
-  }
-
-  avatar.addEventListener('change', sync);
-  sync();
-})();
-</script>
-{% endblock %}
+</body>
+</html>
