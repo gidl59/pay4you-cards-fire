@@ -1,39 +1,84 @@
-{% extends "base.html" %}
-{% block title %}Login | Pay4You{% endblock %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="color-scheme" content="light dark">
+  <title>Login | Pay4You</title>
 
-{% block content %}
-<div class="page-main">
-  <div class="panel panel-login">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body data-theme="">
 
-    <div class="panel-head panel-head-center">
-      <img src="{{ url_for('static', filename='pay4you-logo.png') }}"
-           alt="Pay4You" class="login-logo">
-      <div class="login-title">Area riservata</div>
-      <div class="hint">Inserisci le credenziali per gestire la tua card.</div>
-    </div>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="Pay4You">
+        <span class="brand-title">Pay4You</span>
+      </a>
+      <div class="app-header-right">
+        <a class="header-link" href="https://www.pay4you.store" target="_blank" rel="noopener">Sito</a>
+      </div>
+    </header>
 
-    <form method="post" class="panel-body">
-      <div class="field">
-        <label>Username</label>
-        <input type="text" name="username" autocomplete="username" required>
+    <main class="app-main">
+      <div class="flash-wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for cat, msg in messages %}
+              <div class="flash flash-{{ cat|default('success') }}">{{ msg }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
       </div>
 
-      <div class="field" style="margin-top:12px;">
-        <label>Password</label>
-        <input type="password" name="password" autocomplete="current-password" required>
-      </div>
+      <div class="page-main">
+        <div class="panel panel-login">
+          <div class="panel-head panel-head-center">
+            <img class="login-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Pay4You"
+                 onerror="this.style.display='none'">
+            <div class="login-title">Area Riservata</div>
+            <div class="hint">Accedi con le credenziali ricevute via email/WhatsApp.</div>
+          </div>
 
-      {% if error %}
-        <div class="flash flash-error" style="margin-top:12px;">
-          {{ error }}
+          <div class="panel-body">
+            {% if error %}
+              <div class="flash flash-error" style="margin-bottom:12px;">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('login_post') }}">
+              <div class="form-grid">
+                <div class="field full">
+                  <label>Username</label>
+                  <input type="text" name="username" autocomplete="username" required>
+                </div>
+                <div class="field full">
+                  <label>Password</label>
+                  <input type="password" name="password" autocomplete="current-password" required>
+                </div>
+              </div>
+
+              <div class="actions-footer" style="margin-top:14px;">
+                <button class="btn primary" type="submit">Accedi</button>
+                <a class="btn ghost" href="https://www.pay4you.store" target="_blank" rel="noopener">Torna al sito</a>
+              </div>
+            </form>
+
+            <div class="footer" style="margin-top:16px;">© 2026 Pay4You — Giuseppe Di Lisio</div>
+          </div>
         </div>
-      {% endif %}
-
-      <div style="margin-top:14px;">
-        <button class="btn primary" type="submit" style="width:100%;">Accedi</button>
       </div>
-    </form>
-
+    </main>
   </div>
-</div>
-{% endblock %}
+
+  <script>
+    // Theme
+    (function(){
+      const KEY="p4y_theme";
+      const saved = localStorage.getItem(KEY) || "auto";
+      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
+    })();
+  </script>
+</body>
+</html>
