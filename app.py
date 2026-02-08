@@ -323,7 +323,7 @@ class Agent(Base):
     # ✅ CROP FOTO (NUOVO)
     photo_pos_x = Column(Integer, nullable=True)   # 0..100
     photo_pos_y = Column(Integer, nullable=True)   # 0..100
-    photo_zoom  = Column(String, nullable=True)    # float in string (compat)
+    photo_zoom  = Column(Float, nullable=True)    # float in string (compat)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
@@ -779,7 +779,8 @@ def _save_common_fields_to_agent(ag: Agent):
     # ✅ SALVATAGGIO CROP FOTO
     ag.photo_pos_x = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
     ag.photo_pos_y = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
-    ag.photo_zoom  = str(clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0))
+    ag.photo_zoom  = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
+
 
 def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
