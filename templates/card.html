@@ -11,7 +11,6 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
   <style>
-    /* Logo top-left: più grande, NO quadrato/box, resta cliccabile */
     .top-left-logo{
       position: fixed;
       top: 14px;
@@ -50,31 +49,19 @@
       will-change: transform;
     }
 
-    /* ✅ FAB: torna alla card */
-    .to-card-fab{
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      z-index: 60;
+    /* ✅ iframe sito dentro modal */
+    #mWeb{
+      width: min(980px, 92vw);
+      height: min(78vh, 720px);
       border: 0;
-      cursor: pointer;
-      padding: 10px 12px;
       border-radius: 14px;
-      font-weight: 800;
-      letter-spacing: .2px;
-      background: rgba(0,0,0,.35);
-      color: #fff;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(0,0,0,.06);
+      display:none;
     }
-    .to-card-fab:active{ transform: scale(.98); }
   </style>
 </head>
 
 <body data-theme="">
-  <!-- ✅ tasto fisso torna alla card -->
-  <button class="to-card-fab" type="button" onclick="goTop()" aria-label="Torna alla card">↑ Card</button>
-
   <div class="page-main">
     <div class="card-outer">
 
@@ -146,11 +133,7 @@
 
         <div class="hero-text hero-text-center">
           {% if ag.name %}<div class="name name-center">{{ ag.name }}</div>{% endif %}
-
-          {% if ag.company %}
-            <div class="company-badge">{{ ag.company }}</div>
-          {% endif %}
-
+          {% if ag.company %}<div class="company-badge">{{ ag.company }}</div>{% endif %}
           {% if ag.role %}<div class="role role-center">{{ ag.role }}</div>{% endif %}
           {% if ag.bio %}<div class="bio bio-center">{{ ag.bio }}</div>{% endif %}
 
@@ -225,7 +208,6 @@
               </a>
             {% endif %}
           </div>
-
         </div>
       </div>
 
@@ -241,7 +223,7 @@
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
 
-      {% if mobiles or office_value or emails or pec_email or websites %}
+      {% if mobiles or phone_office or emails or pec_email or websites %}
       <div class="section">
         <div class="section-title">{{ t_func('contacts') }}</div>
 
@@ -254,20 +236,6 @@
               {% endfor %}
             </div>
           </div>
-        {% endif %}
-
-        {% if office_value %}
-          {% if '@' in office_value %}
-            <div class="row row-email">
-              <span class="row-tag tag-email">Email</span>
-              <a href="mailto:{{ office_value }}">{{ office_value }}</a>
-            </div>
-          {% elif office_value|length > 0 %}
-            <div class="row row-phone">
-              <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
-              <a href="tel:{{ office_value|replace(' ','') }}">{{ office_value }}</a>
-            </div>
-          {% endif %}
         {% endif %}
 
         {% if emails %}
@@ -288,18 +256,23 @@
           </div>
         {% endif %}
 
+        {% if phone_office %}
+          <div class="row row-phone">
+            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
+            <a href="tel:{{ phone_office|replace(' ','') }}">{{ phone_office }}</a>
+          </div>
+        {% endif %}
+
         {% if websites %}
           <div class="row row-web">
             <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
             <div class="right-stack">
               {% for w in websites %}
                 <div class="stack-item">
-  <a href="/out?u={{ w|urlencode }}&back={{ (base_url ~ '/' ~ ag.slug ~ ('?p=p2' if p_key=='p2' else '') ~ ('&lang=' ~ lang if p_key=='p2' else '?lang=' ~ lang))|urlencode }}"
-     target="_blank" rel="noopener">
-    {{ w|replace('https://','')|replace('http://','') }}
-  </a>
-</div>
-
+                  <button type="button" class="linklike" onclick="openWebsite('{{ w }}')">
+                    {{ w|replace('https://','')|replace('http://','') }}
+                  </button>
+                </div>
               {% endfor %}
             </div>
           </div>
@@ -382,14 +355,13 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}')">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}', '{{ p.name|e }}')">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
       {% endif %}
 
       <div class="footer">© 2026 Realizzato Pay4You — Giuseppe Di Lisio</div>
-
     </div>
   </div>
 
@@ -400,14 +372,12 @@
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
+      <iframe id="mWeb" src="" style="display:none;" referrerpolicy="no-referrer"></iframe>
 
       <div class="modal-actions">
         <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareMediaEmail()">Invia via Email</button>
 
-        {% if websites and websites|length > 0 %}
-          <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
-        {% endif %}
         <button class="btn ghost" type="button" onclick="goTop()">Torna alla card</button>
         <button class="btn primary" type="button" onclick="closeModal()">{{ t_func('close') }}</button>
       </div>
@@ -431,6 +401,7 @@
   window.__QR_URL = "";
   window.__MEDIA_URL = "";
   window.__MEDIA_TITLE = "";
+  window.__BACK_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}";
 
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
@@ -467,9 +438,10 @@
   function openModal(type){
     const modal = document.getElementById('modal');
     modal.style.display='flex';
-    document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
+    document.getElementById('mImg').style.display   = (type==='img') ? 'block' : 'none';
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
-    document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
+    document.getElementById('mPdf').style.display   = (type==='pdf') ? 'block' : 'none';
+    document.getElementById('mWeb').style.display   = (type==='web') ? 'block' : 'none';
   }
 
   function closeModal(){
@@ -480,6 +452,7 @@
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
     const pdf = document.getElementById('mPdf');
+    const web = document.getElementById('mWeb');
 
     if(img) img.src = '';
     if(vid){
@@ -488,6 +461,7 @@
       try{ vid.load(); }catch(e){}
     }
     if(pdf) pdf.src = '';
+    if(web) web.src = '';
 
     window.__MEDIA_URL = "";
     window.__MEDIA_TITLE = "";
@@ -495,32 +469,35 @@
 
   function openImg(src){
     if(!src) return;
-    const img = document.getElementById('mImg');
-    img.src = src;
-
+    document.getElementById('mImg').src = src;
     window.__MEDIA_URL = src;
     window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
-
     openModal('img');
   }
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
-
     window.__MEDIA_URL = src;
     window.__MEDIA_TITLE = "Video - {{ ag.name }}";
-
     openModal('video');
     v.play().catch(()=>{});
   }
-  function openPdf(src){
+  function openPdf(src, name){
     const f = document.getElementById('mPdf');
     f.src = src;
-
     window.__MEDIA_URL = src;
-    window.__MEDIA_TITLE = "Documento - {{ ag.name }}";
-
+    window.__MEDIA_TITLE = (name ? ("Documento: " + name) : "Documento - {{ ag.name }}");
     openModal('pdf');
+  }
+
+  /* ✅ SITO dentro modal (no pagina ponte sbagliata) */
+  function openWebsite(url){
+    if(!url) return;
+    const w = document.getElementById('mWeb');
+    w.src = url;
+    window.__MEDIA_URL = url;
+    window.__MEDIA_TITLE = "Sito - {{ ag.name }}";
+    openModal('web');
   }
 
   document.getElementById('modal')?.addEventListener('click', function(e){
@@ -532,49 +509,47 @@
 
   function openQrModal(src){
     window.__QR_URL = src || "";
-    const m = document.getElementById('qr-modal');
-    const img = document.getElementById('qr-img');
-    img.src = src;
-    m.style.display = 'flex';
+    document.getElementById('qr-img').src = src;
+    document.getElementById('qr-modal').style.display = 'flex';
   }
   function closeQrModal(){
-    const m = document.getElementById('qr-modal');
-    const img = document.getElementById('qr-img');
-    img.src = '';
-    m.style.display = 'none';
+    document.getElementById('qr-img').src = '';
+    document.getElementById('qr-modal').style.display = 'none';
     window.__QR_URL = "";
+  }
+
+  /* ✅ WhatsApp: passa da pagina interna /share (così NON torna bianco) */
+  function openSharePage(text){
+    const u = "/share?back=" + encodeURIComponent(window.__BACK_URL) + "&text=" + encodeURIComponent(text);
+    window.location.href = u;
   }
 
   function shareQrWhatsApp(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
-    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
-    window.open(wa, "_blank");
+    openSharePage(text);
   }
   function shareQrEmail(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const subject = "QR Pay4You Card";
     const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + url + "\n";
-    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    window.location.href = mail;
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
   function shareMediaWhatsApp(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
-    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
-    window.open(wa, "_blank");
+    openSharePage(text);
   }
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const subject = window.__MEDIA_TITLE || "Pay4You";
     const body = "Ciao!\n\nTi invio questo contenuto:\n" + url + "\n";
-    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    window.location.href = mail;
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
   (function(){
@@ -592,22 +567,6 @@
       });
     });
   })();
-
-  // ✅ FIX iOS: quando torni da WhatsApp a volte Safari ripristina male (pagina bianca)
-  window.addEventListener('pageshow', function(e){
-    if(e && e.persisted){
-      try{ window.location.reload(); }catch(err){}
-    }
-  });
 </script>
 </body>
 </html>
-<script>
-  // ✅ iOS/Safari: dopo WhatsApp (wa.me) a volte torna una pagina "bianca" dalla cache.
-  // Forziamo un refresh pulito quando la pagina rientra da bfcache.
-  window.addEventListener('pageshow', function(e){
-    if (e.persisted) {
-      try { window.location.reload(); } catch(err) {}
-    }
-  });
-</script>
