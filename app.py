@@ -1497,9 +1497,7 @@ def vcard(slug):
             s = " " + s[limit:]
         out.append(s)
         return out
-
-
-    def abs_url(u: str) -> str:
+        def abs_url(u: str) -> str:
         u = clean_str(u) or ""
         if not u:
             return ""
@@ -1508,11 +1506,35 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
-    # ✅ iPhone-friendly: riduci e comprimi foto per embed
-      def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
+    def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
+        rel = photo_url.replace("/uploads/", "", 1)
+        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
+        if not os.path.isfile(disk_path):
+            return None
+
+        try:
+            from PIL import Image
+
+            with Image.open(disk_path) as im:
+                im = im.convert("RGB")
+                im.thumbnail((420, 420))
+
+                # comprimi fino a stare sotto max_bytes
+                for quality in (82, 72, 62, 52, 45):
+                    buf = BytesIO()
+                    im.save(buf, format="JPEG", quality=quality, optimize=True)
+                    blob = buf.getvalue()
+                    if len(blob) <= max_bytes:
+                        b64 = base64.b64encode(blob).decode("ascii")
+                        return ("JPEG", b64)
+
+            return None
+        except Exception:
+            return None
+ 
         rel = photo_url.replace("/uploads/", "", 1)
         disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
         if not os.path.isfile(disk_path):
