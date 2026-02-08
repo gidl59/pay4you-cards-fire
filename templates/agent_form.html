@@ -42,18 +42,13 @@
         </div>
       {% endif %}
 
-      {# ✅ Toolbar admin: visibile sia su P1 che su P2 #}
-      {% if session.get('role') == 'admin' and agent %}
+      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
         <div class="toolbar">
           <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
           <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
 
           {% if (agent.p2_enabled or 0)|int == 1 %}
-            {% if not editing_profile2 %}
-              <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
-            {% else %}
-              <a class="btn ghost" href="{{ url_for('edit_agent', slug=agent.slug) }}">Modifica Profilo 1</a>
-            {% endif %}
+            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
             <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
           {% else %}
             <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
@@ -151,12 +146,18 @@
 
         <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails" value="{{ D.emails if D and D.emails else '' }}">
+          <input type="text" name="emails"
+                 value="{{ D.emails if D and D.emails else '' }}"
+                 placeholder="es: info@azienda.it, amministrazione@azienda.it">
+          <div class="hint">Inserisci una o più email separate da virgola. Esempio: info@..., support@...</div>
         </div>
 
         <div class="field">
           <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites" value="{{ D.websites if D and D.websites else '' }}">
+          <input type="text" name="websites"
+                 value="{{ D.websites if D and D.websites else '' }}"
+                 placeholder="es: www.sito.it, https://shop.sito.it">
+          <div class="hint">Inserisci uno o più siti separati da virgola. Se manca https:// lo aggiungiamo in automatico.</div>
         </div>
 
         <div class="field">
