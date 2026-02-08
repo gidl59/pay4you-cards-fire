@@ -1,135 +1,98 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="color-scheme" content="light dark">
-  <title>Dashboard | Pay4You</title>
+{% extends "base.html" %}
+{% block title %}Dashboard | Pay4You{% endblock %}
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<body data-theme="">
-
-  <div class="app-shell">
-    <header class="app-header">
-      <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Pay4You">
-        <span class="brand-title">Pay4You — Dashboard</span>
-      </a>
-      <div class="app-header-right">
+{% block content %}
+<div class="admin-wrap">
+  <div class="admin-head">
+    <div>
+      <h1 class="admin-title">{% if is_admin %}Cards{% else %}La tua card{% endif %}</h1>
+      <div class="admin-sub">
         {% if is_admin %}
-          <a class="btn-mini ghost" href="{{ url_for('new_agent') }}">+ Nuova card</a>
+          Gestisci le card (profilo 1 e profilo 2).
         {% else %}
-          <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica Profilo 1</a>
-          {% if agent and (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica Profilo 2</a>
-          {% endif %}
+          Qui puoi gestire la tua card e attivare/disattivare il profilo 2.
         {% endif %}
-        <a class="btn-mini danger" href="{{ url_for('logout') }}">Esci</a>
       </div>
-    </header>
+    </div>
 
-    <main class="app-main">
-      <div class="flash-wrap">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for cat, msg in messages %}
-              <div class="flash flash-{{ cat|default('success') }}">{{ msg }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-      </div>
-
-      <div class="admin-wrap">
-        <div class="admin-head">
-          <div>
-            <h1 class="admin-title">{% if is_admin %}Cards{% else %}La tua card{% endif %}</h1>
-            <div class="admin-sub">
-              {% if is_admin %}
-                Gestisci le card (profilo 1 e profilo 2).
-              {% else %}
-                Qui puoi gestire la tua card e attivare/disattivare il profilo 2.
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="toolbar">
-            {% if not is_admin %}
-              {% if agent and (agent.p2_enabled or 0)|int == 1 %}
-                <form method="post" action="{{ url_for('me_deactivate_p2') }}">
-                  <button class="btn-mini warn" type="submit">Disattiva Profilo 2</button>
-                </form>
-              {% else %}
-                <form method="post" action="{{ url_for('me_activate_p2') }}">
-                  <button class="btn-mini" type="submit">Attiva Profilo 2</button>
-                </form>
-              {% endif %}
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="table-card">
-          <div class="table-row table-head">
-            <div>Nome</div>
-            <div>Slug</div>
-            <div>Azioni</div>
-          </div>
-
-          {% for a in agents %}
-          <div class="table-row">
-            <div>
-              <span class="name-badge">{{ a.name }}</span>
-            </div>
-            <div>
-              <span class="slug-badge">{{ a.slug }}</span>
-            </div>
-            <div class="actions-cell">
-              <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
-              <a class="btn-mini ghost" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-
-              <a class="btn-mini ghost" href="/{{ a.slug }}.vcf" target="_blank" rel="noopener">VCF</a>
-
-              {% if is_admin %}
-                <a class="btn-mini" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
-
-                {% if (a.p2_enabled or 0)|int == 1 %}
-                  <a class="btn-mini" href="{{ url_for('admin_profile2', slug=a.slug) }}">Modifica P2</a>
-                  <form method="post" action="{{ url_for('admin_deactivate_p2', slug=a.slug) }}">
-                    <button class="btn-mini warn" type="submit">Disattiva P2</button>
-                  </form>
-                {% else %}
-                  <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}">
-                    <button class="btn-mini" type="submit">Attiva P2</button>
-                  </form>
-                {% endif %}
-
-                <a class="btn-mini ghost" href="{{ url_for('admin_credentials_html', slug=a.slug) }}">Credenziali</a>
-
-                <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
-                      onsubmit="return confirm('Eliminare la card {{ a.slug }}?');">
-                  <button class="btn-mini danger" type="submit">Elimina</button>
-                </form>
-              {% else %}
-                <a class="btn-mini" href="{{ url_for('me_edit') }}">Modifica</a>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
-      </div>
-    </main>
+    <div class="toolbar">
+      {% if is_admin %}
+        <a class="btn-mini ghost" href="{{ url_for('new_agent') }}">+ Nuova card</a>
+      {% else %}
+        {% if agent and (agent.p2_enabled or 0)|int == 1 %}
+          <form method="post" action="{{ url_for('me_deactivate_p2') }}">
+            <button class="btn-mini warn" type="submit">Disattiva Profilo 2</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('me_activate_p2') }}">
+            <button class="btn-mini" type="submit">Attiva Profilo 2</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
   </div>
 
-  <script>
-    // Theme
-    (function(){
-      const KEY="p4y_theme";
-      const saved = localStorage.getItem(KEY) || "auto";
-      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
-    })();
-  </script>
-</body>
-</html>
+  <div class="table-card">
+    <div class="table-row table-head">
+      <div>Nome</div>
+      <div>Slug</div>
+      <div>Azioni</div>
+    </div>
+
+    {% for a in agents %}
+    <div class="table-row">
+      <div>
+        <span class="name-badge">{{ a.name }}</span>
+      </div>
+      <div>
+        <span class="slug-badge">{{ a.slug }}</span>
+      </div>
+      <div class="actions-cell">
+        <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
+
+        {% if (a.p2_enabled or 0)|int == 1 %}
+          <a class="btn-mini ghost" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
+        {% endif %}
+
+        <a class="btn-mini ghost" href="/{{ a.slug }}.vcf" target="_blank" rel="noopener">VCF</a>
+
+        {% if is_admin %}
+          <a class="btn-mini" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
+
+          {% if (a.p2_enabled or 0)|int == 1 %}
+            <a class="btn-mini" href="{{ url_for('admin_profile2', slug=a.slug) }}">Modifica P2</a>
+            <form method="post" action="{{ url_for('admin_deactivate_p2', slug=a.slug) }}">
+              <button class="btn-mini warn" type="submit">Disattiva P2</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_activate_p2', slug=a.slug) }}">
+              <button class="btn-mini" type="submit">Attiva P2</button>
+            </form>
+          {% endif %}
+
+          <a class="btn-mini ghost" href="{{ url_for('admin_credentials_html', slug=a.slug) }}">Credenziali</a>
+
+          <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
+                onsubmit="return confirm('Eliminare la card {{ a.slug }}?');">
+            <button class="btn-mini danger" type="submit">Elimina</button>
+          </form>
+        {% else %}
+          <a class="btn-mini" href="{{ url_for('me_edit') }}">Modifica</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
+</div>
+
+<script>
+  // Theme (coerente con base)
+  (function(){
+    const KEY="p4y_theme";
+    const saved = localStorage.getItem(KEY) || "auto";
+    document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
+  })();
+</script>
+{% endblock %}
