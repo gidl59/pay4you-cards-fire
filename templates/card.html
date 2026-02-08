@@ -11,6 +11,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
   <style>
+    /* logo top-left (NON cliccabile) */
     .top-left-logo{
       position: fixed;
       top: 14px;
@@ -19,11 +20,11 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      text-decoration: none;
       background: transparent !important;
       border: 0 !important;
       box-shadow: none !important;
       padding: 0 !important;
+      pointer-events: none; /* ✅ non cliccabile */
     }
     .top-left-logo img{
       width: 84px;
@@ -48,16 +49,6 @@
       transform-origin: center center;
       will-change: transform;
     }
-
-    /* lasciato, ma non usato per i siti esterni */
-    #mWeb{
-      width: min(980px, 92vw);
-      height: min(78vh, 720px);
-      border: 0;
-      border-radius: 14px;
-      background: rgba(0,0,0,.06);
-      display:none;
-    }
   </style>
 </head>
 
@@ -66,9 +57,10 @@
     <div class="card-outer">
 
       {% if ag.logo_url %}
-      <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
-        <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
-      </a>
+        <!-- ✅ NON è più un link -->
+        <div class="top-left-logo" aria-label="Pay4You">
+          <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
+        </div>
       {% endif %}
 
       <div class="hero hero-center">
@@ -372,7 +364,6 @@
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
-      <iframe id="mWeb" src="" style="display:none;" referrerpolicy="no-referrer"></iframe>
 
       <div class="modal-actions">
         <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
@@ -403,12 +394,12 @@
   window.__MEDIA_TITLE = "";
   window.__BACK_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}";
 
-  // ✅ trasforma /uploads/... in URL assoluto (per WhatsApp/Email)
+  // ✅ rende sempre assoluti i link (per WhatsApp/Email)
   function absUrl(u){
     if(!u) return "";
     if(u.startsWith("http://") || u.startsWith("https://")) return u;
     if(u.startsWith("/")) return "{{ base_url }}" + u;
-    return u;
+    return "{{ base_url }}/" + u;
   }
 
   (function(){
@@ -449,7 +440,6 @@
     document.getElementById('mImg').style.display   = (type==='img') ? 'block' : 'none';
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
     document.getElementById('mPdf').style.display   = (type==='pdf') ? 'block' : 'none';
-    document.getElementById('mWeb').style.display   = (type==='web') ? 'block' : 'none';
   }
 
   function closeModal(){
@@ -460,7 +450,6 @@
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
     const pdf = document.getElementById('mPdf');
-    const web = document.getElementById('mWeb');
 
     if(img) img.src = '';
     if(vid){
@@ -469,40 +458,42 @@
       try{ vid.load(); }catch(e){}
     }
     if(pdf) pdf.src = '';
-    if(web) web.src = '';
 
     window.__MEDIA_URL = "";
     window.__MEDIA_TITLE = "";
   }
 
   function openImg(src){
+    src = absUrl(src);
     if(!src) return;
     document.getElementById('mImg').src = src;
-    window.__MEDIA_URL = absUrl(src);
+    window.__MEDIA_URL = src;
     window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
     openModal('img');
   }
 
   function openVideo(src){
+    src = absUrl(src);
     const v = document.getElementById('mVideo');
     v.src = src;
-    window.__MEDIA_URL = absUrl(src);
+    window.__MEDIA_URL = src;
     window.__MEDIA_TITLE = "Video - {{ ag.name }}";
     openModal('video');
     v.play().catch(()=>{});
   }
 
+  // ✅ PDF in pagina interna con “Torna alla card”
   function openPdf(src, name){
-    const f = document.getElementById('mPdf');
-    f.src = src;
-    window.__MEDIA_URL = absUrl(src);
-    window.__MEDIA_TITLE = (name ? ("Documento: " + name) : "Documento - {{ ag.name }}");
-    openModal('pdf');
+    src = absUrl(src);
+    const back = window.__BACK_URL || "/";
+    const go = "/docview?u=" + encodeURIComponent(src) + "&back=" + encodeURIComponent(back) + "&title=" + encodeURIComponent(name || "Documento");
+    window.location.href = go;
   }
 
-  // ✅ SITO: apri pagina interna webview con "Torna alla card"
+  // ✅ SITO in pagina interna con “Torna alla card”
   function openWebsite(url){
     if(!url) return;
+    url = absUrl(url);
     const back = window.__BACK_URL || "/";
     const go = "/webview?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
     window.location.href = go;
@@ -516,18 +507,18 @@
   });
 
   function openQrModal(src){
-    window.__QR_URL = absUrl(src || "");
+    src = absUrl(src);
+    window.__QR_URL = src || "";
     document.getElementById('qr-img').src = src;
     document.getElementById('qr-modal').style.display = 'flex';
   }
-
   function closeQrModal(){
     document.getElementById('qr-img').src = '';
     document.getElementById('qr-modal').style.display = 'none';
     window.__QR_URL = "";
   }
 
-  // ✅ WhatsApp: passa da pagina interna /share (così c’è sempre "Torna alla card")
+  // ✅ WhatsApp: pagina interna bella (stile webview)
   function openSharePage(text){
     const u = "/share?back=" + encodeURIComponent(window.__BACK_URL) + "&text=" + encodeURIComponent(text);
     window.location.href = u;
@@ -539,7 +530,6 @@
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
     openSharePage(text);
   }
-
   function shareQrEmail(){
     const url = window.__QR_URL || "";
     if(!url) return;
@@ -554,7 +544,6 @@
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
     openSharePage(text);
   }
-
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
@@ -563,7 +552,7 @@
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
-  // ✅ iPhone/Safari: prova a “caricare” un frame nei video thumb
+  // preview frame videos su iPhone
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
