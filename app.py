@@ -776,6 +776,11 @@ def _save_common_fields_to_agent(ag: Agent):
     ag.logo_spin = form_checkbox_int("logo_spin")
     ag.allow_flip = form_checkbox_int("allow_flip")
 
+    # ✅ VINCOLO: o RUOTA FOTO (avatar_spin) o FLIP (allow_flip). Solo uno.
+    if int(ag.avatar_spin or 0) == 1 and int(ag.allow_flip or 0) == 1:
+        # priorità alla rotazione foto (se attivata)
+        ag.allow_flip = 0
+
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     ag.back_media_mode = mode if mode in ("company", "personal") else "company"
 
@@ -1131,6 +1136,10 @@ def _save_profile2_payload_from_form():
     payload["logo_spin"] = form_checkbox_int("logo_spin")
     payload["allow_flip"] = form_checkbox_int("allow_flip")
 
+    # ✅ VINCOLO: o RUOTA FOTO (avatar_spin) o FLIP (allow_flip). Solo uno.
+    if int(payload.get("avatar_spin") or 0) == 1 and int(payload.get("allow_flip") or 0) == 1:
+        payload["allow_flip"] = 0
+
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     payload["back_media_mode"] = mode if mode in ("company", "personal") else "company"
 
@@ -1315,6 +1324,21 @@ def admin_credentials_html(slug):
         card_url=card_url,
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
     )
+
+# ✅ ALIAS “Credenziali” (se in qualche template il link è diverso)
+@app.get("/admin/<slug>/credenziali")
+@admin_required
+def admin_credentials_alias_it(slug):
+    return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
+
+@app.get("/credentials/<slug>")
+@login_required
+def credentials_alias(slug):
+    # se admin, va alla pagina credenziali admin
+    if is_admin():
+        return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
+    # se client, per sicurezza reindirizza alla dashboard (non deve vedere credenziali di altri)
+    return redirect(url_for("dashboard"))
 
 # ---------- PUBLIC CARD ----------
 @app.get("/<slug>")
