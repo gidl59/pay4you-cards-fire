@@ -602,3 +602,12 @@
 </script>
 </body>
 </html>
+<script>
+  // ✅ iOS/Safari: dopo WhatsApp (wa.me) a volte torna una pagina "bianca" dalla cache.
+  // Forziamo un refresh pulito quando la pagina rientra da bfcache.
+  window.addEventListener('pageshow', function(e){
+    if (e.persisted) {
+      try { window.location.reload(); } catch(err) {}
+    }
+  });
+</script>
