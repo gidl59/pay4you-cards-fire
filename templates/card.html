@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-  <!-- ✅ SOLO override mirati qui, senza toccare style.css -->
   <style>
     /* Logo top-left: più grande, NO quadrato/box, resta cliccabile */
     .top-left-logo{
@@ -39,7 +38,6 @@
       filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
     }
 
-    /* Foto agente: crop + zoom gestito inline su FRONT (qui lasciamo fallback) */
     .avatar-img{
       width: 100%;
       height: 100%;
@@ -47,60 +45,54 @@
       object-position: center center !important;
       display: block;
     }
-
-    /* ✅ quando applichiamo zoom, evitiamo “spostamenti strani” */
     .avatar-img.zoomable{
       transform-origin: center center;
       will-change: transform;
     }
 
-    /* ✅ Pulsante fisso: torna INDIETRO (history.back) */
-    .back-to-card-fab{
+    /* ✅ FAB: torna alla card */
+    .to-card-fab{
       position: fixed;
       right: 14px;
-      top: 14px;
+      bottom: 14px;
       z-index: 60;
       border: 0;
       cursor: pointer;
       padding: 10px 12px;
       border-radius: 14px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: .2px;
       background: rgba(0,0,0,.35);
       color: #fff;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-    .back-to-card-fab:active{ transform: scale(.98); }
+    .to-card-fab:active{ transform: scale(.98); }
   </style>
 </head>
 
 <body data-theme="">
-  <!-- ✅ tasto indietro vero -->
-  <button class="back-to-card-fab" type="button" onclick="goBack()" aria-label="Torna indietro">← Indietro</button>
+  <!-- ✅ tasto fisso torna alla card -->
+  <button class="to-card-fab" type="button" onclick="goTop()" aria-label="Torna alla card">↑ Card</button>
 
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- ✅ Top-left logo: fisso, grande, cliccabile, NON ruota -->
       {% if ag.logo_url %}
       <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
       </a>
       {% endif %}
 
-      <!-- HERO -->
       <div class="hero hero-center">
         <div class="avatar-wrap">
 
-          <!-- ✅ ORBIT dietro (se attivo) -->
           {% if ag.logo_url %}
           <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
             <img src="{{ ag.logo_url }}" alt="Logo orbit">
           </div>
           {% endif %}
 
-          {# LOGICA FLIP: se avatar_spin attivo, DISATTIVA tap per flip #}
           {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
           {% set can_flip  = ((ag.allow_flip or 0)|int == 1) and (not auto_flip) %}
 
@@ -112,7 +104,6 @@
             {% set back_url = ag.logo_url %}
           {% endif %}
 
-          {# ✅ crop/zoom defaults sicuri #}
           {% set px = (ag.photo_pos_x if ag.photo_pos_x is not none else 50) %}
           {% set py = (ag.photo_pos_y if ag.photo_pos_y is not none else 35) %}
           {% set pz = (ag.photo_zoom if ag.photo_zoom is not none else 1.0) %}
@@ -120,7 +111,6 @@
           <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
             <div class="flip-inner">
 
-              <!-- FRONT -->
               <div class="flip-front">
                 <button class="avatar avatar-btn" type="button"
                         onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
@@ -136,7 +126,6 @@
                 </button>
               </div>
 
-              <!-- BACK -->
               <div class="flip-back">
                 <button class="avatar avatar-btn" type="button"
                         onclick="event.stopPropagation(); openImg('{{ back_url }}')"
@@ -165,20 +154,16 @@
           {% if ag.role %}<div class="role role-center">{{ ag.role }}</div>{% endif %}
           {% if ag.bio %}<div class="bio bio-center">{{ ag.bio }}</div>{% endif %}
 
-          <!-- ✅ SWITCH PROFILI: mostra SOLO l'altro (P1 <-> P2) -->
           {% if p2_enabled %}
             <div class="profile-switch profile-switch-center">
               {% if p_key == 'p2' %}
-                <!-- Sei su P2: mostra SOLO P1 -->
                 <a class="profile-pill" href="/{{ ag.slug }}?lang={{ lang }}">{{ t_func('profile_1') }}</a>
               {% else %}
-                <!-- Sei su P1: mostra SOLO P2 -->
                 <a class="profile-pill" href="/{{ ag.slug }}?p=p2&lang={{ lang }}">{{ t_func('profile_2') }}</a>
               {% endif %}
             </div>
           {% endif %}
 
-          <!-- SOCIAL (SVG colorati) -->
           <div class="social-icons social-icons-center">
             {% if ag.facebook %}
               <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
@@ -187,7 +172,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.instagram %}
               <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -202,7 +186,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.linkedin %}
               <a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -210,7 +193,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.tiktok %}
               <a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -220,7 +202,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.telegram %}
               <a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -228,7 +209,6 @@
                 </svg>
               </a>
             {% endif %}
-
             {% if ag.youtube %}
               <a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -237,8 +217,6 @@
                 </svg>
               </a>
             {% endif %}
-
-            <!-- ✅ SPOTIFY -->
             {% if ag.spotify %}
               <a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify" title="Spotify">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -251,7 +229,6 @@
         </div>
       </div>
 
-      <!-- AZIONI -->
       <div class="section actions-box">
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
@@ -264,8 +241,7 @@
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
 
-      <!-- CONTATTI -->
-      {% if mobiles or phone_office or emails or pec_email or websites %}
+      {% if mobiles or office_value or emails or pec_email or websites %}
       <div class="section">
         <div class="section-title">{{ t_func('contacts') }}</div>
 
@@ -280,11 +256,18 @@
           </div>
         {% endif %}
 
-        {% if phone_office %}
-          <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
-            <a href="tel:{{ phone_office|replace(' ','') }}">{{ phone_office }}</a>
-          </div>
+        {% if office_value %}
+          {% if '@' in office_value %}
+            <div class="row row-email">
+              <span class="row-tag tag-email">Email</span>
+              <a href="mailto:{{ office_value }}">{{ office_value }}</a>
+            </div>
+          {% elif office_value|length > 0 %}
+            <div class="row row-phone">
+              <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
+              <a href="tel:{{ office_value|replace(' ','') }}">{{ office_value }}</a>
+            </div>
+          {% endif %}
         {% endif %}
 
         {% if emails %}
@@ -318,7 +301,6 @@
       </div>
       {% endif %}
 
-      <!-- DATI -->
       {% if ag.piva or ag.sdi %}
       <div class="section">
         <div class="section-title">{{ t_func('data') }}</div>
@@ -331,7 +313,6 @@
       </div>
       {% endif %}
 
-      <!-- INDIRIZZI -->
       {% if addresses %}
       <div class="section">
         <div class="section-title">{{ t_func('open_maps') }}</div>
@@ -346,7 +327,6 @@
       </div>
       {% endif %}
 
-      <!-- THEME TOGGLE -->
       <div class="section">
         <div class="section-title">{{ t_func('theme') }}</div>
         <div class="theme-toggle theme-toggle-compact">
@@ -357,7 +337,6 @@
         </div>
       </div>
 
-      <!-- FOTO -->
       {% if gallery %}
       <div class="section">
         <div class="section-title">{{ t_func('gallery') }}</div>
@@ -371,7 +350,6 @@
       </div>
       {% endif %}
 
-      <!-- VIDEO -->
       {% if videos %}
       <div class="section">
         <div class="section-title">{{ t_func('videos') }}</div>
@@ -393,7 +371,6 @@
       </div>
       {% endif %}
 
-      <!-- PDF -->
       {% if pdfs %}
       <div class="section">
         <div class="section-title">{{ t_func('documents') }}</div>
@@ -410,7 +387,6 @@
     </div>
   </div>
 
-  <!-- MODAL (immagine/video/pdf) -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
       <button class="modal-x" type="button" onclick="closeModal()">✕</button>
@@ -420,7 +396,6 @@
       <iframe id="mPdf" src="" style="display:none;"></iframe>
 
       <div class="modal-actions">
-        <!-- ✅ share per qualunque contenuto aperto (foto/video/pdf) -->
         <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareMediaEmail()">Invia via Email</button>
 
@@ -433,7 +408,6 @@
     </div>
   </div>
 
-  <!-- QR MODAL -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
@@ -448,14 +422,10 @@
   </div>
 
 <script>
-  // variabile globale per QR (così i bottoni WhatsApp/Email sanno cosa inviare)
   window.__QR_URL = "";
-
-  // ✅ variabili globali per contenuto aperto in MODAL (foto/video/pdf)
   window.__MEDIA_URL = "";
   window.__MEDIA_TITLE = "";
 
-  // flip tap (solo se canFlip)
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
     if(!canFlip) return;
@@ -464,7 +434,6 @@
     box.addEventListener('click', ()=> box.classList.toggle('flipped'));
   })();
 
-  // theme
   (function(){
     const KEY = "p4y_theme";
     const buttons = document.querySelectorAll(".theme-pill");
@@ -483,26 +452,12 @@
     });
   })();
 
-  // ✅ torna indietro (history back) con fallback
-  function goBack(){
-    try{ closeQrModal(); }catch(e){}
-    try{ closeModal(); }catch(e){}
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-    // fallback: torna al base_url
-    window.location.href = "{{ base_url }}";
-  }
-
-  // torna su (card)
   function goTop(){
     try{ closeQrModal(); }catch(e){}
     try{ closeModal(); }catch(e){}
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // modal helpers
   function openModal(type){
     const modal = document.getElementById('modal');
     modal.style.display='flex';
@@ -562,7 +517,6 @@
     openModal('pdf');
   }
 
-  // click fuori chiude
   document.getElementById('modal')?.addEventListener('click', function(e){
     if(e.target === this) closeModal();
   });
@@ -570,7 +524,6 @@
     if(e.target === this) closeQrModal();
   });
 
-  // QR modal
   function openQrModal(src){
     window.__QR_URL = src || "";
     const m = document.getElementById('qr-modal');
@@ -586,7 +539,6 @@
     window.__QR_URL = "";
   }
 
-  // ✅ invio QR via WhatsApp/Email
   function shareQrWhatsApp(){
     const url = window.__QR_URL || "";
     if(!url) return;
@@ -603,7 +555,6 @@
     window.location.href = mail;
   }
 
-  // ✅ invio MEDIA (foto/video/pdf) via WhatsApp/Email
   function shareMediaWhatsApp(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
@@ -620,7 +571,6 @@
     window.location.href = mail;
   }
 
-  // ✅ Video thumbs: forza un frame "neutro" e stabile (niente poster immagini)
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
@@ -631,12 +581,18 @@
           }
         }catch(e){}
       });
-      // alcuni browser rendono meglio dopo seeked
       v.addEventListener('seeked', ()=>{
         try{ v.pause(); }catch(e){}
       });
     });
   })();
+
+  // ✅ FIX iOS: quando torni da WhatsApp a volte Safari ripristina male (pagina bianca)
+  window.addEventListener('pageshow', function(e){
+    if(e && e.persisted){
+      try{ window.location.reload(); }catch(err){}
+    }
+  });
 </script>
 </body>
 </html>
