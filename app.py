@@ -718,6 +718,41 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
 
 # ===================== ROUTES =====================
 
+from flask import request, render_template, redirect, url_for
+from urllib.parse import quote
+
+@app.get("/webview")
+def webview():
+    url = request.args.get("u", "").strip()
+    back = request.args.get("back", "/").strip() or "/"
+    if not url:
+        return render_template("not_found_card.html", back=back), 404
+    return render_template("webview.html", url=url, back=back)
+
+@app.get("/docview")
+def docview():
+    url = request.args.get("u", "").strip()
+    back = request.args.get("back", "/").strip() or "/"
+    title = request.args.get("title", "Documento").strip()
+    if not url:
+        return render_template("not_found_card.html", back=back), 404
+    return render_template("docview.html", url=url, back=back, title=title)
+
+@app.get("/share")
+def share():
+    back = request.args.get("back", "/").strip() or "/"
+    text = request.args.get("text", "").strip()
+    if not text:
+        return render_template("not_found_card.html", back=back), 404
+    wa_url = "https://wa.me/?text=" + quote(text)
+    return render_template("share.html", back=back, text=text, wa_url=wa_url)
+
+@app.errorhandler(404)
+def not_found(e):
+    # se arriva un 404 generico, prova a tornare indietro alla card
+    back = request.args.get("back") or request.referrer or "/"
+    return render_template("not_found_card.html", back=back), 404
+
 @app.get("/share")
 def share_page():
     text = (request.args.get("text") or "").strip()
