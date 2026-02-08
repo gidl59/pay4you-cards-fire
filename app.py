@@ -1414,6 +1414,48 @@ def public_card(slug):
         p_key=p_key,
         p2_enabled=p2_enabled,
     )
+@app.get("/out")
+def out():
+    u = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "").strip()
+
+    # sicurezza minima: accetta solo http/https
+    if not (u.startswith("http://") or u.startswith("https://")):
+        return redirect(back or url_for("dashboard"))
+
+    # back può essere relativo (es: /mario-rossi?lang=it)
+    if not back:
+        back = url_for("dashboard")
+
+    # pagina HTML semplice
+    html = f"""
+    <!doctype html>
+    <html lang="it">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="color-scheme" content="light dark">
+      <title>Apri sito</title>
+      <style>
+        body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; padding:18px;}}
+        .box{{max-width:720px; margin:0 auto;}}
+        .card{{border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:16px;}}
+        .btn{{display:inline-block; padding:12px 14px; border-radius:12px; font-weight:700; text-decoration:none; border:1px solid rgba(0,0,0,.15); margin-right:10px;}}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <div class="card">
+          <h2 style="margin:0 0 10px;">Sito esterno</h2>
+          <div style="margin:0 0 14px; word-break:break-word;">{u}</div>
+          <a class="btn" href="{u}" target="_blank" rel="noopener">Apri sito</a>
+          <a class="btn" href="{back}">Torna alla card</a>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    return Response(html, mimetype="text/html")
 
 # ---------- VCARD ----------
 @app.get("/<slug>.vcf")
