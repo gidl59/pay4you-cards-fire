@@ -13,14 +13,11 @@
 
   <!-- ✅ Override piccoli per header area riservata -->
   <style>
-    /* header sempre visibile in scroll */
     .app-header{
       position: sticky;
       top: 0;
       z-index: 1000;
     }
-
-    /* logo più grande + pulito */
     .brand{
       display:flex;
       align-items:center;
@@ -28,7 +25,7 @@
       text-decoration:none;
     }
     .brand-logo{
-      width:54px;              /* ✅ più grande */
+      width:54px;
       height:54px;
       object-fit:contain;
       filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
@@ -39,8 +36,6 @@
       font-size:16px;
       line-height:1.1;
     }
-
-    /* link header più compatti su mobile */
     @media (max-width: 520px){
       .brand-logo{ width:46px; height:46px; }
       .brand-title{ font-size:14px; }
@@ -58,7 +53,6 @@
     <header class="app-header">
       <div class="app-header-left">
         <a href="{{ url_for('dashboard') }}" class="brand" aria-label="Vai alla dashboard">
-          <!-- ⚠️ Assicurati che il file esista davvero: static/pay4you-logo.png -->
           <img src="{{ url_for('static', filename='pay4you-logo.png') }}" alt="Pay4You" class="brand-logo">
           <span class="brand-title">Area riservata</span>
         </a>
@@ -93,7 +87,7 @@
   </div>
 
   <script>
-    // Theme init (auto/light/dark)
+    // ✅ Theme globale su tutte le pagine (auto/light/dark)
     (function(){
       const KEY="p4y_theme";
       const saved = localStorage.getItem(KEY) || "auto";
