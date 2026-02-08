@@ -747,6 +747,19 @@ def home():
 def health():
     return "ok", 200
 
+@app.get("/webview")
+def webview():
+    url = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "").strip()
+
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return redirect(back or "/")
+
+    if back and not (back.startswith("http://") or back.startswith("https://") or back.startswith("/")):
+        back = "/"
+
+    return render_template("webview.html", url=url, back_url=back or "/")
+
 
 # ---------- LOGIN ----------
 @app.get("/login")
@@ -1666,16 +1679,17 @@ def vcard(slug):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
     # EMAIL: iOS-friendly
-    raw_emails = (getattr(ag, "emails", "") or "").strip()
+        raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
+        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=PREF:{valid_emails[0]}")
         for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{e}")
+            lines.append(f"EMAIL;TYPE=INTERNET:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
+        lines.append(f"EMAIL;TYPE=INTERNET:{pec}")
+
 
     # Address (prima riga)
     addr = clean_str(getattr(ag, "addresses", "") or "")
