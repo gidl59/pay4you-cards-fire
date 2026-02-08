@@ -39,13 +39,19 @@
       filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
     }
 
-    /* Foto agente: crop centrato (evita facce tagliate male) */
+    /* Foto agente: crop + zoom gestito inline su FRONT (qui lasciamo fallback) */
     .avatar-img{
       width: 100%;
       height: 100%;
       object-fit: cover !important;
       object-position: center center !important;
       display: block;
+    }
+
+    /* ✅ quando applichiamo zoom, evitiamo “spostamenti strani” */
+    .avatar-img.zoomable{
+      transform-origin: center center;
+      will-change: transform;
     }
 
     /* Pulsante fisso: torna su alla card */
@@ -106,6 +112,11 @@
             {% set back_url = ag.logo_url %}
           {% endif %}
 
+          {# ✅ crop/zoom defaults sicuri #}
+          {% set px = (ag.photo_pos_x if ag.photo_pos_x is not none else 50) %}
+          {% set py = (ag.photo_pos_y if ag.photo_pos_y is not none else 35) %}
+          {% set pz = (ag.photo_zoom if ag.photo_zoom is not none else 1.0) %}
+
           <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
             <div class="flip-inner">
 
@@ -115,7 +126,10 @@
                         onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <img class="avatar-img" src="{{ ag.photo_url }}" alt="Foto">
+                    <img class="avatar-img zoomable"
+                         src="{{ ag.photo_url }}"
+                         alt="Foto"
+                         style="object-position: {{ px|int }}% {{ py|int }}% !important; transform: scale({{ '%.2f'|format(pz|float) }});">
                   {% else %}
                     <div class="avatar-placeholder">👤</div>
                   {% endif %}
