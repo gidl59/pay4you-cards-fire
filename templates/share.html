@@ -1,69 +1,40 @@
-{% extends "base.html" %}
-{% block title %}Condivisione | Pay4You{% endblock %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Condividi</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; padding:18px;}
+    .box{max-width:760px; margin:0 auto;}
+    .card{border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:16px;}
+    .btn{display:inline-block; padding:12px 14px; border-radius:12px; font-weight:800; text-decoration:none;
+         border:1px solid rgba(0,0,0,.15); margin-right:10px; margin-top:10px;}
+    textarea{width:100%; min-height:160px; border-radius:12px; border:1px solid rgba(0,0,0,.15); padding:12px;}
+    .muted{opacity:.75; font-size:13px;}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="card">
+      <h2 style="margin:0 0 10px;">Condividi su WhatsApp</h2>
+      <div class="muted">Se dopo WhatsApp tornavi “bianco”, da qui hai sempre il tasto per rientrare nella card.</div>
 
-{% block content %}
-<div class="page-main">
-  <div class="panel panel-wide">
-
-    <div class="panel-head">
-      <h1 class="page-title">Condivisione</h1>
-      <div class="hint">Copia il testo e apri WhatsApp. Poi puoi tornare alla card senza pagina bianca.</div>
-    </div>
-
-    <div class="panel-body">
-      <div class="field full">
-        <div class="hint">Testo pronto</div>
-        <textarea id="shareBox" class="mono" style="min-height:170px; margin-top:10px;">{{ text }}</textarea>
-        <div class="hint" id="copyOk" style="margin-top:8px; display:none;">Copiato ✅</div>
+      <div style="margin-top:12px;">
+        <textarea readonly>{{ text }}</textarea>
       </div>
 
-      <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn primary" type="button" onclick="copyShare()">📋 Copia</button>
-        <a class="btn ghost" href="{{ wa_url }}" target="_blank" rel="noopener">Apri WhatsApp</a>
+      <div>
+        <a class="btn" href="{{ wa_url }}" target="_blank" rel="noopener">Apri WhatsApp</a>
 
         {% if back_url %}
-          <a class="btn" href="{{ back_url }}">← Torna alla card</a>
+          <a class="btn" href="{{ back_url }}">Torna alla card</a>
         {% else %}
-          <button class="btn" type="button" onclick="history.back()">← Torna indietro</button>
+          <a class="btn" href="/">Torna</a>
         {% endif %}
       </div>
-
-      <div class="hint" style="margin-top:10px;">
-        Se WhatsApp non incolla automaticamente, premi “Copia”, poi incolla nella chat.
-      </div>
     </div>
-
   </div>
-</div>
-
-<script>
-  function showCopied(){
-    const el = document.getElementById('copyOk');
-    if(!el) return;
-    el.style.display = 'block';
-    clearTimeout(window.__copyTimer);
-    window.__copyTimer = setTimeout(()=>{ el.style.display='none'; }, 1200);
-  }
-
-  async function copyText(txt){
-    try{
-      await navigator.clipboard.writeText(txt);
-      showCopied();
-    }catch(e){
-      const ta = document.createElement('textarea');
-      ta.value = txt;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      showCopied();
-    }
-  }
-
-  function copyShare(){
-    const box = document.getElementById('shareBox');
-    if(!box) return;
-    copyText(box.value);
-  }
-</script>
-{% endblock %}
+</body>
+</html>
