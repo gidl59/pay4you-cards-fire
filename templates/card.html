@@ -47,8 +47,6 @@
       object-position: center center !important;
       display: block;
     }
-
-    /* ✅ quando applichiamo zoom, evitiamo “spostamenti strani” */
     .avatar-img.zoomable{
       transform-origin: center center;
       will-change: transform;
@@ -72,6 +70,17 @@
       -webkit-backdrop-filter: blur(10px);
     }
     .back-to-card-fab:active{ transform: scale(.98); }
+
+    /* ✅ iOS: modali più stabili (svh/dvh) + niente “tagli” */
+    #mImg{ max-height: 90svh; max-height: 90dvh; }
+    #mVideo{ max-height: 85svh; max-height: 85dvh; }
+    #mPdf{ height: 85svh; height: 85dvh; }
+
+    /* ✅ quando apri modale, blocco scroll dietro */
+    body.modal-open{ overflow: hidden; touch-action: none; }
+
+    /* ✅ su iOS a volte il video-thumb fa “flash”: evitato con bg */
+    .video-thumb{ background: rgba(0,0,0,.35); }
   </style>
 </head>
 
@@ -169,10 +178,8 @@
           {% if p2_enabled %}
             <div class="profile-switch profile-switch-center">
               {% if p_key == 'p2' %}
-                <!-- Sei su P2: mostra SOLO P1 -->
                 <a class="profile-pill" href="/{{ ag.slug }}?lang={{ lang }}">{{ t_func('profile_1') }}</a>
               {% else %}
-                <!-- Sei su P1: mostra SOLO P2 -->
                 <a class="profile-pill" href="/{{ ag.slug }}?p=p2&lang={{ lang }}">{{ t_func('profile_2') }}</a>
               {% endif %}
             </div>
@@ -238,7 +245,6 @@
               </a>
             {% endif %}
 
-            <!-- ✅ SPOTIFY -->
             {% if ag.spotify %}
               <a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify" title="Spotify">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -377,13 +383,13 @@
         <div class="section-title">{{ t_func('videos') }}</div>
         <div class="gallery-scroll">
           {% for v in videos %}
-            <div class="video-thumb">
+            <div class="video-thumb" data-src="{{ v }}">
               <video class="video-mini"
                      src="{{ v }}"
                      muted
                      playsinline
-                     preload="metadata"
-                     poster=""
+                     webkit-playsinline
+                     preload="auto"
                      aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
@@ -416,11 +422,10 @@
       <button class="modal-x" type="button" onclick="closeModal()">✕</button>
 
       <img id="mImg" src="" alt="" style="display:none;">
-      <video id="mVideo" controls playsinline style="display:none;"></video>
+      <video id="mVideo" controls playsinline webkit-playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
 
       <div class="modal-actions">
-        <!-- ✅ share per qualunque contenuto aperto (foto/video/pdf) -->
         <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareMediaEmail()">Invia via Email</button>
 
@@ -448,10 +453,7 @@
   </div>
 
 <script>
-  // variabile globale per QR (così i bottoni WhatsApp/Email sanno cosa inviare)
   window.__QR_URL = "";
-
-  // ✅ variabili globali per contenuto aperto in MODAL (foto/video/pdf)
   window.__MEDIA_URL = "";
   window.__MEDIA_TITLE = "";
 
@@ -491,21 +493,24 @@
       window.history.back();
       return;
     }
-    // fallback: torna al base_url
     window.location.href = "{{ base_url }}";
   }
 
-  // torna su (card)
   function goTop(){
     try{ closeQrModal(); }catch(e){}
     try{ closeModal(); }catch(e){}
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // modal helpers
+  function setModalOpen(isOpen){
+    document.body.classList.toggle('modal-open', !!isOpen);
+  }
+
   function openModal(type){
     const modal = document.getElementById('modal');
     modal.style.display='flex';
+    setModalOpen(true);
+
     document.getElementById('mImg').style.display = (type==='img') ? 'block' : 'none';
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
     document.getElementById('mPdf').style.display = (type==='pdf') ? 'block' : 'none';
@@ -515,6 +520,7 @@
     const modal = document.getElementById('modal');
     if(!modal) return;
     modal.style.display='none';
+    setModalOpen(false);
 
     const img = document.getElementById('mImg');
     const vid = document.getElementById('mVideo');
@@ -536,12 +542,11 @@
     if(!src) return;
     const img = document.getElementById('mImg');
     img.src = src;
-
     window.__MEDIA_URL = src;
     window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
-
     openModal('img');
   }
+
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
@@ -550,8 +555,11 @@
     window.__MEDIA_TITLE = "Video - {{ ag.name }}";
 
     openModal('video');
+
+    // su iOS spesso serve un play “post click” (qui siamo dentro click)
     v.play().catch(()=>{});
   }
+
   function openPdf(src){
     const f = document.getElementById('mPdf');
     f.src = src;
@@ -562,7 +570,6 @@
     openModal('pdf');
   }
 
-  // click fuori chiude
   document.getElementById('modal')?.addEventListener('click', function(e){
     if(e.target === this) closeModal();
   });
@@ -570,70 +577,92 @@
     if(e.target === this) closeQrModal();
   });
 
-  // QR modal
   function openQrModal(src){
     window.__QR_URL = src || "";
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
     img.src = src;
     m.style.display = 'flex';
+    setModalOpen(true);
   }
+
   function closeQrModal(){
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
     img.src = '';
     m.style.display = 'none';
     window.__QR_URL = "";
+    setModalOpen(false);
   }
 
-  // ✅ invio QR via WhatsApp/Email
   function shareQrWhatsApp(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
-    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
-    window.open(wa, "_blank");
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
   }
   function shareQrEmail(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const subject = "QR Pay4You Card";
     const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + url + "\n";
-    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    window.location.href = mail;
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
-  // ✅ invio MEDIA (foto/video/pdf) via WhatsApp/Email
   function shareMediaWhatsApp(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
-    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
-    window.open(wa, "_blank");
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
   }
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const subject = window.__MEDIA_TITLE || "Pay4You";
     const body = "Ciao!\n\nTi invio questo contenuto:\n" + url + "\n";
-    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-    window.location.href = mail;
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
-  // ✅ Video thumbs: forza un frame "neutro" e stabile (niente poster immagini)
+  /**
+   * ✅ FIX iPhone: genera un poster dal primo frame (canvas)
+   * - Safari spesso non mostra la thumb senza poster reale
+   * - Funziona bene se i video sono sul tuo stesso dominio
+   */
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
-      v.addEventListener('loadedmetadata', ()=>{
+      // alcuni iPhone non “disegnano” finché non fai loadeddata
+      v.addEventListener('loadeddata', async ()=>{
         try{
+          // seek leggero
           if(v.duration && v.duration > 0.2){
-            v.currentTime = 0.05;
+            v.currentTime = 0.08;
           }
         }catch(e){}
       });
-      // alcuni browser rendono meglio dopo seeked
+
       v.addEventListener('seeked', ()=>{
-        try{ v.pause(); }catch(e){}
+        try{
+          // cattura frame -> poster
+          const w = v.videoWidth || 0;
+          const h = v.videoHeight || 0;
+          if(!w || !h) return;
+
+          const c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          const ctx = c.getContext('2d');
+          if(!ctx) return;
+
+          ctx.drawImage(v, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', 0.82);
+
+          // assegna poster vero
+          v.setAttribute('poster', dataUrl);
+
+          // e fermiamo il video (thumb)
+          try{ v.pause(); }catch(e){}
+        }catch(e){}
       });
     });
   })();
