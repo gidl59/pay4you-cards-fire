@@ -9,13 +9,74 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+  <!-- ✅ SOLO override mirati qui, senza toccare style.css -->
+  <style>
+    /* Logo top-left: più grande, NO quadrato/box, resta cliccabile */
+    .top-left-logo{
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 50;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .top-left-logo img{
+      width: 84px;              /* <-- più grande */
+      height: 84px;             /* <-- più grande */
+      max-width: 92px;
+      max-height: 92px;
+      object-fit: contain;      /* mantiene trasparenza/scontorno */
+      background: transparent;  /* NO box */
+      border-radius: 22px;      /* morbido, ma non "quadrato" */
+      display: block;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
+    }
+
+    /* Foto agente: crop centrato (evita facce tagliate male) */
+    .avatar-img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover !important;
+      object-position: center center !important;
+      display: block;
+    }
+
+    /* Pulsante fisso: torna su alla card */
+    .back-to-card-fab{
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      z-index: 60;
+      border: 0;
+      cursor: pointer;
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      background: rgba(0,0,0,.35);
+      color: #fff;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .back-to-card-fab:active{ transform: scale(.98); }
+  </style>
 </head>
 
 <body data-theme="">
+  <!-- ✅ freccia/ritorno alla card -->
+  <button class="back-to-card-fab" type="button" onclick="goTop()" aria-label="Torna alla card">↩︎ Card</button>
+
   <div class="page-main">
     <div class="card-outer">
 
-      <!-- ✅ Top-left logo: grande, scontornato, NON quadrato, cliccabile -->
+      <!-- ✅ Top-left logo: fisso, grande, cliccabile, NON ruota -->
       {% if ag.logo_url %}
       <a class="top-left-logo" href="{{ base_url }}" aria-label="Pay4You">
         <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
@@ -97,7 +158,7 @@
           </div>
           {% endif %}
 
-          <!-- SOCIAL -->
+          <!-- SOCIAL (SVG colorati) -->
           <div class="social-icons social-icons-center">
             {% if ag.facebook %}
               <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
@@ -293,6 +354,7 @@
                      muted
                      playsinline
                      preload="metadata"
+                     poster=""
                      aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
@@ -308,7 +370,7 @@
         <div class="section-title">{{ t_func('documents') }}</div>
         <div class="pdf-list">
           {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}', '{{ (p.name|replace(\"'\",\"\\'\") ) }}')">{{ p.name }}</button>
+            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}')">{{ p.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -322,8 +384,6 @@
   <!-- MODAL (immagine/video/pdf) -->
   <div id="modal" class="modal-overlay" style="display:none;">
     <div class="modal-box modal-big">
-      <!-- ✅ back arrow -->
-      <button class="modal-back" type="button" onclick="closeModal()" aria-label="Torna alla card">←</button>
       <button class="modal-x" type="button" onclick="closeModal()">✕</button>
 
       <img id="mImg" src="" alt="" style="display:none;">
@@ -331,13 +391,10 @@
       <iframe id="mPdf" src="" style="display:none;"></iframe>
 
       <div class="modal-actions">
-        <button class="btn ghost" type="button" onclick="shareCurrent('native')">Condividi</button>
-        <button class="btn ghost" type="button" onclick="shareCurrent('wa')">Invia WhatsApp</button>
-        <button class="btn ghost" type="button" onclick="shareCurrent('email')">Invia Email</button>
-
         {% if websites and websites|length > 0 %}
           <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
         {% endif %}
+        <button class="btn ghost" type="button" onclick="goTop()">Torna alla card</button>
         <button class="btn primary" type="button" onclick="closeModal()">{{ t_func('close') }}</button>
       </div>
     </div>
@@ -346,28 +403,20 @@
   <!-- QR MODAL -->
   <div id="qr-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <!-- ✅ back arrow -->
-      <button class="modal-back" type="button" onclick="closeQrModal()" aria-label="Torna alla card">←</button>
       <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
-
       <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
 
-      <div class="modal-actions">
-        <button class="btn ghost" type="button" onclick="shareQr('native')">Condividi</button>
-        <button class="btn ghost" type="button" onclick="shareQr('wa')">Invia WhatsApp</button>
-        <button class="btn ghost" type="button" onclick="shareQr('email')">Invia Email</button>
+      <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
+        <button class="btn ghost" type="button" onclick="shareQrWhatsApp()">Invia via WhatsApp</button>
+        <button class="btn ghost" type="button" onclick="shareQrEmail()">Invia via Email</button>
         <button class="btn primary" type="button" onclick="closeQrModal()">{{ t_func('close') }}</button>
       </div>
     </div>
   </div>
 
 <script>
-  // ====== URLs utili ======
-  const CARD_PUBLIC_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}&lang={{ lang }}{% else %}?lang={{ lang }}{% endif %}";
-  const CARD_TITLE = "Card digitale Pay4You - {{ ag.name|replace(\"'\",\"\\'\") }}";
-
-  // ====== stato share del modal principale ======
-  let CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
+  // variabile globale per QR (così i bottoni WhatsApp/Email sanno cosa inviare)
+  window.__QR_URL = "";
 
   // flip tap (solo se canFlip)
   (function(){
@@ -397,49 +446,11 @@
     });
   })();
 
-  // ====== share helpers ======
-  function shareNative(title, url){
-    const text = title + "\n" + url;
-    if (navigator.share){
-      navigator.share({ title, text, url }).catch(()=>{});
-      return true;
-    }
-    return false;
-  }
-  function shareWA(title, url){
-    const text = title + "\n" + url;
-    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
-  }
-  function shareEmail(title, url){
-    const subject = title;
-    const body = title + "\n" + url;
-    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-  }
-
-  // condividi quello che è aperto nel MODAL principale
-  function shareCurrent(mode){
-    const title = CURRENT_SHARE?.title || CARD_TITLE;
-    const url = CURRENT_SHARE?.url || CARD_PUBLIC_URL;
-
-    if(mode === 'native'){
-      if(!shareNative(title, url)) shareWA(title, url);
-      return;
-    }
-    if(mode === 'wa'){ shareWA(title, url); return; }
-    if(mode === 'email'){ shareEmail(title, url); return; }
-  }
-
-  // QR condivide SEMPRE la card
-  function shareQr(mode){
-    const title = CARD_TITLE;
-    const url = CARD_PUBLIC_URL;
-
-    if(mode === 'native'){
-      if(!shareNative(title, url)) shareWA(title, url);
-      return;
-    }
-    if(mode === 'wa'){ shareWA(title, url); return; }
-    if(mode === 'email'){ shareEmail(title, url); return; }
+  // torna su (card)
+  function goTop(){
+    try{ closeQrModal(); }catch(e){}
+    try{ closeModal(); }catch(e){}
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // modal helpers
@@ -467,32 +478,23 @@
       try{ vid.load(); }catch(e){}
     }
     if(pdf) pdf.src = '';
-
-    // reset share
-    CURRENT_SHARE = { url: CARD_PUBLIC_URL, title: CARD_TITLE };
   }
 
   function openImg(src){
     if(!src) return;
     const img = document.getElementById('mImg');
     img.src = src;
-    CURRENT_SHARE = { url: src, title: CARD_TITLE + " (Foto)" };
     openModal('img');
   }
-
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
-    CURRENT_SHARE = { url: src, title: CARD_TITLE + " (Video)" };
     openModal('video');
     v.play().catch(()=>{});
   }
-
-  function openPdf(src, name){
+  function openPdf(src){
     const f = document.getElementById('mPdf');
     f.src = src;
-    const t = (name && String(name).trim()) ? (CARD_TITLE + " - " + name) : (CARD_TITLE + " (Documento)");
-    CURRENT_SHARE = { url: src, title: t };
     openModal('pdf');
   }
 
@@ -506,6 +508,7 @@
 
   // QR modal
   function openQrModal(src){
+    window.__QR_URL = src || "";
     const m = document.getElementById('qr-modal');
     const img = document.getElementById('qr-img');
     img.src = src;
@@ -516,9 +519,27 @@
     const img = document.getElementById('qr-img');
     img.src = '';
     m.style.display = 'none';
+    window.__QR_URL = "";
   }
 
-  // ✅ Video thumbs: tenta di mostrare un frame stabile
+  // ✅ invio QR via WhatsApp/Email
+  function shareQrWhatsApp(){
+    const url = window.__QR_URL || "";
+    if(!url) return;
+    const text = "Ecco il QR della mia Pay4You Card:\n" + url;
+    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
+    window.open(wa, "_blank");
+  }
+  function shareQrEmail(){
+    const url = window.__QR_URL || "";
+    if(!url) return;
+    const subject = "QR Pay4You Card";
+    const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + url + "\n";
+    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    window.location.href = mail;
+  }
+
+  // ✅ Video thumbs: forza un frame "neutro" e stabile (niente poster immagini)
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
@@ -529,6 +550,7 @@
           }
         }catch(e){}
       });
+      // alcuni browser rendono meglio dopo seeked
       v.addEventListener('seeked', ()=>{
         try{ v.pause(); }catch(e){}
       });
