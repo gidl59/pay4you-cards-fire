@@ -674,6 +674,24 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
 
 # ===================== ROUTES =====================
 
+@app.get("/share")
+def share_page():
+    text = (request.args.get("text") or "").strip()
+    back = (request.args.get("back") or "").strip()
+
+    # fallback se back non valido
+    if back and not (back.startswith("http://") or back.startswith("https://") or back.startswith("/")):
+        back = ""
+
+    wa_url = "https://wa.me/?text=" + urllib.parse.quote(text or "")
+
+    return render_template(
+        "share.html",
+        text=text or "",
+        wa_url=wa_url,
+        back_url=back or "",
+    )
+
 @app.get("/")
 def home():
     if is_logged_in():
@@ -1491,17 +1509,12 @@ def vcard(slug):
         return base + (u if u.startswith("/") else ("/" + u))
 
     # ✅ iPhone-friendly: riduci e comprimi foto per embed
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 140_000):
-        """
-        iPhone spesso non salva la foto se è troppo pesante o in formato non compatibile.
-        Qui la convertiamo in JPEG, max 420px, qualità moderata, e la embeddamo in vCard.
-        """
+      def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
         rel = photo_url.replace("/uploads/", "", 1)
         disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-
         if not os.path.isfile(disk_path):
             return None
 
@@ -1510,27 +1523,21 @@ def vcard(slug):
 
             with Image.open(disk_path) as im:
                 im = im.convert("RGB")
-                im.thumbnail((420, 420))  # ridimensiona
+                im.thumbnail((420, 420))
 
-                # salva JPEG compresso in memoria
-                out = BytesIO()
-                im.save(out, format="JPEG", quality=72, optimize=True)
-                blob = out.getvalue()
+                # comprimi fino a stare sotto max_bytes
+                for quality in (82, 72, 62, 52, 45):
+                    buf = BytesIO()
+                    im.save(buf, format="JPEG", quality=quality, optimize=True)
+                    blob = buf.getvalue()
+                    if len(blob) <= max_bytes:
+                        b64 = base64.b64encode(blob).decode("ascii")
+                        return ("JPEG", b64)
 
-                # se ancora grande, scendi di qualità
-                if len(blob) > max_bytes:
-                    out = BytesIO()
-                    im.save(out, format="JPEG", quality=62, optimize=True)
-                    blob = out.getvalue()
-
-                if len(blob) <= 0 or len(blob) > max_bytes:
-                    return None
-
-                b64 = base64.b64encode(blob).decode("ascii")
-                return ("JPEG", b64)
-
+            return None
         except Exception:
             return None
+
 
     full_name = (ag.name or "").strip()
     parts = full_name.split(" ", 1)
@@ -1577,7 +1584,7 @@ def vcard(slug):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
     # ✅ EMAIL: iOS-friendly (TYPE ripetuti, no virgole)
-    raw_emails = (getattr(ag, "emails", "") or "").strip()
+       raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
         lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
@@ -1587,6 +1594,7 @@ def vcard(slug):
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
         lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
+
 
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
