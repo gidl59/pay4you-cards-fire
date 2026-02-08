@@ -49,7 +49,7 @@
       will-change: transform;
     }
 
-    /* (lasciato, ma non usato per i siti esterni: ora usiamo /out) */
+    /* lasciato, ma non usato per i siti esterni */
     #mWeb{
       width: min(980px, 92vw);
       height: min(78vh, 720px);
@@ -403,6 +403,14 @@
   window.__MEDIA_TITLE = "";
   window.__BACK_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}";
 
+  // ✅ trasforma /uploads/... in URL assoluto (per WhatsApp/Email)
+  function absUrl(u){
+    if(!u) return "";
+    if(u.startsWith("http://") || u.startsWith("https://")) return u;
+    if(u.startsWith("/")) return "{{ base_url }}" + u;
+    return u;
+  }
+
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
     if(!canFlip) return;
@@ -470,31 +478,33 @@
   function openImg(src){
     if(!src) return;
     document.getElementById('mImg').src = src;
-    window.__MEDIA_URL = src;
+    window.__MEDIA_URL = absUrl(src);
     window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
     openModal('img');
   }
+
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
-    window.__MEDIA_URL = src;
+    window.__MEDIA_URL = absUrl(src);
     window.__MEDIA_TITLE = "Video - {{ ag.name }}";
     openModal('video');
     v.play().catch(()=>{});
   }
+
   function openPdf(src, name){
     const f = document.getElementById('mPdf');
     f.src = src;
-    window.__MEDIA_URL = src;
+    window.__MEDIA_URL = absUrl(src);
     window.__MEDIA_TITLE = (name ? ("Documento: " + name) : "Documento - {{ ag.name }}");
     openModal('pdf');
   }
 
-  /* ✅ SITO: usa pagina interna /out con "Torna alla card" */
+  // ✅ SITO: apri pagina interna webview con "Torna alla card"
   function openWebsite(url){
     if(!url) return;
     const back = window.__BACK_URL || "/";
-    const go = "/out?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
+    const go = "/webview?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
     window.location.href = go;
   }
 
@@ -506,17 +516,18 @@
   });
 
   function openQrModal(src){
-    window.__QR_URL = src || "";
+    window.__QR_URL = absUrl(src || "");
     document.getElementById('qr-img').src = src;
     document.getElementById('qr-modal').style.display = 'flex';
   }
+
   function closeQrModal(){
     document.getElementById('qr-img').src = '';
     document.getElementById('qr-modal').style.display = 'none';
     window.__QR_URL = "";
   }
 
-  /* ✅ WhatsApp: passa da pagina interna /share (così NON torna bianco) */
+  // ✅ WhatsApp: passa da pagina interna /share (così c’è sempre "Torna alla card")
   function openSharePage(text){
     const u = "/share?back=" + encodeURIComponent(window.__BACK_URL) + "&text=" + encodeURIComponent(text);
     window.location.href = u;
@@ -528,6 +539,7 @@
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
     openSharePage(text);
   }
+
   function shareQrEmail(){
     const url = window.__QR_URL || "";
     if(!url) return;
@@ -542,6 +554,7 @@
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
     openSharePage(text);
   }
+
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
     if(!url) return;
@@ -550,6 +563,7 @@
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
+  // ✅ iPhone/Safari: prova a “caricare” un frame nei video thumb
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
