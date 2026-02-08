@@ -54,7 +54,7 @@
       will-change: transform;
     }
 
-    /* Pulsante fisso: torna su alla card */
+    /* ✅ Pulsante fisso: torna INDIETRO (history.back) */
     .back-to-card-fab{
       position: fixed;
       right: 14px;
@@ -76,8 +76,8 @@
 </head>
 
 <body data-theme="">
-  <!-- ✅ freccia/ritorno alla card -->
-  <button class="back-to-card-fab" type="button" onclick="goTop()" aria-label="Torna alla card">↩︎ Card</button>
+  <!-- ✅ tasto indietro vero -->
+  <button class="back-to-card-fab" type="button" onclick="goBack()" aria-label="Torna indietro">← Indietro</button>
 
   <div class="page-main">
     <div class="card-outer">
@@ -420,6 +420,10 @@
       <iframe id="mPdf" src="" style="display:none;"></iframe>
 
       <div class="modal-actions">
+        <!-- ✅ share per qualunque contenuto aperto (foto/video/pdf) -->
+        <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
+        <button class="btn ghost" type="button" onclick="shareMediaEmail()">Invia via Email</button>
+
         {% if websites and websites|length > 0 %}
           <a class="btn ghost" href="{{ websites[0] }}" target="_blank" rel="noopener">{{ t_func('open_website') }}</a>
         {% endif %}
@@ -446,6 +450,10 @@
 <script>
   // variabile globale per QR (così i bottoni WhatsApp/Email sanno cosa inviare)
   window.__QR_URL = "";
+
+  // ✅ variabili globali per contenuto aperto in MODAL (foto/video/pdf)
+  window.__MEDIA_URL = "";
+  window.__MEDIA_TITLE = "";
 
   // flip tap (solo se canFlip)
   (function(){
@@ -474,6 +482,18 @@
       });
     });
   })();
+
+  // ✅ torna indietro (history back) con fallback
+  function goBack(){
+    try{ closeQrModal(); }catch(e){}
+    try{ closeModal(); }catch(e){}
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    // fallback: torna al base_url
+    window.location.href = "{{ base_url }}";
+  }
 
   // torna su (card)
   function goTop(){
@@ -507,23 +527,38 @@
       try{ vid.load(); }catch(e){}
     }
     if(pdf) pdf.src = '';
+
+    window.__MEDIA_URL = "";
+    window.__MEDIA_TITLE = "";
   }
 
   function openImg(src){
     if(!src) return;
     const img = document.getElementById('mImg');
     img.src = src;
+
+    window.__MEDIA_URL = src;
+    window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
+
     openModal('img');
   }
   function openVideo(src){
     const v = document.getElementById('mVideo');
     v.src = src;
+
+    window.__MEDIA_URL = src;
+    window.__MEDIA_TITLE = "Video - {{ ag.name }}";
+
     openModal('video');
     v.play().catch(()=>{});
   }
   function openPdf(src){
     const f = document.getElementById('mPdf');
     f.src = src;
+
+    window.__MEDIA_URL = src;
+    window.__MEDIA_TITLE = "Documento - {{ ag.name }}";
+
     openModal('pdf');
   }
 
@@ -564,6 +599,23 @@
     if(!url) return;
     const subject = "QR Pay4You Card";
     const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + url + "\n";
+    const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    window.location.href = mail;
+  }
+
+  // ✅ invio MEDIA (foto/video/pdf) via WhatsApp/Email
+  function shareMediaWhatsApp(){
+    const url = window.__MEDIA_URL || "";
+    if(!url) return;
+    const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
+    const wa = "https://wa.me/?text=" + encodeURIComponent(text);
+    window.open(wa, "_blank");
+  }
+  function shareMediaEmail(){
+    const url = window.__MEDIA_URL || "";
+    if(!url) return;
+    const subject = window.__MEDIA_TITLE || "Pay4You";
+    const body = "Ciao!\n\nTi invio questo contenuto:\n" + url + "\n";
     const mail = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
     window.location.href = mail;
   }
