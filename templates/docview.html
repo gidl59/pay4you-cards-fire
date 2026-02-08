@@ -1,1 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Documento | Pay4You{% endblock %}
 
+{% block content %}
+<div class="out-shell">
+  <div class="out-head">
+    <div class="out-title">{{ title or 'Documento' }}</div>
+    <a class="btn-mini ghost" href="{{ back or '/' }}">← Torna alla card</a>
+  </div>
+
+  <div class="out-frame">
+    <iframe src="{{ url }}"></iframe>
+  </div>
+
+  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
+</div>
+{% endblock %}
