@@ -206,6 +206,14 @@
           <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
         </div>
 
+        <!-- ✅ SPOTIFY -->
+        <div class="field">
+          <label>Spotify</label>
+          <input type="text" name="spotify" value="{{ D.spotify if D and D.spotify else '' }}"
+                 placeholder="es: https://open.spotify.com/artist/...  oppure  /show/...">
+          <div class="hint">Incolla un link Spotify completo (artista / podcast / playlist / profilo).</div>
+        </div>
+
         {# ====== FOTO + CROP MANUALE ====== #}
         {% set _px = (D.photo_pos_x|default(50))|int %}
         {% set _py = (D.photo_pos_y|default(35))|int %}
