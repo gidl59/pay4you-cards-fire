@@ -776,3 +776,75 @@ body[data-theme="light"] .header-link:hover{
 body[data-theme="light"] .brand-title{
   color:#0f172a;
 }
+/* =========================
+   EXTRA: hint-box / section-box / linklike / form wrap
+   ========================= */
+.hint-box{
+  margin-top:12px;
+  padding:12px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  color:rgba(255,255,255,.92);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  line-height:1.35;
+}
+body[data-theme="light"] .hint-box{
+  background:rgba(255,255,255,.86);
+  border-color:rgba(15,23,42,.12);
+  color:#0f172a;
+}
+
+.section-box{
+  margin-top:12px;
+  padding:16px 14px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  backdrop-filter: blur(18px);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+body[data-theme="light"] .section-box{
+  background:rgba(255,255,255,.78);
+  border-color:rgba(15,23,42,.12);
+}
+
+.form-wrap{width:min(var(--maxw), 100%); margin:0 auto;}
+.form-head{display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap;}
+.form-title{font-size:30px; font-weight:950; margin:0}
+.form-sub{color:var(--muted); font-size:13px; margin-top:6px}
+.form-actions{display:flex; gap:10px; flex-wrap:wrap}
+
+.card-form{margin-top:14px;}
+.sticky-save{
+  position:sticky;
+  bottom:12px;
+  margin-top:14px;
+  padding:10px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+body[data-theme="light"] .sticky-save{
+  background:rgba(255,255,255,.82);
+  border-color:rgba(15,23,42,.12);
+}
+
+/* Bottone "linklike" per siti: sembra link, ma è button */
+.linklike{
+  border:none;
+  background:transparent;
+  color:inherit;
+  font-weight:900;
+  cursor:pointer;
+  padding:0;
+  text-decoration:underline;
+  opacity:.95;
+}
+.linklike:hover{opacity:1}
