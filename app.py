@@ -1416,10 +1416,6 @@ def public_card(slug):
     )
 
 # ---------- VCARD ----------
-@app.get("/<slug>.vfc")
-def vcard_alias(slug):
-    return redirect(f"/{slugify(slug)}.vcf", code=302)
-
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1441,6 +1437,48 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
+    # ✅ iPhone-friendly: riduci e comprimi foto per embed
+    def try_embed_photo_b64(photo_url: str, max_bytes: int = 140_000):
+        """
+        iPhone spesso non salva la foto se è troppo pesante o in formato non compatibile.
+        Qui la convertiamo in JPEG, max 420px, qualità moderata, e la embeddamo in vCard.
+        """
+        if not photo_url or not photo_url.startswith("/uploads/"):
+            return None
+
+        rel = photo_url.replace("/uploads/", "", 1)
+        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
+
+        if not os.path.isfile(disk_path):
+            return None
+
+        try:
+            from PIL import Image
+
+            with Image.open(disk_path) as im:
+                im = im.convert("RGB")
+                im.thumbnail((420, 420))  # ridimensiona
+
+                # salva JPEG compresso in memoria
+                out = BytesIO()
+                im.save(out, format="JPEG", quality=72, optimize=True)
+                blob = out.getvalue()
+
+                # se ancora grande, scendi di qualità
+                if len(blob) > max_bytes:
+                    out = BytesIO()
+                    im.save(out, format="JPEG", quality=62, optimize=True)
+                    blob = out.getvalue()
+
+                if len(blob) <= 0 or len(blob) > max_bytes:
+                    return None
+
+                b64 = base64.b64encode(blob).decode("ascii")
+                return ("JPEG", b64)
+
+        except Exception:
+            return None
+
     full_name = (ag.name or "").strip()
     parts = full_name.split(" ", 1)
     first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
@@ -1458,9 +1496,17 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # ✅ iPhone più stabile: SOLO PHOTO URI (niente base64 embed)
+    # ✅ foto: embedded (ridotta) + URI
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     photo_abs = abs_url(photo_url)
+    embedded = try_embed_photo_b64(photo_url)
+
+    if embedded:
+        mime, b64 = embedded
+        base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
+        for fl in fold_line(base_line, 74):
+            lines.append(fl)
+
     if photo_abs:
         lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
@@ -1469,23 +1515,25 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
+    # ✅ TEL: iOS-friendly (TYPE ripetuti, no virgole)
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL,VOICE:{clean_str(ag.phone_mobile2)}")
+        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE:{clean_str(ag.phone_mobile2)}")
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
+        lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
+    # ✅ EMAIL: iOS-friendly (TYPE ripetuti, no virgole)
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK,PREF:{valid_emails[0]}")
+        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
         for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET,WORK:{e}")
+            lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{e}")
 
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
+        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
 
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
@@ -1493,6 +1541,7 @@ def vcard(slug):
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
+    # link card
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1534,12 +1583,14 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content)
-    resp.headers["Content-Type"] = "text/vcard; charset=utf-8"
+    # ✅ più compatibile iOS
+    resp.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+
 
 # ---------- QR ----------
 @app.get("/<slug>/qr.png")
