@@ -609,8 +609,6 @@ def agent_to_view(ag: Agent):
         telegram=safe_url(ag.telegram),
         whatsapp=clean_str(ag.whatsapp),
         youtube=safe_url(getattr(ag, "youtube", None)),
-
-        # ✅ spotify
         spotify=safe_url(getattr(ag, "spotify", None)),
 
         pec=clean_str(ag.pec),
@@ -620,7 +618,7 @@ def agent_to_view(ag: Agent):
         photo_url=clean_str(ag.photo_url),
         logo_url=logo,
 
-        # ✅ crop in view (risolve il 500)
+        # ✅ crop in view
         photo_pos_x=px,
         photo_pos_y=py,
         photo_zoom=pz,
@@ -641,7 +639,6 @@ def agent_to_view(ag: Agent):
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    # ✅ crop defaults anche per view "vuota"
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -661,21 +658,16 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         telegram="",
         whatsapp="",
         youtube="",
-
-        # ✅ spotify
         spotify="",
-
         pec="",
         piva="",
         sdi="",
         addresses="",
         photo_url="",
         logo_url="",
-
         photo_pos_x=50,
         photo_pos_y=35,
         photo_zoom=1.0,
-
         gallery_urls="",
         video_urls="",
         pdf1_url="",
@@ -751,6 +743,7 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
+        # NB: qui passiamo l'oggetto Agent grezzo perché il template usa solo name/slug/p2_enabled
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
 # ---------- ADMIN CRUD ----------
@@ -778,7 +771,6 @@ def _save_common_fields_to_agent(ag: Agent):
 
     # ✅ VINCOLO: o RUOTA FOTO (avatar_spin) o FLIP (allow_flip). Solo uno.
     if int(ag.avatar_spin or 0) == 1 and int(ag.allow_flip or 0) == 1:
-        # priorità alla rotazione foto (se attivata)
         ag.allow_flip = 0
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
@@ -1098,7 +1090,6 @@ def me_profile2():
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
               "back_media_mode","back_media_url",
-              # ✅ crop P2
               "photo_pos_x","photo_pos_y","photo_zoom"]:
         v = p2.get(k)
         if v is None:
@@ -1136,14 +1127,12 @@ def _save_profile2_payload_from_form():
     payload["logo_spin"] = form_checkbox_int("logo_spin")
     payload["allow_flip"] = form_checkbox_int("allow_flip")
 
-    # ✅ VINCOLO: o RUOTA FOTO (avatar_spin) o FLIP (allow_flip). Solo uno.
     if int(payload.get("avatar_spin") or 0) == 1 and int(payload.get("allow_flip") or 0) == 1:
         payload["allow_flip"] = 0
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     payload["back_media_mode"] = mode if mode in ("company", "personal") else "company"
 
-    # ✅ crop P2
     payload["photo_pos_x"] = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
     payload["photo_pos_y"] = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
     payload["photo_zoom"]  = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
@@ -1209,7 +1198,6 @@ def me_profile2_post():
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    # normalizza url social (incluso spotify)
     for k in ("facebook","instagram","linkedin","tiktok","telegram","youtube","spotify"):
         if payload.get(k):
             payload[k] = safe_url(payload[k])
@@ -1247,7 +1235,6 @@ def admin_profile2(slug):
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
               "back_media_mode","back_media_url",
-              # ✅ crop P2
               "photo_pos_x","photo_pos_y","photo_zoom"]:
         v = p2.get(k)
         if v is None:
@@ -1287,7 +1274,6 @@ def admin_profile2_post(slug):
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
-    # normalizza url social (incluso spotify)
     for k in ("facebook","instagram","linkedin","tiktok","telegram","youtube","spotify"):
         if payload.get(k):
             payload[k] = safe_url(payload[k])
@@ -1325,7 +1311,6 @@ def admin_credentials_html(slug):
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
     )
 
-# ✅ ALIAS “Credenziali” (se in qualche template il link è diverso)
 @app.get("/admin/<slug>/credenziali")
 @admin_required
 def admin_credentials_alias_it(slug):
@@ -1334,10 +1319,8 @@ def admin_credentials_alias_it(slug):
 @app.get("/credentials/<slug>")
 @login_required
 def credentials_alias(slug):
-    # se admin, va alla pagina credenziali admin
     if is_admin():
         return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
-    # se client, per sicurezza reindirizza alla dashboard (non deve vedere credenziali di altri)
     return redirect(url_for("dashboard"))
 
 # ---------- PUBLIC CARD ----------
@@ -1372,7 +1355,6 @@ def public_card(slug):
                       "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
                       "orbit_spin","avatar_spin","logo_spin","allow_flip",
                       "back_media_mode","back_media_url",
-                      # ✅ crop P2
                       "photo_pos_x","photo_pos_y","photo_zoom"]:
                 v = p2.get(k)
                 if v is None:
@@ -1447,10 +1429,6 @@ def public_card(slug):
 
 # ---------- VCARD: helper fold line ----------
 def fold_line(line: str, limit: int = 74):
-    """
-    vCard folding: iOS vuole righe max ~75 chars.
-    Line folding: CRLF + spazio all'inizio della riga successiva.
-    """
     out = []
     s = line
     while len(s) > limit:
@@ -1489,13 +1467,10 @@ def vcard(slug):
     def try_embed_photo_b64(photo_url: str, max_bytes: int = 350_000):
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
-
         rel = photo_url.replace("/uploads/", "", 1)
         disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-
         if not os.path.isfile(disk_path):
             return None
-
         try:
             size = os.path.getsize(disk_path)
             if size <= 0 or size > max_bytes:
