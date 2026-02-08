@@ -229,6 +229,28 @@ def is_phone_like(s: str) -> bool:
     d = digits_only(s)
     return len(d) >= 7
 
+def clamp_int(v, lo, hi, default):
+    try:
+        iv = int(v)
+        if iv < lo:
+            return lo
+        if iv > hi:
+            return hi
+        return iv
+    except Exception:
+        return default
+
+def clamp_float(v, lo, hi, default):
+    try:
+        fv = float(v)
+        if fv < lo:
+            return lo
+        if fv > hi:
+            return hi
+        return fv
+    except Exception:
+        return default
+
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
@@ -295,6 +317,11 @@ class Agent(Base):
     logo_url = Column(String, nullable=True)
     extra_logo_url = Column(String, nullable=True)
 
+    # ✅ CROP FOTO (NUOVO)
+    photo_pos_x = Column(Integer, nullable=True)   # 0..100
+    photo_pos_y = Column(Integer, nullable=True)   # 0..100
+    photo_zoom  = Column(String, nullable=True)    # float in string (compat)
+
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
     pdf1_url = Column(Text, nullable=True)
@@ -345,6 +372,11 @@ ensure_sqlite_column("agents", "allow_flip", "INTEGER")
 ensure_sqlite_column("agents", "youtube", "TEXT")
 ensure_sqlite_column("agents", "back_media_url", "TEXT")
 ensure_sqlite_column("agents", "back_media_mode", "TEXT")
+
+# ✅ MIGRAZIONI CROP FOTO
+ensure_sqlite_column("agents", "photo_pos_x", "INTEGER")
+ensure_sqlite_column("agents", "photo_pos_y", "INTEGER")
+ensure_sqlite_column("agents", "photo_zoom", "REAL")
 
 # ===== HELPERS =====
 def is_logged_in() -> bool:
@@ -546,6 +578,11 @@ def agent_to_view(ag: Agent):
     back_mode = clean_str(getattr(ag, "back_media_mode", None)) or "company"
     back_url = clean_str(getattr(ag, "back_media_url", None))
 
+    # ✅ crop defaults
+    px = clamp_int(getattr(ag, "photo_pos_x", None), 0, 100, 50)
+    py = clamp_int(getattr(ag, "photo_pos_y", None), 0, 100, 35)
+    pz = clamp_float(getattr(ag, "photo_zoom", None), 1.0, 2.6, 1.0)
+
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -571,6 +608,12 @@ def agent_to_view(ag: Agent):
         addresses=clean_str(ag.addresses),
         photo_url=clean_str(ag.photo_url),
         logo_url=logo,
+
+        # ✅ crop in view (risolve il 500)
+        photo_pos_x=px,
+        photo_pos_y=py,
+        photo_zoom=pz,
+
         gallery_urls=clean_str(ag.gallery_urls),
         video_urls=clean_str(ag.video_urls),
         pdf1_url=clean_str(ag.pdf1_url),
@@ -587,6 +630,7 @@ def agent_to_view(ag: Agent):
     )
 
 def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
+    # ✅ crop defaults anche per view "vuota"
     return SimpleNamespace(
         id=ag.id,
         slug=ag.slug,
@@ -612,6 +656,11 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         addresses="",
         photo_url="",
         logo_url="",
+
+        photo_pos_x=50,
+        photo_pos_y=35,
+        photo_zoom=1.0,
+
         gallery_urls="",
         video_urls="",
         pdf1_url="",
@@ -713,6 +762,11 @@ def _save_common_fields_to_agent(ag: Agent):
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     ag.back_media_mode = mode if mode in ("company", "personal") else "company"
+
+    # ✅ SALVATAGGIO CROP FOTO
+    ag.photo_pos_x = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
+    ag.photo_pos_y = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
+    ag.photo_zoom  = str(clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0))
 
 def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
@@ -1021,13 +1075,20 @@ def me_profile2():
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
-              "back_media_mode","back_media_url"]:
+              "back_media_mode","back_media_url",
+              # ✅ crop P2
+              "photo_pos_x","photo_pos_y","photo_zoom"]:
         v = p2.get(k)
         if v is None:
             continue
-        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip", "photo_pos_x", "photo_pos_y"):
             try:
                 setattr(view, k, int(v))
+            except Exception:
+                pass
+        elif k in ("photo_zoom",):
+            try:
+                setattr(view, k, float(v))
             except Exception:
                 pass
         else:
@@ -1050,6 +1111,11 @@ def _save_profile2_payload_from_form():
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     payload["back_media_mode"] = mode if mode in ("company", "personal") else "company"
+
+    # ✅ crop P2
+    payload["photo_pos_x"] = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
+    payload["photo_pos_y"] = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
+    payload["photo_zoom"]  = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
 
     photo = request.files.get("photo")
     logo = request.files.get("logo")
@@ -1143,13 +1209,20 @@ def admin_profile2(slug):
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
-              "back_media_mode","back_media_url"]:
+              "back_media_mode","back_media_url",
+              # ✅ crop P2
+              "photo_pos_x","photo_pos_y","photo_zoom"]:
         v = p2.get(k)
         if v is None:
             continue
-        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+        if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip", "photo_pos_x", "photo_pos_y"):
             try:
                 setattr(view, k, int(v))
+            except Exception:
+                pass
+        elif k in ("photo_zoom",):
+            try:
+                setattr(view, k, float(v))
             except Exception:
                 pass
         else:
@@ -1236,13 +1309,20 @@ def public_card(slug):
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
                       "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
                       "orbit_spin","avatar_spin","logo_spin","allow_flip",
-                      "back_media_mode","back_media_url"]:
+                      "back_media_mode","back_media_url",
+                      # ✅ crop P2
+                      "photo_pos_x","photo_pos_y","photo_zoom"]:
                 v = p2.get(k)
                 if v is None:
                     continue
-                if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip"):
+                if k in ("orbit_spin","avatar_spin","logo_spin","allow_flip", "photo_pos_x", "photo_pos_y"):
                     try:
                         setattr(ag_view, k, int(v))
+                    except Exception:
+                        pass
+                elif k in ("photo_zoom",):
+                    try:
+                        setattr(ag_view, k, float(v))
                     except Exception:
                         pass
                 else:
@@ -1316,7 +1396,6 @@ def fold_line(line: str, limit: int = 74):
 # ---------- VCARD: alias .vfc -> .vcf ----------
 @app.get("/<slug>.vfc")
 def vcard_alias(slug):
-    # se sbagli estensione, non 404: ti porta alla .vcf
     return redirect(f"/{slugify(slug)}.vcf", code=302)
 
 # ---------- VCARD: FOTO + EMAIL OK ----------
@@ -1342,10 +1421,6 @@ def vcard(slug):
         return base + (u if u.startswith("/") else ("/" + u))
 
     def try_embed_photo_b64(photo_url: str, max_bytes: int = 350_000):
-        """
-        Embed base64: più affidabile su iPhone.
-        Se il file è locale /uploads/... e piccolo, lo embeddiamo.
-        """
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
@@ -1390,7 +1465,6 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # FOTO: DOPPIO metodo (BASE64 + URL fallback)
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     photo_abs = abs_url(photo_url)
     embedded = try_embed_photo_b64(photo_url)
@@ -1409,7 +1483,6 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL: SOLO numeri
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
         lines.append(f"TEL;TYPE=CELL,VOICE,PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
@@ -1417,7 +1490,6 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK,VOICE:{clean_str(ag.phone_office)}")
 
-    # EMAIL: SOLO email valide
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
@@ -1429,14 +1501,12 @@ def vcard(slug):
     if is_email_like(pec):
         lines.append(f"EMAIL;TYPE=INTERNET,WORK:{pec}")
 
-    # ADR: primo indirizzo
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # URL etichettati
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1444,20 +1514,17 @@ def vcard(slug):
         lines.append(f"item2.URL:{websites[0]}")
         lines.append("item2.X-ABLABEL:Sito web")
 
-    # NOTE
     note_parts = []
     if clean_str(getattr(ag, "piva", None)):
         note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
     note_parts.append(f"{label_card}: {card_url}")
     lines.append("NOTE:" + " | ".join(note_parts))
 
-    # WhatsApp
     wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
     if wa:
         lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
         lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
 
-    # Social
     for typ, raw in [
         ("facebook", getattr(ag, "facebook", None)),
         ("instagram", getattr(ag, "instagram", None)),
@@ -1470,7 +1537,6 @@ def vcard(slug):
         if u:
             lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
 
-    # PIVA/SDI
     if clean_str(getattr(ag, "piva", None)):
         lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
     if clean_str(getattr(ag, "sdi", None)):
