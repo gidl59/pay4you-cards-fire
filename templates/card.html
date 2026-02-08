@@ -49,7 +49,7 @@
       will-change: transform;
     }
 
-    /* ✅ iframe sito dentro modal */
+    /* (lasciato, ma non usato per i siti esterni: ora usiamo /out) */
     #mWeb{
       width: min(980px, 92vw);
       height: min(78vh, 720px);
@@ -223,7 +223,7 @@
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
 
-      {% if mobiles or phone_office or emails or pec_email or websites %}
+      {% if mobiles or office_value or emails or pec_email or websites %}
       <div class="section">
         <div class="section-title">{{ t_func('contacts') }}</div>
 
@@ -256,10 +256,10 @@
           </div>
         {% endif %}
 
-        {% if phone_office %}
+        {% if office_value %}
           <div class="row row-phone">
             <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
-            <a href="tel:{{ phone_office|replace(' ','') }}">{{ phone_office }}</a>
+            <a href="tel:{{ office_value|replace(' ','') }}">{{ office_value }}</a>
           </div>
         {% endif %}
 
@@ -490,14 +490,12 @@
     openModal('pdf');
   }
 
-  /* ✅ SITO dentro modal (no pagina ponte sbagliata) */
+  /* ✅ SITO: usa pagina interna /out con "Torna alla card" */
   function openWebsite(url){
     if(!url) return;
-    const w = document.getElementById('mWeb');
-    w.src = url;
-    window.__MEDIA_URL = url;
-    window.__MEDIA_TITLE = "Sito - {{ ag.name }}";
-    openModal('web');
+    const back = window.__BACK_URL || "/";
+    const go = "/out?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
+    window.location.href = go;
   }
 
   document.getElementById('modal')?.addEventListener('click', function(e){
