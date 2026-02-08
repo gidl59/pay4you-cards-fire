@@ -1469,6 +1469,17 @@ def vcard(slug):
 
     lang = pick_lang_from_request()
     label_card = t(lang, "digital_card_label")
+        # ✅ vCard folding: iOS vuole righe max ~75 chars
+    # Line folding: CRLF + spazio all'inizio della riga successiva.
+    def fold_line(line: str, limit: int = 74):
+        out = []
+        s = line
+        while len(s) > limit:
+            out.append(s[:limit])
+            s = " " + s[limit:]
+        out.append(s)
+        return out
+
 
     def abs_url(u: str) -> str:
         u = clean_str(u) or ""
