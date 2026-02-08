@@ -293,7 +293,13 @@
             <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
             <div class="right-stack">
               {% for w in websites %}
-                <div class="stack-item"><a href="{{ w }}" target="_blank" rel="noopener">{{ w|replace('https://','')|replace('http://','') }}</a></div>
+                <div class="stack-item">
+  <a href="/out?u={{ w|urlencode }}&back={{ (base_url ~ '/' ~ ag.slug ~ ('?p=p2' if p_key=='p2' else '') ~ ('&lang=' ~ lang if p_key=='p2' else '?lang=' ~ lang))|urlencode }}"
+     target="_blank" rel="noopener">
+    {{ w|replace('https://','')|replace('http://','') }}
+  </a>
+</div>
+
               {% endfor %}
             </div>
           </div>
