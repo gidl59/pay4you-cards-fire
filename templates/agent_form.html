@@ -10,11 +10,7 @@
         {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
       </h1>
 
-      {% if editing_profile2 %}
-        {% set D = agent %}
-      {% else %}
-        {% set D = agent %}
-      {% endif %}
+      {% set D = agent %}
 
       {% if session.get('role') != 'admin' and agent %}
         <div class="toolbar">
@@ -210,9 +206,84 @@
           <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
         </div>
 
-        <div class="field">
-          <label>Foto profilo (max 8MB)</label>
-          <input type="file" name="photo" accept="image/*">
+        {# ====== FOTO + CROP MANUALE ====== #}
+        {% set _px = (D.photo_pos_x|default(50))|int %}
+        {% set _py = (D.photo_pos_y|default(35))|int %}
+        {% set _pz = (D.photo_zoom|default(1.0)) %}
+
+        <div class="field full details">
+          <details open>
+            <summary>Foto profilo + Centratura manuale (consigliato)</summary>
+
+            <div class="grid-2" style="margin-top:10px; align-items:start;">
+              <div class="field">
+                <label>Carica foto profilo (max 8MB)</label>
+                <input type="file" name="photo" accept="image/*" id="photoFile">
+                <div class="hint">Dopo aver scelto la foto, usa i cursori per centrare il volto nel cerchio.</div>
+
+                {# valori salvati nel DB #}
+                <input type="hidden" name="photo_pos_x" id="photoPosX" value="{{ _px }}">
+                <input type="hidden" name="photo_pos_y" id="photoPosY" value="{{ _py }}">
+                <input type="hidden" name="photo_zoom"  id="photoZoom" value="{{ _pz }}">
+
+                <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn-mini ghost" type="button" id="cropResetBtn">Reset</button>
+                  <span class="hint" id="cropHint" style="margin:0;">X={{ _px }} · Y={{ _py }} · Zoom={{ _pz }}</span>
+                </div>
+
+                <div class="grid-3" style="margin-top:10px;">
+                  <div class="field">
+                    <label>X (sinistra/destra)</label>
+                    <input type="range" min="0" max="100" step="1" value="{{ _px }}" id="rangeX">
+                  </div>
+                  <div class="field">
+                    <label>Y (su/giù)</label>
+                    <input type="range" min="0" max="100" step="1" value="{{ _py }}" id="rangeY">
+                  </div>
+                  <div class="field">
+                    <label>Zoom</label>
+                    <input type="range" min="1" max="2.6" step="0.01" value="{{ _pz }}" id="rangeZ">
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Anteprima nel cerchio</label>
+
+                <div id="cropPreviewWrap" style="
+                    width:220px; height:220px; border-radius:999px;
+                    border:3px solid rgba(243,198,43,.55);
+                    background: rgba(0,0,0,.22);
+                    overflow:hidden;
+                    box-shadow: 0 18px 40px rgba(0,0,0,.45);
+                    position:relative;
+                ">
+                  <img id="cropPreviewImg"
+                       src="{{ (D.photo_url if D and D.photo_url else '') }}"
+                       alt="Preview"
+                       style="
+                         width:100%;
+                         height:100%;
+                         object-fit:cover;
+                         object-position: {{ _px }}% {{ _py }}%;
+                         transform: scale({{ _pz }});
+                         transform-origin: center;
+                         display:block;
+                       ">
+                  <div id="cropNoImg" style="
+                      position:absolute; inset:0;
+                      display:{% if D and D.photo_url %}none{% else %}flex{% endif %};
+                      align-items:center; justify-content:center;
+                      font-size:42px; color: rgba(255,255,255,.75);
+                  ">👤</div>
+                </div>
+
+                <div class="hint" style="margin-top:10px;">
+                  Tip: aumenta Zoom finché il viso riempie bene il cerchio, poi regola X/Y.
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         <div class="field">
@@ -388,4 +459,71 @@
     </form>
   </div>
 </div>
+
+<script>
+(function(){
+  const fileInput = document.getElementById('photoFile');
+  const img = document.getElementById('cropPreviewImg');
+  const noImg = document.getElementById('cropNoImg');
+
+  const rangeX = document.getElementById('rangeX');
+  const rangeY = document.getElementById('rangeY');
+  const rangeZ = document.getElementById('rangeZ');
+
+  const hidX = document.getElementById('photoPosX');
+  const hidY = document.getElementById('photoPosY');
+  const hidZ = document.getElementById('photoZoom');
+
+  const hint = document.getElementById('cropHint');
+  const resetBtn = document.getElementById('cropResetBtn');
+
+  function apply(){
+    const x = parseInt(rangeX.value || '50', 10);
+    const y = parseInt(rangeY.value || '35', 10);
+    const z = parseFloat(rangeZ.value || '1');
+
+    hidX.value = String(x);
+    hidY.value = String(y);
+    hidZ.value = String(z);
+
+    if(img){
+      img.style.objectPosition = x + "% " + y + "%";
+      img.style.transform = "scale(" + z + ")";
+    }
+    if(hint){
+      hint.textContent = "X=" + x + " · Y=" + y + " · Zoom=" + z.toFixed(2);
+    }
+  }
+
+  rangeX?.addEventListener('input', apply);
+  rangeY?.addEventListener('input', apply);
+  rangeZ?.addEventListener('input', apply);
+
+  resetBtn?.addEventListener('click', function(){
+    rangeX.value = 50;
+    rangeY.value = 35;
+    rangeZ.value = 1;
+    apply();
+  });
+
+  fileInput?.addEventListener('change', function(){
+    const f = fileInput.files && fileInput.files[0];
+    if(!f) return;
+
+    const url = URL.createObjectURL(f);
+    if(img){
+      img.src = url;
+      img.onload = () => URL.revokeObjectURL(url);
+    }
+    if(noImg) noImg.style.display = 'none';
+
+    // non resetto i valori: l'utente può caricare e poi centrare
+    apply();
+  });
+
+  // init
+  apply();
+})();
+</script>
+
 {% endblock %}
