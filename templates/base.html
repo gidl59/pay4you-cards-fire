@@ -51,7 +51,7 @@
   </style>
 </head>
 
-<body>
+<body data-theme="">
   <div class="app-shell">
 
     {% if session.get('username') %}
@@ -91,5 +91,14 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <script>
+    // Theme init (auto/light/dark)
+    (function(){
+      const KEY="p4y_theme";
+      const saved = localStorage.getItem(KEY) || "auto";
+      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
+    })();
+  </script>
 </body>
 </html>
