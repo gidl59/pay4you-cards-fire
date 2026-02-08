@@ -19,6 +19,11 @@
       {% if is_admin %}
         <a class="btn-mini ghost" href="{{ url_for('new_agent') }}">+ Nuova card</a>
       {% else %}
+        <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica Profilo 1</a>
+        {% if agent and (agent.p2_enabled or 0)|int == 1 %}
+          <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica Profilo 2</a>
+        {% endif %}
+
         {% if agent and (agent.p2_enabled or 0)|int == 1 %}
           <form method="post" action="{{ url_for('me_deactivate_p2') }}">
             <button class="btn-mini warn" type="submit">Disattiva Profilo 2</button>
@@ -41,12 +46,9 @@
 
     {% for a in agents %}
     <div class="table-row">
-      <div>
-        <span class="name-badge">{{ a.name }}</span>
-      </div>
-      <div>
-        <span class="slug-badge">{{ a.slug }}</span>
-      </div>
+      <div><span class="name-badge">{{ a.name }}</span></div>
+      <div><span class="slug-badge">{{ a.slug }}</span></div>
+
       <div class="actions-cell">
         <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri card</a>
 
@@ -86,13 +88,4 @@
 
   <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
 </div>
-
-<script>
-  // Theme (coerente con base)
-  (function(){
-    const KEY="p4y_theme";
-    const saved = localStorage.getItem(KEY) || "auto";
-    document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
-  })();
-</script>
 {% endblock %}
