@@ -672,6 +672,60 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         back_media_url="",
     )
 
+# ---------- VCARD helpers (GLOBALI, così niente indent errors) ----------
+
+def fold_line(line: str, limit: int = 74):
+    """
+    vCard folding: CRLF + spazio all'inizio della riga successiva.
+    iOS vuole righe max ~75 chars.
+    """
+    out = []
+    s = line
+    while len(s) > limit:
+        out.append(s[:limit])
+        s = " " + s[limit:]
+    out.append(s)
+    return out
+
+def abs_url_from_base(u: str, base: str) -> str:
+    u = clean_str(u) or ""
+    if not u:
+        return ""
+    if u.startswith("http://") or u.startswith("https://"):
+        return u
+    return base + (u if u.startswith("/") else ("/" + u))
+
+def try_embed_photo_b64(photo_url: str, uploads_dir: str, max_bytes: int = 320_000):
+    """
+    Ritorna tuple (MIME, BASE64) oppure None.
+    Converte e comprime in JPEG per compatibilità iPhone/Contatti.
+    """
+    if not photo_url or not photo_url.startswith("/uploads/"):
+        return None
+
+    rel = photo_url.replace("/uploads/", "", 1)
+    disk_path = os.path.join(uploads_dir, rel)
+    if not os.path.isfile(disk_path):
+        return None
+
+    try:
+        from PIL import Image
+
+        with Image.open(disk_path) as im:
+            im = im.convert("RGB")
+            im.thumbnail((420, 420))
+
+            for quality in (82, 72, 62, 52, 45):
+                buf = BytesIO()
+                im.save(buf, format="JPEG", quality=quality, optimize=True)
+                blob = buf.getvalue()
+                if len(blob) <= max_bytes:
+                    b64 = base64.b64encode(blob).decode("ascii")
+                    return ("JPEG", b64)
+        return None
+    except Exception:
+        return None
+
 # ===================== ROUTES =====================
 
 @app.get("/share")
@@ -679,7 +733,6 @@ def share_page():
     text = (request.args.get("text") or "").strip()
     back = (request.args.get("back") or "").strip()
 
-    # fallback se back non valido
     if back and not (back.startswith("http://") or back.startswith("https://") or back.startswith("/")):
         back = ""
 
@@ -1404,7 +1457,6 @@ def public_card(slug):
     if is_phone_like(getattr(ag_view, "phone_mobile2", "") or ""):
         mobiles.append((ag_view.phone_mobile2 or "").strip())
 
-    # ✅ passiamo il valore "office" grezzo al template
     office_value = (ag_view.phone_office or "").strip()
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or (mobiles[0] if mobiles else ""))
 
@@ -1426,26 +1478,24 @@ def public_card(slug):
         websites=websites,
         addresses=addresses,
         mobiles=mobiles,
-        office_value=office_value,   # ✅ nuovo
+        office_value=office_value,
         wa_link=wa_link,
         qr_url=qr_url,
         p_key=p_key,
         p2_enabled=p2_enabled,
     )
+
 @app.get("/out")
 def out():
     u = (request.args.get("u") or "").strip()
     back = (request.args.get("back") or "").strip()
 
-    # sicurezza minima: accetta solo http/https
     if not (u.startswith("http://") or u.startswith("https://")):
         return redirect(back or url_for("dashboard"))
 
-    # back può essere relativo (es: /mario-rossi?lang=it)
     if not back:
         back = url_for("dashboard")
 
-    # pagina HTML semplice
     html = f"""
     <!doctype html>
     <html lang="it">
@@ -1487,79 +1537,6 @@ def vcard(slug):
 
     lang = pick_lang_from_request()
     label_card = t(lang, "digital_card_label")
-        # ✅ vCard folding: iOS vuole righe max ~75 chars
-    # Line folding: CRLF + spazio all'inizio della riga successiva.
-    def fold_line(line: str, limit: int = 74):
-        out = []
-        s = line
-        while len(s) > limit:
-            out.append(s[:limit])
-            s = " " + s[limit:]
-        out.append(s)
-        return out
-        def abs_url(u: str) -> str:
-        u = clean_str(u) or ""
-        if not u:
-            return ""
-        if u.startswith("http://") or u.startswith("https://"):
-            return u
-        base = get_base_url()
-        return base + (u if u.startswith("/") else ("/" + u))
-
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
-        if not photo_url or not photo_url.startswith("/uploads/"):
-            return None
-
-        rel = photo_url.replace("/uploads/", "", 1)
-        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-        if not os.path.isfile(disk_path):
-            return None
-
-        try:
-            from PIL import Image
-
-            with Image.open(disk_path) as im:
-                im = im.convert("RGB")
-                im.thumbnail((420, 420))
-
-                # comprimi fino a stare sotto max_bytes
-                for quality in (82, 72, 62, 52, 45):
-                    buf = BytesIO()
-                    im.save(buf, format="JPEG", quality=quality, optimize=True)
-                    blob = buf.getvalue()
-                    if len(blob) <= max_bytes:
-                        b64 = base64.b64encode(blob).decode("ascii")
-                        return ("JPEG", b64)
-
-            return None
-        except Exception:
-            return None
- 
-        rel = photo_url.replace("/uploads/", "", 1)
-        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-        if not os.path.isfile(disk_path):
-            return None
-
-        try:
-            from PIL import Image
-
-            with Image.open(disk_path) as im:
-                im = im.convert("RGB")
-                im.thumbnail((420, 420))
-
-                # comprimi fino a stare sotto max_bytes
-                for quality in (82, 72, 62, 52, 45):
-                    buf = BytesIO()
-                    im.save(buf, format="JPEG", quality=quality, optimize=True)
-                    blob = buf.getvalue()
-                    if len(blob) <= max_bytes:
-                        b64 = base64.b64encode(blob).decode("ascii")
-                        return ("JPEG", b64)
-
-            return None
-        except Exception:
-            return None
-
 
     full_name = (ag.name or "").strip()
     parts = full_name.split(" ", 1)
@@ -1580,8 +1557,8 @@ def vcard(slug):
 
     # ✅ foto: embedded (ridotta) + URI
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
-    photo_abs = abs_url(photo_url)
-    embedded = try_embed_photo_b64(photo_url)
+    photo_abs = abs_url_from_base(photo_url, base)
+    embedded = try_embed_photo_b64(photo_url, PERSIST_UPLOADS_DIR)
 
     if embedded:
         mime, b64 = embedded
@@ -1597,7 +1574,7 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # ✅ TEL: iOS-friendly (TYPE ripetuti, no virgole)
+    # ✅ TEL
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
         lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
@@ -1605,8 +1582,8 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
-    # ✅ EMAIL: iOS-friendly (TYPE ripetuti, no virgole)
-       raw_emails = (getattr(ag, "emails", "") or "").strip()
+    # ✅ EMAIL (qui si risolve il tuo punto 1: niente più “ufficio” al posto delle email)
+    raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
         lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK;TYPE=PREF:{valid_emails[0]}")
@@ -1616,7 +1593,6 @@ def vcard(slug):
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
         lines.append(f"EMAIL;TYPE=INTERNET;TYPE=WORK:{pec}")
-
 
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
@@ -1666,14 +1642,12 @@ def vcard(slug):
     content = "\r\n".join(lines)
 
     resp = Response(content)
-    # ✅ più compatibile iOS
     resp.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
-
 
 # ---------- QR ----------
 @app.get("/<slug>/qr.png")
