@@ -13,6 +13,7 @@ from flask import (
     send_from_directory, flash
 )
 
+# ✅ FIX: import Float (evita NameError)
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text as sa_text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -308,7 +309,6 @@ class Agent(Base):
     whatsapp = Column(String, nullable=True)
     youtube = Column(String, nullable=True)
 
-    # ✅ SPOTIFY
     spotify = Column(String, nullable=True)
 
     pec = Column(String, nullable=True)
@@ -320,10 +320,10 @@ class Agent(Base):
     logo_url = Column(String, nullable=True)
     extra_logo_url = Column(String, nullable=True)
 
-    # ✅ CROP FOTO (NUOVO)
+    # ✅ CROP FOTO
     photo_pos_x = Column(Integer, nullable=True)   # 0..100
     photo_pos_y = Column(Integer, nullable=True)   # 0..100
-    photo_zoom  = Column(Float, nullable=True)   # float (SQLite REAL)
+    photo_zoom  = Column(Float, nullable=True)     # ✅ ora Float importato
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
@@ -374,13 +374,11 @@ ensure_sqlite_column("agents", "logo_spin", "INTEGER")
 ensure_sqlite_column("agents", "allow_flip", "INTEGER")
 ensure_sqlite_column("agents", "youtube", "TEXT")
 
-# ✅ SPOTIFY MIGRATION
 ensure_sqlite_column("agents", "spotify", "TEXT")
 
 ensure_sqlite_column("agents", "back_media_url", "TEXT")
 ensure_sqlite_column("agents", "back_media_mode", "TEXT")
 
-# ✅ MIGRAZIONI CROP FOTO
 ensure_sqlite_column("agents", "photo_pos_x", "INTEGER")
 ensure_sqlite_column("agents", "photo_pos_y", "INTEGER")
 ensure_sqlite_column("agents", "photo_zoom", "REAL")
@@ -585,7 +583,6 @@ def agent_to_view(ag: Agent):
     back_mode = clean_str(getattr(ag, "back_media_mode", None)) or "company"
     back_url = clean_str(getattr(ag, "back_media_url", None))
 
-    # ✅ crop defaults
     px = clamp_int(getattr(ag, "photo_pos_x", None), 0, 100, 50)
     py = clamp_int(getattr(ag, "photo_pos_y", None), 0, 100, 35)
     pz = clamp_float(getattr(ag, "photo_zoom", None), 1.0, 2.6, 1.0)
@@ -610,30 +607,24 @@ def agent_to_view(ag: Agent):
         whatsapp=clean_str(ag.whatsapp),
         youtube=safe_url(getattr(ag, "youtube", None)),
         spotify=safe_url(getattr(ag, "spotify", None)),
-
         pec=clean_str(ag.pec),
         piva=clean_str(ag.piva),
         sdi=clean_str(ag.sdi),
         addresses=clean_str(ag.addresses),
         photo_url=clean_str(ag.photo_url),
         logo_url=logo,
-
-        # ✅ crop in view
         photo_pos_x=px,
         photo_pos_y=py,
         photo_zoom=pz,
-
         gallery_urls=clean_str(ag.gallery_urls),
         video_urls=clean_str(ag.video_urls),
         pdf1_url=clean_str(ag.pdf1_url),
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
         profiles_json=getattr(ag, "profiles_json", None),
-
         orbit_spin=int(getattr(ag, "orbit_spin", 0) or 0),
         avatar_spin=int(getattr(ag, "avatar_spin", 0) or 0),
         logo_spin=int(getattr(ag, "logo_spin", 0) or 0),
         allow_flip=int(getattr(ag, "allow_flip", 0) or 0),
-
         back_media_mode=back_mode,
         back_media_url=back_url,
     )
@@ -743,7 +734,6 @@ def dashboard():
         db.close()
         if not ag:
             abort(404)
-        # NB: qui passiamo l'oggetto Agent grezzo perché il template usa solo name/slug/p2_enabled
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
 # ---------- ADMIN CRUD ----------
@@ -769,18 +759,15 @@ def _save_common_fields_to_agent(ag: Agent):
     ag.logo_spin = form_checkbox_int("logo_spin")
     ag.allow_flip = form_checkbox_int("allow_flip")
 
-    # ✅ VINCOLO: o RUOTA FOTO (avatar_spin) o FLIP (allow_flip). Solo uno.
     if int(ag.avatar_spin or 0) == 1 and int(ag.allow_flip or 0) == 1:
         ag.allow_flip = 0
 
     mode = (request.form.get("back_media_mode") or "").strip().lower()
     ag.back_media_mode = mode if mode in ("company", "personal") else "company"
 
-    # ✅ SALVATAGGIO CROP FOTO
     ag.photo_pos_x = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
     ag.photo_pos_y = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
     ag.photo_zoom  = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
-
 
 def _save_common_uploads_to_agent(ag: Agent):
     photo = request.files.get("photo")
@@ -1211,7 +1198,6 @@ def me_profile2_post():
     flash("Profilo 2 salvato.", "success")
     return redirect(url_for("me_profile2"))
 
-# --- ADMIN: modifica P2 ---
 @app.get("/admin/<slug>/profile2")
 @admin_required
 def admin_profile2(slug):
@@ -1400,7 +1386,8 @@ def public_card(slug):
     if is_phone_like(getattr(ag_view, "phone_mobile2", "") or ""):
         mobiles.append((ag_view.phone_mobile2 or "").strip())
 
-    phone_office = (ag_view.phone_office or "").strip() if is_phone_like(ag_view.phone_office or "") else ""
+    # ✅ passiamo il valore "office" grezzo al template
+    office_value = (ag_view.phone_office or "").strip()
     wa_link = normalize_whatsapp_link(ag_view.whatsapp or (mobiles[0] if mobiles else ""))
 
     qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
@@ -1421,29 +1408,18 @@ def public_card(slug):
         websites=websites,
         addresses=addresses,
         mobiles=mobiles,
-        phone_office=phone_office,
+        office_value=office_value,   # ✅ nuovo
         wa_link=wa_link,
         qr_url=qr_url,
         p_key=p_key,
         p2_enabled=p2_enabled,
     )
 
-# ---------- VCARD: helper fold line ----------
-def fold_line(line: str, limit: int = 74):
-    out = []
-    s = line
-    while len(s) > limit:
-        out.append(s[:limit])
-        s = " " + s[limit:]
-    out.append(s)
-    return out
-
-# ---------- VCARD: alias .vfc -> .vcf ----------
+# ---------- VCARD ----------
 @app.get("/<slug>.vfc")
 def vcard_alias(slug):
     return redirect(f"/{slugify(slug)}.vcf", code=302)
 
-# ---------- VCARD: FOTO + EMAIL OK ----------
 @app.get("/<slug>.vcf")
 def vcard(slug):
     slug = slugify(slug)
@@ -1465,31 +1441,6 @@ def vcard(slug):
         base = get_base_url()
         return base + (u if u.startswith("/") else ("/" + u))
 
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 350_000):
-        if not photo_url or not photo_url.startswith("/uploads/"):
-            return None
-        rel = photo_url.replace("/uploads/", "", 1)
-        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-        if not os.path.isfile(disk_path):
-            return None
-        try:
-            size = os.path.getsize(disk_path)
-            if size <= 0 or size > max_bytes:
-                return None
-            with open(disk_path, "rb") as f:
-                blob = f.read()
-            ext = os.path.splitext(disk_path)[1].lower().lstrip(".")
-            if ext in ("jpg", "jpeg"):
-                mime = "JPEG"
-            elif ext == "png":
-                mime = "PNG"
-            else:
-                return None
-            b64 = base64.b64encode(blob).decode("ascii")
-            return (mime, b64)
-        except Exception:
-            return None
-
     full_name = (ag.name or "").strip()
     parts = full_name.split(" ", 1)
     first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
@@ -1507,16 +1458,9 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
+    # ✅ iPhone più stabile: SOLO PHOTO URI (niente base64 embed)
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     photo_abs = abs_url(photo_url)
-    embedded = try_embed_photo_b64(photo_url)
-
-    if embedded:
-        mime, b64 = embedded
-        base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
-        for fl in fold_line(base_line, 74):
-            lines.append(fl)
-
     if photo_abs:
         lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
 
