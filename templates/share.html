@@ -1,1 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Condivisione | Pay4You{% endblock %}
 
+{% block content %}
+<div class="page-main">
+  <div class="panel panel-wide">
+
+    <div class="panel-head">
+      <h1 class="page-title">Condivisione</h1>
+      <div class="hint">Copia il testo e apri WhatsApp. Poi puoi tornare alla card senza pagina bianca.</div>
+    </div>
+
+    <div class="panel-body">
+      <div class="field full">
+        <div class="hint">Testo pronto</div>
+        <textarea id="shareBox" class="mono" style="min-height:170px; margin-top:10px;">{{ text }}</textarea>
+        <div class="hint" id="copyOk" style="margin-top:8px; display:none;">Copiato ✅</div>
+      </div>
+
+      <div class="field full" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn primary" type="button" onclick="copyShare()">📋 Copia</button>
+        <a class="btn ghost" href="{{ wa_url }}" target="_blank" rel="noopener">Apri WhatsApp</a>
+
+        {% if back_url %}
+          <a class="btn" href="{{ back_url }}">← Torna alla card</a>
+        {% else %}
+          <button class="btn" type="button" onclick="history.back()">← Torna indietro</button>
+        {% endif %}
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        Se WhatsApp non incolla automaticamente, premi “Copia”, poi incolla nella chat.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function showCopied(){
+    const el = document.getElementById('copyOk');
+    if(!el) return;
+    el.style.display = 'block';
+    clearTimeout(window.__copyTimer);
+    window.__copyTimer = setTimeout(()=>{ el.style.display='none'; }, 1200);
+  }
+
+  async function copyText(txt){
+    try{
+      await navigator.clipboard.writeText(txt);
+      showCopied();
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopied();
+    }
+  }
+
+  function copyShare(){
+    const box = document.getElementById('shareBox');
+    if(!box) return;
+    copyText(box.value);
+  }
+</script>
+{% endblock %}
