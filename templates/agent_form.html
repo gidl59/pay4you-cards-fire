@@ -1,537 +1,354 @@
 {% extends "base.html" %}
-{% block title %}Modifica | Pay4You{% endblock %}
+{% block title %}
+  {% if agent %}
+    {% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %} | Pay4You
+  {% else %}
+    Nuova Card | Pay4You
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="page-main">
-  <div class="panel panel-wide">
+<div class="form-wrap">
 
-    <div class="panel-head">
-      <h1 class="page-title">
-        {% if editing_profile2 %}Modifica: Profilo 2{% else %}Modifica: Profilo 1{% endif %}
+  <div class="form-head">
+    <div>
+      <h1 class="form-title">
+        {% if agent %}
+          {% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}
+        {% else %}
+          Crea nuova Card
+        {% endif %}
       </h1>
 
-      {% set D = agent %}
+      <div class="form-sub">
+        {% if editing_profile2 %}
+          Questo è il Profilo 2 (se attivo). Può essere completamente diverso dal Profilo 1.
+        {% else %}
+          Dati della card (Profilo 1).
+        {% endif %}
+      </div>
 
-      {% if session.get('role') != 'admin' and agent %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
-          {% endif %}
-
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% endif %}
-
-          {% if (agent.p2_enabled or 0)|int != 1 %}
-            <form method="post" action="{{ url_for('me_activate_p2') }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
-          {% else %}
-            <form method="post" action="{{ url_for('me_deactivate_p2') }}" style="display:inline;">
-              <button class="btn ghost" type="submit">Disattiva Profilo 2</button>
-            </form>
-          {% endif %}
-        </div>
-      {% endif %}
-
-      {% if session.get('role') == 'admin' and agent and (not editing_profile2) %}
-        <div class="toolbar">
-          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          <a class="btn" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri Card (P1)</a>
-
-          {% if (agent.p2_enabled or 0)|int == 1 %}
-            <a class="btn ghost" href="{{ url_for('admin_profile2', slug=agent.slug) }}">Modifica Profilo 2</a>
-            <a class="btn" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri Card (P2)</a>
-          {% else %}
-            <form method="post" action="{{ url_for('admin_activate_p2', slug=agent.slug) }}" style="display:inline;">
-              <button class="btn primary" type="submit">Attiva Profilo 2</button>
-            </form>
-          {% endif %}
+      {% if not agent and session.get('role') == 'admin' %}
+        <!-- ✅ MODIFICA RICHIESTA: hint chiara sullo slug / dominio -->
+        <div class="hint-box">
+          <strong>Slug</strong>: è la parte finale del link della card.<br>
+          Esempio: <span class="mono">https://TUO-DOMINIO/</span><span class="mono">mario-rossi</span><br>
+          Usa solo lettere, numeri e trattini (niente spazi).
         </div>
       {% endif %}
     </div>
 
-    {# ===== FORM ACTION ===== #}
-    {% if session.get('role') == 'admin' %}
-      {% if agent and not editing_profile2 %}
-        {% set form_action = url_for('update_agent', slug=agent.slug) %}
-      {% elif agent and editing_profile2 %}
-        {% set form_action = url_for('admin_profile2_post', slug=agent.slug) %}
+    <div class="form-actions">
+      {% if session.get('role') == 'admin' %}
+        <a class="btn-mini ghost" href="{{ url_for('dashboard') }}">← Dashboard</a>
       {% else %}
-        {% set form_action = url_for('create_agent') %}
+        <a class="btn-mini ghost" href="{{ url_for('dashboard') }}">← Dashboard</a>
+        {% if editing_profile2 %}
+          <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
+        {% else %}
+          {% if agent and agent.p2_enabled == 1 %}
+            <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Profilo 2</a>
+          {% endif %}
+        {% endif %}
       {% endif %}
-    {% else %}
-      {% if editing_profile2 %}
-        {% set form_action = url_for('me_profile2_post') %}
-      {% else %}
-        {% set form_action = url_for('me_edit_post') %}
-      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="card-form">
+
+    {% if session.get('role') == 'admin' and not agent %}
+      <div class="grid-2">
+        <div class="field">
+          <label>Slug (obbligatorio)</label>
+          <input name="slug" type="text" placeholder="es: mario-rossi" required>
+          <div class="mini-help">Verrà creato anche l’utente di accesso con lo stesso nome.</div>
+        </div>
+
+        <div class="field">
+          <label>Nome (obbligatorio)</label>
+          <input name="name" type="text" placeholder="Nome e Cognome" required>
+        </div>
+      </div>
     {% endif %}
 
-    <form method="post" action="{{ form_action }}" enctype="multipart/form-data">
-      <div class="form-grid">
+    <!-- Dati principali -->
+    <div class="grid-2">
+      <div class="field">
+        <label>Nome</label>
+        <input name="name" type="text" value="{{ agent.name if agent else '' }}" {% if session.get('role')=='admin' and not agent %}disabled{% endif %}>
+        <div class="mini-help">Per P2 può essere diverso dal P1.</div>
+      </div>
 
-        {# ===== SLUG ===== #}
-        {% if session.get('role') == 'admin' and (not agent) and (not editing_profile2) %}
-          <div class="field">
-            <label>Slug (univoco)</label>
-            <input type="text" name="slug" value="" required>
-            <div class="hint">Esempio: nomecognome / negozio-roma. Solo lettere/numeri e trattini.</div>
-            <div class="hint">Una volta creato, lo slug non sarà più modificabile.</div>
-          </div>
-        {% else %}
-          <div class="field">
-            <label>Slug</label>
-            <input type="text" value="{{ agent.slug if agent else '' }}" readonly>
-            <div class="hint">Lo slug è bloccato e non può essere modificato.</div>
-            <div class="hint">La tua card pubblica sarà: https://TUODOMINIO/{{ agent.slug if agent else 'slug' }}</div>
-          </div>
-        {% endif %}
+      <div class="field">
+        <label>Azienda</label>
+        <input name="company" type="text" value="{{ agent.company if agent and agent.company else '' }}">
+      </div>
 
+      <div class="field">
+        <label>Ruolo</label>
+        <input name="role" type="text" value="{{ agent.role if agent and agent.role else '' }}">
+      </div>
+
+      <div class="field">
+        <label>Bio</label>
+        <textarea name="bio" rows="3" placeholder="Breve descrizione...">{{ agent.bio if agent and agent.bio else '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Contatti -->
+    <div class="section-box">
+      <div class="section-title">Contatti</div>
+
+      <div class="grid-2">
         <div class="field">
-          <label>Nome</label>
-          <input type="text" name="name" value="{{ D.name if D and D.name else '' }}" required>
-          <div class="hint">Inserisci nome e cognome (o nome attività se preferisci).</div>
+          <label>Cellulare</label>
+          <input name="phone_mobile" type="text" value="{{ agent.phone_mobile if agent and agent.phone_mobile else '' }}" placeholder="+39 ...">
         </div>
 
         <div class="field">
-          <label>Azienda</label>
-          <input type="text" name="company" value="{{ D.company if D and D.company else '' }}">
-          <div class="hint">Esempio: Pay4You / Bar Centrale / Studio Rossi.</div>
+          <label>Cellulare 2</label>
+          <input name="phone_mobile2" type="text" value="{{ agent.phone_mobile2 if agent and agent.phone_mobile2 else '' }}" placeholder="+39 ...">
         </div>
 
         <div class="field">
-          <label>Ruolo</label>
-          <input type="text" name="role" value="{{ D.role if D and D.role else '' }}">
-          <div class="hint">Esempio: Consulente Pagamenti / Titolare / Agente.</div>
-        </div>
-
-        <div class="field full">
-          <label>Bio / Descrizione</label>
-          <textarea name="bio">{{ D.bio if D and D.bio else '' }}</textarea>
-          <div class="hint">Scrivi 1–3 righe: cosa fai e perché contattarti.</div>
+          <label>Ufficio</label>
+          <input name="phone_office" type="text" value="{{ agent.phone_office if agent and agent.phone_office else '' }}">
         </div>
 
         <div class="field">
-          <label>Telefono mobile</label>
-          <input type="text" name="phone_mobile" value="{{ D.phone_mobile if D and D.phone_mobile else '' }}">
-          <div class="hint">Esempio: +39 333 123 4567</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono mobile 2</label>
-          <input type="text" name="phone_mobile2" value="{{ D.phone_mobile2 if D and D.phone_mobile2 else '' }}">
-          <div class="hint">Opzionale: secondo numero/numero assistenza.</div>
-        </div>
-
-        <div class="field">
-          <label>Telefono ufficio</label>
-          <input type="text" name="phone_office" value="{{ D.phone_office if D and D.phone_office else '' }}">
-          <div class="hint">Opzionale: numero fisso o centralino.</div>
-        </div>
-
-        <div class="field">
-          <label>WhatsApp (numero o link)</label>
-          <input type="text" name="whatsapp" value="{{ D.whatsapp if D and D.whatsapp else '' }}">
-          <div class="hint">Numero +39... oppure link wa.me.</div>
+          <label>WhatsApp (link o numero)</label>
+          <input name="whatsapp" type="text" value="{{ agent.whatsapp if agent and agent.whatsapp else '' }}" placeholder="es: +39333... oppure https://wa.me/...">
         </div>
 
         <div class="field">
           <label>Email (separate da virgola)</label>
-          <input type="text" name="emails"
-                 value="{{ D.emails if D and D.emails else '' }}"
-                 placeholder="es: info@azienda.it, amministrazione@azienda.it">
-          <div class="hint">Inserisci una o più email separate da virgola. Esempio: info@..., support@...</div>
+          <input name="emails" type="text" value="{{ agent.emails if agent and agent.emails else '' }}" placeholder="mail1@... , mail2@...">
         </div>
 
         <div class="field">
-          <label>Siti web (separati da virgola)</label>
-          <input type="text" name="websites"
-                 value="{{ D.websites if D and D.websites else '' }}"
-                 placeholder="es: www.sito.it, https://shop.sito.it">
-          <div class="hint">Inserisci uno o più siti separati da virgola. Se manca https:// lo aggiungiamo in automatico.</div>
+          <label>Siti (separati da virgola)</label>
+          <input name="websites" type="text" value="{{ agent.websites if agent and agent.websites else '' }}" placeholder="pay4you.store, ...">
         </div>
 
         <div class="field">
           <label>PEC</label>
-          <input type="text" name="pec" value="{{ D.pec if D and D.pec else '' }}">
+          <input name="pec" type="text" value="{{ agent.pec if agent and agent.pec else '' }}">
         </div>
 
+        <div class="field">
+          <label>Indirizzi (uno per riga)</label>
+          <textarea name="addresses" rows="3" placeholder="Via..., Città...">{{ agent.addresses if agent and agent.addresses else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dati fiscali -->
+    <div class="section-box">
+      <div class="section-title">Dati</div>
+      <div class="grid-2">
         <div class="field">
           <label>P.IVA</label>
-          <input type="text" name="piva" value="{{ D.piva if D and D.piva else '' }}">
+          <input name="piva" type="text" value="{{ agent.piva if agent and agent.piva else '' }}">
         </div>
-
         <div class="field">
           <label>SDI</label>
-          <input type="text" name="sdi" value="{{ D.sdi if D and D.sdi else '' }}">
+          <input name="sdi" type="text" value="{{ agent.sdi if agent and agent.sdi else '' }}">
         </div>
+      </div>
+    </div>
 
-        <div class="field full">
-          <label>Indirizzi (uno per riga)</label>
-          <textarea name="addresses">{{ D.addresses if D and D.addresses else '' }}</textarea>
-        </div>
+    <!-- Social -->
+    <div class="section-box">
+      <div class="section-title">Social</div>
+      <div class="grid-2">
+        <div class="field"><label>Facebook</label><input name="facebook" type="text" value="{{ agent.facebook if agent and agent.facebook else '' }}"></div>
+        <div class="field"><label>Instagram</label><input name="instagram" type="text" value="{{ agent.instagram if agent and agent.instagram else '' }}"></div>
+        <div class="field"><label>LinkedIn</label><input name="linkedin" type="text" value="{{ agent.linkedin if agent and agent.linkedin else '' }}"></div>
+        <div class="field"><label>TikTok</label><input name="tiktok" type="text" value="{{ agent.tiktok if agent and agent.tiktok else '' }}"></div>
+        <div class="field"><label>Telegram</label><input name="telegram" type="text" value="{{ agent.telegram if agent and agent.telegram else '' }}"></div>
+        <div class="field"><label>YouTube</label><input name="youtube" type="text" value="{{ agent.youtube if agent and agent.youtube else '' }}"></div>
+        <div class="field"><label>Spotify</label><input name="spotify" type="text" value="{{ agent.spotify if agent and agent.spotify else '' }}"></div>
+      </div>
+    </div>
 
+    <!-- Media avatar/logo/back -->
+    <div class="section-box">
+      <div class="section-title">Immagini</div>
+
+      <div class="grid-2">
         <div class="field">
-          <label>Facebook</label>
-          <input type="text" name="facebook" value="{{ D.facebook if D and D.facebook else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" name="instagram" value="{{ D.instagram if D and D.instagram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>LinkedIn</label>
-          <input type="text" name="linkedin" value="{{ D.linkedin if D and D.linkedin else '' }}">
-        </div>
-
-        <div class="field">
-          <label>TikTok</label>
-          <input type="text" name="tiktok" value="{{ D.tiktok if D and D.tiktok else '' }}">
-        </div>
-
-        <div class="field">
-          <label>Telegram</label>
-          <input type="text" name="telegram" value="{{ D.telegram if D and D.telegram else '' }}">
-        </div>
-
-        <div class="field">
-          <label>YouTube</label>
-          <input type="text" name="youtube" value="{{ D.youtube if D and D.youtube else '' }}">
-        </div>
-
-        <!-- ✅ SPOTIFY -->
-        <div class="field">
-          <label>Spotify</label>
-          <input type="text" name="spotify" value="{{ D.spotify if D and D.spotify else '' }}"
-                 placeholder="es: https://open.spotify.com/artist/...  oppure  /show/...">
-          <div class="hint">Incolla un link Spotify completo (artista / podcast / playlist / profilo).</div>
-        </div>
-
-        {# ====== FOTO + CROP MANUALE ====== #}
-        {% set _px = (D.photo_pos_x|default(50))|int %}
-        {% set _py = (D.photo_pos_y|default(35))|int %}
-        {% set _pz = (D.photo_zoom|default(1.0)) %}
-
-        <div class="field full details">
-          <details open>
-            <summary>Foto profilo + Centratura manuale (consigliato)</summary>
-
-            <div class="grid-2" style="margin-top:10px; align-items:start;">
-              <div class="field">
-                <label>Carica foto profilo (max 8MB)</label>
-                <input type="file" name="photo" accept="image/*" id="photoFile">
-                <div class="hint">Dopo aver scelto la foto, usa i cursori per centrare il volto nel cerchio.</div>
-
-                {# valori salvati nel DB #}
-                <input type="hidden" name="photo_pos_x" id="photoPosX" value="{{ _px }}">
-                <input type="hidden" name="photo_pos_y" id="photoPosY" value="{{ _py }}">
-                <input type="hidden" name="photo_zoom"  id="photoZoom" value="{{ _pz }}">
-
-                <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn-mini ghost" type="button" id="cropResetBtn">Reset</button>
-                  <span class="hint" id="cropHint" style="margin:0;">X={{ _px }} · Y={{ _py }} · Zoom={{ _pz }}</span>
-                </div>
-
-                <div class="grid-3" style="margin-top:10px;">
-                  <div class="field">
-                    <label>X (sinistra/destra)</label>
-                    <input type="range" min="0" max="100" step="1" value="{{ _px }}" id="rangeX">
-                  </div>
-                  <div class="field">
-                    <label>Y (su/giù)</label>
-                    <input type="range" min="0" max="100" step="1" value="{{ _py }}" id="rangeY">
-                  </div>
-                  <div class="field">
-                    <label>Zoom</label>
-                    <input type="range" min="1" max="2.6" step="0.01" value="{{ _pz }}" id="rangeZ">
-                  </div>
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Anteprima nel cerchio</label>
-
-                <div id="cropPreviewWrap" style="
-                    width:220px; height:220px; border-radius:999px;
-                    border:3px solid rgba(243,198,43,.55);
-                    background: rgba(0,0,0,.22);
-                    overflow:hidden;
-                    box-shadow: 0 18px 40px rgba(0,0,0,.45);
-                    position:relative;
-                ">
-                  <img id="cropPreviewImg"
-                       src="{{ (D.photo_url if D and D.photo_url else '') }}"
-                       alt="Preview"
-                       style="
-                         width:100%;
-                         height:100%;
-                         object-fit:cover;
-                         object-position: {{ _px }}% {{ _py }}%;
-                         transform: scale({{ _pz }});
-                         transform-origin: center;
-                         display:block;
-                       ">
-                  <div id="cropNoImg" style="
-                      position:absolute; inset:0;
-                      display:{% if D and D.photo_url %}none{% else %}flex{% endif %};
-                      align-items:center; justify-content:center;
-                      font-size:42px; color: rgba(255,255,255,.75);
-                  ">👤</div>
-                </div>
-
-                <div class="hint" style="margin-top:10px;">
-                  Tip: aumenta Zoom finché il viso riempie bene il cerchio, poi regola X/Y.
-                </div>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <div class="field">
-          <label>Logo azienda (max 8MB)</label>
-          <input type="file" name="logo" accept="image/*">
-        </div>
-
-        <!-- BACK MEDIA -->
-        <div class="field full details">
-          <details open>
-            <summary>Dietro la foto (logo azienda / foto personale)</summary>
-
-            <div class="hint" style="margin-top:8px;">
-              Puoi caricare una seconda immagine (famiglia/animale) e scegliere cosa mostrare sul retro dell’avatar.
-            </div>
-
-            <div class="grid-2" style="margin-top:10px;">
-              <div class="field">
-                <label>Foto/Logo personale (dietro avatar)</label>
-                <input type="file" name="back_media" accept="image/*">
-                <div class="hint">Esempio: famiglia, animale, logo personale. (opzionale)</div>
-              </div>
-
-              <div class="field">
-                <label>Cosa mostrare dietro?</label>
-                {% set mode = (D.back_media_mode if D and D.back_media_mode else 'company') %}
-                <label class="btn-mini" style="justify-content:flex-start;">
-                  <input type="radio" name="back_media_mode" value="company" {% if mode=='company' %}checked{% endif %} style="margin-right:8px;">
-                  Logo aziendale
-                </label>
-                <label class="btn-mini" style="justify-content:flex-start; margin-top:8px;">
-                  <input type="radio" name="back_media_mode" value="personal" {% if mode=='personal' %}checked{% endif %} style="margin-right:8px;">
-                  Foto/Logo personale
-                </label>
-                <div class="hint" style="margin-top:8px;">Se scegli “personale” ma non carichi l’immagine, torna al logo aziendale.</div>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <!-- EFFETTI -->
-        <div class="field full details">
-          <details open>
-            <summary>Effetti grafici</summary>
-
-            <div class="grid-3" style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="orbit_spin" value="1"
-                       {% if D and (D.orbit_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo dietro ruota
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="avatar_spin" value="1"
-                       {% if D and (D.avatar_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Foto ruota (flip 3D orizzontale)
-              </label>
-
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="logo_spin" value="1"
-                       {% if D and (D.logo_spin or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Logo (dietro) ruota su se stesso
-              </label>
-            </div>
-
-            <div style="margin-top:10px;">
-              <label class="btn-mini" style="justify-content:flex-start;">
-                <input type="checkbox" name="allow_flip" value="1"
-                       {% if D and (D.allow_flip or 0)|int == 1 %}checked{% endif %}
-                       style="margin-right:8px;">
-                Tap per flip
-              </label>
-              <div class="hint" style="margin-top:6px;">
-                Nota: se attivi “Foto ruota”, allora il tap per flip viene disattivato automaticamente nella card (evita vibrazioni/casini).
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <div class="field full"><div class="sep"></div></div>
-
-        <div class="field full">
-          {% if editing_profile2 %}
-            <h3 class="h3">Media Profilo 2</h3>
-            <div class="hint">Foto/video/pdf caricati qui saranno visibili solo nella Card con ?p=p2.</div>
-          {% else %}
-            <h3 class="h3">Media Profilo 1</h3>
-            <div class="hint">Foto/video/pdf caricati qui sono visibili nella Card principale.</div>
+          <label>Foto profilo (upload)</label>
+          <input name="photo" type="file" accept="image/*">
+          {% if agent and agent.photo_url %}
+            <div class="mini-help">Attuale: <span class="mono">{{ agent.photo_url }}</span></div>
           {% endif %}
         </div>
 
         <div class="field">
-          <label>Galleria (max 30 immagini)</label>
-          <input type="file" name="gallery" accept="image/*" multiple>
+          <label>Logo (upload)</label>
+          <input name="logo" type="file" accept="image/*">
+          {% if agent and agent.logo_url %}
+            <div class="mini-help">Attuale: <span class="mono">{{ agent.logo_url }}</span></div>
+          {% endif %}
         </div>
 
         <div class="field">
-          <label>Video (max 10)</label>
-          <input type="file" name="videos" accept="video/*" multiple>
+          <label>Contenuto dietro foto</label>
+          <select name="back_media_mode">
+            {% set bm = (agent.back_media_mode if agent and agent.back_media_mode else 'company') %}
+            <option value="company" {% if bm=='company' %}selected{% endif %}>Logo aziendale</option>
+            <option value="personal" {% if bm=='personal' %}selected{% endif %}>Foto/Logo personale</option>
+          </select>
         </div>
 
-        <div class="field full">
-          <label>PDF (fino a 12)</label>
-          <div class="grid-3">
-            <input type="file" name="pdf1" accept="application/pdf">
-            <input type="file" name="pdf2" accept="application/pdf">
-            <input type="file" name="pdf3" accept="application/pdf">
-            <input type="file" name="pdf4" accept="application/pdf">
-            <input type="file" name="pdf5" accept="application/pdf">
-            <input type="file" name="pdf6" accept="application/pdf">
-            <input type="file" name="pdf7" accept="application/pdf">
-            <input type="file" name="pdf8" accept="application/pdf">
-            <input type="file" name="pdf9" accept="application/pdf">
-            <input type="file" name="pdf10" accept="application/pdf">
-            <input type="file" name="pdf11" accept="application/pdf">
-            <input type="file" name="pdf12" accept="application/pdf">
-          </div>
+        <div class="field">
+          <label>Upload retro (solo se “personale”)</label>
+          <input name="back_media" type="file" accept="image/*">
+          {% if agent and agent.back_media_url %}
+            <div class="mini-help">Attuale: <span class="mono">{{ agent.back_media_url }}</span></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Crop -->
+      <div class="grid-3">
+        <div class="field">
+          <label>Crop X (0–100)</label>
+          <input name="photo_pos_x" type="number" min="0" max="100" step="1"
+                 value="{{ agent.photo_pos_x if agent and agent.photo_pos_x is not none else 50 }}">
+        </div>
+        <div class="field">
+          <label>Crop Y (0–100)</label>
+          <input name="photo_pos_y" type="number" min="0" max="100" step="1"
+                 value="{{ agent.photo_pos_y if agent and agent.photo_pos_y is not none else 35 }}">
+        </div>
+        <div class="field">
+          <label>Zoom (1.0–2.6)</label>
+          <input name="photo_zoom" type="number" min="1" max="2.6" step="0.05"
+                 value="{{ agent.photo_zoom if agent and agent.photo_zoom is not none else 1.0 }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Effetti -->
+    <div class="section-box">
+      <div class="section-title">Effetti</div>
+
+      <div class="check-grid">
+        {% set orbit = 1 if agent and (agent.orbit_spin or 0) == 1 else 0 %}
+        {% set aspin = 1 if agent and (agent.avatar_spin or 0) == 1 else 0 %}
+        {% set lspin = 1 if agent and (agent.logo_spin or 0) == 1 else 0 %}
+        {% set flip  = 1 if agent and (agent.allow_flip or 0) == 1 else 0 %}
+
+        <label class="check">
+          <input type="checkbox" name="orbit_spin" {% if orbit==1 %}checked{% endif %}>
+          <span>Orbit logo (ruota dietro)</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="avatar_spin" {% if aspin==1 %}checked{% endif %}>
+          <span>Ruota foto</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="logo_spin" {% if lspin==1 %}checked{% endif %}>
+          <span>Ruota logo sul retro</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="allow_flip" {% if flip==1 %}checked{% endif %}>
+          <span>Flip (tap per retro)</span>
+        </label>
+      </div>
+
+      <div class="mini-help">
+        Nota: se attivi “Ruota foto” il flip viene disabilitato automaticamente.
+      </div>
+    </div>
+
+    <!-- Gallery / video / pdf -->
+    <div class="section-box">
+      <div class="section-title">Media (foto / video / PDF)</div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Galleria foto (max {{ 30 }})</label>
+          <input name="gallery" type="file" accept="image/*" multiple>
+          {% if agent and agent.gallery_urls %}
+            <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
+          {% endif %}
         </div>
 
-        {% if not editing_profile2 %}
-          <div class="field full">
-            <div class="sep"></div>
-            <h3 class="h3">Traduzioni Profilo 1 (opzionali)</h3>
-            <div class="hint">Se il telefono è in EN/FR/ES/DE, la card userà questi testi (se compilati).</div>
-          </div>
+        <div class="field">
+          <label>Video (max {{ 10 }})</label>
+          <input name="videos" type="file" accept="video/*" multiple>
+          {% if agent and agent.video_urls %}
+            <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
+          {% endif %}
+        </div>
+      </div>
 
-          {% for L in ['en','fr','es','de'] %}
-            <div class="field full details">
-              <details>
-                <summary>{{ L|upper }}</summary>
-                <div class="grid-2" style="margin-top:10px;">
-                  <div class="field">
-                    <label>Nome ({{ L|upper }})</label>
-                    <input type="text" name="name_{{L}}" value="{{ (i18n_data.get(L, {}).get('name') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Azienda ({{ L|upper }})</label>
-                    <input type="text" name="company_{{L}}" value="{{ (i18n_data.get(L, {}).get('company') if i18n_data else '') }}">
-                  </div>
-                  <div class="field">
-                    <label>Ruolo ({{ L|upper }})</label>
-                    <input type="text" name="role_{{L}}" value="{{ (i18n_data.get(L, {}).get('role') if i18n_data else '') }}">
-                  </div>
-                  <div class="field full">
-                    <label>Bio ({{ L|upper }})</label>
-                    <textarea name="bio_{{L}}">{{ (i18n_data.get(L, {}).get('bio') if i18n_data else '') }}</textarea>
-                  </div>
-                  <div class="field full">
-                    <label>Indirizzi ({{ L|upper }})</label>
-                    <textarea name="addresses_{{L}}">{{ (i18n_data.get(L, {}).get('addresses') if i18n_data else '') }}</textarea>
-                  </div>
-                </div>
-              </details>
+      <div class="field">
+        <label>PDF (fino a 12)</label>
+        <div class="grid-3">
+          {% for i in range(1,13) %}
+            <div class="field mini">
+              <label>PDF {{ i }}</label>
+              <input name="pdf{{ i }}" type="file" accept="application/pdf">
             </div>
           {% endfor %}
-        {% endif %}
-
-        <div class="field full actions-footer">
-          <button class="btn primary" type="submit">Salva</button>
-          <div class="hint" style="margin:0;">Dopo il salvataggio, apri la card per controllare che tutto sia corretto.</div>
-
-          {% if session.get('role') == 'admin' %}
-            <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla lista</a>
-          {% else %}
-            <a class="btn ghost" href="{{ url_for('logout') }}">Logout</a>
-          {% endif %}
         </div>
-
+        {% if agent and agent.pdf1_url %}
+          <div class="mini-help">Già presenti: sì (aggiunge/sovrascrive quelli che ricarichi)</div>
+        {% endif %}
       </div>
-    </form>
-  </div>
+    </div>
+
+    <!-- i18n -->
+    {% if session.get('role') == 'admin' %}
+    <div class="section-box">
+      <div class="section-title">Traduzioni (opzionali)</div>
+      <div class="mini-help">Solo per la card pubblica quando lang=en/fr/es/de.</div>
+
+      {% for L in ['en','fr','es','de'] %}
+        {% set d = (i18n_data.get(L) if i18n_data and i18n_data.get(L) else {}) %}
+        <div class="lang-box">
+          <div class="lang-title">{{ L|upper }}</div>
+          <div class="grid-2">
+            <div class="field"><label>Nome</label><input name="name_{{L}}" value="{{ d.get('name','') }}"></div>
+            <div class="field"><label>Azienda</label><input name="company_{{L}}" value="{{ d.get('company','') }}"></div>
+            <div class="field"><label>Ruolo</label><input name="role_{{L}}" value="{{ d.get('role','') }}"></div>
+            <div class="field"><label>Bio</label><textarea name="bio_{{L}}" rows="2">{{ d.get('bio','') }}</textarea></div>
+            <div class="field" style="grid-column:1/-1"><label>Indirizzi</label><textarea name="addresses_{{L}}" rows="2">{{ d.get('addresses','') }}</textarea></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Submit -->
+    <div class="sticky-save">
+      <button class="btn primary" type="submit">
+        {% if agent %}
+          {% if editing_profile2 %}Salva Profilo 2{% else %}Salva Profilo 1{% endif %}
+        {% else %}
+          Crea Card
+        {% endif %}
+      </button>
+
+      {% if session.get('role') == 'admin' %}
+        <a class="btn ghost" href="{{ url_for('dashboard') }}">Annulla</a>
+      {% else %}
+        {% if editing_profile2 %}
+          <a class="btn ghost" href="{{ url_for('me_profile2') }}">Ricarica</a>
+        {% else %}
+          <a class="btn ghost" href="{{ url_for('me_edit') }}">Ricarica</a>
+        {% endif %}
+      {% endif %}
+    </div>
+
+  </form>
+
+  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
 </div>
-
-<script>
-(function(){
-  const fileInput = document.getElementById('photoFile');
-  const img = document.getElementById('cropPreviewImg');
-  const noImg = document.getElementById('cropNoImg');
-
-  const rangeX = document.getElementById('rangeX');
-  const rangeY = document.getElementById('rangeY');
-  const rangeZ = document.getElementById('rangeZ');
-
-  const hidX = document.getElementById('photoPosX');
-  const hidY = document.getElementById('photoPosY');
-  const hidZ = document.getElementById('photoZoom');
-
-  const hint = document.getElementById('cropHint');
-  const resetBtn = document.getElementById('cropResetBtn');
-
-  function apply(){
-    const x = parseInt(rangeX.value || '50', 10);
-    const y = parseInt(rangeY.value || '35', 10);
-    const z = parseFloat(rangeZ.value || '1');
-
-    hidX.value = String(x);
-    hidY.value = String(y);
-    hidZ.value = String(z);
-
-    if(img){
-      img.style.objectPosition = x + "% " + y + "%";
-      img.style.transform = "scale(" + z + ")";
-    }
-    if(hint){
-      hint.textContent = "X=" + x + " · Y=" + y + " · Zoom=" + z.toFixed(2);
-    }
-  }
-
-  rangeX?.addEventListener('input', apply);
-  rangeY?.addEventListener('input', apply);
-  rangeZ?.addEventListener('input', apply);
-
-  resetBtn?.addEventListener('click', function(){
-    rangeX.value = 50;
-    rangeY.value = 35;
-    rangeZ.value = 1;
-    apply();
-  });
-
-  fileInput?.addEventListener('change', function(){
-    const f = fileInput.files && fileInput.files[0];
-    if(!f) return;
-
-    const url = URL.createObjectURL(f);
-    if(img){
-      img.src = url;
-      img.onload = () => URL.revokeObjectURL(url);
-    }
-    if(noImg) noImg.style.display = 'none';
-
-    // non resetto i valori: l'utente può caricare e poi centrare
-    apply();
-  });
-
-  // init
-  apply();
-})();
-</script>
-
 {% endblock %}
