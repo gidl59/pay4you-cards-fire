@@ -308,6 +308,9 @@ class Agent(Base):
     whatsapp = Column(String, nullable=True)
     youtube = Column(String, nullable=True)
 
+    # ✅ SPOTIFY
+    spotify = Column(String, nullable=True)
+
     pec = Column(String, nullable=True)
     piva = Column(String, nullable=True)
     sdi = Column(String, nullable=True)
@@ -370,6 +373,10 @@ ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
 ensure_sqlite_column("agents", "logo_spin", "INTEGER")
 ensure_sqlite_column("agents", "allow_flip", "INTEGER")
 ensure_sqlite_column("agents", "youtube", "TEXT")
+
+# ✅ SPOTIFY MIGRATION
+ensure_sqlite_column("agents", "spotify", "TEXT")
+
 ensure_sqlite_column("agents", "back_media_url", "TEXT")
 ensure_sqlite_column("agents", "back_media_mode", "TEXT")
 
@@ -602,6 +609,10 @@ def agent_to_view(ag: Agent):
         telegram=safe_url(ag.telegram),
         whatsapp=clean_str(ag.whatsapp),
         youtube=safe_url(getattr(ag, "youtube", None)),
+
+        # ✅ spotify
+        spotify=safe_url(getattr(ag, "spotify", None)),
+
         pec=clean_str(ag.pec),
         piva=clean_str(ag.piva),
         sdi=clean_str(ag.sdi),
@@ -650,6 +661,10 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
         telegram="",
         whatsapp="",
         youtube="",
+
+        # ✅ spotify
+        spotify="",
+
         pec="",
         piva="",
         sdi="",
@@ -752,7 +767,8 @@ def new_agent():
 def _save_common_fields_to_agent(ag: Agent):
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","whatsapp",
               "emails","websites","pec","piva","sdi","addresses",
-              "facebook","instagram","linkedin","tiktok","telegram","youtube"]:
+              "facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "spotify"]:
         setattr(ag, k, clean_str(request.form.get(k)))
 
     ag.orbit_spin = form_checkbox_int("orbit_spin")
@@ -1073,6 +1089,7 @@ def me_profile2():
 
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "spotify",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
               "back_media_mode","back_media_url",
@@ -1091,6 +1108,10 @@ def me_profile2():
                 setattr(view, k, float(v))
             except Exception:
                 pass
+        elif k in ("spotify","youtube","facebook","instagram","linkedin","tiktok","telegram"):
+            vv = clean_str(v)
+            if vv is not None:
+                setattr(view, k, safe_url(vv))
         else:
             vv = clean_str(v)
             if vv is not None:
@@ -1101,7 +1122,8 @@ def me_profile2():
 def _save_profile2_payload_from_form():
     payload = {}
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
-              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube"]:
+              "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "spotify"]:
         payload[k] = clean_str(request.form.get(k))
 
     payload["orbit_spin"] = form_checkbox_int("orbit_spin")
@@ -1178,6 +1200,11 @@ def me_profile2_post():
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
 
+    # normalizza url social (incluso spotify)
+    for k in ("facebook","instagram","linkedin","tiktok","telegram","youtube","spotify"):
+        if payload.get(k):
+            payload[k] = safe_url(payload[k])
+
     profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
 
@@ -1207,6 +1234,7 @@ def admin_profile2(slug):
     view = blank_profile_view_from_agent(ag)
     for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
               "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+              "spotify",
               "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
               "orbit_spin","avatar_spin","logo_spin","allow_flip",
               "back_media_mode","back_media_url",
@@ -1225,6 +1253,10 @@ def admin_profile2(slug):
                 setattr(view, k, float(v))
             except Exception:
                 pass
+        elif k in ("spotify","youtube","facebook","instagram","linkedin","tiktok","telegram"):
+            vv = clean_str(v)
+            if vv is not None:
+                setattr(view, k, safe_url(vv))
         else:
             vv = clean_str(v)
             if vv is not None:
@@ -1245,6 +1277,11 @@ def admin_profile2_post(slug):
     ag.p2_enabled = 1
     profiles = parse_profiles_json(ag.profiles_json or "")
     payload = _save_profile2_payload_from_form()
+
+    # normalizza url social (incluso spotify)
+    for k in ("facebook","instagram","linkedin","tiktok","telegram","youtube","spotify"):
+        if payload.get(k):
+            payload[k] = safe_url(payload[k])
 
     profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
     ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
@@ -1307,6 +1344,7 @@ def public_card(slug):
         if p2_enabled and p2:
             for k in ["name","company","role","bio","phone_mobile","phone_mobile2","phone_office","emails","websites",
                       "whatsapp","pec","piva","sdi","addresses","facebook","instagram","linkedin","tiktok","telegram","youtube",
+                      "spotify",
                       "photo_url","logo_url","gallery_urls","video_urls","pdf1_url",
                       "orbit_spin","avatar_spin","logo_spin","allow_flip",
                       "back_media_mode","back_media_url",
@@ -1325,6 +1363,10 @@ def public_card(slug):
                         setattr(ag_view, k, float(v))
                     except Exception:
                         pass
+                elif k in ("spotify","youtube","facebook","instagram","linkedin","tiktok","telegram"):
+                    vv = clean_str(v)
+                    if vv is not None:
+                        setattr(ag_view, k, safe_url(vv))
                 else:
                     vv = clean_str(v)
                     if vv is not None:
@@ -1532,6 +1574,7 @@ def vcard(slug):
         ("tiktok", getattr(ag, "tiktok", None)),
         ("telegram", getattr(ag, "telegram", None)),
         ("youtube", getattr(ag, "youtube", None)),
+        ("spotify", getattr(ag, "spotify", None)),
     ]:
         u = safe_url(raw or "")
         if u:
