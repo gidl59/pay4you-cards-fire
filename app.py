@@ -13,7 +13,7 @@ from flask import (
     send_from_directory, flash
 )
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, text as sa_text, event
+from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text as sa_text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
@@ -323,7 +323,7 @@ class Agent(Base):
     # ✅ CROP FOTO (NUOVO)
     photo_pos_x = Column(Integer, nullable=True)   # 0..100
     photo_pos_y = Column(Integer, nullable=True)   # 0..100
-    photo_zoom  = Column(Float, nullable=True)    # float in string (compat)
+    photo_zoom  = Column(Float, nullable=True)   # float (SQLite REAL)
 
     gallery_urls = Column(Text, nullable=True)
     video_urls = Column(Text, nullable=True)
