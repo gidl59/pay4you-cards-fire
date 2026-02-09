@@ -33,21 +33,61 @@
             <button class="btn-mini" type="submit">Attiva Profilo 2</button>
           </form>
         {% endif %}
+
+        <a class="btn-mini ghost" href="{{ url_for('me_credentials') }}">Credenziali</a>
       {% endif %}
     </div>
   </div>
 
   <div class="table-card">
-    <div class="table-row table-head">
+    <div class="table-row table-head" style="grid-template-columns: 240px 200px 220px 1fr;">
       <div>Nome</div>
       <div>Slug</div>
+      <div>Anteprima</div>
       <div>Azioni</div>
     </div>
 
     {% for a in agents %}
-    <div class="table-row">
+    {% set gal = (a.gallery_urls or '').split('|') if a.gallery_urls else [] %}
+    {% set vids = (a.video_urls or '').split('|') if a.video_urls else [] %}
+    {% set pdfraw = (a.pdf1_url or '') %}
+    {% set pdfs = pdfraw.split('|') if pdfraw else [] %}
+
+    <div class="table-row" style="grid-template-columns: 240px 200px 220px 1fr;">
       <div><span class="name-badge">{{ a.name }}</span></div>
       <div><span class="slug-badge">{{ a.slug }}</span></div>
+
+      <div class="dash-preview">
+        {# immagine preview: prima gallery oppure foto profilo #}
+        {% set preview_img = (gal[0] if gal and gal[0] else (a.photo_url if a.photo_url else '')) %}
+        {% if preview_img %}
+          <img class="dash-thumb" src="{{ preview_img }}" alt="preview">
+        {% else %}
+          <div class="dash-thumb dash-thumb-empty">—</div>
+        {% endif %}
+
+        {# video preview: primo video #}
+        {% if vids and vids[0] %}
+          <div class="dash-video">
+            <video class="dash-video-mini" src="{{ vids[0] }}" muted playsinline preload="metadata"></video>
+            <span class="dash-video-badge">video</span>
+          </div>
+        {% endif %}
+
+        {# pdf names #}
+        {% if pdfs %}
+          <div class="dash-pdfs">
+            {% for item in pdfs %}
+              {% if '||' in item %}
+                {% set parts = item.split('||') %}
+                <span class="dash-pdf-name" title="{{ parts[0] }}">{{ parts[0] }}</span>
+              {% else %}
+                <span class="dash-pdf-name" title="{{ item }}">{{ item }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
 
       <div class="actions-cell">
         <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
@@ -58,9 +98,11 @@
 
         <a class="btn-mini ghost" href="/{{ a.slug }}.vcf" target="_blank" rel="noopener">VCF</a>
 
-        <!-- ✅ QR1 / QR2 (aggiungiamo endpoints in app.py se mancano) -->
-        <a class="btn-mini ghost" href="{{ url_for('qr1', slug=a.slug) }}" target="_blank" rel="noopener">QR1</a>
-        <a class="btn-mini ghost" href="{{ url_for('qr2', slug=a.slug) }}" target="_blank" rel="noopener">QR2</a>
+        <button class="btn-mini ghost" type="button" onclick="openDashQr('{{ a.slug }}', false)">QR1</button>
+
+        {% if (a.p2_enabled or 0)|int == 1 %}
+          <button class="btn-mini ghost" type="button" onclick="openDashQr('{{ a.slug }}', true)">QR2</button>
+        {% endif %}
 
         {% if is_admin %}
           <a class="btn-mini" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
@@ -92,4 +134,57 @@
 
   <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
 </div>
+
+{# ===== MODAL QR DASHBOARD ===== #}
+<div id="dash-qr-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-x" type="button" onclick="closeDashQr()">✕</button>
+    <img id="dash-qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
+    <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
+      <button class="btn ghost" type="button" onclick="dashQrWhatsApp()">Invia via WhatsApp</button>
+      <button class="btn ghost" type="button" onclick="dashQrEmail()">Invia via Email</button>
+      <button class="btn primary" type="button" onclick="closeDashQr()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let __DASH_QR_URL = "";
+  function openDashQr(slug, isP2){
+    const base = window.location.origin;
+    let url = base + "/" + slug + "/qr.png";
+    if(isP2) url += "?p=p2";
+    __DASH_QR_URL = url;
+    document.getElementById("dash-qr-img").src = url;
+    document.getElementById("dash-qr-modal").style.display = "flex";
+  }
+  function closeDashQr(){
+    document.getElementById("dash-qr-img").src = "";
+    document.getElementById("dash-qr-modal").style.display = "none";
+    __DASH_QR_URL = "";
+  }
+  function dashQrWhatsApp(){
+    if(!__DASH_QR_URL) return;
+    const txt = "Ecco il QR della mia Pay4You Card:\n" + __DASH_QR_URL;
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+  }
+  function dashQrEmail(){
+    if(!__DASH_QR_URL) return;
+    const subject = "QR Pay4You Card";
+    const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + __DASH_QR_URL + "\n";
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+
+  // Preview primo frame video (Safari)
+  (function(){
+    document.querySelectorAll('.dash-video-mini').forEach(v=>{
+      v.addEventListener('loadedmetadata', ()=>{
+        try{ v.currentTime = 0.05; }catch(e){}
+      });
+      v.addEventListener('seeked', ()=>{
+        try{ v.pause(); }catch(e){}
+      });
+    });
+  })();
+</script>
 {% endblock %}
