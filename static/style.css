@@ -963,3 +963,33 @@ body[data-theme="light"] .out-textarea{
   border-color:rgba(15,23,42,.14);
   color:#0f172a;
 }
+/* ===============================
+   ✅ EXTRA: hint-box + section-box
+   =============================== */
+.hint-box{
+  margin-top:12px;
+  padding:12px 12px;
+  border-radius:16px;
+  border:1px solid rgba(53,199,255,.22);
+  background:rgba(53,199,255,.08);
+  color:rgba(255,255,255,.92);
+  font-weight:800;
+  line-height:1.35;
+}
+.section-box{
+  margin-top:14px;
+  padding:14px 14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+}
+
+/* ✅ light theme: bottoni modal leggibili */
+body[data-theme="light"] .modal-actions .btn{
+  color:#0f172a !important;
+  border-color:rgba(15,23,42,.16) !important;
+  background:rgba(255,255,255,.92) !important;
+}
+body[data-theme="light"] .modal-actions .btn.primary{
+  color:#0b1220 !important;
+}
