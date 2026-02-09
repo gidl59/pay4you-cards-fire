@@ -1,22 +1,40 @@
-{% extends "base.html" %}
-{% block title %}Login | Pay4You{% endblock %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accesso | Pay4You</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo">PAY<span>4</span>YOU</div>
+        <div class="login-sub">Area riservata</div>
+      </div>
 
-{% block content %}
-<div class="login-wrap">
-  <div class="login-card">
-    <h1 class="login-title">Pay4You — Accesso</h1>
-    <form method="post">
-      <div class="field">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}
+          {% for cat, msg in msgs %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" class="login-form">
         <label>Username</label>
-        <input name="username" required>
-      </div>
-      <div class="field">
+        <input name="username" placeholder="es: admin oppure mario-rossi" required>
+
         <label>Password</label>
-        <input name="password" type="password" required>
-      </div>
-      <button class="btn primary" type="submit">Entra</button>
-      <a class="btn ghost" href="/">Vai alle card</a>
-    </form>
+        <input type="password" name="password" placeholder="••••••••" required>
+
+        <button class="btn primary" type="submit">Accedi</button>
+        <a class="btn ghost" href="https://www.pay4you.store" target="_blank" rel="noopener">Torna al sito</a>
+      </form>
+    </div>
+
+    <div class="login-foot">© 2026 Pay4You — Giuseppe Di Lisio</div>
   </div>
-</div>
-{% endblock %}
+</body>
+</html>
