@@ -9,8 +9,8 @@ import urllib.parse
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, session, abort, Response,
-    send_from_directory, flash, send_file
+    url_for, send_file, session, abort, Response,
+    send_from_directory, flash
 )
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text as sa_text, event
@@ -44,7 +44,6 @@ SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
 # ===== SQLITE TUNING =====
 SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))
 SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))
-
 SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")
 SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")
 
@@ -330,7 +329,6 @@ class Agent(Base):
     logo_url = Column(String, nullable=True)
     extra_logo_url = Column(String, nullable=True)
 
-    # CROP FOTO
     photo_pos_x = Column(Integer, nullable=True)  # 0..100
     photo_pos_y = Column(Integer, nullable=True)  # 0..100
     photo_zoom = Column(Float, nullable=True)
@@ -715,51 +713,7 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
     )
 
 
-# ===================== ROUTES (NO DUPLICATI) =====================
-
-@app.get("/webview", endpoint="p4y_webview")
-def p4y_webview():
-    url = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "/").strip() or "/"
-
-    if not url:
-        return render_template("not_found_card.html", back=back), 404
-
-    # Normalizza schema
-    if url.startswith("www."):
-        url = "https://" + url
-    if not (url.startswith("http://") or url.startswith("https://")):
-        url = "https://" + url
-
-    return render_template("webview.html", url=url, back=back)
-
-
-@app.get("/docview", endpoint="p4y_docview")
-def p4y_docview():
-    url = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "/").strip() or "/"
-    title = (request.args.get("title") or "Documento").strip()
-
-    if not url:
-        return render_template("not_found_card.html", back=back), 404
-
-    if url.startswith("www."):
-        url = "https://" + url
-    if not (url.startswith("http://") or url.startswith("https://")) and not url.startswith("/"):
-        url = "https://" + url
-
-    return render_template("docview.html", url=url, back=back, title=title)
-
-
-@app.get("/share", endpoint="p4y_share")
-def p4y_share():
-    back = (request.args.get("back") or "/").strip() or "/"
-    text = (request.args.get("text") or "").strip()
-    if not text:
-        return render_template("not_found_card.html", back=back), 404
-    wa_url = "https://wa.me/?text=" + urllib.parse.quote(text)
-    return render_template("share.html", back=back, text=text, wa_url=wa_url)
-
+# ===================== ROUTES =====================
 
 @app.get("/")
 def home():
@@ -829,6 +783,37 @@ def dashboard():
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
 
+# ---------- CREDENTIALS (anche per CLIENT) ----------
+@app.get("/me/credentials")
+@login_required
+def me_credentials():
+    if is_admin():
+        return redirect(url_for("dashboard"))
+    slug = current_client_slug()
+    if not slug:
+        return redirect(url_for("dashboard"))
+
+    db = SessionLocal()
+    ag = db.query(Agent).filter_by(slug=slug).first()
+    u = db.query(User).filter_by(username=slug).first()
+    db.close()
+    if not ag or not u:
+        abort(404)
+
+    base = get_base_url()
+    login_url = f"{base}/login"
+    card_url = f"{base}/{slug}"
+
+    return render_template(
+        "credentials.html",
+        username=u.username,
+        password=u.password,
+        login_url=login_url,
+        card_url=card_url,
+        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
+    )
+
+
 # ---------- ADMIN CRUD ----------
 @app.get("/admin", endpoint="admin_home")
 @admin_required
@@ -856,6 +841,7 @@ def _save_common_fields_to_agent(ag: Agent):
     ag.logo_spin = form_checkbox_int("logo_spin")
     ag.allow_flip = form_checkbox_int("allow_flip")
 
+    # se ruota foto, disabilita flip
     if int(ag.avatar_spin or 0) == 1 and int(ag.allow_flip or 0) == 1:
         ag.allow_flip = 0
 
@@ -1394,7 +1380,7 @@ def admin_profile2_post(slug):
     return redirect(url_for("admin_profile2", slug=slug))
 
 
-# ---------- ADMIN: INVIA CODICI (HTML) ----------
+# ---------- ADMIN: CREDENZIALI ----------
 @app.get("/admin/<slug>/credentials")
 @admin_required
 def admin_credentials_html(slug):
@@ -1418,20 +1404,6 @@ def admin_credentials_html(slug):
         card_url=card_url,
         p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
     )
-
-
-@app.get("/admin/<slug>/credenziali")
-@admin_required
-def admin_credentials_alias_it(slug):
-    return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
-
-
-@app.get("/credentials/<slug>")
-@login_required
-def credentials_alias(slug):
-    if is_admin():
-        return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
-    return redirect(url_for("dashboard"))
 
 
 # ---------- PUBLIC CARD ----------
@@ -1541,47 +1513,36 @@ def public_card(slug):
     )
 
 
-# ---------- OUT (lasciato, ma la card usa /webview) ----------
-@app.get("/out")
-def out():
-    u = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "").strip()
+# ---------- WEBVIEW / DOCVIEW / SHARE (per iframe dentro MODAL) ----------
+@app.get("/webview")
+def webview():
+    url = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "/").strip() or "/"
+    if not url:
+        return render_template("not_found_card.html", back=back), 404
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return render_template("not_found_card.html", back=back), 404
+    return render_template("webview.html", url=url, back=back)
 
-    if not (u.startswith("http://") or u.startswith("https://")):
-        return redirect(back or url_for("dashboard"))
 
-    if not back:
-        back = url_for("dashboard")
+@app.get("/docview")
+def docview():
+    url = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "/").strip() or "/"
+    title = (request.args.get("title") or "Documento").strip()
+    if not url:
+        return render_template("not_found_card.html", back=back), 404
+    return render_template("docview.html", url=url, back=back, title=title)
 
-    html = f"""
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>Apri sito</title>
-  <style>
-    body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; padding:18px;}}
-    .box{{max-width:720px; margin:0 auto;}}
-    .card{{border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:16px;}}
-    .btn{{display:inline-block; padding:12px 14px; border-radius:12px; font-weight:700; text-decoration:none;
-          border:1px solid rgba(0,0,0,.15); margin-right:10px;}}
-  </style>
-</head>
-<body>
-  <div class="box">
-    <div class="card">
-      <h2 style="margin:0 0 10px;">Sito esterno</h2>
-      <div style="margin:0 0 14px; word-break:break-word;">{u}</div>
-      <a class="btn" href="{u}" target="_blank" rel="noopener">Apri sito</a>
-      <a class="btn" href="{back}">Torna alla card</a>
-    </div>
-  </div>
-</body>
-</html>
-"""
-    return Response(html, mimetype="text/html")
+
+@app.get("/share")
+def share():
+    back = (request.args.get("back") or "/").strip() or "/"
+    text = (request.args.get("text") or "").strip()
+    if not text:
+        return render_template("not_found_card.html", back=back), 404
+    wa_url = "https://wa.me/?text=" + urllib.parse.quote(text)
+    return render_template("share.html", back=back, text=text, wa_url=wa_url)
 
 
 # ---------- VCARD ----------
@@ -1631,7 +1592,6 @@ def vcard(slug):
             with Image.open(disk_path) as im:
                 im = im.convert("RGB")
                 im.thumbnail((420, 420))
-
                 for quality in (82, 72, 62, 52, 45):
                     buf = BytesIO()
                     im.save(buf, format="JPEG", quality=quality, optimize=True)
@@ -1660,7 +1620,6 @@ def vcard(slug):
         f"N:{last_name};{first_name};;;",
     ]
 
-    # FOTO: embedded (ridotta) + URI
     photo_url = clean_str(getattr(ag, "photo_url", "") or "")
     photo_abs = abs_url(photo_url)
     embedded = try_embed_photo_b64(photo_url)
@@ -1679,7 +1638,6 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
         lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
@@ -1687,7 +1645,7 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
-    # ✅ EMAIL (FIX indent + iOS-friendly)
+    # EMAIL (fix indent + label)
     raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
@@ -1699,14 +1657,12 @@ def vcard(slug):
     if is_email_like(pec):
         lines.append(f"EMAIL;TYPE=INTERNET:{pec}")
 
-    # Address (prima riga)
     addr = clean_str(getattr(ag, "addresses", "") or "")
     if addr:
         first_addr = addr.split("\n", 1)[0].strip()
         if first_addr:
             lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
 
-    # Link card
     lines.append(f"item1.URL:{card_url}")
     lines.append(f"item1.X-ABLABEL:{label_card}")
 
@@ -1746,7 +1702,6 @@ def vcard(slug):
     lines.append("END:VCARD")
 
     content = "\r\n".join(lines)
-
     resp = Response(content)
     resp.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
@@ -1756,7 +1711,7 @@ def vcard(slug):
     return resp
 
 
-# ---------- QR PRINCIPALE ----------
+# ---------- QR ----------
 @app.get("/<slug>/qr.png")
 def qr(slug):
     slug = slugify(slug)
@@ -1775,28 +1730,11 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# ✅ QR1 / QR2 (per dashboard)
-@app.get("/qr1/<slug>")
-def qr1(slug):
-    slug = slugify(slug)
-    return redirect(f"/{slug}", code=302)
-
-
-@app.get("/qr2/<slug>")
-def qr2(slug):
-    slug = slugify(slug)
-    return redirect(f"/{slug}?p=p2", code=302)
-
-
-# ---------- ERROR HANDLERS (UNICO 404) ----------
+# ---------- ERRORS (unico 404) ----------
 @app.errorhandler(404)
 def not_found(e):
     back = (request.args.get("back") or request.referrer or "/").strip() or "/"
-    # Prova not_found_card.html (con "Torna alla card"), se non esiste usa 404.html
-    try:
-        return render_template("not_found_card.html", back=back), 404
-    except Exception:
-        return render_template("404.html"), 404
+    return render_template("not_found_card.html", back=back), 404
 
 
 @app.errorhandler(500)
