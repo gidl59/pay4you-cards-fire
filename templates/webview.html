@@ -2,16 +2,23 @@
 {% block title %}Sito | Pay4You{% endblock %}
 
 {% block content %}
-<div class="out-shell">
-  <div class="out-head">
-    <div class="out-title">Sito</div>
-    <a class="btn-mini ghost" href="{{ back or '/' }}">← Torna alla card</a>
+<div class="panel panel-wide">
+  <div class="panel-head" style="align-items:center;">
+    <div>
+      <h1 class="page-title" style="margin-bottom:4px;">Sito esterno</h1>
+      <div class="hint">Stai aprendo un contenuto esterno. Puoi tornare alla card quando vuoi.</div>
+    </div>
+
+    <div class="btn-row">
+      <a class="btn-mini ghost" href="{{ back or url_for('dashboard') }}">← Torna alla card</a>
+      <a class="btn-mini" href="{{ url }}" target="_blank" rel="noopener">Apri in una nuova scheda</a>
+    </div>
   </div>
 
-  <div class="out-frame">
-    <iframe src="{{ url }}" referrerpolicy="no-referrer" loading="lazy"></iframe>
-  </div>
+  <div class="sep" style="margin:12px 0;"></div>
 
-  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
+  <div style="border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.18);">
+    <iframe src="{{ url }}" style="width:100%; height:78vh; border:0;" referrerpolicy="no-referrer"></iframe>
+  </div>
 </div>
 {% endblock %}
