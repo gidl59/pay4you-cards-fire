@@ -50,21 +50,17 @@
       <div><span class="slug-badge">{{ a.slug }}</span></div>
 
       <div class="actions-cell">
-        <!-- ✅ Apri P1 -->
         <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
 
-        <!-- ✅ Apri P2 se attivo -->
         {% if (a.p2_enabled or 0)|int == 1 %}
           <a class="btn-mini ghost" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
         {% endif %}
 
-        <!-- ✅ QR P1 / QR P2 -->
-        <a class="btn-mini ghost" href="/{{ a.slug }}/qr.png" target="_blank" rel="noopener">QR P1</a>
-        {% if (a.p2_enabled or 0)|int == 1 %}
-          <a class="btn-mini ghost" href="/{{ a.slug }}/qr.png?p=p2" target="_blank" rel="noopener">QR P2</a>
-        {% endif %}
-
         <a class="btn-mini ghost" href="/{{ a.slug }}.vcf" target="_blank" rel="noopener">VCF</a>
+
+        <!-- ✅ QR1 / QR2 (aggiungiamo endpoints in app.py se mancano) -->
+        <a class="btn-mini ghost" href="{{ url_for('qr1', slug=a.slug) }}" target="_blank" rel="noopener">QR1</a>
+        <a class="btn-mini ghost" href="{{ url_for('qr2', slug=a.slug) }}" target="_blank" rel="noopener">QR2</a>
 
         {% if is_admin %}
           <a class="btn-mini" href="{{ url_for('edit_agent', slug=a.slug) }}">Modifica P1</a>
@@ -80,7 +76,6 @@
             </form>
           {% endif %}
 
-          <!-- ✅ Credenziali: torna a funzionare e resta “bella” -->
           <a class="btn-mini ghost" href="{{ url_for('admin_credentials_html', slug=a.slug) }}">Credenziali</a>
 
           <form method="post" action="{{ url_for('delete_agent', slug=a.slug) }}"
