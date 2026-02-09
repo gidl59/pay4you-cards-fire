@@ -8,9 +8,9 @@
       <h1 class="page-title" style="margin-bottom:4px;">Contenuto non disponibile</h1>
       <div class="hint">Il link potrebbe essere scaduto o il file non è più presente.</div>
     </div>
+
     <div class="btn-row">
-      <a class="btn-mini ghost" href="{{ back or url_for('dashboard') }}">← Torna alla card</a>
-      <a class="btn-mini" href="{{ url_for('dashboard') }}">Area riservata</a>
+      <a class="btn-mini ghost" href="{{ (back or '/') }}">← Torna alla card</a>
     </div>
   </div>
 </div>
