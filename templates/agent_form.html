@@ -39,7 +39,6 @@
 
     <div class="form-actions">
       <a class="btn-mini ghost" href="{{ url_for('dashboard') }}">← Dashboard</a>
-
       {% if session.get('role') != 'admin' %}
         {% if editing_profile2 %}
           <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Profilo 1</a>
@@ -53,20 +52,6 @@
   </div>
 
   <form method="post" enctype="multipart/form-data" class="card-form">
-
-    <!-- ✅ SLUG: visibile solo admin. Non modificabile per i client. -->
-    {% if session.get('role') == 'admin' and agent and agent.slug %}
-      <div class="section-box">
-        <div class="section-title">Identificativo</div>
-        <div class="grid-2">
-          <div class="field">
-            <label>Slug (non modificabile)</label>
-            <input type="text" value="{{ agent.slug }}" readonly>
-            <div class="mini-help">Link card: <span class="mono">{{ request.url_root.rstrip('/') }}/{{ agent.slug }}</span></div>
-          </div>
-        </div>
-      </div>
-    {% endif %}
 
     {% if session.get('role') == 'admin' and not agent %}
       <div class="grid-2">
@@ -83,11 +68,27 @@
       </div>
     {% endif %}
 
-    <!-- Dati principali -->
+    {% if agent %}
+      <div class="section-box">
+        <div class="section-title">Identificativo</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Slug (non modificabile)</label>
+            <input type="text" value="{{ agent.slug }}" readonly>
+            <div class="mini-help">È il link pubblico della card.</div>
+          </div>
+          <div class="field">
+            <label>Link card</label>
+            <input type="text" value="{{ request.url_root.strip().rstrip('/') }}/{{ agent.slug }}" readonly>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     <div class="grid-2">
       <div class="field">
         <label>Nome</label>
-        <input name="name" type="text" value="{{ agent.name if agent else '' }}">
+        <input name="name" type="text" value="{{ agent.name if agent else '' }}" {% if session.get('role')=='admin' and not agent %}disabled{% endif %}>
         <div class="mini-help">Per P2 può essere diverso dal P1.</div>
       </div>
 
@@ -107,7 +108,6 @@
       </div>
     </div>
 
-    <!-- Contatti -->
     <div class="section-box">
       <div class="section-title">Contatti</div>
 
@@ -154,7 +154,6 @@
       </div>
     </div>
 
-    <!-- Dati fiscali -->
     <div class="section-box">
       <div class="section-title">Dati</div>
       <div class="grid-2">
@@ -169,50 +168,20 @@
       </div>
     </div>
 
-    <!-- Social -->
     <div class="section-box">
       <div class="section-title">Social</div>
-      <div class="mini-help">
-        Inserisci un link completo (https://...) oppure il tuo @ (solo per Telegram). Se il formato è sbagliato, l’icona non comparirà sulla card.
-      </div>
-
       <div class="grid-2">
-        <div class="field">
-          <label>Facebook</label>
-          <input class="js-url" name="facebook" type="text" value="{{ agent.facebook if agent and agent.facebook else '' }}" placeholder="https://facebook.com/tuapagina">
-        </div>
-        <div class="field">
-          <label>Instagram</label>
-          <input class="js-url" name="instagram" type="text" value="{{ agent.instagram if agent and agent.instagram else '' }}" placeholder="https://instagram.com/tuoprofilo">
-        </div>
-        <div class="field">
-          <label>LinkedIn</label>
-          <input class="js-url" name="linkedin" type="text" value="{{ agent.linkedin if agent and agent.linkedin else '' }}" placeholder="https://linkedin.com/in/...">
-        </div>
-        <div class="field">
-          <label>TikTok</label>
-          <input class="js-url" name="tiktok" type="text" value="{{ agent.tiktok if agent and agent.tiktok else '' }}" placeholder="https://tiktok.com/@...">
-        </div>
-        <div class="field">
-          <label>Telegram</label>
-          <input class="js-telegram" name="telegram" type="text" value="{{ agent.telegram if agent and agent.telegram else '' }}" placeholder="@username oppure https://t.me/username">
-        </div>
-        <div class="field">
-          <label>YouTube</label>
-          <input class="js-url" name="youtube" type="text" value="{{ agent.youtube if agent and agent.youtube else '' }}" placeholder="https://youtube.com/@...">
-        </div>
-        <div class="field">
-          <label>Spotify</label>
-          <input class="js-url" name="spotify" type="text" value="{{ agent.spotify if agent and agent.spotify else '' }}" placeholder="https://open.spotify.com/...">
-        </div>
+        <div class="field"><label>Facebook</label><input name="facebook" type="text" value="{{ agent.facebook if agent and agent.facebook else '' }}"></div>
+        <div class="field"><label>Instagram</label><input name="instagram" type="text" value="{{ agent.instagram if agent and agent.instagram else '' }}"></div>
+        <div class="field"><label>LinkedIn</label><input name="linkedin" type="text" value="{{ agent.linkedin if agent and agent.linkedin else '' }}"></div>
+        <div class="field"><label>TikTok</label><input name="tiktok" type="text" value="{{ agent.tiktok if agent and agent.tiktok else '' }}"></div>
+        <div class="field"><label>Telegram</label><input name="telegram" type="text" value="{{ agent.telegram if agent and agent.telegram else '' }}"></div>
+        <div class="field"><label>YouTube</label><input name="youtube" type="text" value="{{ agent.youtube if agent and agent.youtube else '' }}"></div>
+        <div class="field"><label>Spotify</label><input name="spotify" type="text" value="{{ agent.spotify if agent and agent.spotify else '' }}"></div>
       </div>
-
-      <div id="urlWarn" class="mini-help" style="display:none; color:#ffb2b2; font-weight:900; margin-top:10px;">
-        ⚠️ Alcuni link social sembrano non validi (controlla http/https o @telegram). Non blocco il salvataggio, ma l’icona potrebbe non apparire.
-      </div>
+      <div class="mini-help">Suggerimento: incolla link completi (https://...). Se non è valido, l’icona non verrà mostrata.</div>
     </div>
 
-    <!-- Media avatar/logo/back -->
     <div class="section-box">
       <div class="section-title">Immagini</div>
 
@@ -240,7 +209,6 @@
             <option value="company" {% if bm=='company' %}selected{% endif %}>Logo aziendale</option>
             <option value="personal" {% if bm=='personal' %}selected{% endif %}>Foto/Logo personale</option>
           </select>
-          <div class="mini-help">Se scegli “personale”, carica l’immagine sotto.</div>
         </div>
 
         <div class="field">
@@ -252,52 +220,25 @@
         </div>
       </div>
 
-      <!-- ✅ CROP “come prima”: slider + preview -->
-      <div class="section-box" style="margin-top:12px;">
-        <div class="section-title">Crop foto (Zoom / Sposta)</div>
-
-        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;">
-          <div style="width:220px; height:220px; border-radius:999px; overflow:hidden; border:3px solid rgba(243,198,43,.55); background:rgba(0,0,0,.25); box-shadow:0 18px 40px rgba(0,0,0,.45);">
-            {% if agent and agent.photo_url %}
-              <img id="cropPreview" src="{{ agent.photo_url }}" alt="Preview" style="width:100%; height:100%; object-fit:cover;">
-            {% else %}
-              <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:42px;opacity:.8;">👤</div>
-            {% endif %}
-          </div>
-
-          <div style="flex:1; min-width:260px;">
-            <div class="grid-3">
-              <div class="field">
-                <label>Crop X (0–100)</label>
-                <input id="posX" name="photo_pos_x" type="range" min="0" max="100" step="1"
-                       value="{{ agent.photo_pos_x if agent and agent.photo_pos_x is not none else 50 }}">
-                <div class="mini-help">Valore: <span class="mono" id="posXVal"></span></div>
-              </div>
-
-              <div class="field">
-                <label>Crop Y (0–100)</label>
-                <input id="posY" name="photo_pos_y" type="range" min="0" max="100" step="1"
-                       value="{{ agent.photo_pos_y if agent and agent.photo_pos_y is not none else 35 }}">
-                <div class="mini-help">Valore: <span class="mono" id="posYVal"></span></div>
-              </div>
-
-              <div class="field">
-                <label>Zoom (1.0–2.6)</label>
-                <input id="zoom" name="photo_zoom" type="range" min="1" max="2.6" step="0.05"
-                       value="{{ agent.photo_zoom if agent and agent.photo_zoom is not none else 1.0 }}">
-                <div class="mini-help">Valore: <span class="mono" id="zoomVal"></span></div>
-              </div>
-            </div>
-
-            <div class="mini-help" style="margin-top:10px;">
-              Suggerimento: metti Zoom 1.15–1.35 e centra il volto con X/Y.
-            </div>
-          </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Crop X (0–100)</label>
+          <input name="photo_pos_x" type="number" min="0" max="100" step="1"
+                 value="{{ agent.photo_pos_x if agent and agent.photo_pos_x is not none else 50 }}">
+        </div>
+        <div class="field">
+          <label>Crop Y (0–100)</label>
+          <input name="photo_pos_y" type="number" min="0" max="100" step="1"
+                 value="{{ agent.photo_pos_y if agent and agent.photo_pos_y is not none else 35 }}">
+        </div>
+        <div class="field">
+          <label>Zoom (1.0–2.6)</label>
+          <input name="photo_zoom" type="number" min="1" max="2.6" step="0.05"
+                 value="{{ agent.photo_zoom if agent and agent.photo_zoom is not none else 1.0 }}">
         </div>
       </div>
     </div>
 
-    <!-- Effetti -->
     <div class="section-box">
       <div class="section-title">Effetti</div>
 
@@ -313,7 +254,7 @@
         </label>
 
         <label class="check">
-          <input id="avatarSpin" type="checkbox" name="avatar_spin" {% if aspin==1 %}checked{% endif %}>
+          <input type="checkbox" name="avatar_spin" {% if aspin==1 %}checked{% endif %}>
           <span>Ruota foto</span>
         </label>
 
@@ -323,23 +264,22 @@
         </label>
 
         <label class="check">
-          <input id="allowFlip" type="checkbox" name="allow_flip" {% if flip==1 %}checked{% endif %}>
+          <input type="checkbox" name="allow_flip" {% if flip==1 %}checked{% endif %}>
           <span>Flip (tap per retro)</span>
         </label>
       </div>
 
       <div class="mini-help">
-        Nota: “Ruota foto” e “Flip” non possono essere attivi insieme (se attivi uno, l’altro si disattiva).
+        Nota: se attivi “Ruota foto” il flip viene disabilitato automaticamente.
       </div>
     </div>
 
-    <!-- Gallery / video / pdf -->
     <div class="section-box">
       <div class="section-title">Media (foto / video / PDF)</div>
 
       <div class="grid-2">
         <div class="field">
-          <label>Galleria foto (max 30)</label>
+          <label>Galleria foto (max {{ 30 }})</label>
           <input name="gallery" type="file" accept="image/*" multiple>
           {% if agent and agent.gallery_urls %}
             <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
@@ -347,7 +287,7 @@
         </div>
 
         <div class="field">
-          <label>Video (max 10)</label>
+          <label>Video (max {{ 10 }})</label>
           <input name="videos" type="file" accept="video/*" multiple>
           {% if agent and agent.video_urls %}
             <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
@@ -371,29 +311,27 @@
       </div>
     </div>
 
-    <!-- i18n -->
     {% if session.get('role') == 'admin' %}
-    <div class="section-box">
-      <div class="section-title">Traduzioni (opzionali)</div>
-      <div class="mini-help">Solo per la card pubblica quando lang=en/fr/es/de.</div>
+    <details class="section-box" style="padding:12px;">
+      <summary class="section-title" style="margin:0;">Traduzioni (opzionali)</summary>
+      <div class="mini-help" style="margin-top:8px;">Solo per la card pubblica quando lang=en/fr/es/de.</div>
 
       {% for L in ['en','fr','es','de'] %}
         {% set d = (i18n_data.get(L) if i18n_data and i18n_data.get(L) else {}) %}
-        <div class="lang-box">
-          <div class="lang-title">{{ L|upper }}</div>
-          <div class="grid-2">
+        <details class="lang-box">
+          <summary class="lang-title">{{ L|upper }}</summary>
+          <div class="grid-2" style="margin-top:10px;">
             <div class="field"><label>Nome</label><input name="name_{{L}}" value="{{ d.get('name','') }}"></div>
             <div class="field"><label>Azienda</label><input name="company_{{L}}" value="{{ d.get('company','') }}"></div>
             <div class="field"><label>Ruolo</label><input name="role_{{L}}" value="{{ d.get('role','') }}"></div>
             <div class="field"><label>Bio</label><textarea name="bio_{{L}}" rows="2">{{ d.get('bio','') }}</textarea></div>
             <div class="field" style="grid-column:1/-1"><label>Indirizzi</label><textarea name="addresses_{{L}}" rows="2">{{ d.get('addresses','') }}</textarea></div>
           </div>
-        </div>
+        </details>
       {% endfor %}
-    </div>
+    </details>
     {% endif %}
 
-    <!-- Submit -->
     <div class="sticky-save">
       <button class="btn primary" type="submit">
         {% if agent %}
@@ -405,84 +343,9 @@
 
       <a class="btn ghost" href="{{ url_for('dashboard') }}">Annulla</a>
     </div>
+
   </form>
 
   <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
 </div>
-
-<script>
-  // ✅ Crop preview live
-  (function(){
-    const img = document.getElementById('cropPreview');
-    const x = document.getElementById('posX');
-    const y = document.getElementById('posY');
-    const z = document.getElementById('zoom');
-
-    const xv = document.getElementById('posXVal');
-    const yv = document.getElementById('posYVal');
-    const zv = document.getElementById('zoomVal');
-
-    function apply(){
-      if(xv) xv.textContent = (x ? x.value : '');
-      if(yv) yv.textContent = (y ? y.value : '');
-      if(zv) zv.textContent = (z ? Number(z.value).toFixed(2) : '');
-      if(!img) return;
-      const px = x ? x.value : 50;
-      const py = y ? y.value : 35;
-      const pz = z ? z.value : 1.0;
-      img.style.objectPosition = px + "% " + py + "%";
-      img.style.transformOrigin = "center center";
-      img.style.transform = "scale(" + pz + ")";
-    }
-    [x,y,z].forEach(el => el && el.addEventListener('input', apply));
-    apply();
-  })();
-
-  // ✅ Mutual exclusion: ruota foto vs flip
-  (function(){
-    const a = document.getElementById('avatarSpin');
-    const f = document.getElementById('allowFlip');
-    if(!a || !f) return;
-
-    function sync(){
-      if(a.checked) f.checked = false;
-    }
-    function sync2(){
-      if(f.checked) a.checked = false;
-    }
-    a.addEventListener('change', sync);
-    f.addEventListener('change', sync2);
-    sync();
-  })();
-
-  // ✅ Mini warning su social
-  (function(){
-    const warn = document.getElementById('urlWarn');
-    function okUrl(v){
-      v = (v||"").trim();
-      if(!v) return true;
-      if(v.startsWith("http://") || v.startsWith("https://")) return true;
-      return false;
-    }
-    function okTelegram(v){
-      v = (v||"").trim();
-      if(!v) return true;
-      if(v.startsWith("@")) return true;
-      if(v.startsWith("http://") || v.startsWith("https://")) return true;
-      return false;
-    }
-    function check(){
-      let bad = false;
-      document.querySelectorAll(".js-url").forEach(i=>{
-        if(!okUrl(i.value)) bad = true;
-      });
-      document.querySelectorAll(".js-telegram").forEach(i=>{
-        if(!okTelegram(i.value)) bad = true;
-      });
-      if(warn) warn.style.display = bad ? "block" : "none";
-    }
-    document.querySelectorAll(".js-url,.js-telegram").forEach(i=> i.addEventListener('input', check));
-    check();
-  })();
-</script>
 {% endblock %}
