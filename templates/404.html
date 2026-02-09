@@ -1,34 +1,17 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>404 | Pay4You</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body data-theme="">
-  <div class="page-main" style="padding:26px 16px;">
-    <div class="panel panel-login">
-      <div class="panel-head panel-head-center">
-        <div class="page-title" style="font-size:26px;">Pagina non trovata</div>
-        <div class="hint">La card o la pagina richiesta non esiste.</div>
-      </div>
-      <div class="panel-body">
-        <div class="actions-footer" style="margin-top:10px;">
-          <a class="btn primary" href="{{ url_for('login') }}">Vai al login</a>
-          <a class="btn ghost" href="https://www.pay4you.store" target="_blank" rel="noopener">Sito Pay4You</a>
-        </div>
-        <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
-      </div>
+{% extends "base.html" %}
+{% block title %}Contenuto non disponibile | Pay4You{% endblock %}
+
+{% block content %}
+<div class="panel panel-wide">
+  <div class="panel-head" style="align-items:center;">
+    <div>
+      <h1 class="page-title" style="margin-bottom:4px;">Contenuto non disponibile</h1>
+      <div class="hint">Il link potrebbe essere scaduto o il file non è più presente.</div>
+    </div>
+    <div class="btn-row">
+      <a class="btn-mini ghost" href="{{ back or url_for('dashboard') }}">← Torna alla card</a>
+      <a class="btn-mini" href="{{ url_for('dashboard') }}">Area riservata</a>
     </div>
   </div>
-  <script>
-    (function(){
-      const KEY="p4y_theme";
-      const saved = localStorage.getItem(KEY) || "auto";
-      document.body.setAttribute("data-theme", saved === "auto" ? "" : saved);
-    })();
-  </script>
-</body>
-</html>
+</div>
+{% endblock %}
