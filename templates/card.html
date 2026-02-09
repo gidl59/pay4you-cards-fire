@@ -23,7 +23,7 @@
       border: 0 !important;
       box-shadow: none !important;
       padding: 0 !important;
-      pointer-events: none; /* ✅ NON cliccabile */
+      pointer-events: none; /* NON cliccabile */
     }
     .top-left-logo img{
       width: 84px;
@@ -49,18 +49,6 @@
       will-change: transform;
     }
 
-    /* ✅ avatar spin (se in css non c'è, lo aggiungiamo qui per sicurezza) */
-    @keyframes spinAvatar { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-    .spin-avatar{ animation: spinAvatar 6.5s linear infinite; }
-
-    /* ✅ Tema chiaro: azienda leggibile anche se style.css non lo gestisce */
-    body[data-theme="light"] .company-badge{
-      color:#0f172a !important;
-      background: rgba(15,23,42,.08) !important;
-      border-color: rgba(15,23,42,.18) !important;
-    }
-
-    /* iframe interno modal: ora lo usiamo per webview e share */
     #mWeb{
       width: min(980px, 92vw);
       height: min(78vh, 720px);
@@ -69,6 +57,7 @@
       background: rgba(0,0,0,.06);
       display:none;
     }
+    #mShare{ display:none; width:min(980px, 92vw); }
   </style>
 </head>
 
@@ -114,7 +103,7 @@
                         onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <img class="avatar-img zoomable {% if (ag.avatar_spin or 0)|int == 1 %}spin-avatar{% endif %}"
+                    <img class="avatar-img zoomable"
                          src="{{ ag.photo_url }}"
                          alt="Foto"
                          style="object-position: {{ px|int }}% {{ py|int }}% !important; transform: scale({{ '%.2f'|format(pz|float) }});">
@@ -159,65 +148,13 @@
           {% endif %}
 
           <div class="social-icons social-icons-center">
-            {% if ag.facebook %}
-              <a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.87v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.25c-1.23 0-1.61.77-1.61 1.55V12h2.74l-.44 2.88h-2.3v6.99A10 10 0 0 0 22 12z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.instagram %}
-              <a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="ig" x1="0" y1="24" x2="24" y2="0">
-                      <stop offset="0" stop-color="#F58529"/>
-                      <stop offset="0.5" stop-color="#DD2A7B"/>
-                      <stop offset="1" stop-color="#515BD4"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.linkedin %}
-              <a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#0A66C2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.86-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.31V9h3.41v1.56h.05c.47-.9 1.62-1.86 3.34-1.86 3.57 0 4.23 2.35 4.23 5.4v6.35zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.tiktok %}
-              <a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#25F4EE" d="M14.5 3v11.1a3.6 3.6 0 1 1-3.1-3.6V7.6a7.3 7.3 0 1 0 6.6 7.3V9.2a6.1 6.1 0 0 1-3.5-1.7V3z"/>
-                  <path fill="#FE2C55" d="M14.5 3v3.5a6.1 6.1 0 0 0 3.5 1.7V6.1A6.8 6.8 0 0 1 14.5 3z"/>
-                  <path fill="#111111" d="M11.4 7.6v2.9a3.6 3.6 0 1 0 3.1 3.6V3h-2.1v4.6z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.telegram %}
-              <a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#2AABEE" d="M21.9 4.6 19 20.2c-.2 1.1-.8 1.4-1.6.9l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.8.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2l-10.6 6.7-4.6-1.4c-1-.3-1-1 .2-1.5L20 3.8c.9-.3 1.7.2 1.4.8z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.youtube %}
-              <a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#FF0000" d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.7 4.6 12 4.6 12 4.6s-5.7 0-7.5.5A3 3 0 0 0 2.4 7.2 31 31 0 0 0 2 12a31 31 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.8.5 7.5.5 7.5.5s5.7 0 7.5-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.4-4.8z"/>
-                  <path fill="#fff" d="M10 15.5V8.5L16 12l-6 3.5z"/>
-                </svg>
-              </a>
-            {% endif %}
-            {% if ag.spotify %}
-              <a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify" title="Spotify">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path fill="#1DB954" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.5a.9.9 0 0 1-1.2.3c-3.3-2-7.4-2.5-12.2-1.4a.9.9 0 1 1-.4-1.7c5.2-1.2 9.8-.6 13.5 1.6.4.2.6.8.3 1.2zm1.4-3a1 1 0 0 1-1.4.3c-3.8-2.3-9.7-3-14.3-1.6a1 1 0 1 1-.6-1.9c5.2-1.6 11.6-.8 15.9 1.8.5.3.7.9.4 1.4zm.1-3.2c-4.6-2.7-12.1-3-16.5-1.7a1.1 1.1 0 1 1-.7-2.1c5.1-1.6 13.3-1.2 18.6 1.9a1.1 1.1 0 0 1-1.4 1.9z"/>
-                </svg>
-              </a>
-            {% endif %}
+            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.87v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.25c-1.23 0-1.61.77-1.61 1.55V12h2.74l-.44 2.88h-2.3v6.99A10 10 0 0 0 22 12z"/></svg></a>{% endif %}
+            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><svg viewBox="0 0 24 24" width="22" height="22"><defs><linearGradient id="ig" x1="0" y1="24" x2="24" y2="0"><stop offset="0" stop-color="#F58529"/><stop offset="0.5" stop-color="#DD2A7B"/><stop offset="1" stop-color="#515BD4"/></linearGradient></defs><path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/></svg></a>{% endif %}
+            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#0A66C2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.86-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.31V9h3.41v1.56h.05c.47-.9 1.62-1.86 3.34-1.86 3.57 0 4.23 2.35 4.23 5.4v6.35zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg></a>{% endif %}
+            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#25F4EE" d="M14.5 3v11.1a3.6 3.6 0 1 1-3.1-3.6V7.6a7.3 7.3 0 1 0 6.6 7.3V9.2a6.1 6.1 0 0 1-3.5-1.7V3z"/><path fill="#FE2C55" d="M14.5 3v3.5a6.1 6.1 0 0 0 3.5 1.7V6.1A6.8 6.8 0 0 1 14.5 3z"/><path fill="#111111" d="M11.4 7.6v2.9a3.6 3.6 0 1 0 3.1 3.6V3h-2.1v4.6z"/></svg></a>{% endif %}
+            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#2AABEE" d="M21.9 4.6 19 20.2c-.2 1.1-.8 1.4-1.6.9l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.8.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2l-10.6 6.7-4.6-1.4c-1-.3-1-1 .2-1.5L20 3.8c.9-.3 1.7.2 1.4.8z"/></svg></a>{% endif %}
+            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#FF0000" d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.7 4.6 12 4.6 12 4.6s-5.7 0-7.5.5A3 3 0 0 0 2.4 7.2 31 31 0 0 0 2 12a31 31 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.8.5 7.5.5 7.5.5s5.7 0 7.5-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.4-4.8z"/><path fill="#fff" d="M10 15.5V8.5L16 12l-6 3.5z"/></svg></a>{% endif %}
+            {% if ag.spotify %}<a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify" title="Spotify"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#1DB954" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.5a.9.9 0 0 1-1.2.3c-3.3-2-7.4-2.5-12.2-1.4a.9.9 0 1 1-.4-1.7c5.2-1.2 9.8-.6 13.5 1.6.4.2.6.8.3 1.2zm1.4-3a1 1 0 0 1-1.4.3c-3.8-2.3-9.7-3-14.3-1.6a1 1 0 1 1-.6-1.9c5.2-1.6 11.6-.8 15.9 1.8.5.3.7.9.4 1.4zm.1-3.2c-4.6-2.7-12.1-3-16.5-1.7a1.1 1.1 0 1 1-.7-2.1c5.1-1.6 13.3-1.2 18.6 1.9a1.1 1.1 0 0 1-1.4 1.9z"/></svg></a>{% endif %}
           </div>
         </div>
       </div>
@@ -351,7 +288,6 @@
                      muted
                      playsinline
                      preload="metadata"
-                     poster=""
                      aria-label="Video"></video>
               <div class="video-play">PLAY</div>
               <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
@@ -383,9 +319,20 @@
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
-
-      <!-- ✅ iframe web/share dentro modal (finestra nella finestra) -->
       <iframe id="mWeb" src="" style="display:none;" referrerpolicy="no-referrer"></iframe>
+
+      <!-- SHARE MODAL (come ieri: finestra nella finestra) -->
+      <div id="mShare">
+        <div class="section" style="margin:0;">
+          <div class="section-title">Condivisione</div>
+          <div id="mShareText" style="white-space:pre-wrap; line-height:1.35;"></div>
+          <div class="modal-actions" style="margin-top:12px;">
+            <a id="mShareBtn" class="btn primary" href="#" target="_blank" rel="noopener">Apri WhatsApp</a>
+            <button class="btn ghost" type="button" onclick="goTop()">Torna alla card</button>
+            <button class="btn ghost" type="button" onclick="closeModal()">Chiudi</button>
+          </div>
+        </div>
+      </div>
 
       <div class="modal-actions">
         <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
@@ -400,7 +347,6 @@
     <div class="modal-box">
       <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
       <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
-
       <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
         <button class="btn ghost" type="button" onclick="shareQrWhatsApp()">Invia via WhatsApp</button>
         <button class="btn ghost" type="button" onclick="shareQrEmail()">Invia via Email</button>
@@ -462,6 +408,7 @@
     document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
     document.getElementById('mPdf').style.display   = (type==='pdf') ? 'block' : 'none';
     document.getElementById('mWeb').style.display   = (type==='web') ? 'block' : 'none';
+    document.getElementById('mShare').style.display = (type==='share') ? 'block' : 'none';
   }
 
   function closeModal(){
@@ -482,6 +429,10 @@
     }
     if(pdf) pdf.src = '';
     if(web) web.src = '';
+
+    // chiudi share
+    document.getElementById('mShareText').textContent = "";
+    document.getElementById('mShareBtn').href = "#";
 
     window.__MEDIA_URL = "";
     window.__MEDIA_TITLE = "";
@@ -513,24 +464,13 @@
     openModal('pdf');
   }
 
-  // ✅ SITO: MODAL iframe (finestra nella finestra)
+  // ✅ SITO ESTERNO: come ieri, dentro la MODAL (finestra nella finestra)
   function openWebsite(url){
     if(!url) return;
-    const back = window.__BACK_URL || "/";
-    const go = "/webview?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
-    const web = document.getElementById('mWeb');
-    web.src = go;
+    const f = document.getElementById('mWeb');
+    f.src = url;
     window.__MEDIA_URL = url;
-    window.__MEDIA_TITLE = "Sito - {{ ag.name }}";
-    openModal('web');
-  }
-
-  // ✅ WhatsApp: MODAL iframe (share.html)
-  function openShareModal(text){
-    const back = window.__BACK_URL || "/";
-    const u = "/share?back=" + encodeURIComponent(back) + "&text=" + encodeURIComponent(text);
-    const web = document.getElementById('mWeb');
-    web.src = u;
+    window.__MEDIA_TITLE = "Sito";
     openModal('web');
   }
 
@@ -553,11 +493,21 @@
     window.__QR_URL = "";
   }
 
+  // ✅ SHARE: come ieri, dentro la MODAL
+  function openSharePage(text){
+    const t = (text || "").trim();
+    if(!t) return;
+    const wa = "https://wa.me/?text=" + encodeURIComponent(t);
+    document.getElementById("mShareText").textContent = t;
+    document.getElementById("mShareBtn").href = wa;
+    openModal('share');
+  }
+
   function shareQrWhatsApp(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
-    openShareModal(text);
+    openSharePage(text);
   }
   function shareQrEmail(){
     const url = window.__QR_URL || "";
@@ -571,7 +521,7 @@
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
-    openShareModal(text);
+    openSharePage(text);
   }
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
@@ -581,19 +531,16 @@
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
+  // 1° frame video mini
   (function(){
     const vids = document.querySelectorAll('.video-mini');
     vids.forEach(v=>{
       v.addEventListener('loadedmetadata', ()=>{
         try{
-          if(v.duration && v.duration > 0.2){
-            v.currentTime = 0.05;
-          }
+          if(v.duration && v.duration > 0.2){ v.currentTime = 0.05; }
         }catch(e){}
       });
-      v.addEventListener('seeked', ()=>{
-        try{ v.pause(); }catch(e){}
-      });
+      v.addEventListener('seeked', ()=>{ try{ v.pause(); }catch(e){} });
     });
   })();
 </script>
