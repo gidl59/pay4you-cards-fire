@@ -16,6 +16,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+@app.route("/login")
+def login_alias():
+    return redirect(url_for("login"))
+
 
 # ==========================
 # CONFIG
