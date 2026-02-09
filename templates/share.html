@@ -2,40 +2,38 @@
 {% block title %}Condividi | Pay4You{% endblock %}
 
 {% block content %}
-<div class="out-shell">
-  <div class="out-head">
-    <div class="out-title">Condivisione WhatsApp</div>
-    <a class="btn-mini ghost" href="{{ back or '/' }}">← Torna alla card</a>
-  </div>
-
-  <div class="out-box">
-    <div style="font-weight:950; margin-bottom:8px;">Messaggio da inviare</div>
-    <textarea class="out-textarea" readonly>{{ text }}</textarea>
-
-    <div class="out-actions">
-      <a class="btn primary" href="{{ wa_url }}" rel="noopener">Apri WhatsApp</a>
-      <button class="btn ghost" type="button" onclick="copyText()">Copia testo</button>
-      <a class="btn ghost" href="{{ back or '/' }}">Torna alla card</a>
+<div class="panel panel-wide">
+  <div class="panel-head" style="align-items:center;">
+    <div>
+      <h1 class="page-title" style="margin-bottom:4px;">Condivisione</h1>
+      <div class="hint">Se WhatsApp non si apre da solo, premi “Apri WhatsApp”.</div>
     </div>
 
-    <div style="margin-top:10px; color:rgba(255,255,255,.72); font-weight:800; font-size:13px;">
-      Se WhatsApp non si apre automaticamente, premi <b>Apri WhatsApp</b>.
+    <div class="btn-row">
+      <a class="btn-mini ghost" href="{{ back or url_for('dashboard') }}">← Torna alla card</a>
+      <a class="btn-mini" id="btnOpen" href="#" rel="noopener">Apri WhatsApp</a>
     </div>
   </div>
 
-  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
+  <div class="sep" style="margin:12px 0;"></div>
+
+  <div class="section" style="margin-top:0;">
+    <div class="section-title">Testo da inviare</div>
+    <div class="row" style="justify-content:flex-start;">
+      <div style="width:100%; white-space:pre-wrap; line-height:1.35;">{{ text }}</div>
+    </div>
+  </div>
 </div>
 
 <script>
-  function copyText(){
-    try{
-      navigator.clipboard.writeText({{ text|tojson }});
-      alert("Copiato!");
-    }catch(e){
-      alert("Non riesco a copiare su questo browser.");
-    }
-  }
-  // prova ad aprire WhatsApp subito (se il browser blocca, resta il bottone)
-  setTimeout(function(){ window.location.href = {{ wa_url|tojson }}; }, 250);
+  (function(){
+    const t = {{ text|tojson }};
+    const wa = "https://wa.me/?text=" + encodeURIComponent(t);
+    const btn = document.getElementById("btnOpen");
+    if(btn) btn.href = wa;
+
+    // ✅ auto-apertura con fallback
+    setTimeout(()=>{ window.location.href = wa; }, 250);
+  })();
 </script>
 {% endblock %}
