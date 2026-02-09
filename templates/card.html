@@ -58,6 +58,9 @@
       display:none;
     }
     #mShare{ display:none; width:min(980px, 92vw); }
+
+    /* piccolo fallback pdf */
+    #mPdfFallback{ display:none; margin-top:10px; }
   </style>
 </head>
 
@@ -163,9 +166,15 @@
         <div class="section-title">{{ t_func('actions') }}</div>
         <div class="actions-row">
           <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
+
           {% if wa_link %}
-            <a class="action-btn action-wa" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
+            <!-- invece di aprire WhatsApp diretto, apri MODAL share (come ieri) -->
+            <button class="action-btn action-wa" type="button"
+                    onclick="openSharePage('Ciao! Ti scrivo dalla mia Pay4You Card:\\n{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}')">
+              {{ t_func('whatsapp') }}
+            </button>
           {% endif %}
+
           <button class="action-btn action-qr" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
         </div>
         <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
@@ -319,9 +328,14 @@
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
-      <iframe id="mWeb" src="" style="display:none;" referrerpolicy="no-referrer"></iframe>
 
-      <!-- SHARE MODAL (come ieri: finestra nella finestra) -->
+      <!-- ✅ sandbox per siti esterni -->
+      <iframe id="mWeb" src=""
+              style="display:none;"
+              sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+              referrerpolicy="no-referrer"></iframe>
+
+      <!-- SHARE MODAL (finestra nella finestra) -->
       <div id="mShare">
         <div class="section" style="margin:0;">
           <div class="section-title">Condivisione</div>
@@ -332,6 +346,12 @@
             <button class="btn ghost" type="button" onclick="closeModal()">Chiudi</button>
           </div>
         </div>
+      </div>
+
+      <!-- ✅ fallback pdf (iphone) -->
+      <div id="mPdfFallback">
+        <a id="mPdfOpen" class="btn primary" href="#" target="_blank" rel="noopener">Apri documento</a>
+        <div class="hint" style="margin-top:8px;">Se il PDF non si vede nel riquadro, aprilo con questo tasto.</div>
       </div>
 
       <div class="modal-actions">
@@ -368,6 +388,14 @@
     if(u.startsWith("/")) return "{{ base_url }}" + u;
     return "{{ base_url }}/" + u;
   }
+
+  // ESC per chiudere modali
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){
+      try{ closeQrModal(); }catch(err){}
+      try{ closeModal(); }catch(err){}
+    }
+  });
 
   (function(){
     const canFlip = {{ 1 if can_flip else 0 }};
@@ -409,6 +437,9 @@
     document.getElementById('mPdf').style.display   = (type==='pdf') ? 'block' : 'none';
     document.getElementById('mWeb').style.display   = (type==='web') ? 'block' : 'none';
     document.getElementById('mShare').style.display = (type==='share') ? 'block' : 'none';
+
+    const fb = document.getElementById('mPdfFallback');
+    if(fb) fb.style.display = (type === 'pdf') ? 'block' : 'none';
   }
 
   function closeModal(){
@@ -434,6 +465,10 @@
     document.getElementById('mShareText').textContent = "";
     document.getElementById('mShareBtn').href = "#";
 
+    // reset pdf fallback
+    const open = document.getElementById('mPdfOpen');
+    if(open) open.href = "#";
+
     window.__MEDIA_URL = "";
     window.__MEDIA_TITLE = "";
   }
@@ -458,13 +493,18 @@
   function openPdf(src, name){
     const f = document.getElementById('mPdf');
     const u = absUrl(src);
+
     f.src = u;
     window.__MEDIA_URL = u;
     window.__MEDIA_TITLE = (name ? ("Documento: " + name) : "Documento - {{ ag.name }}");
+
+    const open = document.getElementById('mPdfOpen');
+    if(open) open.href = u;
+
     openModal('pdf');
   }
 
-  // ✅ SITO ESTERNO: come ieri, dentro la MODAL (finestra nella finestra)
+  // ✅ SITO ESTERNO: dentro la MODAL (finestra nella finestra)
   function openWebsite(url){
     if(!url) return;
     const f = document.getElementById('mWeb');
@@ -493,7 +533,7 @@
     window.__QR_URL = "";
   }
 
-  // ✅ SHARE: come ieri, dentro la MODAL
+  // ✅ SHARE: dentro la MODAL
   function openSharePage(text){
     const t = (text || "").trim();
     if(!t) return;
