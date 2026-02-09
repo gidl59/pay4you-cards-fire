@@ -1,3 +1,11 @@
+RESERVED = {"login","logout","dashboard","admin","static","health","metrics","wa","api"}
+
+@app.get("/<slug>")
+def card(slug):
+    if slug in RESERVED:
+        abort(404)
+    ...
+
 <!doctype html>
 <html lang="{{ lang|default('it') }}">
 <head>
