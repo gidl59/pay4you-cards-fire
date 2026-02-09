@@ -168,7 +168,7 @@ def ensure_db():
         # Add them
         for (name, coltype, default_sql) in missing:
             sql = f"ALTER TABLE agents ADD COLUMN {name} {coltype}"
-            conn.execute(sql)
+            conn.exec_driver_sql(sql)
 
         # Backfill defaults for new cols
         # (SQLite doesn't apply default retroactively)
