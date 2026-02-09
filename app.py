@@ -3,1829 +3,1029 @@ import re
 import uuid
 import json
 import base64
-from io import BytesIO
-from types import SimpleNamespace
-import urllib.parse
+from datetime import datetime
+from urllib.parse import quote_plus
 
 from flask import (
-    Flask, render_template, request, redirect,
-    url_for, send_file, session, abort, Response,
-    send_from_directory, flash
+    Flask, render_template, request, redirect, url_for,
+    session, abort, flash, send_from_directory
 )
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text as sa_text, event
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import IntegrityError
+
 from dotenv import load_dotenv
-import qrcode
 
 load_dotenv()
 
-# ===== ENV / CONFIG =====
+# =========================
+# ENV / CONFIG
+# =========================
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
-BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
+BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")  # es: https://pay4you-cards-fire.onrender.com
 
-# Upload persistenti (Render Disk su /var/data/uploads)
-PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////var/data/pay4you.db").strip()
+PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").strip()
 
-# Backup
-BACKUP_DIR = os.getenv("BACKUP_DIR", "/var/data/backups")
-
-# Limiti upload
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_IMAGE_MB = 8
-MAX_VIDEO_MB = 60
-MAX_PDF_MB = 15
+MAX_PDFS = 12
 
-SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
-
-# ===== SQLITE TUNING =====
-SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))  # connect timeout
-SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))  # busy_timeout pragma
-
-SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")
-SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")
-
-# ===== UI I18N (etichette fisse) =====
-I18N = {
-    "it": {
-        "save_contact": "Salva contatto",
-        "scan_qr": "QR Code",
-        "contacts": "Contatti",
-        "social": "Social",
-        "documents": "Documenti",
-        "gallery": "Foto",
-        "videos": "Video",
-        "actions": "Azioni",
-        "data": "Dati",
-        "vat": "P.IVA",
-        "sdi": "SDI",
-        "open_maps": "Apri Maps",
-        "open_website": "Apri sito",
-        "mobile_phone": "Cellulare",
-        "office_phone": "Ufficio",
-        "whatsapp": "WhatsApp",
-        "close": "Chiudi",
-        "theme": "Tema",
-        "theme_auto": "Auto",
-        "theme_light": "Chiaro",
-        "theme_dark": "Scuro",
-        "profile_1": "Profilo 1",
-        "profile_2": "Profilo 2",
-        "back_media": "Contenuto dietro foto",
-        "back_company": "Logo aziendale",
-        "back_personal": "Foto/Logo personale",
-        "digital_card_label": "Card digitale Pay4You",
-    },
-    "en": {
-        "save_contact": "Save contact",
-        "scan_qr": "QR Code",
-        "contacts": "Contacts",
-        "social": "Social",
-        "documents": "Documents",
-        "gallery": "Photos",
-        "videos": "Videos",
-        "actions": "Actions",
-        "data": "Company data",
-        "vat": "VAT",
-        "sdi": "SDI",
-        "open_maps": "Open Maps",
-        "open_website": "Open website",
-        "mobile_phone": "Mobile",
-        "office_phone": "Office",
-        "whatsapp": "WhatsApp",
-        "close": "Close",
-        "theme": "Theme",
-        "theme_auto": "Auto",
-        "theme_light": "Light",
-        "theme_dark": "Dark",
-        "profile_1": "Profile 1",
-        "profile_2": "Profile 2",
-        "back_media": "Back of avatar",
-        "back_company": "Company logo",
-        "back_personal": "Personal image",
-        "digital_card_label": "Pay4You Digital Card",
-    },
-    "fr": {
-        "save_contact": "Enregistrer le contact",
-        "scan_qr": "QR Code",
-        "contacts": "Contacts",
-        "social": "Réseaux sociaux",
-        "documents": "Documents",
-        "gallery": "Photos",
-        "videos": "Vidéos",
-        "actions": "Actions",
-        "data": "Données",
-        "vat": "TVA",
-        "sdi": "SDI",
-        "open_maps": "Ouvrir Maps",
-        "open_website": "Ouvrir le site",
-        "mobile_phone": "Mobile",
-        "office_phone": "Bureau",
-        "whatsapp": "WhatsApp",
-        "close": "Fermer",
-        "theme": "Thème",
-        "theme_auto": "Auto",
-        "theme_light": "Clair",
-        "theme_dark": "Sombre",
-        "profile_1": "Profil 1",
-        "profile_2": "Profil 2",
-        "back_media": "Derrière l’avatar",
-        "back_company": "Logo entreprise",
-        "back_personal": "Image personnelle",
-        "digital_card_label": "Carte digitale Pay4You",
-    },
-    "es": {
-        "save_contact": "Guardar contacto",
-        "scan_qr": "Código QR",
-        "contacts": "Contactos",
-        "social": "Redes",
-        "documents": "Documentos",
-        "gallery": "Fotos",
-        "videos": "Vídeos",
-        "actions": "Acciones",
-        "data": "Datos",
-        "vat": "IVA",
-        "sdi": "SDI",
-        "open_maps": "Abrir Maps",
-        "open_website": "Abrir sitio",
-        "mobile_phone": "Móvil",
-        "office_phone": "Oficina",
-        "whatsapp": "WhatsApp",
-        "close": "Cerrar",
-        "theme": "Tema",
-        "theme_auto": "Auto",
-        "theme_light": "Claro",
-        "theme_dark": "Oscuro",
-        "profile_1": "Perfil 1",
-        "profile_2": "Perfil 2",
-        "back_media": "Parte trasera",
-        "back_company": "Logo empresa",
-        "back_personal": "Imagen personal",
-        "digital_card_label": "Tarjeta digital Pay4You",
-    },
-    "de": {
-        "save_contact": "Kontakt speichern",
-        "scan_qr": "QR Code",
-        "contacts": "Kontakte",
-        "social": "Social",
-        "documents": "Dokumente",
-        "gallery": "Fotos",
-        "videos": "Videos",
-        "actions": "Aktionen",
-        "data": "Daten",
-        "vat": "USt-IdNr.",
-        "sdi": "SDI",
-        "open_maps": "Maps öffnen",
-        "open_website": "Website öffnen",
-        "mobile_phone": "Mobil",
-        "office_phone": "Büro",
-        "whatsapp": "WhatsApp",
-        "close": "Schließen",
-        "theme": "Theme",
-        "theme_auto": "Auto",
-        "theme_light": "Hell",
-        "theme_dark": "Dunkel",
-        "profile_1": "Profil 1",
-        "profile_2": "Profil 2",
-        "back_media": "Rückseite Avatar",
-        "back_company": "Firmenlogo",
-        "back_personal": "Persönliches Bild",
-        "digital_card_label": "Pay4You Digitale Karte",
-    },
-}
-
-
-def t(lang: str, key: str) -> str:
-    lang = (lang or "it").lower()
-    if lang not in SUPPORTED_LANGS:
-        lang = "it"
-    return I18N.get(lang, I18N["it"]).get(key, key)
-
-
-def mb_to_bytes(mb: int) -> int:
-    return int(mb) * 1024 * 1024
-
-
-def form_checkbox_int(name: str) -> int:
-    return 1 if request.form.get(name) in ("1", "on", "true", "True") else 0
-
-
-def clean_str(v):
-    if v is None:
-        return None
-    v = str(v).strip()
-    if not v or v.lower() == "none":
-        return None
-    return v
-
-
-def is_email_like(s: str) -> bool:
-    s = (s or "").strip()
-    return bool(s) and ("@" in s) and (" " not in s)
-
-
-def digits_only(s: str) -> str:
-    return re.sub(r"\D+", "", (s or ""))
-
-
-def is_phone_like(s: str) -> bool:
-    d = digits_only(s)
-    return len(d) >= 7
-
-
-def clamp_int(v, lo, hi, default):
-    try:
-        iv = int(v)
-        if iv < lo:
-            return lo
-        if iv > hi:
-            return hi
-        return iv
-    except Exception:
-        return default
-
-
-def clamp_float(v, lo, hi, default):
-    try:
-        fv = float(v)
-        if fv < lo:
-            return lo
-        if fv > hi:
-            return hi
-        return fv
-    except Exception:
-        return default
-
-
+# =========================
+# APP
+# =========================
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024
 
-# ✅ supporta DATABASE_URL (come nel tuo Render env), fallback sqlite disk
-DB_URL = (os.getenv("DATABASE_URL") or "sqlite:////var/data/data.db").strip()
-engine = create_engine(
-    DB_URL,
-    echo=False,
-    connect_args={"check_same_thread": False, "timeout": SQLITE_TIMEOUT_SECONDS} if DB_URL.startswith("sqlite") else {},
-    pool_pre_ping=True,
-)
-
-
-@event.listens_for(engine, "connect")
-def _sqlite_pragmas(dbapi_conn, connection_record):
-    try:
-        # pragma solo per sqlite
-        cur = dbapi_conn.cursor()
-        cur.execute(f"PRAGMA journal_mode={SQLITE_JOURNAL_MODE};")
-        cur.execute(f"PRAGMA synchronous={SQLITE_SYNCHRONOUS};")
-        cur.execute("PRAGMA foreign_keys=ON;")
-        cur.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")
-        cur.close()
-    except Exception:
-        pass
-
-
-SessionLocal = sessionmaker(bind=engine)
+# =========================
+# DB
+# =========================
 Base = declarative_base()
 
-
-# ===== MODELS =====
 class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(Integer, primary_key=True)
-    slug = Column(String, unique=True, nullable=False)
+    slug = Column(String(120), unique=True, nullable=False)
+    username = Column(String(120), unique=True, nullable=False)  # login user
+    password = Column(String(255), nullable=False)
 
-    name = Column(String, nullable=False)
-    company = Column(String, nullable=True)
-    role = Column(String, nullable=True)
-    bio = Column(Text, nullable=True)
+    # P1 base
+    name = Column(String(255), default="")
+    company = Column(String(255), default="")
+    role = Column(String(255), default="")
+    bio = Column(Text, default="")
 
-    phone_mobile = Column(String, nullable=True)
-    phone_mobile2 = Column(String, nullable=True)
-    phone_office = Column(String, nullable=True)
+    phone_mobile = Column(String(80), default="")
+    phone_mobile2 = Column(String(80), default="")
+    phone_office = Column(String(80), default="")
+    whatsapp = Column(String(255), default="")
+    emails = Column(String(255), default="")     # comma separated
+    websites = Column(String(255), default="")   # comma separated
+    pec = Column(String(255), default="")
+    addresses = Column(Text, default="")         # one per line
 
-    emails = Column(String, nullable=True)
-    websites = Column(String, nullable=True)
+    piva = Column(String(80), default="")
+    sdi = Column(String(80), default="")
 
-    facebook = Column(String, nullable=True)
-    instagram = Column(String, nullable=True)
-    linkedin = Column(String, nullable=True)
-    tiktok = Column(String, nullable=True)
-    telegram = Column(String, nullable=True)
-    whatsapp = Column(String, nullable=True)
-    youtube = Column(String, nullable=True)
-    spotify = Column(String, nullable=True)
+    facebook = Column(String(255), default="")
+    instagram = Column(String(255), default="")
+    linkedin = Column(String(255), default="")
+    tiktok = Column(String(255), default="")
+    telegram = Column(String(255), default="")
+    youtube = Column(String(255), default="")
+    spotify = Column(String(255), default="")
 
-    pec = Column(String, nullable=True)
-    piva = Column(String, nullable=True)
-    sdi = Column(String, nullable=True)
-    addresses = Column(Text, nullable=True)
+    photo_url = Column(String(500), default="")
+    logo_url = Column(String(500), default="")
+    back_media_mode = Column(String(30), default="company")  # company/personal
+    back_media_url = Column(String(500), default="")
 
-    photo_url = Column(String, nullable=True)
-    logo_url = Column(String, nullable=True)
-    extra_logo_url = Column(String, nullable=True)
+    photo_pos_x = Column(Integer, default=50)
+    photo_pos_y = Column(Integer, default=35)
+    photo_zoom = Column(String(20), default="1.0")
 
-    # CROP FOTO
-    photo_pos_x = Column(Integer, nullable=True)  # 0..100
-    photo_pos_y = Column(Integer, nullable=True)  # 0..100
-    photo_zoom = Column(Float, nullable=True)
+    orbit_spin = Column(Integer, default=0)
+    avatar_spin = Column(Integer, default=0)
+    logo_spin = Column(Integer, default=0)
+    allow_flip = Column(Integer, default=0)
 
-    gallery_urls = Column(Text, nullable=True)
-    video_urls = Column(Text, nullable=True)
-    pdf1_url = Column(Text, nullable=True)
+    # Media lists for P1
+    gallery_urls = Column(Text, default="")  # "|" separated
+    video_urls = Column(Text, default="")    # "|" separated
+    pdf1_url = Column(Text, default="")      # store "name||url|name||url|..."
 
-    p2_enabled = Column(Integer, nullable=True)
-    profiles_json = Column(Text, nullable=True)
+    # P2 enabled + JSON data
+    p2_enabled = Column(Integer, default=0)
+    p2_json = Column(Text, default="")       # JSON string for P2 fields
 
-    i18n_json = Column(Text, nullable=True)
-
-    orbit_spin = Column(Integer, nullable=True)
-    avatar_spin = Column(Integer, nullable=True)
-    logo_spin = Column(Integer, nullable=True)
-    allow_flip = Column(Integer, nullable=True)
-
-    back_media_url = Column(String, nullable=True)
-    back_media_mode = Column(String, nullable=True)
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="client")
-    agent_slug = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
-Base.metadata.create_all(engine)
+def _engine_from_url(url: str):
+    # sqlite needs check_same_thread=False
+    if url.startswith("sqlite:"):
+        return create_engine(url, connect_args={"check_same_thread": False})
+    return create_engine(url, pool_pre_ping=True)
 
+engine = _engine_from_url(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
 
-# ===== micro-migrazioni =====
-def ensure_sqlite_column(table: str, column: str, coltype: str):
-    if not DB_URL.startswith("sqlite"):
-        return
-    with engine.connect() as conn:
-        rows = conn.execute(sa_text(f"PRAGMA table_info({table})")).fetchall()
-        existing = {r[1] for r in rows}
-        if column not in existing:
-            conn.execute(sa_text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
-            conn.commit()
+def init_db():
+    Base.metadata.create_all(engine)
 
+init_db()
 
-ensure_sqlite_column("agents", "logo_url", "TEXT")
-ensure_sqlite_column("agents", "extra_logo_url", "TEXT")
-ensure_sqlite_column("agents", "phone_office", "TEXT")
-ensure_sqlite_column("agents", "phone_mobile2", "TEXT")
-ensure_sqlite_column("agents", "p2_enabled", "INTEGER")
-ensure_sqlite_column("agents", "profiles_json", "TEXT")
-ensure_sqlite_column("agents", "i18n_json", "TEXT")
-ensure_sqlite_column("agents", "orbit_spin", "INTEGER")
-ensure_sqlite_column("agents", "avatar_spin", "INTEGER")
-ensure_sqlite_column("agents", "logo_spin", "INTEGER")
-ensure_sqlite_column("agents", "allow_flip", "INTEGER")
-ensure_sqlite_column("agents", "youtube", "TEXT")
-ensure_sqlite_column("agents", "spotify", "TEXT")
-ensure_sqlite_column("agents", "back_media_url", "TEXT")
-ensure_sqlite_column("agents", "back_media_mode", "TEXT")
-ensure_sqlite_column("agents", "photo_pos_x", "INTEGER")
-ensure_sqlite_column("agents", "photo_pos_y", "INTEGER")
-ensure_sqlite_column("agents", "photo_zoom", "REAL")
+# =========================
+# HELPERS
+# =========================
+def db():
+    return SessionLocal()
 
-
-# ===== HELPERS =====
-def is_logged_in() -> bool:
-    return bool(session.get("username"))
-
-
-def is_admin() -> bool:
+def is_admin():
     return session.get("role") == "admin"
 
-
-def current_client_slug():
-    return session.get("agent_slug")
-
-
-def admin_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not is_logged_in() or not is_admin():
-            return redirect(url_for("login"))
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-def login_required(f):
-    from functools import wraps
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not is_logged_in():
-            return redirect(url_for("login"))
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-def generate_password(length=10):
-    return uuid.uuid4().hex[:length]
-
-
-def slugify(s: str) -> str:
-    s = (s or "").strip().lower()
-    s = s.replace("+", " ")
-    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
-    s = re.sub(r"\s+", "-", s).strip("-")
-    return s
-
-
-def ensure_admin_user():
-    db = SessionLocal()
-    admin = db.query(User).filter_by(username="admin").first()
-    if not admin:
-        db.add(User(username="admin", password=ADMIN_PASSWORD, role="admin", agent_slug=None))
-        db.commit()
-    db.close()
-
-
-ensure_admin_user()
-
-
-def get_base_url():
-    if BASE_URL:
-        return BASE_URL
-    return request.url_root.strip().rstrip("/")
-
-
-def pick_lang_from_request() -> str:
-    q = (request.args.get("lang") or "").strip().lower()
-    if q:
-        q = q.split("-", 1)[0]
-        return q if q in SUPPORTED_LANGS else "it"
-    al = (request.headers.get("Accept-Language") or "").lower()
-    if al:
-        first = al.split(",", 1)[0].strip().split("-", 1)[0]
-        if first in SUPPORTED_LANGS:
-            return first
-    return "it"
-
-
-def safe_json_load(s: str, default):
-    try:
-        return json.loads(s) if s else default
-    except Exception:
-        return default
-
-
-def i18n_get(ag: Agent) -> dict:
-    return safe_json_load(getattr(ag, "i18n_json", "") or "", {})
-
-
-def i18n_set(ag: Agent, data: dict):
-    ag.i18n_json = json.dumps(data, ensure_ascii=False)
-
-
-def apply_i18n_to_agent_view(ag_view, ag: Agent, lang: str):
-    if lang not in SUPPORTED_LANGS or lang == "it":
-        return ag_view
-    data = i18n_get(ag)
-    tr = data.get(lang) if isinstance(data, dict) else None
-    if not isinstance(tr, dict):
-        return ag_view
-    for k in ("name", "company", "role", "bio", "addresses"):
-        v = clean_str(tr.get(k))
-        if v:
-            setattr(ag_view, k, v)
-    return ag_view
-
-
-def upload_file(file_storage, folder="uploads", max_bytes=None):
-    if not file_storage or not file_storage.filename:
-        return None
-    if max_bytes is not None:
-        file_storage.stream.seek(0, os.SEEK_END)
-        size = file_storage.stream.tell()
-        file_storage.stream.seek(0)
-        if size > max_bytes:
-            raise ValueError("file too large")
-
-    ext = os.path.splitext(file_storage.filename or "")[1].lower()
-    uploads_folder = os.path.join(PERSIST_UPLOADS_DIR, folder)
-    os.makedirs(uploads_folder, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}{ext}"
-    fullpath = os.path.join(uploads_folder, filename)
-    file_storage.save(fullpath)
-    return f"/uploads/{folder}/{filename}"
-
-
-@app.get("/uploads/<path:subpath>")
-def serve_uploads(subpath):
-    return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
-
-
-def parse_pdfs(raw: str):
-    pdfs = []
-    if not raw:
-        return pdfs
-    tokens = raw.split("|")
-    for item in tokens:
-        item = (item or "").strip()
-        if not item:
-            continue
-        if "||" in item:
-            name, url = item.split("||", 1)
-            name = (name or "Documento").strip()
-            url = (url or "").strip()
-            if url:
-                pdfs.append({"name": name, "url": url})
-        else:
-            url = item
-            filename = os.path.basename(urllib.parse.urlparse(url).path) or "Documento"
-            pdfs.append({"name": filename, "url": url})
-    return pdfs
-
-
-def parse_media_list(raw: str):
-    raw = clean_str(raw)
-    if not raw:
-        return []
-    return [x.strip() for x in raw.split("|") if clean_str(x)]
-
-
-def normalize_whatsapp_link(raw: str) -> str:
-    t0 = clean_str(raw)
-    if not t0:
-        return ""
-    if t0.startswith("http://") or t0.startswith("https://"):
-        return t0
-    t2 = t0.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    if t2.startswith("+"):
-        t2 = t2[1:]
-    if t2.startswith("00"):
-        t2 = t2[2:]
-    if t2.isdigit():
-        return f"https://wa.me/{t2}"
-    return ""
-
-
-def safe_url(u: str) -> str:
-    u = clean_str(u)
-    if not u:
-        return ""
-    if u.startswith("http://") or u.startswith("https://"):
-        return u
-    if u.startswith("@"):
-        return f"https://t.me/{u[1:]}"
-    if "." in u and " " not in u and not u.startswith("mailto:"):
-        return "https://" + u.lstrip("/")
-    return ""
-
-
-def google_maps_link(address: str) -> str:
-    q = urllib.parse.quote_plus(address)
-    return f"https://www.google.com/maps/search/?api=1&query={q}"
-
-
-def parse_profiles_json(raw: str):
-    data = safe_json_load(raw, [])
-    if not isinstance(data, list):
-        return []
-    out = []
-    for p in data:
-        if isinstance(p, dict) and p.get("key"):
-            out.append(p)
-    return out
-
-
-def upsert_profile(profiles: list, key: str, payload: dict):
-    for p in profiles:
-        if p.get("key") == key:
-            p.update(payload)
-            return profiles
-    profiles.append({"key": key, **payload})
-    return profiles
-
-
-def select_profile(profiles: list, key: str):
-    if not key:
-        return None
-    for p in profiles:
-        if p.get("key") == key:
-            return p
+def require_login():
+    if not session.get("role"):
+        return redirect(url_for("login"))
     return None
 
+def clean_slug(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = re.sub(r"[^a-z0-9\-]+", "-", s)
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+    return s
 
-def agent_to_view(ag: Agent):
-    logo = clean_str(getattr(ag, "logo_url", None)) or clean_str(getattr(ag, "extra_logo_url", None))
-    back_mode = clean_str(getattr(ag, "back_media_mode", None)) or "company"
-    back_url = clean_str(getattr(ag, "back_media_url", None))
+def ensure_dirs():
+    os.makedirs(PERSIST_UPLOADS_DIR, exist_ok=True)
+    os.makedirs(os.path.join(PERSIST_UPLOADS_DIR, "img"), exist_ok=True)
+    os.makedirs(os.path.join(PERSIST_UPLOADS_DIR, "video"), exist_ok=True)
+    os.makedirs(os.path.join(PERSIST_UPLOADS_DIR, "pdf"), exist_ok=True)
 
-    px = clamp_int(getattr(ag, "photo_pos_x", None), 0, 100, 50)
-    py = clamp_int(getattr(ag, "photo_pos_y", None), 0, 100, 35)
-    pz = clamp_float(getattr(ag, "photo_zoom", None), 1.0, 2.6, 1.0)
+ensure_dirs()
 
-    return SimpleNamespace(
-        id=ag.id,
-        slug=ag.slug,
-        name=clean_str(ag.name) or "",
-        company=clean_str(ag.company),
-        role=clean_str(ag.role),
-        bio=clean_str(ag.bio),
-        phone_mobile=clean_str(ag.phone_mobile),
-        phone_mobile2=clean_str(ag.phone_mobile2),
-        phone_office=clean_str(ag.phone_office),
-        emails=clean_str(ag.emails),
-        websites=clean_str(ag.websites),
-        facebook=safe_url(ag.facebook),
-        instagram=safe_url(ag.instagram),
-        linkedin=safe_url(ag.linkedin),
-        tiktok=safe_url(ag.tiktok),
-        telegram=safe_url(ag.telegram),
-        whatsapp=clean_str(ag.whatsapp),
-        youtube=safe_url(getattr(ag, "youtube", None)),
-        spotify=safe_url(getattr(ag, "spotify", None)),
-        pec=clean_str(ag.pec),
-        piva=clean_str(ag.piva),
-        sdi=clean_str(ag.sdi),
-        addresses=clean_str(ag.addresses),
-        photo_url=clean_str(ag.photo_url),
-        logo_url=logo,
-        photo_pos_x=px,
-        photo_pos_y=py,
-        photo_zoom=pz,
-        gallery_urls=clean_str(ag.gallery_urls),
-        video_urls=clean_str(ag.video_urls),
-        pdf1_url=clean_str(ag.pdf1_url),
-        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
-        profiles_json=getattr(ag, "profiles_json", None),
-        orbit_spin=int(getattr(ag, "orbit_spin", 0) or 0),
-        avatar_spin=int(getattr(ag, "avatar_spin", 0) or 0),
-        logo_spin=int(getattr(ag, "logo_spin", 0) or 0),
-        allow_flip=int(getattr(ag, "allow_flip", 0) or 0),
-        back_media_mode=back_mode,
-        back_media_url=back_url,
-    )
+def save_upload(file_storage, subdir: str, slug: str) -> str:
+    """
+    Save upload to /var/data/uploads/<subdir>/<slug>/...
+    Return URL path: /uploads/<subdir>/<slug>/<filename>
+    """
+    if not file_storage or not file_storage.filename:
+        return ""
 
+    ext = os.path.splitext(file_storage.filename)[1].lower()
+    safe_name = re.sub(r"[^a-zA-Z0-9\.\-_]+", "_", os.path.splitext(file_storage.filename)[0]).strip("_")
+    safe_name = (safe_name[:60] if safe_name else "file")
+    fname = f"{safe_name}_{uuid.uuid4().hex[:10]}{ext}"
 
-def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
-    return SimpleNamespace(
-        id=ag.id,
-        slug=ag.slug,
-        name="",
-        company="",
-        role="",
-        bio="",
-        phone_mobile="",
-        phone_mobile2="",
-        phone_office="",
-        emails="",
-        websites="",
-        facebook="",
-        instagram="",
-        linkedin="",
-        tiktok="",
-        telegram="",
-        whatsapp="",
-        youtube="",
-        spotify="",
-        pec="",
-        piva="",
-        sdi="",
-        addresses="",
-        photo_url="",
-        logo_url="",
-        photo_pos_x=50,
-        photo_pos_y=35,
-        photo_zoom=1.0,
-        gallery_urls="",
-        video_urls="",
-        pdf1_url="",
-        p2_enabled=1,
-        profiles_json=ag.profiles_json,
-        orbit_spin=0,
-        avatar_spin=0,
-        logo_spin=0,
-        allow_flip=0,
-        back_media_mode="company",
-        back_media_url="",
-    )
+    dir_path = os.path.join(PERSIST_UPLOADS_DIR, subdir, slug)
+    os.makedirs(dir_path, exist_ok=True)
+    abs_path = os.path.join(dir_path, fname)
+    file_storage.save(abs_path)
 
+    return f"/uploads/{subdir}/{slug}/{fname}"
 
-# ===================== ROUTES =====================
+def split_pipe(s: str):
+    if not s:
+        return []
+    return [x for x in s.split("|") if x.strip()]
 
-@app.get("/")
-def home():
-    if is_logged_in():
-        return redirect(url_for("dashboard"))
-    return redirect(url_for("login"))
+def join_pipe(items):
+    return "|".join([x for x in items if x])
 
+def parse_pdfs(raw: str):
+    """
+    raw: "name||/url|name||/url|..."
+    """
+    out = []
+    for item in split_pipe(raw):
+        if "||" in item:
+            name, url = item.split("||", 1)
+        else:
+            name, url = item, item
+        out.append({"name": name, "url": url})
+    return out
 
-@app.get("/health")
-def health():
-    return "ok", 200
+def build_pdfs_raw(pdfs):
+    # pdfs: list of dict {name,url}
+    items = []
+    for p in pdfs:
+        name = (p.get("name") or "").strip()
+        url = (p.get("url") or "").strip()
+        if not url:
+            continue
+        if not name:
+            name = os.path.basename(url)
+        items.append(f"{name}||{url}")
+    return join_pipe(items)
 
+def normalize_whatsapp(val: str):
+    v = (val or "").strip()
+    if not v:
+        return ""
+    if v.startswith("http://") or v.startswith("https://"):
+        return v
+    # number: keep digits + +
+    digits = re.sub(r"[^\d\+]", "", v)
+    if digits.startswith("00"):
+        digits = "+" + digits[2:]
+    if digits.startswith("39") and not digits.startswith("+"):
+        digits = "+" + digits
+    if not digits.startswith("+"):
+        # best guess
+        digits = "+39" + re.sub(r"[^\d]", "", digits)
+    return f"https://wa.me/{digits.replace('+','')}"
 
-# ✅ singole pagine (usate dentro iframe/modal)
-@app.get("/webview")
-def webview():
-    url = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "/").strip() or "/"
-    if not url:
-        return render_template("404.html", back=back), 404
-    return render_template("webview.html", url=url, back=back)
+def safe_list_from_csv(s: str):
+    if not s:
+        return []
+    parts = [x.strip() for x in s.split(",") if x.strip()]
+    return parts
 
+def t(lang):
+    # super minimal translator (keep your existing if you had one)
+    IT = {
+        "actions": "Azioni",
+        "save_contact": "Salva contatto",
+        "whatsapp": "WhatsApp",
+        "scan_qr": "QR",
+        "contacts": "Contatti",
+        "mobile_phone": "Cellulare",
+        "office_phone": "Ufficio",
+        "open_website": "Sito",
+        "open_maps": "Apri Maps",
+        "theme": "Tema",
+        "theme_auto": "Auto",
+        "theme_light": "Chiaro",
+        "theme_dark": "Scuro",
+        "gallery": "Foto",
+        "videos": "Video",
+        "documents": "Documenti",
+        "close": "Chiudi",
+        "profile_1": "Profilo 1",
+        "profile_2": "Profilo 2",
+        "data": "Dati",
+        "vat": "P.IVA",
+        "sdi": "SDI"
+    }
+    return IT
 
-@app.get("/share")
-def share():
-    back = (request.args.get("back") or "/").strip() or "/"
-    text = (request.args.get("text") or "").strip()
-    if not text:
-        return render_template("404.html", back=back), 404
-    return render_template("share.html", back=back, text=text)
+def current_base_url():
+    if BASE_URL:
+        return BASE_URL
+    # fallback: request.url_root is available only in request context; used in templates too
+    return ""
 
+# =========================
+# STATIC UPLOADS
+# =========================
+@app.route("/uploads/<path:subpath>")
+def uploads(subpath):
+    # serve from PERSIST_UPLOADS_DIR
+    return send_from_directory(PERSIST_UPLOADS_DIR, subpath)
 
-@app.get("/docview")
-def docview():
-    url = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "/").strip() or "/"
-    title = (request.args.get("title") or "Documento").strip()
-    if not url:
-        return render_template("404.html", back=back), 404
-    return render_template("docview.html", url=url, back=back, title=title)
-
-
-# ---------- LOGIN ----------
-@app.get("/login")
+# =========================
+# AUTH
+# =========================
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("login.html", error=None)
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip().lower()
+        password = (request.form.get("password") or "").strip()
 
+        if username == "admin" and password == ADMIN_PASSWORD:
+            session["role"] = "admin"
+            session["username"] = "admin"
+            return redirect(url_for("dashboard"))
 
-@app.post("/login")
-def login_post():
-    username = (request.form.get("username") or "").strip()
-    password = (request.form.get("password") or "").strip()
+        s = db()
+        ag = s.query(Agent).filter(Agent.username == username).first()
+        s.close()
+        if ag and ag.password == password:
+            session["role"] = "agent"
+            session["username"] = username
+            session["slug"] = ag.slug
+            return redirect(url_for("dashboard"))
 
-    if not username or not password:
-        return render_template("login.html", error="Inserisci username e password")
+        flash("Credenziali non valide", "error")
+        return redirect(url_for("login"))
 
-    if username == "admin" and password == ADMIN_PASSWORD:
-        session["username"] = "admin"
-        session["role"] = "admin"
-        session["agent_slug"] = None
-        return redirect(url_for("dashboard"))
+    return render_template("login.html")
 
-    db = SessionLocal()
-    u = db.query(User).filter_by(username=username, password=password).first()
-    db.close()
-    if not u:
-        return render_template("login.html", error="Credenziali errate")
-
-    session["username"] = u.username
-    session["role"] = u.role
-    session["agent_slug"] = u.agent_slug
-    return redirect(url_for("dashboard"))
-
-
-@app.get("/logout")
+@app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-
-# ---------- DASHBOARD ----------
-@app.get("/dashboard")
-@login_required
+# =========================
+# DASHBOARD
+# =========================
+@app.route("/dashboard")
 def dashboard():
-    db = SessionLocal()
+    r = require_login()
+    if r: return r
+
+    s = db()
     if is_admin():
-        agents = db.query(Agent).order_by(Agent.name).all()
-        db.close()
-        return render_template("admin_list.html", agents=agents, is_admin=True, agent=None)
+        agents = s.query(Agent).order_by(Agent.created_at.desc()).all()
+        agent = None
     else:
-        slug = current_client_slug()
-        ag = db.query(Agent).filter_by(slug=slug).first()
-        db.close()
-        if not ag:
-            abort(404)
-        return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
+        agent = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+        agents = [agent] if agent else []
+    s.close()
 
+    return render_template("admin_list.html", agents=agents, is_admin=is_admin(), agent=agent)
 
-# ---------- ADMIN CRUD ----------
-@app.get("/admin", endpoint="admin_home")
-@admin_required
-def admin_home():
-    return redirect(url_for("dashboard"))
-
-
-@app.get("/admin/new")
-@admin_required
+# =========================
+# CREATE AGENT (ADMIN)
+# =========================
+@app.route("/admin/new", methods=["GET", "POST"])
 def new_agent():
-    return render_template("agent_form.html", agent=None, i18n_data=None, editing_profile2=False)
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
 
+    if request.method == "POST":
+        slug = clean_slug(request.form.get("slug"))
+        name = (request.form.get("name") or "").strip()
+        if not slug or not name:
+            flash("Slug e Nome sono obbligatori", "error")
+            return redirect(url_for("new_agent"))
 
-def _save_common_fields_to_agent(ag: Agent):
-    for k in [
-        "name", "company", "role", "bio", "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
-        "emails", "websites", "pec", "piva", "sdi", "addresses",
-        "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube",
-        "spotify"
-    ]:
-        setattr(ag, k, clean_str(request.form.get(k)))
+        # default credentials: username=slug, password=random short
+        username = slug
+        password = uuid.uuid4().hex[:8]
 
-    ag.orbit_spin = form_checkbox_int("orbit_spin")
-    ag.avatar_spin = form_checkbox_int("avatar_spin")
-    ag.logo_spin = form_checkbox_int("logo_spin")
-    ag.allow_flip = form_checkbox_int("allow_flip")
+        s = db()
+        ag = Agent(slug=slug, username=username, password=password, name=name)
+        try:
+            s.add(ag)
+            s.commit()
+        except IntegrityError:
+            s.rollback()
+            s.close()
+            flash("Slug già esistente", "error")
+            return redirect(url_for("new_agent"))
 
-    if int(ag.avatar_spin or 0) == 1 and int(ag.allow_flip or 0) == 1:
-        ag.allow_flip = 0
+        s.close()
+        flash(f"Card creata. Username: {username} Password: {password}", "ok")
+        return redirect(url_for("dashboard"))
 
-    mode = (request.form.get("back_media_mode") or "").strip().lower()
-    ag.back_media_mode = mode if mode in ("company", "personal") else "company"
+    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={})
 
-    ag.photo_pos_x = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
-    ag.photo_pos_y = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
-    ag.photo_zoom = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
+# =========================
+# EDIT P1/P2 (ADMIN)
+# =========================
+@app.route("/admin/<slug>/edit", methods=["GET", "POST"])
+def edit_agent(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
 
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
 
-def _save_common_uploads_to_agent(ag: Agent):
-    photo = request.files.get("photo")
-    logo = request.files.get("logo")
-    back_media = request.files.get("back_media")
-    if photo and photo.filename:
-        ag.photo_url = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
-    if logo and logo.filename:
-        ag.logo_url = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
-    if back_media and back_media.filename:
-        ag.back_media_url = upload_file(back_media, "logos", mb_to_bytes(MAX_IMAGE_MB))
-
-
-def _save_media_to_agent(ag: Agent):
-    gallery_files = request.files.getlist("gallery")
-    if gallery_files and any(g.filename for g in gallery_files):
-        gallery_urls = []
-        for f in gallery_files[:MAX_GALLERY_IMAGES]:
-            if f and f.filename:
-                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
-                if u:
-                    gallery_urls.append(u)
-        if gallery_urls:
-            ag.gallery_urls = "|".join(gallery_urls)
-
-    video_files = request.files.getlist("videos")
-    if video_files and any(v.filename for v in video_files):
-        video_urls = []
-        for f in video_files[:MAX_VIDEOS]:
-            if f and f.filename:
-                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
-                if u:
-                    video_urls.append(u)
-        if video_urls:
-            ag.video_urls = "|".join(video_urls)
-
-    pdf_entries = []
-    for i in range(1, 13):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
-    if pdf_entries:
-        ag.pdf1_url = "|".join(pdf_entries)
-
-
-@app.post("/admin/new")
-@admin_required
-def create_agent():
-    db = SessionLocal()
-    slug = slugify(request.form.get("slug", ""))
-    name = (request.form.get("name") or "").strip()
-    if not slug or not name:
-        db.close()
-        return "Slug e Nome obbligatori", 400
-    if db.query(Agent).filter_by(slug=slug).first():
-        db.close()
-        return "Slug già esistente", 400
-
-    ag = Agent(slug=slug, name=name, p2_enabled=0, back_media_mode="company")
-    _save_common_fields_to_agent(ag)
+    if request.method == "POST":
+        apply_form_to_agent(ag, request, editing_profile2=False)
+        s.commit()
+        s.close()
+        flash("Salvato Profilo 1", "ok")
+        return redirect(url_for("dashboard"))
 
     i18n_data = {}
-    for lang in ("en", "fr", "es", "de"):
-        tr = {
-            "name": clean_str(request.form.get(f"name_{lang}")),
-            "company": clean_str(request.form.get(f"company_{lang}")),
-            "role": clean_str(request.form.get(f"role_{lang}")),
-            "bio": clean_str(request.form.get(f"bio_{lang}")),
-            "addresses": clean_str(request.form.get(f"addresses_{lang}")),
-        }
-        tr = {k: v for k, v in tr.items() if v}
-        if tr:
-            i18n_data[lang] = tr
-    if i18n_data:
-        i18n_set(ag, i18n_data)
+    s.close()
+    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data)
 
-    _save_common_uploads_to_agent(ag)
-    _save_media_to_agent(ag)
-
-    db.add(ag)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        db.close()
-        return "Errore salvataggio", 400
-
-    # crea user client (username=slug)
-    u = db.query(User).filter_by(username=slug).first()
-    if not u:
-        pw = generate_password()
-        db.add(User(username=slug, password=pw, role="client", agent_slug=slug))
-        db.commit()
-
-    db.close()
-    flash("Card creata.", "success")
-    return redirect(url_for("dashboard"))
-
-
-@app.get("/admin/<slug>/edit")
-@admin_required
-def edit_agent(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
-
-
-@app.post("/admin/<slug>/edit")
-@admin_required
-def update_agent(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    _save_common_fields_to_agent(ag)
-
-    i18n_data = i18n_get(ag)
-    if not isinstance(i18n_data, dict):
-        i18n_data = {}
-    for lang in ("en", "fr", "es", "de"):
-        tr = {
-            "name": clean_str(request.form.get(f"name_{lang}")),
-            "company": clean_str(request.form.get(f"company_{lang}")),
-            "role": clean_str(request.form.get(f"role_{lang}")),
-            "bio": clean_str(request.form.get(f"bio_{lang}")),
-            "addresses": clean_str(request.form.get(f"addresses_{lang}")),
-        }
-        tr = {k: v for k, v in tr.items() if v}
-        if tr:
-            i18n_data[lang] = tr
-    i18n_set(ag, i18n_data)
-
-    _save_common_uploads_to_agent(ag)
-    _save_media_to_agent(ag)
-
-    db.commit()
-    db.close()
-    flash("Profilo 1 salvato.", "success")
-    return redirect(url_for("dashboard"))
-
-
-@app.post("/admin/<slug>/delete")
-@admin_required
-def delete_agent(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if ag:
-        db.delete(ag)
-        db.commit()
-    db.close()
-    flash("Card eliminata.", "success")
-    return redirect(url_for("dashboard"))
-
-
-# ---------- CLIENT EDIT P1 ----------
-@app.get("/me/edit")
-@login_required
-def me_edit():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-    return render_template("agent_form.html", agent=agent_to_view(ag), i18n_data=i18n_get(ag), editing_profile2=False)
-
-
-@app.post("/me/edit")
-@login_required
-def me_edit_post():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    _save_common_fields_to_agent(ag)
-
-    i18n_data = i18n_get(ag)
-    if not isinstance(i18n_data, dict):
-        i18n_data = {}
-    for lang in ("en", "fr", "es", "de"):
-        tr = {
-            "name": clean_str(request.form.get(f"name_{lang}")),
-            "company": clean_str(request.form.get(f"company_{lang}")),
-            "role": clean_str(request.form.get(f"role_{lang}")),
-            "bio": clean_str(request.form.get(f"bio_{lang}")),
-            "addresses": clean_str(request.form.get(f"addresses_{lang}")),
-        }
-        tr = {k: v for k, v in tr.items() if v}
-        if tr:
-            i18n_data[lang] = tr
-    i18n_set(ag, i18n_data)
-
-    _save_common_uploads_to_agent(ag)
-    _save_media_to_agent(ag)
-
-    db.commit()
-    db.close()
-    flash("Profilo 1 salvato.", "success")
-    return redirect(url_for("me_edit"))
-
-
-# ---------- P2: attiva + disattiva + edit ----------
-@app.post("/me/activate_p2")
-@login_required
-def me_activate_p2():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    if not select_profile(profiles, "p2"):
-        profiles = upsert_profile(profiles, "p2", {"key": "p2"})
-        ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 attivato (vuoto).", "success")
-    return redirect(url_for("me_profile2"))
-
-
-@app.post("/me/deactivate_p2")
-@login_required
-def me_deactivate_p2():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-    ag.p2_enabled = 0
-    db.commit()
-    db.close()
-    flash("Profilo 2 disattivato.", "success")
-    return redirect(url_for("me_edit"))
-
-
-@app.post("/admin/<slug>/activate_p2")
-@admin_required
-def admin_activate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    if not select_profile(profiles, "p2"):
-        profiles = upsert_profile(profiles, "p2", {"key": "p2"})
-        ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 attivato (vuoto).", "success")
-    return redirect(url_for("dashboard"))
-
-
-@app.post("/admin/<slug>/deactivate_p2")
-@admin_required
-def admin_deactivate_p2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-    ag.p2_enabled = 0
-    db.commit()
-    db.close()
-    flash("Profilo 2 disattivato.", "success")
-    return redirect(url_for("dashboard"))
-
-
-@app.get("/me/profile2")
-@login_required
-def me_profile2():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
-    if not ag:
-        abort(404)
-    if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
-        return redirect(url_for("me_edit"))
-
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    p2 = select_profile(profiles, "p2") or {"key": "p2"}
-    view = blank_profile_view_from_agent(ag)
-
-    for k in [
-        "name", "company", "role", "bio", "phone_mobile", "phone_mobile2", "phone_office", "emails", "websites",
-        "whatsapp", "pec", "piva", "sdi", "addresses", "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube",
-        "spotify",
-        "photo_url", "logo_url", "gallery_urls", "video_urls", "pdf1_url",
-        "orbit_spin", "avatar_spin", "logo_spin", "allow_flip",
-        "back_media_mode", "back_media_url",
-        "photo_pos_x", "photo_pos_y", "photo_zoom"
-    ]:
-        v = p2.get(k)
-        if v is None:
-            continue
-        if k in ("orbit_spin", "avatar_spin", "logo_spin", "allow_flip", "photo_pos_x", "photo_pos_y"):
-            try:
-                setattr(view, k, int(v))
-            except Exception:
-                pass
-        elif k in ("photo_zoom",):
-            try:
-                setattr(view, k, float(v))
-            except Exception:
-                pass
-        elif k in ("spotify", "youtube", "facebook", "instagram", "linkedin", "tiktok", "telegram"):
-            vv = clean_str(v)
-            if vv is not None:
-                setattr(view, k, safe_url(vv))
-        else:
-            vv = clean_str(v)
-            if vv is not None:
-                setattr(view, k, vv)
-
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
-
-
-def _save_profile2_payload_from_form():
-    payload = {}
-    for k in [
-        "name", "company", "role", "bio", "phone_mobile", "phone_mobile2", "phone_office", "emails", "websites",
-        "whatsapp", "pec", "piva", "sdi", "addresses", "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube",
-        "spotify"
-    ]:
-        payload[k] = clean_str(request.form.get(k))
-
-    payload["orbit_spin"] = form_checkbox_int("orbit_spin")
-    payload["avatar_spin"] = form_checkbox_int("avatar_spin")
-    payload["logo_spin"] = form_checkbox_int("logo_spin")
-    payload["allow_flip"] = form_checkbox_int("allow_flip")
-
-    if int(payload.get("avatar_spin") or 0) == 1 and int(payload.get("allow_flip") or 0) == 1:
-        payload["allow_flip"] = 0
-
-    mode = (request.form.get("back_media_mode") or "").strip().lower()
-    payload["back_media_mode"] = mode if mode in ("company", "personal") else "company"
-
-    payload["photo_pos_x"] = clamp_int(request.form.get("photo_pos_x"), 0, 100, 50)
-    payload["photo_pos_y"] = clamp_int(request.form.get("photo_pos_y"), 0, 100, 35)
-    payload["photo_zoom"] = clamp_float(request.form.get("photo_zoom"), 1.0, 2.6, 1.0)
-
-    photo = request.files.get("photo")
-    logo = request.files.get("logo")
-    back_media = request.files.get("back_media")
-
-    if photo and photo.filename:
-        payload["photo_url"] = upload_file(photo, "photos", mb_to_bytes(MAX_IMAGE_MB))
-    if logo and logo.filename:
-        payload["logo_url"] = upload_file(logo, "logos", mb_to_bytes(MAX_IMAGE_MB))
-    if back_media and back_media.filename:
-        payload["back_media_url"] = upload_file(back_media, "logos", mb_to_bytes(MAX_IMAGE_MB))
-
-    gallery_files = request.files.getlist("gallery")
-    if gallery_files and any(g.filename for g in gallery_files):
-        gallery_urls = []
-        for f in gallery_files[:MAX_GALLERY_IMAGES]:
-            if f and f.filename:
-                u = upload_file(f, "gallery", mb_to_bytes(MAX_IMAGE_MB))
-                if u:
-                    gallery_urls.append(u)
-        if gallery_urls:
-            payload["gallery_urls"] = "|".join(gallery_urls)
-
-    video_files = request.files.getlist("videos")
-    if video_files and any(v.filename for v in video_files):
-        video_urls = []
-        for f in video_files[:MAX_VIDEOS]:
-            if f and f.filename:
-                u = upload_file(f, "videos", mb_to_bytes(MAX_VIDEO_MB))
-                if u:
-                    video_urls.append(u)
-        if video_urls:
-            payload["video_urls"] = "|".join(video_urls)
-
-    pdf_entries = []
-    for i in range(1, 13):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            u = upload_file(f, "pdf", mb_to_bytes(MAX_PDF_MB))
-            if u:
-                pdf_entries.append(f"{f.filename}||{u}")
-    if pdf_entries:
-        payload["pdf1_url"] = "|".join(pdf_entries)
-
-    return payload
-
-
-@app.post("/me/profile2")
-@login_required
-def me_profile2_post():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    payload = _save_profile2_payload_from_form()
-
-    for k in ("facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"):
-        if payload.get(k):
-            payload[k] = safe_url(payload[k])
-
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 salvato.", "success")
-    return redirect(url_for("me_profile2"))
-
-
-@app.get("/admin/<slug>/profile2")
-@admin_required
+@app.route("/admin/<slug>/p2", methods=["GET", "POST"])
 def admin_profile2(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
+        s.close()
         abort(404)
 
-    if int(getattr(ag, "p2_enabled", 0) or 0) != 1:
-        flash("Prima attiva il Profilo 2.", "warning")
+    if (ag.p2_enabled or 0) != 1:
+        s.close()
+        flash("Profilo 2 non attivo", "error")
         return redirect(url_for("dashboard"))
 
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    p2 = select_profile(profiles, "p2") or {"key": "p2"}
+    # load p2 json into a temp dict (so template uses agent fields normally)
+    p2 = json.loads(ag.p2_json or "{}")
+    ag_view = clone_agent_for_profile(ag, p2)
 
-    view = blank_profile_view_from_agent(ag)
-    for k in [
-        "name", "company", "role", "bio", "phone_mobile", "phone_mobile2", "phone_office", "emails", "websites",
-        "whatsapp", "pec", "piva", "sdi", "addresses", "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube",
-        "spotify",
-        "photo_url", "logo_url", "gallery_urls", "video_urls", "pdf1_url",
-        "orbit_spin", "avatar_spin", "logo_spin", "allow_flip",
-        "back_media_mode", "back_media_url",
-        "photo_pos_x", "photo_pos_y", "photo_zoom"
-    ]:
-        v = p2.get(k)
-        if v is None:
-            continue
-        if k in ("orbit_spin", "avatar_spin", "logo_spin", "allow_flip", "photo_pos_x", "photo_pos_y"):
-            try:
-                setattr(view, k, int(v))
-            except Exception:
-                pass
-        elif k in ("photo_zoom",):
-            try:
-                setattr(view, k, float(v))
-            except Exception:
-                pass
-        elif k in ("spotify", "youtube", "facebook", "instagram", "linkedin", "tiktok", "telegram"):
-            vv = clean_str(v)
-            if vv is not None:
-                setattr(view, k, safe_url(vv))
-        else:
-            vv = clean_str(v)
-            if vv is not None:
-                setattr(view, k, vv)
+    if request.method == "POST":
+        # save changes into p2 json, not overwrite p1
+        p2 = apply_form_to_profile_json(ag, request)
+        ag.p2_json = json.dumps(p2, ensure_ascii=False)
+        s.commit()
+        s.close()
+        flash("Salvato Profilo 2", "ok")
+        return redirect(url_for("dashboard"))
 
-    return render_template("agent_form.html", agent=view, i18n_data=i18n_get(ag), editing_profile2=True)
+    i18n_data = {}
+    s.close()
+    return render_template("agent_form.html", agent=ag_view, editing_profile2=True, i18n_data=i18n_data)
 
+@app.route("/admin/<slug>/delete", methods=["POST"])
+def delete_agent(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
 
-@app.post("/admin/<slug>/profile2")
-@admin_required
-def admin_profile2_post(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
-        db.close()
+        s.close()
+        abort(404)
+    s.delete(ag)
+    s.commit()
+    s.close()
+    flash("Card eliminata", "ok")
+    return redirect(url_for("dashboard"))
+
+# =========================
+# ACTIVATE / DEACTIVATE P2
+# =========================
+@app.route("/admin/<slug>/p2/activate", methods=["POST"])
+def admin_activate_p2(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
         abort(404)
 
     ag.p2_enabled = 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    payload = _save_profile2_payload_from_form()
-
-    for k in ("facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"):
-        if payload.get(k):
-            payload[k] = safe_url(payload[k])
-
-    profiles = upsert_profile(profiles, "p2", {"key": "p2", **{k: v for k, v in payload.items() if v is not None}})
-    ag.profiles_json = json.dumps(profiles, ensure_ascii=False)
-
-    db.commit()
-    db.close()
-    flash("Profilo 2 salvato.", "success")
-    return redirect(url_for("admin_profile2", slug=slug))
-
-
-# ---------- MEDIA DELETE (singolo) ----------
-def _remove_item_by_index(pipe_str: str, idx: int) -> str:
-    items = [x for x in (pipe_str or "").split("|") if x.strip()]
-    if idx < 0 or idx >= len(items):
-        return pipe_str or ""
-    items.pop(idx)
-    return "|".join(items)
-
-
-@app.post("/admin/<slug>/media/delete")
-@admin_required
-def admin_media_delete(slug):
-    slug = slugify(slug)
-    kind = (request.form.get("kind") or "").strip()
-    idx = clamp_int(request.form.get("idx"), 0, 9999, 0)
-
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    if kind == "gallery":
-        ag.gallery_urls = _remove_item_by_index(ag.gallery_urls or "", idx)
-    elif kind == "video":
-        ag.video_urls = _remove_item_by_index(ag.video_urls or "", idx)
-    elif kind == "pdf":
-        ag.pdf1_url = _remove_item_by_index(ag.pdf1_url or "", idx)
-
-    db.commit()
-    db.close()
-    flash("Elemento rimosso.", "success")
-    return redirect(request.referrer or url_for("dashboard"))
-
-
-@app.post("/me/media/delete")
-@login_required
-def me_media_delete():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    kind = (request.form.get("kind") or "").strip()
-    idx = clamp_int(request.form.get("idx"), 0, 9999, 0)
-    back_to = (request.form.get("back_to") or "").strip()
-
-    slug = current_client_slug()
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    if not ag:
-        db.close()
-        abort(404)
-
-    # NB: qui eliminiamo SOLO i media del profilo 1, perché sono sul record Agent
-    if kind == "gallery":
-        ag.gallery_urls = _remove_item_by_index(ag.gallery_urls or "", idx)
-    elif kind == "video":
-        ag.video_urls = _remove_item_by_index(ag.video_urls or "", idx)
-    elif kind == "pdf":
-        ag.pdf1_url = _remove_item_by_index(ag.pdf1_url or "", idx)
-
-    db.commit()
-    db.close()
-    flash("Elemento rimosso.", "success")
-
-    if back_to == "p2":
-        return redirect(url_for("me_profile2"))
-    return redirect(url_for("me_edit"))
-
-
-# ---------- CREDENTIALS ----------
-@app.get("/admin/<slug>/credentials")
-@admin_required
-def admin_credentials_html(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    u = db.query(User).filter_by(username=slug).first()
-    db.close()
-    if not ag or not u:
-        abort(404)
-
-    base = get_base_url()
-    login_url = f"{base}/login"
-    card_url = f"{base}/{slug}"
-
-    return render_template(
-        "credentials.html",
-        username=u.username,
-        password=u.password,
-        login_url=login_url,
-        card_url=card_url,
-        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
-    )
-
-
-@app.get("/admin/<slug>/credenziali")
-@admin_required
-def admin_credentials_alias_it(slug):
-    return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
-
-
-# ✅ credenziali anche per client (il suo account)
-@app.get("/me/credentials")
-@login_required
-def me_credentials():
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    username = session.get("username")
-    slug = current_client_slug()
-    if not username or not slug:
-        abort(404)
-
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    u = db.query(User).filter_by(username=username).first()
-    db.close()
-    if not ag or not u:
-        abort(404)
-
-    base = get_base_url()
-    login_url = f"{base}/login"
-    card_url = f"{base}/{slug}"
-
-    return render_template(
-        "credentials.html",
-        username=u.username,
-        password=u.password,
-        login_url=login_url,
-        card_url=card_url,
-        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
-    )
-
-
-@app.get("/credentials/<slug>")
-@login_required
-def credentials_alias(slug):
-    if is_admin():
-        return redirect(f"/admin/{slugify(slug)}/credentials", code=302)
+    # IMPORTANT: start empty, do not copy P1
+    ag.p2_json = json.dumps({}, ensure_ascii=False)
+    s.commit()
+    s.close()
+    flash("Profilo 2 attivato (vuoto)", "ok")
     return redirect(url_for("dashboard"))
 
+@app.route("/admin/<slug>/p2/deactivate", methods=["POST"])
+def admin_deactivate_p2(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
 
-# ---------- PUBLIC CARD ----------
-@app.get("/<slug>")
-def public_card(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    ag.p2_json = json.dumps({}, ensure_ascii=False)
+    s.commit()
+    s.close()
+    flash("Profilo 2 disattivato", "ok")
+    return redirect(url_for("dashboard"))
+
+# =========================
+# SELF (AGENT) EDIT
+# =========================
+@app.route("/me/edit", methods=["GET", "POST"])
+def me_edit():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    slug = session.get("slug")
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    if request.method == "POST":
+        apply_form_to_agent(ag, request, editing_profile2=False)
+        s.commit()
+        s.close()
+        flash("Salvato Profilo 1", "ok")
+        return redirect(url_for("dashboard"))
+
+    i18n_data = {}
+    s.close()
+    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data)
+
+@app.route("/me/p2", methods=["GET", "POST"])
+def me_profile2():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    slug = session.get("slug")
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    if (ag.p2_enabled or 0) != 1:
+        s.close()
+        flash("Profilo 2 non attivo", "error")
+        return redirect(url_for("dashboard"))
+
+    p2 = json.loads(ag.p2_json or "{}")
+    ag_view = clone_agent_for_profile(ag, p2)
+
+    if request.method == "POST":
+        p2 = apply_form_to_profile_json(ag, request)
+        ag.p2_json = json.dumps(p2, ensure_ascii=False)
+        s.commit()
+        s.close()
+        flash("Salvato Profilo 2", "ok")
+        return redirect(url_for("dashboard"))
+
+    i18n_data = {}
+    s.close()
+    return render_template("agent_form.html", agent=ag_view, editing_profile2=True, i18n_data=i18n_data)
+
+@app.route("/me/p2/activate", methods=["POST"])
+def me_activate_p2():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    ag.p2_enabled = 1
+    ag.p2_json = json.dumps({}, ensure_ascii=False)
+    s.commit()
+    s.close()
+    flash("Profilo 2 attivato (vuoto)", "ok")
+    return redirect(url_for("dashboard"))
+
+@app.route("/me/p2/deactivate", methods=["POST"])
+def me_deactivate_p2():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    ag.p2_enabled = 0
+    ag.p2_json = json.dumps({}, ensure_ascii=False)
+    s.commit()
+    s.close()
+    flash("Profilo 2 disattivato", "ok")
+    return redirect(url_for("dashboard"))
+
+# =========================
+# CREDENTIALS
+# =========================
+@app.route("/me/credentials")
+def me_credentials():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    s.close()
     if not ag:
         abort(404)
 
-    lang = pick_lang_from_request()
-    p_key = (request.args.get("p") or "").strip()
+    return render_template("credentials.html", ag=ag, is_admin=False)
 
-    p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0) == 1
-    profiles = parse_profiles_json(ag.profiles_json or "")
-    p2 = select_profile(profiles, "p2")
+@app.route("/admin/<slug>/credentials")
+def admin_credentials_html(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
 
-    if p_key != "p2":
-        ag_view = agent_to_view(ag)
-        ag_view = apply_i18n_to_agent_view(ag_view, ag, lang)
-        gallery = parse_media_list(ag.gallery_urls)
-        videos = parse_media_list(ag.video_urls)
-        pdfs = parse_pdfs(ag.pdf1_url or "")
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    s.close()
+    if not ag:
+        abort(404)
+    return render_template("credentials.html", ag=ag, is_admin=True)
+
+# =========================
+# DELETE SINGLE MEDIA (P1)
+# =========================
+@app.route("/admin/<slug>/media/delete", methods=["POST"])
+def admin_delete_media(slug):
+    r = require_login()
+    if r: return r
+    if not is_admin():
+        abort(403)
+
+    kind = (request.form.get("kind") or "").strip()  # gallery/video/pdf
+    url = (request.form.get("url") or "").strip()
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    if kind == "gallery":
+        items = split_pipe(ag.gallery_urls)
+        items = [x for x in items if x != url]
+        ag.gallery_urls = join_pipe(items)
+
+    elif kind == "video":
+        items = split_pipe(ag.video_urls)
+        items = [x for x in items if x != url]
+        ag.video_urls = join_pipe(items)
+
+    elif kind == "pdf":
+        pdfs = parse_pdfs(ag.pdf1_url)
+        pdfs = [p for p in pdfs if p.get("url") != url]
+        ag.pdf1_url = build_pdfs_raw(pdfs)
+
+    s.commit()
+    s.close()
+    flash("Elemento eliminato", "ok")
+    return redirect(url_for("edit_agent", slug=slug))
+
+@app.route("/me/media/delete", methods=["POST"])
+def me_delete_media():
+    r = require_login()
+    if r: return r
+    if is_admin():
+        abort(403)
+
+    slug = session.get("slug")
+    kind = (request.form.get("kind") or "").strip()
+    url = (request.form.get("url") or "").strip()
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        s.close()
+        abort(404)
+
+    if kind == "gallery":
+        items = split_pipe(ag.gallery_urls)
+        items = [x for x in items if x != url]
+        ag.gallery_urls = join_pipe(items)
+
+    elif kind == "video":
+        items = split_pipe(ag.video_urls)
+        items = [x for x in items if x != url]
+        ag.video_urls = join_pipe(items)
+
+    elif kind == "pdf":
+        pdfs = parse_pdfs(ag.pdf1_url)
+        pdfs = [p for p in pdfs if p.get("url") != url]
+        ag.pdf1_url = build_pdfs_raw(pdfs)
+
+    s.commit()
+    s.close()
+    flash("Elemento eliminato", "ok")
+    return redirect(url_for("me_edit"))
+
+# =========================
+# PUBLIC CARD + VCF + QR
+# =========================
+@app.route("/<slug>")
+def public_card(slug):
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    s.close()
+    if not ag:
+        abort(404)
+
+    lang = (request.args.get("lang") or "it").lower()
+    p_key = (request.args.get("p") or "").lower()
+
+    # pick profile data
+    p2_enabled = (ag.p2_enabled or 0) == 1
+    if p_key == "p2" and p2_enabled:
+        p2 = json.loads(ag.p2_json or "{}")
+        ag_view = clone_agent_for_profile(ag, p2)
     else:
-        ag_view = blank_profile_view_from_agent(ag)
-        if p2_enabled and p2:
-            for k in [
-                "name", "company", "role", "bio", "phone_mobile", "phone_mobile2", "phone_office", "emails", "websites",
-                "whatsapp", "pec", "piva", "sdi", "addresses", "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube",
-                "spotify",
-                "photo_url", "logo_url", "gallery_urls", "video_urls", "pdf1_url",
-                "orbit_spin", "avatar_spin", "logo_spin", "allow_flip",
-                "back_media_mode", "back_media_url",
-                "photo_pos_x", "photo_pos_y", "photo_zoom"
-            ]:
-                v = p2.get(k)
-                if v is None:
-                    continue
-                if k in ("orbit_spin", "avatar_spin", "logo_spin", "allow_flip", "photo_pos_x", "photo_pos_y"):
-                    try:
-                        setattr(ag_view, k, int(v))
-                    except Exception:
-                        pass
-                elif k in ("photo_zoom",):
-                    try:
-                        setattr(ag_view, k, float(v))
-                    except Exception:
-                        pass
-                elif k in ("spotify", "youtube", "facebook", "instagram", "linkedin", "tiktok", "telegram"):
-                    vv = clean_str(v)
-                    if vv is not None:
-                        setattr(ag_view, k, safe_url(vv))
-                else:
-                    vv = clean_str(v)
-                    if vv is not None:
-                        setattr(ag_view, k, vv)
+        ag_view = ag
 
-        gallery = parse_media_list(getattr(ag_view, "gallery_urls", "") or "")
-        videos = parse_media_list(getattr(ag_view, "video_urls", "") or "")
-        pdfs = parse_pdfs(getattr(ag_view, "pdf1_url", "") or "")
-
-    base = get_base_url()
-
-    emails = [e.strip() for e in (ag_view.emails or "").split(",") if is_email_like(e)]
-    pec_email = clean_str(ag_view.pec) if is_email_like(clean_str(ag_view.pec) or "") else None
-
-    websites = [safe_url(w.strip()) for w in (ag_view.websites or "").split(",") if clean_str(w)]
-    websites = [w for w in websites if w]
-
-    raw_addresses = [a.strip() for a in (ag_view.addresses or "").split("\n") if clean_str(a)]
-    addresses = [{"text": a, "maps": google_maps_link(a)} for a in raw_addresses]
-
-    mobiles = []
-    if is_phone_like(getattr(ag_view, "phone_mobile", "") or ""):
-        mobiles.append((ag_view.phone_mobile or "").strip())
-    if is_phone_like(getattr(ag_view, "phone_mobile2", "") or ""):
-        mobiles.append((ag_view.phone_mobile2 or "").strip())
-
+    # build lists
+    mobiles = [x for x in [ag_view.phone_mobile, ag_view.phone_mobile2] if (x or "").strip()]
     office_value = (ag_view.phone_office or "").strip()
-    wa_link = normalize_whatsapp_link(ag_view.whatsapp or (mobiles[0] if mobiles else ""))
+    emails = safe_list_from_csv(ag_view.emails)
+    websites = safe_list_from_csv(ag_view.websites)
+    pec_email = (ag_view.pec or "").strip()
 
-    qr_url = f"{base}/{ag.slug}/qr.png?lang={urllib.parse.quote(lang)}"
-    if p_key:
-        qr_url += f"&p={urllib.parse.quote(p_key)}"
+    addresses = []
+    for line in (ag_view.addresses or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        q = quote_plus(line)
+        addresses.append({"text": line, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
+
+    gallery = split_pipe(ag_view.gallery_urls)
+    videos = split_pipe(ag_view.video_urls)
+    pdfs = parse_pdfs(ag_view.pdf1_url)
+
+    wa_link = normalize_whatsapp(ag_view.whatsapp) if ag_view.whatsapp else ""
+    base_url = BASE_URL or request.url_root.strip().rstrip("/")
+
+    qr_url = f"/{ag.slug}/qr.png" + (f"?p={p_key}" if p_key else "")
 
     return render_template(
         "card.html",
         ag=ag_view,
         lang=lang,
-        t_func=lambda k: t(lang, k),
-        base_url=base,
+        base_url=base_url,
+        p2_enabled=p2_enabled,
+        p_key=("p2" if (p_key == "p2" and p2_enabled) else ""),
+        t_func=t(lang),
+        mobiles=mobiles,
+        office_value=office_value,
+        emails=emails,
+        websites=websites,
+        pec_email=pec_email,
+        addresses=addresses,
         gallery=gallery,
         videos=videos,
         pdfs=pdfs,
-        emails=emails,
-        pec_email=pec_email,
-        websites=websites,
-        addresses=addresses,
-        mobiles=mobiles,
-        office_value=office_value,
         wa_link=wa_link,
-        qr_url=qr_url,
-        p_key=p_key,
-        p2_enabled=p2_enabled,
+        qr_url=qr_url
     )
 
-
-# ---------- VCARD ----------
-@app.get("/<slug>.vcf")
-def vcard(slug):
-    slug = slugify(slug)
-    db = SessionLocal()
-    ag = db.query(Agent).filter_by(slug=slug).first()
-    db.close()
+@app.route("/<slug>.vcf")
+def vcf(slug):
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    s.close()
     if not ag:
         abort(404)
 
-    lang = pick_lang_from_request()
-    label_card = t(lang, "digital_card_label")
+    p_key = (request.args.get("p") or "").lower()
+    if p_key == "p2" and (ag.p2_enabled or 0) == 1:
+        p2 = json.loads(ag.p2_json or "{}")
+        ag = clone_agent_for_profile(ag, p2)
 
-    def fold_line(line: str, limit: int = 74):
-        out = []
-        s = line
-        while len(s) > limit:
-            out.append(s[:limit])
-            s = " " + s[limit:]
-        out.append(s)
-        return out
-
-    def abs_url(u: str) -> str:
-        u = clean_str(u) or ""
-        if not u:
-            return ""
-        if u.startswith("http://") or u.startswith("https://"):
-            return u
-        base = get_base_url()
-        if u.startswith("/"):
-            return base + u
-        return base + "/" + u
-
-    def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
-        if not photo_url or not photo_url.startswith("/uploads/"):
-            return None
-        rel = photo_url.replace("/uploads/", "", 1)
-        disk_path = os.path.join(PERSIST_UPLOADS_DIR, rel)
-        if not os.path.isfile(disk_path):
-            return None
-        try:
-            from PIL import Image
-            with Image.open(disk_path) as im:
-                im = im.convert("RGB")
-                im.thumbnail((420, 420))
-                for quality in (82, 72, 62, 52, 45):
-                    buf = BytesIO()
-                    im.save(buf, format="JPEG", quality=quality, optimize=True)
-                    blob = buf.getvalue()
-                    if len(blob) <= max_bytes:
-                        b64 = base64.b64encode(blob).decode("ascii")
-                        return ("JPEG", b64)
-            return None
-        except Exception:
-            return None
-
-    full_name = (ag.name or "").strip()
-    parts = full_name.split(" ", 1)
-    first_name, last_name = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else (full_name, "")
-
-    base = get_base_url()
-    card_url = f"{base}/{ag.slug}"
-
-    websites = [safe_url(w.strip()) for w in (getattr(ag, "websites", "") or "").split(",") if clean_str(w)]
-    websites = [w for w in websites if w]
+    name = (ag.name or "").strip()
+    org = (ag.company or "").strip()
+    title = (ag.role or "").strip()
+    tel = (ag.phone_mobile or "").strip()
+    email = (safe_list_from_csv(ag.emails)[0] if ag.emails else "").strip()
 
     lines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        f"FN:{full_name}",
-        f"N:{last_name};{first_name};;;",
+        f"N:{name};;;;",
+        f"FN:{name}",
     ]
-
-    photo_url = clean_str(getattr(ag, "photo_url", "") or "")
-    photo_abs = abs_url(photo_url)
-    embedded = try_embed_photo_b64(photo_url)
-
-    if embedded:
-        mime, b64 = embedded
-        base_line = f"PHOTO;ENCODING=b;TYPE={mime}:{b64}"
-        for fl in fold_line(base_line, 74):
-            lines.append(fl)
-
-    if photo_abs:
-        lines.append(f"PHOTO;VALUE=URI:{photo_abs}")
-
-    if clean_str(getattr(ag, "role", None)):
-        lines.append(f"TITLE:{clean_str(ag.role)}")
-    if clean_str(getattr(ag, "company", None)):
-        lines.append(f"ORG:{clean_str(ag.company)}")
-
-    if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
-        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
-    if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
-        lines.append(f"TEL;TYPE=CELL;TYPE=VOICE:{clean_str(ag.phone_mobile2)}")
-    if is_phone_like(getattr(ag, "phone_office", "") or ""):
-        lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
-
-    raw_emails = (getattr(ag, "emails", "") or "").strip()
-    valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
-    if valid_emails:
-        lines.append(f"EMAIL;TYPE=INTERNET;TYPE=PREF:{valid_emails[0]}")
-        for e in valid_emails[1:]:
-            lines.append(f"EMAIL;TYPE=INTERNET:{e}")
-
-    pec = clean_str(getattr(ag, "pec", "") or "")
-    if is_email_like(pec):
-        lines.append(f"EMAIL;TYPE=INTERNET:{pec}")
-
-    addr = clean_str(getattr(ag, "addresses", "") or "")
-    if addr:
-        first_addr = addr.split("\n", 1)[0].strip()
-        if first_addr:
-            lines.append(f"ADR;TYPE=WORK:;;{first_addr};;;;")
-
-    lines.append(f"item1.URL:{card_url}")
-    lines.append(f"item1.X-ABLABEL:{label_card}")
-
-    if websites:
-        lines.append(f"item2.URL:{websites[0]}")
-        lines.append("item2.X-ABLABEL:Sito web")
-
-    note_parts = []
-    if clean_str(getattr(ag, "piva", None)):
-        note_parts.append(f"Partita IVA: {clean_str(ag.piva)}")
-    note_parts.append(f"{label_card}: {card_url}")
-    lines.append("NOTE:" + " | ".join(note_parts))
-
-    wa = normalize_whatsapp_link(getattr(ag, "whatsapp", "") or getattr(ag, "phone_mobile", "") or "")
-    if wa:
-        lines.append(f"IMPP;X-SERVICE-TYPE=WhatsApp:{wa}")
-        lines.append(f"X-SOCIALPROFILE;TYPE=whatsapp:{wa}")
-
-    for typ, raw in [
-        ("facebook", getattr(ag, "facebook", None)),
-        ("instagram", getattr(ag, "instagram", None)),
-        ("linkedin", getattr(ag, "linkedin", None)),
-        ("tiktok", getattr(ag, "tiktok", None)),
-        ("telegram", getattr(ag, "telegram", None)),
-        ("youtube", getattr(ag, "youtube", None)),
-        ("spotify", getattr(ag, "spotify", None)),
-    ]:
-        u = safe_url(raw or "")
-        if u:
-            lines.append(f"X-SOCIALPROFILE;TYPE={typ}:{u}")
-
-    if clean_str(getattr(ag, "piva", None)):
-        lines.append(f"X-TAX-ID:{clean_str(ag.piva)}")
-    if clean_str(getattr(ag, "sdi", None)):
-        lines.append(f"X-SDI-CODE:{clean_str(ag.sdi)}")
-
+    if org:
+        lines.append(f"ORG:{org}")
+    if title:
+        lines.append(f"TITLE:{title}")
+    if tel:
+        lines.append(f"TEL;TYPE=CELL:{tel}")
+    if email:
+        lines.append(f"EMAIL:{email}")
     lines.append("END:VCARD")
 
-    content = "\r\n".join(lines)
-    resp = Response(content)
-    resp.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
-    resp.headers["Content-Disposition"] = f'attachment; filename="{ag.slug}.vcf"'
-    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    resp.headers["Pragma"] = "no-cache"
-    resp.headers["Expires"] = "0"
-    return resp
+    v = "\n".join(lines)
+    return app.response_class(v, mimetype="text/vcard")
 
+@app.route("/<slug>/qr.png")
+def qr_png(slug):
+    # very simple: render QR via an embedded SVG-ish approach not needed; easiest is to serve a prebuilt static
+    # To keep dependency-free, we generate a PNG using qrcode if installed.
+    import qrcode
+    from io import BytesIO
+    from flask import send_file
 
-# ---------- QR ----------
-@app.get("/<slug>/qr.png")
-def qr(slug):
-    slug = slugify(slug)
-    base = get_base_url()
-    lang = pick_lang_from_request()
-    p = (request.args.get("p") or "").strip()
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    s.close()
+    if not ag:
+        abort(404)
 
-    url = f"{base}/{slug}?lang={urllib.parse.quote(lang)}"
-    if p:
-        url += f"&p={urllib.parse.quote(p)}"
+    base_url = BASE_URL or request.url_root.strip().rstrip("/")
+    p_key = (request.args.get("p") or "").lower()
+    url = f"{base_url}/{ag.slug}" + (f"?p={p_key}" if p_key else "")
 
     img = qrcode.make(url)
-    bio = BytesIO()
-    img.save(bio, format="PNG")
-    bio.seek(0)
-    return send_file(bio, mimetype="image/png")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
 
+# =========================
+# APPLY FORM TO AGENT (P1)
+# =========================
+def apply_form_to_agent(ag: Agent, req, editing_profile2: bool):
+    """
+    editing_profile2=False: save directly into columns (P1)
+    """
+    # text fields
+    ag.name = (req.form.get("name") or "").strip()
+    ag.company = (req.form.get("company") or "").strip()
+    ag.role = (req.form.get("role") or "").strip()
+    ag.bio = (req.form.get("bio") or "").strip()
 
-# ---------- ERRORS ----------
-@app.errorhandler(404)
-def not_found(e):
-    back = (request.args.get("back") or request.referrer or "").strip()
-    if not back:
-        back = url_for("dashboard") if is_logged_in() else url_for("login")
-    return render_template("404.html", back=back), 404
+    ag.phone_mobile = (req.form.get("phone_mobile") or "").strip()
+    ag.phone_mobile2 = (req.form.get("phone_mobile2") or "").strip()
+    ag.phone_office = (req.form.get("phone_office") or "").strip()
+    ag.whatsapp = (req.form.get("whatsapp") or "").strip()
+    ag.emails = (req.form.get("emails") or "").strip()
+    ag.websites = (req.form.get("websites") or "").strip()
+    ag.pec = (req.form.get("pec") or "").strip()
+    ag.addresses = (req.form.get("addresses") or "").strip()
 
+    ag.piva = (req.form.get("piva") or "").strip()
+    ag.sdi = (req.form.get("sdi") or "").strip()
 
-@app.errorhandler(500)
-def server_error(e):
-    return render_template("500.html"), 500
+    ag.facebook = (req.form.get("facebook") or "").strip()
+    ag.instagram = (req.form.get("instagram") or "").strip()
+    ag.linkedin = (req.form.get("linkedin") or "").strip()
+    ag.tiktok = (req.form.get("tiktok") or "").strip()
+    ag.telegram = (req.form.get("telegram") or "").strip()
+    ag.youtube = (req.form.get("youtube") or "").strip()
+    ag.spotify = (req.form.get("spotify") or "").strip()
 
+    ag.back_media_mode = (req.form.get("back_media_mode") or "company").strip() or "company"
 
+    # crop/zoom
+    try:
+        ag.photo_pos_x = int(req.form.get("photo_pos_x") or 50)
+    except:
+        ag.photo_pos_x = 50
+    try:
+        ag.photo_pos_y = int(req.form.get("photo_pos_y") or 35)
+    except:
+        ag.photo_pos_y = 35
+    try:
+        ag.photo_zoom = str(float(req.form.get("photo_zoom") or 1.0))
+    except:
+        ag.photo_zoom = "1.0"
+
+    # effects
+    ag.orbit_spin = 1 if req.form.get("orbit_spin") == "on" else 0
+    ag.avatar_spin = 1 if req.form.get("avatar_spin") == "on" else 0
+    ag.logo_spin = 1 if req.form.get("logo_spin") == "on" else 0
+    ag.allow_flip = 1 if req.form.get("allow_flip") == "on" else 0
+
+    # if avatar spin -> disable flip
+    if ag.avatar_spin == 1:
+        ag.allow_flip = 0
+
+    # uploads
+    if req.files.get("photo") and req.files.get("photo").filename:
+        ag.photo_url = save_upload(req.files["photo"], "img", ag.slug)
+
+    if req.files.get("logo") and req.files.get("logo").filename:
+        ag.logo_url = save_upload(req.files["logo"], "img", ag.slug)
+
+    if req.files.get("back_media") and req.files.get("back_media").filename:
+        ag.back_media_url = save_upload(req.files["back_media"], "img", ag.slug)
+
+    # gallery (append)
+    gallery_files = req.files.getlist("gallery")
+    if gallery_files:
+        existing = split_pipe(ag.gallery_urls)
+        for f in gallery_files:
+            if not f or not f.filename:
+                continue
+            if len(existing) >= MAX_GALLERY_IMAGES:
+                break
+            existing.append(save_upload(f, "img", ag.slug))
+        ag.gallery_urls = join_pipe(existing)
+
+    # videos (append)
+    video_files = req.files.getlist("videos")
+    if video_files:
+        existing = split_pipe(ag.video_urls)
+        for f in video_files:
+            if not f or not f.filename:
+                continue
+            if len(existing) >= MAX_VIDEOS:
+                break
+            existing.append(save_upload(f, "video", ag.slug))
+        ag.video_urls = join_pipe(existing)
+
+    # pdf slots (append each uploaded)
+    pdfs = parse_pdfs(ag.pdf1_url)
+    for i in range(1, MAX_PDFS + 1):
+        key = f"pdf{i}"
+        if req.files.get(key) and req.files.get(key).filename:
+            url = save_upload(req.files[key], "pdf", ag.slug)
+            name = req.files[key].filename
+            pdfs.append({"name": name, "url": url})
+    # keep last MAX_PDFS
+    pdfs = pdfs[:MAX_PDFS]
+    ag.pdf1_url = build_pdfs_raw(pdfs)
+
+def clone_agent_for_profile(ag: Agent, data: dict) -> Agent:
+    """
+    Returns a lightweight object that behaves like Agent in templates (same attributes),
+    overriding with values in data dict.
+    """
+    class Obj: pass
+    o = Obj()
+    # copy all simple fields from ag
+    for k in ag.__dict__.keys():
+        if k.startswith("_"):
+            continue
+        setattr(o, k, getattr(ag, k))
+    # apply overrides
+    for k, v in (data or {}).items():
+        setattr(o, k, v)
+    # keep original slug
+    o.slug = ag.slug
+    return o
+
+def apply_form_to_profile_json(ag_main: Agent, req) -> dict:
+    """
+    Build P2 json from form fields; it starts from existing json (so you can partial edit).
+    IMPORTANT: doesn't copy from P1; only what the user fills.
+    """
+    p2 = json.loads(ag_main.p2_json or "{}")
+
+    def setv(key):
+        p2[key] = (req.form.get(key) or "").strip()
+
+    # same keys used in template
+    for key in [
+        "name","company","role","bio",
+        "phone_mobile","phone_mobile2","phone_office","whatsapp",
+        "emails","websites","pec","addresses",
+        "piva","sdi",
+        "facebook","instagram","linkedin","tiktok","telegram","youtube","spotify",
+        "back_media_mode"
+    ]:
+        setv(key)
+
+    # crop/zoom numeric
+    def seti(key, default):
+        try:
+            p2[key] = int(req.form.get(key) or default)
+        except:
+            p2[key] = default
+
+    seti("photo_pos_x", 50)
+    seti("photo_pos_y", 35)
+    try:
+        p2["photo_zoom"] = str(float(req.form.get("photo_zoom") or 1.0))
+    except:
+        p2["photo_zoom"] = "1.0"
+
+    # effects
+    p2["orbit_spin"] = 1 if req.form.get("orbit_spin") == "on" else 0
+    p2["avatar_spin"] = 1 if req.form.get("avatar_spin") == "on" else 0
+    p2["logo_spin"] = 1 if req.form.get("logo_spin") == "on" else 0
+    p2["allow_flip"] = 1 if req.form.get("allow_flip") == "on" else 0
+    if p2["avatar_spin"] == 1:
+        p2["allow_flip"] = 0
+
+    # uploads: P2 uses same storage but stored inside json keys
+    if req.files.get("photo") and req.files.get("photo").filename:
+        p2["photo_url"] = save_upload(req.files["photo"], "img", ag_main.slug)
+    if req.files.get("logo") and req.files.get("logo").filename:
+        p2["logo_url"] = save_upload(req.files["logo"], "img", ag_main.slug)
+    if req.files.get("back_media") and req.files.get("back_media").filename:
+        p2["back_media_url"] = save_upload(req.files["back_media"], "img", ag_main.slug)
+
+    # media lists: stored in json keys
+    g_existing = split_pipe(p2.get("gallery_urls",""))
+    for f in req.files.getlist("gallery"):
+        if not f or not f.filename:
+            continue
+        if len(g_existing) >= MAX_GALLERY_IMAGES:
+            break
+        g_existing.append(save_upload(f, "img", ag_main.slug))
+    p2["gallery_urls"] = join_pipe(g_existing)
+
+    v_existing = split_pipe(p2.get("video_urls",""))
+    for f in req.files.getlist("videos"):
+        if not f or not f.filename:
+            continue
+        if len(v_existing) >= MAX_VIDEOS:
+            break
+        v_existing.append(save_upload(f, "video", ag_main.slug))
+    p2["video_urls"] = join_pipe(v_existing)
+
+    pdfs = parse_pdfs(p2.get("pdf1_url",""))
+    for i in range(1, MAX_PDFS + 1):
+        key = f"pdf{i}"
+        if req.files.get(key) and req.files.get(key).filename:
+            url = save_upload(req.files[key], "pdf", ag_main.slug)
+            name = req.files[key].filename
+            pdfs.append({"name": name, "url": url})
+    pdfs = pdfs[:MAX_PDFS]
+    p2["pdf1_url"] = build_pdfs_raw(pdfs)
+
+    return p2
+
+# =========================
+# MAIN
+# =========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
