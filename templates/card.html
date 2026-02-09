@@ -49,7 +49,18 @@
       will-change: transform;
     }
 
-    /* iframe interno modal (non usiamo più per siti esterni: usiamo /webview) */
+    /* ✅ avatar spin (se in css non c'è, lo aggiungiamo qui per sicurezza) */
+    @keyframes spinAvatar { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    .spin-avatar{ animation: spinAvatar 6.5s linear infinite; }
+
+    /* ✅ Tema chiaro: azienda leggibile anche se style.css non lo gestisce */
+    body[data-theme="light"] .company-badge{
+      color:#0f172a !important;
+      background: rgba(15,23,42,.08) !important;
+      border-color: rgba(15,23,42,.18) !important;
+    }
+
+    /* iframe interno modal: ora lo usiamo per webview e share */
     #mWeb{
       width: min(980px, 92vw);
       height: min(78vh, 720px);
@@ -103,7 +114,7 @@
                         onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
                         aria-label="Apri foto">
                   {% if ag.photo_url %}
-                    <img class="avatar-img zoomable"
+                    <img class="avatar-img zoomable {% if (ag.avatar_spin or 0)|int == 1 %}spin-avatar{% endif %}"
                          src="{{ ag.photo_url }}"
                          alt="Foto"
                          style="object-position: {{ px|int }}% {{ py|int }}% !important; transform: scale({{ '%.2f'|format(pz|float) }});">
@@ -372,6 +383,8 @@
       <img id="mImg" src="" alt="" style="display:none;">
       <video id="mVideo" controls playsinline style="display:none;"></video>
       <iframe id="mPdf" src="" style="display:none;"></iframe>
+
+      <!-- ✅ iframe web/share dentro modal (finestra nella finestra) -->
       <iframe id="mWeb" src="" style="display:none;" referrerpolicy="no-referrer"></iframe>
 
       <div class="modal-actions">
@@ -402,7 +415,6 @@
   window.__MEDIA_TITLE = "";
   window.__BACK_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}";
 
-  // ✅ rende i link assoluti (fix WhatsApp/email che non aprivano media)
   function absUrl(u){
     if(!u) return "";
     if(u.startsWith("http://") || u.startsWith("https://")) return u;
@@ -501,12 +513,25 @@
     openModal('pdf');
   }
 
-  // ✅ SITO: pagina interna con cornice + tasto torna alla card
+  // ✅ SITO: MODAL iframe (finestra nella finestra)
   function openWebsite(url){
     if(!url) return;
     const back = window.__BACK_URL || "/";
     const go = "/webview?u=" + encodeURIComponent(url) + "&back=" + encodeURIComponent(back);
-    window.location.href = go;
+    const web = document.getElementById('mWeb');
+    web.src = go;
+    window.__MEDIA_URL = url;
+    window.__MEDIA_TITLE = "Sito - {{ ag.name }}";
+    openModal('web');
+  }
+
+  // ✅ WhatsApp: MODAL iframe (share.html)
+  function openShareModal(text){
+    const back = window.__BACK_URL || "/";
+    const u = "/share?back=" + encodeURIComponent(back) + "&text=" + encodeURIComponent(text);
+    const web = document.getElementById('mWeb');
+    web.src = u;
+    openModal('web');
   }
 
   document.getElementById('modal')?.addEventListener('click', function(e){
@@ -528,18 +553,11 @@
     window.__QR_URL = "";
   }
 
-  // ✅ WhatsApp: passa da pagina interna /share (cornice + torna alla card)
-  function openSharePage(text){
-    const back = window.__BACK_URL || "/";
-    const u = "/share?back=" + encodeURIComponent(back) + "&text=" + encodeURIComponent(text);
-    window.location.href = u;
-  }
-
   function shareQrWhatsApp(){
     const url = window.__QR_URL || "";
     if(!url) return;
     const text = "Ecco il QR della mia Pay4You Card:\n" + url;
-    openSharePage(text);
+    openShareModal(text);
   }
   function shareQrEmail(){
     const url = window.__QR_URL || "";
@@ -553,7 +571,7 @@
     const url = window.__MEDIA_URL || "";
     if(!url) return;
     const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
-    openSharePage(text);
+    openShareModal(text);
   }
   function shareMediaEmail(){
     const url = window.__MEDIA_URL || "";
