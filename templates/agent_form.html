@@ -281,17 +281,11 @@
         <div class="field">
           <label>Galleria foto (max 30)</label>
           <input name="gallery" type="file" accept="image/*" multiple>
-          {% if agent and agent.gallery_urls %}
-            <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
-          {% endif %}
         </div>
 
         <div class="field">
           <label>Video (max 10)</label>
           <input name="videos" type="file" accept="video/*" multiple>
-          {% if agent and agent.video_urls %}
-            <div class="mini-help">Già presenti: sì (sovrascrive se ricarichi)</div>
-          {% endif %}
         </div>
       </div>
 
@@ -305,127 +299,86 @@
             </div>
           {% endfor %}
         </div>
-        {% if agent and agent.pdf1_url %}
-          <div class="mini-help">Già presenti: sì (aggiunge/sovrascrive quelli che ricarichi)</div>
-        {% endif %}
       </div>
 
-      {# ✅ PREVIEW + ELIMINA SINGOLO #}
+      {# ===== PREVIEW + ELIMINA SINGOLO ===== #}
       {% if agent %}
         {% set gal = (agent.gallery_urls or '').split('|') if agent.gallery_urls else [] %}
         {% set vids = (agent.video_urls or '').split('|') if agent.video_urls else [] %}
         {% set pdfraw = (agent.pdf1_url or '') %}
         {% set pdfs = pdfraw.split('|') if pdfraw else [] %}
 
-        {% if gal or vids or pdfs %}
-          <div class="sep" style="margin:14px 0;"></div>
-          <div class="section-title" style="margin-bottom:10px;">Anteprima contenuti caricati</div>
+        <div class="media-preview">
+          <div class="media-title">Anteprima caricati (puoi eliminare singoli)</div>
 
           {% if gal %}
-            <div class="mini-help" style="margin-bottom:6px;">Foto</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div class="media-block">
+            <div class="media-sub">Foto</div>
+            <div class="media-grid">
               {% for g in gal %}
-                <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
-                  <img src="{{ g }}" alt="foto" style="width:86px; height:86px; object-fit:cover; border-radius:14px; border:1px solid rgba(255,255,255,.14);">
-                  {% if session.get('role') == 'admin' %}
-                    <form method="post" action="{{ url_for('admin_media_delete', slug=agent.slug) }}">
-                      <input type="hidden" name="kind" value="gallery">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% else %}
-                    <form method="post" action="{{ url_for('me_media_delete') }}">
-                      <input type="hidden" name="kind" value="gallery">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="back_to" value="{{ 'p2' if editing_profile2 else 'p1' }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% endif %}
-                </div>
+              <div class="media-item">
+                <img src="{{ g }}" alt="img">
+                <form method="post"
+                      action="{% if session.get('role')=='admin' %}{{ url_for('admin_delete_media', slug=agent.slug) }}{% else %}{{ url_for('me_delete_media') }}{% endif %}">
+                  <input type="hidden" name="kind" value="gallery">
+                  <input type="hidden" name="url" value="{{ g }}">
+                  <button class="media-del" type="submit" title="Elimina">🗑</button>
+                </form>
+              </div>
               {% endfor %}
             </div>
+          </div>
           {% endif %}
 
           {% if vids %}
-            <div class="mini-help" style="margin:12px 0 6px;">Video</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div class="media-block">
+            <div class="media-sub">Video</div>
+            <div class="media-grid">
               {% for v in vids %}
-                <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
-                  <video src="{{ v }}" muted playsinline preload="metadata"
-                         style="width:120px; height:86px; object-fit:cover; border-radius:14px; border:1px solid rgba(255,255,255,.14);"></video>
-                  {% if session.get('role') == 'admin' %}
-                    <form method="post" action="{{ url_for('admin_media_delete', slug=agent.slug) }}">
-                      <input type="hidden" name="kind" value="video">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% else %}
-                    <form method="post" action="{{ url_for('me_media_delete') }}">
-                      <input type="hidden" name="kind" value="video">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="back_to" value="{{ 'p2' if editing_profile2 else 'p1' }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% endif %}
-                </div>
+              <div class="media-item">
+                <video src="{{ v }}" muted playsinline preload="metadata"></video>
+                <div class="media-play">PLAY</div>
+                <form method="post"
+                      action="{% if session.get('role')=='admin' %}{{ url_for('admin_delete_media', slug=agent.slug) }}{% else %}{{ url_for('me_delete_media') }}{% endif %}">
+                  <input type="hidden" name="kind" value="video">
+                  <input type="hidden" name="url" value="{{ v }}">
+                  <button class="media-del" type="submit" title="Elimina">🗑</button>
+                </form>
+              </div>
               {% endfor %}
             </div>
+          </div>
           {% endif %}
 
           {% if pdfs %}
-            <div class="mini-help" style="margin:12px 0 6px;">PDF</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="media-block">
+            <div class="media-sub">PDF</div>
+            <div class="pdf-preview">
               {% for item in pdfs %}
                 {% if '||' in item %}
                   {% set parts = item.split('||') %}
                   {% set pdfname = parts[0] %}
+                  {% set pdfurl = parts[1] %}
                 {% else %}
                   {% set pdfname = item %}
+                  {% set pdfurl = item %}
                 {% endif %}
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:10px 12px;">
-                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:520px;">{{ pdfname }}</div>
-                  {% if session.get('role') == 'admin' %}
-                    <form method="post" action="{{ url_for('admin_media_delete', slug=agent.slug) }}">
-                      <input type="hidden" name="kind" value="pdf">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% else %}
-                    <form method="post" action="{{ url_for('me_media_delete') }}">
-                      <input type="hidden" name="kind" value="pdf">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="back_to" value="{{ 'p2' if editing_profile2 else 'p1' }}">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  {% endif %}
+                <div class="pdf-row">
+                  <div class="pdf-name" title="{{ pdfname }}">{{ pdfname }}</div>
+                  <form method="post"
+                        action="{% if session.get('role')=='admin' %}{{ url_for('admin_delete_media', slug=agent.slug) }}{% else %}{{ url_for('me_delete_media') }}{% endif %}">
+                    <input type="hidden" name="kind" value="pdf">
+                    <input type="hidden" name="url" value="{{ pdfurl }}">
+                    <button class="pdf-del" type="submit" title="Elimina">🗑</button>
+                  </form>
                 </div>
               {% endfor %}
             </div>
+          </div>
           {% endif %}
-        {% endif %}
+        </div>
       {% endif %}
     </div>
-
-    {% if session.get('role') == 'admin' %}
-    <details class="section-box" style="padding:12px;">
-      <summary class="section-title" style="margin:0;">Traduzioni (opzionali)</summary>
-      <div class="mini-help" style="margin-top:8px;">Solo per la card pubblica quando lang=en/fr/es/de.</div>
-
-      {% for L in ['en','fr','es','de'] %}
-        {% set d = (i18n_data.get(L) if i18n_data and i18n_data.get(L) else {}) %}
-        <details class="lang-box">
-          <summary class="lang-title">{{ L|upper }}</summary>
-          <div class="grid-2" style="margin-top:10px;">
-            <div class="field"><label>Nome</label><input name="name_{{L}}" value="{{ d.get('name','') }}"></div>
-            <div class="field"><label>Azienda</label><input name="company_{{L}}" value="{{ d.get('company','') }}"></div>
-            <div class="field"><label>Ruolo</label><input name="role_{{L}}" value="{{ d.get('role','') }}"></div>
-            <div class="field"><label>Bio</label><textarea name="bio_{{L}}" rows="2">{{ d.get('bio','') }}</textarea></div>
-            <div class="field" style="grid-column:1/-1"><label>Indirizzi</label><textarea name="addresses_{{L}}" rows="2">{{ d.get('addresses','') }}</textarea></div>
-          </div>
-        </details>
-      {% endfor %}
-    </details>
-    {% endif %}
 
     <div class="sticky-save">
       <button class="btn primary" type="submit">
@@ -445,15 +398,13 @@
 </div>
 
 <script>
-  // mini preview primo frame video (Safari)
+  // preview 1° frame video mini
   (function(){
-    document.querySelectorAll('video[preload="metadata"]').forEach(v=>{
+    document.querySelectorAll('.media-item video').forEach(v=>{
       v.addEventListener('loadedmetadata', ()=>{
         try{ v.currentTime = 0.05; }catch(e){}
       });
-      v.addEventListener('seeked', ()=>{
-        try{ v.pause(); }catch(e){}
-      });
+      v.addEventListener('seeked', ()=>{ try{ v.pause(); }catch(e){} });
     });
   })();
 </script>
