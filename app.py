@@ -127,9 +127,11 @@ class Agent(Base):
 # DB INIT + MIGRATION (SQLite)
 # ==========================
 def _sqlite_table_columns(conn, table_name: str):
-    rows = conn.execute(f"PRAGMA table_info({table_name});").fetchall()
-    # row: cid, name, type, notnull, dflt_value, pk
+    # SQLAlchemy 2.x: usare exec_driver_sql per query raw SQLite
+    rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
+    # PRAGMA table_info ritorna colonne: cid, name, type, notnull, dflt_value, pk
     return {r[1] for r in rows}
+
 
 def ensure_db():
     Base.metadata.create_all(engine)
