@@ -31,12 +31,7 @@
     const wa = "https://wa.me/?text=" + encodeURIComponent(t);
     const btn = document.getElementById("btnOpen");
     if(btn) btn.href = wa;
-
-    // ✅ auto-apertura SOLO se non siamo dentro iframe (modal)
-    const inFrame = (window.self !== window.top);
-    if(!inFrame){
-      setTimeout(()=>{ window.location.href = wa; }, 250);
-    }
+    setTimeout(()=>{ window.location.href = wa; }, 250);
   })();
 </script>
 {% endblock %}
