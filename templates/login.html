@@ -2,38 +2,21 @@
 {% block title %}Login | Pay4You{% endblock %}
 
 {% block content %}
-<div class="page-main">
-  <div class="panel panel-login">
-
-    <div class="panel-head panel-head-center">
-      <img src="{{ url_for('static', filename='pay4you-logo.png') }}"
-           alt="Pay4You" class="login-logo">
-      <div class="login-title">Area riservata</div>
-      <div class="hint">Inserisci le credenziali per gestire la tua card.</div>
-    </div>
-
-    <form method="post" class="panel-body">
+<div class="login-wrap">
+  <div class="login-card">
+    <h1 class="login-title">Pay4You — Accesso</h1>
+    <form method="post">
       <div class="field">
         <label>Username</label>
-        <input type="text" name="username" autocomplete="username" required>
+        <input name="username" required>
       </div>
-
-      <div class="field" style="margin-top:12px;">
+      <div class="field">
         <label>Password</label>
-        <input type="password" name="password" autocomplete="current-password" required>
+        <input name="password" type="password" required>
       </div>
-
-      {% if error %}
-        <div class="flash flash-error" style="margin-top:12px;">
-          {{ error }}
-        </div>
-      {% endif %}
-
-      <div style="margin-top:14px;">
-        <button class="btn primary" type="submit" style="width:100%;">Accedi</button>
-      </div>
+      <button class="btn primary" type="submit">Entra</button>
+      <a class="btn ghost" href="/">Vai alle card</a>
     </form>
-
   </div>
 </div>
 {% endblock %}
