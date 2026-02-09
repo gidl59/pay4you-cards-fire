@@ -9,8 +9,8 @@ import urllib.parse
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, send_file, session, abort, Response,
-    send_from_directory, flash
+    url_for, session, abort, Response,
+    send_from_directory, flash, send_file
 )
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, text as sa_text, event
@@ -42,12 +42,11 @@ MAX_PDF_MB = 15
 SUPPORTED_LANGS = ("it", "en", "fr", "es", "de")
 
 # ===== SQLITE TUNING =====
-SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))  # connect timeout
-SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))  # busy_timeout pragma
+SQLITE_TIMEOUT_SECONDS = int(os.getenv("SQLITE_TIMEOUT_SECONDS", "30"))
+SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "8000"))
 
-# Se vuoi forzare WAL sempre:
-SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")  # WAL
-SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")  # NORMAL è ok in WAL
+SQLITE_JOURNAL_MODE = os.getenv("SQLITE_JOURNAL_MODE", "WAL")
+SQLITE_SYNCHRONOUS = os.getenv("SQLITE_SYNCHRONOUS", "NORMAL")
 
 # ===== UI I18N (etichette fisse) =====
 I18N = {
@@ -716,59 +715,50 @@ def blank_profile_view_from_agent(ag: Agent) -> SimpleNamespace:
     )
 
 
-# ===================== ROUTES =====================
+# ===================== ROUTES (NO DUPLICATI) =====================
 
-from flask import request, render_template, redirect, url_for
-from urllib.parse import quote
+@app.get("/webview", endpoint="p4y_webview")
+def p4y_webview():
+    url = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "/").strip() or "/"
 
-@app.get("/webview")
-def webview():
-    url = request.args.get("u", "").strip()
-    back = request.args.get("back", "/").strip() or "/"
     if not url:
         return render_template("not_found_card.html", back=back), 404
+
+    # Normalizza schema
+    if url.startswith("www."):
+        url = "https://" + url
+    if not (url.startswith("http://") or url.startswith("https://")):
+        url = "https://" + url
+
     return render_template("webview.html", url=url, back=back)
 
-@app.get("/docview")
-def docview():
-    url = request.args.get("u", "").strip()
-    back = request.args.get("back", "/").strip() or "/"
-    title = request.args.get("title", "Documento").strip()
+
+@app.get("/docview", endpoint="p4y_docview")
+def p4y_docview():
+    url = (request.args.get("u") or "").strip()
+    back = (request.args.get("back") or "/").strip() or "/"
+    title = (request.args.get("title") or "Documento").strip()
+
     if not url:
         return render_template("not_found_card.html", back=back), 404
+
+    if url.startswith("www."):
+        url = "https://" + url
+    if not (url.startswith("http://") or url.startswith("https://")) and not url.startswith("/"):
+        url = "https://" + url
+
     return render_template("docview.html", url=url, back=back, title=title)
 
-@app.get("/share")
-def share():
-    back = request.args.get("back", "/").strip() or "/"
-    text = request.args.get("text", "").strip()
+
+@app.get("/share", endpoint="p4y_share")
+def p4y_share():
+    back = (request.args.get("back") or "/").strip() or "/"
+    text = (request.args.get("text") or "").strip()
     if not text:
         return render_template("not_found_card.html", back=back), 404
-    wa_url = "https://wa.me/?text=" + quote(text)
+    wa_url = "https://wa.me/?text=" + urllib.parse.quote(text)
     return render_template("share.html", back=back, text=text, wa_url=wa_url)
-
-@app.errorhandler(404)
-def not_found(e):
-    # se arriva un 404 generico, prova a tornare indietro alla card
-    back = request.args.get("back") or request.referrer or "/"
-    return render_template("not_found_card.html", back=back), 404
-
-@app.get("/share")
-def share_page():
-    text = (request.args.get("text") or "").strip()
-    back = (request.args.get("back") or "").strip()
-
-    if back and not (back.startswith("http://") or back.startswith("https://") or back.startswith("/")):
-        back = ""
-
-    wa_url = "https://wa.me/?text=" + urllib.parse.quote(text or "")
-
-    return render_template(
-        "share.html",
-        text=text or "",
-        wa_url=wa_url,
-        back_url=back or "",
-    )
 
 
 @app.get("/")
@@ -781,19 +771,6 @@ def home():
 @app.get("/health")
 def health():
     return "ok", 200
-
-@app.get("/webview")
-def webview():
-    url = (request.args.get("u") or "").strip()
-    back = (request.args.get("back") or "").strip()
-
-    if not (url.startswith("http://") or url.startswith("https://")):
-        return redirect(back or "/")
-
-    if back and not (back.startswith("http://") or back.startswith("https://") or back.startswith("/")):
-        back = "/"
-
-    return render_template("webview.html", url=url, back_url=back or "/")
 
 
 # ---------- LOGIN ----------
@@ -1564,6 +1541,7 @@ def public_card(slug):
     )
 
 
+# ---------- OUT (lasciato, ma la card usa /webview) ----------
 @app.get("/out")
 def out():
     u = (request.args.get("u") or "").strip()
@@ -1619,7 +1597,6 @@ def vcard(slug):
     lang = pick_lang_from_request()
     label_card = t(lang, "digital_card_label")
 
-    # Line folding: CRLF + spazio all'inizio della riga successiva (compat iOS)
     def fold_line(line: str, limit: int = 74):
         out = []
         s = line
@@ -1641,7 +1618,6 @@ def vcard(slug):
         return base + "/" + u
 
     def try_embed_photo_b64(photo_url: str, max_bytes: int = 320_000):
-        # embed SOLO se è un upload nostro
         if not photo_url or not photo_url.startswith("/uploads/"):
             return None
 
@@ -1652,7 +1628,6 @@ def vcard(slug):
 
         try:
             from PIL import Image
-
             with Image.open(disk_path) as im:
                 im = im.convert("RGB")
                 im.thumbnail((420, 420))
@@ -1664,7 +1639,6 @@ def vcard(slug):
                     if len(blob) <= max_bytes:
                         b64 = base64.b64encode(blob).decode("ascii")
                         return ("JPEG", b64)
-
             return None
         except Exception:
             return None
@@ -1705,7 +1679,7 @@ def vcard(slug):
     if clean_str(getattr(ag, "company", None)):
         lines.append(f"ORG:{clean_str(ag.company)}")
 
-    # TEL: iOS-friendly (TYPE ripetuti, no virgole)
+    # TEL
     if is_phone_like(getattr(ag, "phone_mobile", "") or ""):
         lines.append(f"TEL;TYPE=CELL;TYPE=VOICE;TYPE=PREF:{clean_str(ag.phone_mobile)}")
     if is_phone_like(getattr(ag, "phone_mobile2", "") or ""):
@@ -1713,8 +1687,8 @@ def vcard(slug):
     if is_phone_like(getattr(ag, "phone_office", "") or ""):
         lines.append(f"TEL;TYPE=WORK;TYPE=VOICE:{clean_str(ag.phone_office)}")
 
-    # EMAIL: iOS-friendly
-        raw_emails = (getattr(ag, "emails", "") or "").strip()
+    # ✅ EMAIL (FIX indent + iOS-friendly)
+    raw_emails = (getattr(ag, "emails", "") or "").strip()
     valid_emails = [x.strip() for x in raw_emails.split(",") if is_email_like(x)]
     if valid_emails:
         lines.append(f"EMAIL;TYPE=INTERNET;TYPE=PREF:{valid_emails[0]}")
@@ -1724,7 +1698,6 @@ def vcard(slug):
     pec = clean_str(getattr(ag, "pec", "") or "")
     if is_email_like(pec):
         lines.append(f"EMAIL;TYPE=INTERNET:{pec}")
-
 
     # Address (prima riga)
     addr = clean_str(getattr(ag, "addresses", "") or "")
@@ -1783,7 +1756,7 @@ def vcard(slug):
     return resp
 
 
-# ---------- QR ----------
+# ---------- QR PRINCIPALE ----------
 @app.get("/<slug>/qr.png")
 def qr(slug):
     slug = slugify(slug)
@@ -1802,10 +1775,28 @@ def qr(slug):
     return send_file(bio, mimetype="image/png")
 
 
-# ---------- ERRORS ----------
+# ✅ QR1 / QR2 (per dashboard)
+@app.get("/qr1/<slug>")
+def qr1(slug):
+    slug = slugify(slug)
+    return redirect(f"/{slug}", code=302)
+
+
+@app.get("/qr2/<slug>")
+def qr2(slug):
+    slug = slugify(slug)
+    return redirect(f"/{slug}?p=p2", code=302)
+
+
+# ---------- ERROR HANDLERS (UNICO 404) ----------
 @app.errorhandler(404)
 def not_found(e):
-    return render_template("404.html"), 404
+    back = (request.args.get("back") or request.referrer or "/").strip() or "/"
+    # Prova not_found_card.html (con "Torna alla card"), se non esiste usa 404.html
+    try:
+        return render_template("not_found_card.html", back=back), 404
+    except Exception:
+        return render_template("404.html"), 404
 
 
 @app.errorhandler(500)
