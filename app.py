@@ -177,7 +177,10 @@ def ensure_db():
         if "created_at" in missing or "created_at" not in cols:
             conn.execute(f"UPDATE agents SET created_at = COALESCE(created_at, '{now}')")
         if "updated_at" in missing or "updated_at" not in cols:
-            conn.execute(f"UPDATE agents SET updated_at = COALESCE(updated_at, '{now}')")
+            conn.exec_driver_sql(
+    "UPDATE agents SET updated_at = COALESCE(updated_at, :now)",
+    {"now": now}
+)
 
         # JSON defaults
         if "p2_json" in missing or "p2_json" not in cols:
