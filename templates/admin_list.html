@@ -40,7 +40,7 @@
   </div>
 
   <div class="table-card">
-    <div class="table-row table-head" style="grid-template-columns: 240px 200px 340px 1fr;">
+    <div class="table-row table-head" style="grid-template-columns: 220px 180px 280px 1fr;">
       <div>Nome</div>
       <div>Slug</div>
       <div>Anteprima</div>
@@ -53,37 +53,53 @@
     {% set pdfraw = (a.pdf1_url or '') %}
     {% set pdfs = pdfraw.split('|') if pdfraw else [] %}
 
-    <div class="table-row" style="grid-template-columns: 240px 200px 340px 1fr;">
+    <div class="table-row" style="grid-template-columns: 220px 180px 280px 1fr;">
       <div><span class="name-badge">{{ a.name }}</span></div>
       <div><span class="slug-badge">{{ a.slug }}</span></div>
 
       <div class="dash-preview">
         {% set preview_img = (gal[0] if gal and gal[0] else (a.photo_url if a.photo_url else '')) %}
-        {% if preview_img %}
-          <img class="dash-thumb" src="{{ preview_img }}" alt="preview">
-        {% else %}
-          <div class="dash-thumb dash-thumb-empty">—</div>
-        {% endif %}
 
-        {% if vids and vids[0] %}
-          <div class="dash-video">
-            <video class="dash-video-mini" src="{{ vids[0] }}" muted playsinline preload="metadata"></video>
-            <span class="dash-video-badge">video</span>
-          </div>
-        {% endif %}
+        <div class="dash-grid">
+          {% if preview_img %}
+            <div class="dash-cell">
+              <img class="dash-thumb" src="{{ preview_img }}" alt="preview">
+              <div class="dash-mini-label">foto</div>
+            </div>
+          {% else %}
+            <div class="dash-cell dash-thumb-empty">—</div>
+          {% endif %}
 
-        {% if pdfs %}
-          <div class="dash-pdfs">
-            {% for item in pdfs %}
-              {% if '||' in item %}
-                {% set parts = item.split('||') %}
-                <span class="dash-pdf-name" title="{{ parts[0] }}">{{ parts[0] }}</span>
-              {% else %}
-                <span class="dash-pdf-name" title="{{ item }}">{{ item }}</span>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
+          {% if vids and vids[0] %}
+            <div class="dash-cell">
+              <video class="dash-video-mini" src="{{ vids[0] }}" muted playsinline preload="metadata"></video>
+              <div class="dash-mini-label">video</div>
+            </div>
+          {% endif %}
+
+          {% if pdfs %}
+            <div class="dash-cell dash-pdf-box">
+              <div class="dash-mini-label">pdf</div>
+              <div class="dash-pdf-list">
+                {% for item in pdfs[:6] %}
+                  {% if '||' in item %}
+                    {% set parts = item.split('||') %}
+                    <div class="dash-pdf-row" title="{{ parts[0] }}">
+                      <span class="dash-pdf-name">{{ parts[0] }}</span>
+                    </div>
+                  {% else %}
+                    <div class="dash-pdf-row" title="{{ item }}">
+                      <span class="dash-pdf-name">{{ item }}</span>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+                {% if pdfs|length > 6 %}
+                  <div class="dash-pdf-more">+{{ pdfs|length - 6 }} altri</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
       </div>
 
       <div class="actions-cell">
