@@ -3,296 +3,210 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ "Nuova Card" if not agent else "Modifica Card" }} | Pay4You</title>
+  <title>{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }} | Pay4You</title>
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-left">
+<div class="app-shell">
+
+  <header class="app-header">
+    <a class="brand" href="/area">
       <div class="logo-dot"></div>
       <div>
-        <div class="t1">Pay4You Cards</div>
-        <div class="t2">{{ "Profilo 2" if editing_profile2 else "Profilo 1" }}</div>
+        <div class="brand-title">Pay4You Cards</div>
+        <div class="hint">{{ "Profilo 2" if editing_profile2 else "Profilo 1" }}</div>
       </div>
-    </div>
-    <div class="topbar-right">
+    </a>
+
+    <div class="toolbar">
       <a class="btn" href="/area">← Dashboard</a>
       <a class="btn danger" href="/area/logout">Logout</a>
     </div>
   </header>
 
-  <main class="container narrow">
+  <main class="app-main">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-wrap">
           {% for cat,msg in messages %}
-            <div class="flash {{cat}}">{{ msg }}</div>
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
-    {% if not agent %}
-      <!-- CREAZIONE -->
-      <div class="panel">
-        <h2>Nuova Card</h2>
-        <form method="post" class="form-grid">
-          <div class="field">
-            <label>Nome *</label>
-            <input name="first_name" required>
-          </div>
-          <div class="field">
-            <label>Cognome (opzionale)</label>
-            <input name="last_name">
-          </div>
-          <div class="field">
-            <label>Slug (opzionale)</label>
-            <input name="slug" placeholder="es: giuseppe-dilisio">
-          </div>
-          <div class="field">
-            <label>Password *</label>
-            <input name="password" required>
-          </div>
-          <div class="field full">
-            <button class="btn primary" type="submit">Crea Card</button>
-          </div>
-        </form>
-      </div>
-    {% else %}
+    <div class="page-main">
+      <div class="panel panel-wide">
 
-      <form method="post" enctype="multipart/form-data" class="panel">
-        <h2>{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }}</h2>
-
-        <div class="grid2">
-          <div class="field">
-            <label>Nome</label>
-            <input name="name" value="{{ agent.name if agent else '' }}">
+        <div class="panel-head">
+          <div>
+            <h1 class="page-title">{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }}</h1>
+            <div class="hint">
+              {% if editing_profile2 %}
+                Questo è il Profilo 2 (se attivo). Può essere completamente diverso dal Profilo 1.
+              {% else %}
+                Qui modifichi i dati principali della tua Pay4You Card.
+              {% endif %}
+            </div>
           </div>
-          <div class="field">
-            <label>Azienda</label>
-            <input name="company" value="{{ agent.company if agent else '' }}">
-          </div>
-          <div class="field">
-            <label>Ruolo</label>
-            <input name="role" value="{{ agent.role if agent else '' }}">
-          </div>
-          <div class="field full">
-            <label>Bio</label>
-            <textarea name="bio" rows="3">{{ agent.bio if agent else '' }}</textarea>
+          <div class="toolbar">
+            {% if agent %}
+              <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}">Apri P1</a>
+              {% if agent.p2_enabled == 1 %}
+                <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>
+              {% endif %}
+            {% endif %}
           </div>
         </div>
 
-        <hr>
+        <div class="sep"></div>
 
-        <h3>Contatti</h3>
-        <div class="grid2">
-          <div class="field">
-            <label>Cellulare</label>
-            <input name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}" placeholder="+39...">
-          </div>
-          <div class="field">
-            <label>Cellulare 2</label>
-            <input name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
-          </div>
-          <div class="field">
-            <label>Ufficio</label>
-            <input name="phone_office" value="{{ agent.phone_office if agent else '' }}">
-          </div>
-          <div class="field">
-            <label>WhatsApp</label>
-            <input name="whatsapp" value="{{ agent.whatsapp if agent else '' }}" placeholder="+39... oppure https://wa.me/...">
-          </div>
-          <div class="field full">
-            <label>Email (separate da virgola)</label>
-            <input name="emails" value="{{ agent.emails if agent else '' }}" placeholder="nome@dominio.it, altro@dominio.it">
-          </div>
-          <div class="field full">
-            <label>Siti web (separati da virgola)</label>
-            <input name="websites" value="{{ agent.websites if agent else '' }}" placeholder="https://..., https://...">
-          </div>
-          <div class="field">
-            <label>PEC</label>
-            <input name="pec" value="{{ agent.pec if agent else '' }}">
-          </div>
-          <div class="field full">
-            <label>Indirizzi (uno per riga)</label>
-            <textarea name="addresses" rows="3">{{ agent.addresses if agent else '' }}</textarea>
-          </div>
-        </div>
+        <form method="post" enctype="multipart/form-data" class="card-form">
 
-        <hr>
-
-        <h3>Dati fiscali</h3>
-        <div class="grid2">
-          <div class="field">
-            <label>P.IVA</label>
-            <input name="piva" value="{{ agent.piva if agent else '' }}">
-          </div>
-          <div class="field">
-            <label>SDI</label>
-            <input name="sdi" value="{{ agent.sdi if agent else '' }}">
-          </div>
-        </div>
-
-        <hr>
-
-        <h3>Social (inserisci URL completi)</h3>
-        <div class="grid2">
-          <div class="field">
-            <label>Facebook</label>
-            <input name="facebook" value="{{ agent.facebook if agent else '' }}" placeholder="https://www.facebook.com/...">
-          </div>
-          <div class="field">
-            <label>Instagram</label>
-            <input name="instagram" value="{{ agent.instagram if agent else '' }}" placeholder="https://www.instagram.com/...">
-          </div>
-          <div class="field">
-            <label>LinkedIn</label>
-            <input name="linkedin" value="{{ agent.linkedin if agent else '' }}" placeholder="https://www.linkedin.com/in/...">
-          </div>
-          <div class="field">
-            <label>TikTok</label>
-            <input name="tiktok" value="{{ agent.tiktok if agent else '' }}" placeholder="https://www.tiktok.com/@...">
-          </div>
-          <div class="field">
-            <label>Telegram</label>
-            <input name="telegram" value="{{ agent.telegram if agent else '' }}" placeholder="https://t.me/...">
-          </div>
-          <div class="field">
-            <label>YouTube</label>
-            <input name="youtube" value="{{ agent.youtube if agent else '' }}" placeholder="https://www.youtube.com/@...">
-          </div>
-          <div class="field">
-            <label>Spotify</label>
-            <input name="spotify" value="{{ agent.spotify if agent else '' }}" placeholder="https://open.spotify.com/...">
-          </div>
-        </div>
-
-        <hr>
-
-        {% if not editing_profile2 %}
-          <h3>Immagini & Media</h3>
-
-          <div class="grid2">
-            <div class="field">
-              <label>Foto profilo</label>
-              <input type="file" name="photo" accept="image/*">
-              <small>Consiglio: 800x800 o più</small>
+          {% if agent %}
+          <div class="section-box">
+            <div class="h3">Identificativo</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Slug (non modificabile)</label>
+                <input type="text" value="{{ agent.slug }}" readonly>
+                <div class="hint">È il link pubblico della card.</div>
+              </div>
+              <div class="field">
+                <label>Link card</label>
+                <input type="text" value="{{ base_url ~ '/' ~ agent.slug if base_url else ('/' ~ agent.slug) }}" readonly>
+              </div>
             </div>
+          </div>
+          {% endif %}
 
-            <div class="field">
-              <label>Logo</label>
-              <input type="file" name="logo" accept="image/*">
-              <small>PNG trasparente consigliato</small>
-            </div>
-
-            <div class="field">
-              <label>Background (immagine)</label>
-              <input type="file" name="back_media" accept="image/*">
-            </div>
-
-            <div class="field">
-              <label>Modalità background</label>
-              <select name="back_media_mode">
-                <option value="company" {{ "selected" if agent.back_media_mode=="company" else "" }}>Azienda</option>
-                <option value="personal" {{ "selected" if agent.back_media_mode=="personal" else "" }}>Personale</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label>Posizione foto X (0-100)</label>
-              <input name="photo_pos_x" value="{{ agent.photo_pos_x }}" type="number" min="0" max="100">
-            </div>
-
-            <div class="field">
-              <label>Posizione foto Y (0-100)</label>
-              <input name="photo_pos_y" value="{{ agent.photo_pos_y }}" type="number" min="0" max="100">
-            </div>
-
-            <div class="field">
-              <label>Zoom foto (es. 1.0 / 1.2 / 1.5)</label>
-              <input name="photo_zoom" value="{{ agent.photo_zoom }}">
+          <div class="section-box">
+            <div class="h3">Dati principali</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Nome</label>
+                <input type="text" name="name" value="{{ agent.name if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Azienda</label>
+                <input type="text" name="company" value="{{ agent.company if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Ruolo</label>
+                <input type="text" name="role" value="{{ agent.role if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Bio</label>
+                <textarea name="bio" placeholder="Breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
+              </div>
             </div>
           </div>
 
-          <div class="panel mini">
-            <h4>Effetti grafici</h4>
-            <div class="checks">
-              <label><input type="checkbox" name="orbit_spin" {{ "checked" if agent.orbit_spin==1 else "" }}> Orbita</label>
-              <label><input type="checkbox" name="logo_spin" {{ "checked" if agent.logo_spin==1 else "" }}> Logo spin</label>
-              <label><input type="checkbox" name="avatar_spin" {{ "checked" if agent.avatar_spin==1 else "" }}> Foto ruota</label>
-              <label><input type="checkbox" name="allow_flip" {{ "checked" if agent.allow_flip==1 else "" }}> Foto flip</label>
+          <div class="section-box">
+            <div class="h3">Contatti</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Cellulare</label>
+                <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Cellulare 2</label>
+                <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Ufficio</label>
+                <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>WhatsApp</label>
+                <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+              </div>
+              <div class="field full">
+                <label>Email (separate da virgola)</label>
+                <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+              </div>
+              <div class="field full">
+                <label>Siti web (separati da virgola)</label>
+                <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>PEC</label>
+                <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+              </div>
+              <div class="field full">
+                <label>Indirizzi (uno per riga)</label>
+                <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
+              </div>
             </div>
-            <small>Nota: “Foto ruota” e “Foto flip” non possono stare insieme (si escludono).</small>
           </div>
 
-          <div class="grid2">
-            <div class="field">
-              <label>Galleria foto (max {{ 30 }})</label>
-              <input type="file" name="gallery" accept="image/*" multiple>
-            </div>
-            <div class="field">
-              <label>Video (max {{ 10 }})</label>
-              <input type="file" name="videos" accept="video/*" multiple>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>PDF (fino a {{ 12 }})</label>
-            <div class="pdf-grid">
-              {% for i in range(1,13) %}
-                <div><input type="file" name="pdf{{i}}" accept="application/pdf"></div>
-              {% endfor %}
+          <div class="section-box">
+            <div class="h3">Dati fiscali</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>P.IVA</label>
+                <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>SDI</label>
+                <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+              </div>
             </div>
           </div>
 
-          <hr>
+          {% if not editing_profile2 %}
+          <div class="section-box">
+            <div class="h3">Media</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Foto profilo</label>
+                <input type="file" name="photo" accept="image/*">
+              </div>
+              <div class="field">
+                <label>Logo</label>
+                <input type="file" name="logo" accept="image/*">
+              </div>
+              <div class="field full">
+                <label>Background (immagine)</label>
+                <input type="file" name="back_media" accept="image/*">
+              </div>
+              <div class="field full">
+                <label>Galleria (multipla)</label>
+                <input type="file" name="gallery" accept="image/*" multiple>
+              </div>
+              <div class="field full">
+                <label>Video (multipli)</label>
+                <input type="file" name="videos" accept="video/*" multiple>
+              </div>
 
-          <h3>Lingue estere (opzionale)</h3>
-          <p class="hint">Compila solo ciò che vuoi tradurre. Se un campo è vuoto, resta in Italiano.</p>
-          {% set L = i18n_data or {} %}
-          {% for code,label in [("en","English"),("fr","Français"),("es","Español"),("de","Deutsch")] %}
-            {% set D = L.get(code, {}) %}
-            <div class="panel mini">
-              <h4>{{ label }}</h4>
-              <div class="grid2">
-                <div class="field">
-                  <label>Nome</label>
-                  <input name="name_{{code}}" value="{{ D.get('name','') }}">
-                </div>
-                <div class="field">
-                  <label>Azienda</label>
-                  <input name="company_{{code}}" value="{{ D.get('company','') }}">
-                </div>
-                <div class="field">
-                  <label>Ruolo</label>
-                  <input name="role_{{code}}" value="{{ D.get('role','') }}">
-                </div>
-                <div class="field full">
-                  <label>Bio</label>
-                  <textarea name="bio_{{code}}" rows="2">{{ D.get('bio','') }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Indirizzi</label>
-                  <textarea name="addresses_{{code}}" rows="2">{{ D.get('addresses','') }}</textarea>
+              <div class="field full">
+                <label>PDF (fino a {{ 12 }})</label>
+                <div class="hint">Carica nei campi sottostanti: ogni upload sostituisce lo “slot”.</div>
+                <div class="grid-3">
+                  {% for i in range(1, 13) %}
+                    <div class="field">
+                      <label>PDF {{ i }}</label>
+                      <input type="file" name="pdf{{ i }}" accept="application/pdf">
+                    </div>
+                  {% endfor %}
                 </div>
               </div>
             </div>
-          {% endfor %}
-        {% else %}
-          <p class="hint">Profilo 2: solo dati testuali. Media/immagini restano nel Profilo 1.</p>
-        {% endif %}
-
-        <div class="bottom-actions">
-          <button class="btn primary" type="submit">Salva</button>
-          <a class="btn" target="_blank" href="/{{ agent.slug }}">Apri Card</a>
-          {% if agent.p2_enabled == 1 %}
-            <a class="btn" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>
+          </div>
           {% endif %}
-        </div>
-      </form>
-    {% endif %}
+
+          <div class="sticky-save">
+            <button class="btn primary" type="submit">Salva</button>
+            <a class="btn" href="/area">Annulla</a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
   </main>
+
+</div>
 </body>
 </html>
