@@ -8,83 +8,458 @@
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="logo-dot"></div>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo-dot"></div>
+    <div>
+      <div class="t1">Pay4You Cards</div>
+      <div class="t2">{{ "Admin" if is_admin else "Cliente" }}</div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    {% if is_admin %}
+      <a class="btn" href="/area/new">+ Nuova Card</a>
+    {% else %}
+      <a class="btn" href="/area/me/edit">Modifica P1</a>
+      {% if agent and agent.p2_enabled == 1 %}
+        <a class="btn" href="/area/me/p2">Modifica P2</a>
+      {% endif %}
+    {% endif %}
+    <a class="btn danger" href="/area/logout">Logout</a>
+  </div>
+</header>
+
+<main class="container">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-wrap">
+        {% for cat,msg in messages %}
+          <div class="flash {{cat}}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if is_admin %}
+    <div class="page-head">
       <div>
-        <div class="t1">Pay4You Cards</div>
-        <div class="t2">{{ "Admin" if is_admin else "Agente" }}</div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Gestisci le card clienti. Ogni cliente ha P1 e (opzionale) P2.</div>
       </div>
     </div>
-    <div class="topbar-right">
-      {% if is_admin %}
-        <a class="btn" href="/area/new">+ Nuova Card</a>
-      {% else %}
-        <a class="btn" href="/area/me/edit">Modifica profilo</a>
-        {% if agent and agent.p2_enabled == 1 %}
-          <a class="btn" href="/area/me/p2">Profilo 2</a>
-        {% endif %}
-      {% endif %}
-      <a class="btn danger" href="/area/logout">Logout</a>
+  {% else %}
+    <div class="page-head">
+      <div>
+        <div class="page-title">La tua Dashboard</div>
+        <div class="page-sub">Gestisci la tua Pay4You Card (P1 + opzionale P2).</div>
+      </div>
     </div>
-  </header>
+  {% endif %}
 
-  <main class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap">
-          {% for cat,msg in messages %}
-            <div class="flash {{cat}}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+  <div class="dash-list">
 
-    <div class="grid">
-      {% for a in agents %}
-        <div class="card">
-          <div class="card-head">
-            <div class="avatar">
+    {% for a in agents %}
+
+      <section class="client-card">
+        <div class="client-top">
+
+          <div class="client-left">
+            <div class="avatar-lg">
               {% if a.photo_url %}
                 <img src="{{ a.photo_url }}" alt="foto">
               {% else %}
                 <div class="ph">👤</div>
               {% endif %}
             </div>
-            <div class="meta">
-              <div class="name">{{ a.name or a.slug }}</div>
-              <div class="sub">{{ a.company or "—" }}</div>
-              <div class="sub small">Slug: <code>{{ a.slug }}</code></div>
+
+            <div class="client-meta">
+              <div class="client-name">{{ a.name or a.slug }}</div>
+              <div class="client-sub">{{ a.company or "—" }}</div>
+
+              <div class="client-tags">
+                <span class="tag">Slug: <code>{{ a.slug }}</code></span>
+                {% if a.p2_enabled == 1 %}
+                  <span class="tag ok">P2 attivo</span>
+                {% else %}
+                  <span class="tag warn">P2 non attivo</span>
+                {% endif %}
+              </div>
             </div>
           </div>
 
-          <div class="actions">
+          <div class="client-right">
             <a class="btn" target="_blank" href="/{{ a.slug }}">Apri Card</a>
-            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=en">EN</a>
-            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=fr">FR</a>
-            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=es">ES</a>
-            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=de">DE</a>
+            <a class="btn ghost" target="_blank" href="/{{ a.slug }}.vcf">VCF</a>
+
+            {% if is_admin %}
+              <button class="btn primary" type="button"
+                      onclick="openCredModal('{{ a.slug }}','{{ (a.name or a.slug)|e }}')">
+                Invia credenziali
+              </button>
+            {% endif %}
           </div>
+        </div>
+
+        <div class="client-grid">
+
+          <!-- P1 -->
+          <div class="box">
+            <div class="box-title">
+              <span>P1</span>
+              <span class="pill">Profilo principale</span>
+            </div>
+
+            <div class="box-actions">
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
+              <a class="btn-mini ghost" target="_blank" href="/{{ a.slug }}?lang=it">QR1 IT</a>
+            </div>
+
+            <div class="box-actions">
+              {% if is_admin %}
+                <a class="btn-mini primary" href="/area/edit/{{ a.slug }}">Modifica P1</a>
+              {% else %}
+                <a class="btn-mini primary" href="/area/me/edit">Modifica P1</a>
+              {% endif %}
+              <button class="btn-mini" type="button" onclick="openQrModal('/qr/{{ a.slug }}')">QR1</button>
+            </div>
+          </div>
+
+          <!-- P2 -->
+          <div class="box">
+            <div class="box-title">
+              <span>P2</span>
+              <span class="pill">Profilo alternativo</span>
+            </div>
+
+            {% if a.p2_enabled == 1 %}
+              <div class="box-actions">
+                <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
+                <a class="btn-mini ghost" target="_blank" href="/{{ a.slug }}?p=p2&lang=it">QR2 IT</a>
+              </div>
+
+              <div class="box-actions">
+                {% if is_admin %}
+                  <a class="btn-mini primary" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
+                  <form method="post" action="/area/admin/p2/toggle/{{ a.slug }}" class="inline">
+                    <input type="hidden" name="action" value="disable">
+                    <button class="btn-mini warn" type="submit">Disattiva P2</button>
+                  </form>
+                {% else %}
+                  <a class="btn-mini primary" href="/area/me/p2">Modifica P2</a>
+                  <form method="post" action="/area/me/deactivate-p2" class="inline">
+                    <button class="btn-mini warn" type="submit">Disattiva P2</button>
+                  </form>
+                {% endif %}
+                <button class="btn-mini" type="button" onclick="openQrModal('/qr/{{ a.slug }}?p=p2')">QR2</button>
+              </div>
+
+            {% else %}
+              <div class="box-empty">
+                <div class="empty-title">P2 non attivo</div>
+                <div class="empty-sub">Puoi attivarlo e partire da zero.</div>
+
+                <div class="box-actions">
+                  {% if is_admin %}
+                    <form method="post" action="/area/admin/p2/toggle/{{ a.slug }}" class="inline">
+                      <input type="hidden" name="action" value="enable">
+                      <button class="btn-mini primary" type="submit">Attiva P2 (vuoto)</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="/area/me/activate-p2" class="inline">
+                      <button class="btn-mini primary" type="submit">Attiva P2 (vuoto)</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- MEDIA PREVIEW -->
+          <div class="box media">
+            <div class="box-title">
+              <span>Media</span>
+              <span class="pill">Foto / Video / PDF</span>
+            </div>
+
+            <div class="media-grid">
+              <div class="media-slot">
+                <div class="media-label">Foto</div>
+                {% if a.photo_url %}
+                  <img class="media-thumb" src="{{ a.photo_url }}" alt="foto" onclick="openImg('{{ a.photo_url }}')">
+                {% else %}
+                  <div class="media-empty">—</div>
+                {% endif %}
+              </div>
+
+              <div class="media-slot">
+                <div class="media-label">Logo</div>
+                {% if a.logo_url %}
+                  <img class="media-thumb" src="{{ a.logo_url }}" alt="logo" onclick="openImg('{{ a.logo_url }}')">
+                {% else %}
+                  <div class="media-empty">—</div>
+                {% endif %}
+              </div>
+
+              <div class="media-slot">
+                <div class="media-label">Galleria</div>
+                {% if a.gallery_urls %}
+                  {% set g = (a.gallery_urls.split('|') | select | list) %}
+                  {% if g and g[0] %}
+                    <img class="media-thumb" src="{{ g[0] }}" alt="galleria" onclick="openImg('{{ g[0] }}')">
+                    <div class="media-mini">+{{ (g|length) - 1 }}</div>
+                  {% else %}
+                    <div class="media-empty">—</div>
+                  {% endif %}
+                {% else %}
+                  <div class="media-empty">—</div>
+                {% endif %}
+              </div>
+
+              <div class="media-slot">
+                <div class="media-label">Video</div>
+                {% if a.video_urls %}
+                  {% set vv = (a.video_urls.split('|') | select | list) %}
+                  {% if vv and vv[0] %}
+                    <div class="video-thumb" onclick="openVideo('{{ vv[0] }}')">
+                      <video class="video-mini" src="{{ vv[0] }}" muted playsinline preload="metadata"></video>
+                      <div class="video-badge">PLAY</div>
+                      <div class="media-mini">+{{ (vv|length) - 1 }}</div>
+                    </div>
+                  {% else %}
+                    <div class="media-empty">—</div>
+                  {% endif %}
+                {% else %}
+                  <div class="media-empty">—</div>
+                {% endif %}
+              </div>
+
+              <div class="media-slot wide">
+                <div class="media-label">PDF</div>
+                {% if a.pdf1_url %}
+                  {% set items = (a.pdf1_url.split('|') | select | list) %}
+                  {% if items and items[0] %}
+                    <div class="pdf-row">
+                      <div class="pdf-name">{{ items[0].split('||')[0] if '||' in items[0] else items[0] }}</div>
+                      <div class="pdf-mini">+{{ (items|length) - 1 }}</div>
+                    </div>
+                  {% else %}
+                    <div class="media-empty">—</div>
+                  {% endif %}
+                {% else %}
+                  <div class="media-empty">—</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FOOT ACTIONS -->
+        <div class="client-foot">
 
           {% if is_admin %}
-            <div class="actions">
-              <a class="btn primary" href="/area/edit/{{ a.slug }}">Modifica</a>
+            <div class="foot-left">
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri card</a>
+              <a class="btn-mini ghost" target="_blank" href="/{{ a.slug }}.vcf">VCF</a>
+            </div>
+
+            <div class="foot-right">
+              <a class="btn-mini primary" href="/area/edit/{{ a.slug }}">Modifica P1</a>
+
               {% if a.p2_enabled == 1 %}
-                <a class="btn" href="/area/edit/{{ a.slug }}/p2">Profilo 2</a>
-              {% else %}
-                <span class="pill">P2 non attivo</span>
+                <a class="btn-mini" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
+              {% endif %}
+
+              <button class="btn-mini danger" type="button"
+                      onclick="confirmDelete('{{ a.slug }}','{{ (a.name or a.slug)|e }}')">
+                Elimina
+              </button>
+            </div>
+
+          {% else %}
+            <div class="foot-left">
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri card</a>
+              <a class="btn-mini ghost" target="_blank" href="/{{ a.slug }}.vcf">VCF</a>
+            </div>
+
+            <div class="foot-right">
+              <a class="btn-mini primary" href="/area/me/edit">Modifica P1</a>
+              {% if agent and agent.p2_enabled == 1 %}
+                <a class="btn-mini" href="/area/me/p2">Modifica P2</a>
               {% endif %}
             </div>
-          {% else %}
-            {% if agent and agent.p2_enabled != 1 %}
-              <form method="post" action="/area/me/activate-p2" class="inline">
-                <button class="btn" type="submit">Attiva Profilo 2 (vuoto)</button>
-              </form>
-            {% endif %}
           {% endif %}
+
         </div>
-      {% endfor %}
+      </section>
+
+    {% endfor %}
+  </div>
+
+</main>
+
+<!-- MODAL QR -->
+<div id="qrModal" class="modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">QR</div>
+      <button class="x" type="button" onclick="closeQrModal()">✕</button>
     </div>
-  </main>
+    <img id="qrImg" src="" alt="QR" class="qr-img">
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="copyText(window.__lastQr || '')">Copia link</button>
+      <button class="btn primary" type="button" onclick="closeQrModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMMAGINE/VIDEO -->
+<div id="mediaModal" class="modal" style="display:none;">
+  <div class="modal-box modal-big">
+    <div class="modal-head">
+      <div class="modal-title">Anteprima</div>
+      <button class="x" type="button" onclick="closeMedia()">✕</button>
+    </div>
+    <img id="mImg" class="m-img" src="" alt="" style="display:none;">
+    <video id="mVid" class="m-vid" controls playsinline style="display:none;"></video>
+  </div>
+</div>
+
+<!-- MODAL CREDENZIALI -->
+<div id="credModal" class="modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Invia credenziali</div>
+      <button class="x" type="button" onclick="closeCredModal()">✕</button>
+    </div>
+
+    <div class="cred-text" id="credText"></div>
+
+    <form id="credForm" method="post" action="" class="cred-actions">
+      <input type="hidden" name="channel" value="both">
+      <button class="btn primary" type="submit">Invia Email + WhatsApp</button>
+      <button class="btn" type="button" onclick="copyText(document.getElementById('credText').innerText)">Copia testo</button>
+      <button class="btn ghost" type="button" onclick="closeCredModal()">Chiudi</button>
+    </form>
+    <div class="cred-hint">
+      Se SMTP/WhatsApp non sono configurati, il sistema ti avvisa e puoi copiare il testo.
+    </div>
+  </div>
+</div>
+
+<form id="deleteForm" method="post" action="" style="display:none;"></form>
+
+<script>
+  window.__lastQr = "";
+
+  function openQrModal(path){
+    const modal = document.getElementById('qrModal');
+    const img = document.getElementById('qrImg');
+    const url = (path || "");
+    window.__lastQr = window.location.origin + url.replace(window.location.origin, "");
+    img.src = "/qr-img?u=" + encodeURIComponent(window.__lastQr);
+    modal.style.display = "flex";
+  }
+  function closeQrModal(){
+    document.getElementById('qrImg').src = "";
+    document.getElementById('qrModal').style.display = "none";
+  }
+
+  function openImg(url){
+    const m = document.getElementById('mediaModal');
+    const img = document.getElementById('mImg');
+    const vid = document.getElementById('mVid');
+    vid.pause(); vid.style.display="none"; vid.removeAttribute("src");
+    img.style.display="block";
+    img.src = url;
+    m.style.display="flex";
+  }
+  function openVideo(url){
+    const m = document.getElementById('mediaModal');
+    const img = document.getElementById('mImg');
+    const vid = document.getElementById('mVid');
+    img.style.display="none"; img.src="";
+    vid.style.display="block";
+    vid.src = url;
+    m.style.display="flex";
+    vid.play().catch(()=>{});
+  }
+  function closeMedia(){
+    const m = document.getElementById('mediaModal');
+    const img = document.getElementById('mImg');
+    const vid = document.getElementById('mVid');
+    img.src=""; img.style.display="none";
+    try{ vid.pause(); }catch(e){}
+    vid.removeAttribute("src"); vid.style.display="none";
+    m.style.display="none";
+  }
+
+  function copyText(t){
+    const text = (t||"").trim();
+    if(!text) return;
+    navigator.clipboard.writeText(text).then(()=>{
+      alert("Copiato!");
+    }).catch(()=>{
+      prompt("Copia manualmente:", text);
+    });
+  }
+
+  function confirmDelete(slug, name){
+    const first = confirm("Sei sicuro di eliminare la card di: " + (name||slug) + " ?");
+    if(!first) return;
+    const second = confirm("ULTIMO AVVISO:\nUna volta eliminata NON sarà più ripristinabile.\n\nConfermi eliminazione?");
+    if(!second) return;
+    const f = document.getElementById("deleteForm");
+    f.action = "/area/delete/" + encodeURIComponent(slug);
+    f.submit();
+  }
+
+  function openCredModal(slug, name){
+    const modal = document.getElementById("credModal");
+    const form = document.getElementById("credForm");
+    const box = document.getElementById("credText");
+
+    // testo “standard” (quello che vuoi tu)
+    const base = window.location.origin;
+    const cardUrl = base + "/" + slug;
+    const loginUrl = base + "/area/login";
+
+    const txt =
+`✅ Ti ho attivato la tua Pay4You Card
+
+Ciao ${name || "!"}
+🔗 La tua Card: ${cardUrl}
+🔐 Area riservata: ${loginUrl}
+
+A breve riceverai username e password (temporanea).
+Al primo accesso ti chiederà di cambiarla.
+
+— Pay4You (Giuseppe)`;
+
+    box.textContent = txt;
+    form.action = "/area/send-credentials/" + encodeURIComponent(slug);
+    modal.style.display = "flex";
+  }
+  function closeCredModal(){
+    document.getElementById("credModal").style.display = "none";
+    document.getElementById("credForm").action = "";
+    document.getElementById("credText").textContent = "";
+  }
+
+  // 1° frame video mini (preview iOS)
+  (function(){
+    const vids = document.querySelectorAll('.video-mini');
+    vids.forEach(v=>{
+      v.addEventListener('loadedmetadata', ()=>{
+        try{ v.currentTime = 0.05; }catch(e){}
+      });
+      v.addEventListener('seeked', ()=>{ try{ v.pause(); }catch(e){} });
+    });
+  })();
+</script>
+
 </body>
 </html>
