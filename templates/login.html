@@ -3,38 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Accesso | Pay4You</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>Login | Pay4You</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="login-body">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="login-brand">
-        <div class="login-logo">PAY<span>4</span>YOU</div>
-        <div class="login-sub">Area riservata</div>
+<body class="auth-page">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-head">
+        <a class="back-link" href="javascript:history.back()">← Torna indietro</a>
+        <div class="brand">
+          <img src="/static/pay4you-logo.png" alt="Pay4You" onerror="this.style.display='none'">
+          <div>
+            <div class="brand-title">Pay4You Cards</div>
+            <div class="brand-sub">Area riservata</div>
+          </div>
+        </div>
       </div>
 
-      {% with msgs = get_flashed_messages(with_categories=true) %}
-        {% if msgs %}
-          {% for cat, msg in msgs %}
-            <div class="flash {{ cat }}">{{ msg }}</div>
-          {% endfor %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for cat,msg in messages %}
+              <div class="flash {{cat}}">{{ msg }}</div>
+            {% endfor %}
+          </div>
         {% endif %}
       {% endwith %}
 
-      <form method="post" class="login-form">
+      <form method="post" class="auth-form">
         <label>Username</label>
-        <input name="username" placeholder="es: admin oppure mario-rossi" required>
+        <input name="username" autocomplete="username" required>
 
         <label>Password</label>
-        <input type="password" name="password" placeholder="••••••••" required>
+        <input name="password" type="password" autocomplete="current-password" required>
 
         <button class="btn primary" type="submit">Accedi</button>
-        <a class="btn ghost" href="https://www.pay4you.store" target="_blank" rel="noopener">Torna al sito</a>
       </form>
-    </div>
 
-    <div class="login-foot">© 2026 Pay4You — Giuseppe Di Lisio</div>
+      <div class="auth-foot">
+        <span>URL card: <code>{{ request.host_url }}</code></span>
+      </div>
+    </div>
   </div>
 </body>
 </html>
