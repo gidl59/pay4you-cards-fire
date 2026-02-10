@@ -4,42 +4,52 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
+
+  <!-- ✅ favicon anche qui -->
   <link rel="icon" href="/favicon.ico">
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="page-main">
-    <div class="panel panel-login">
-      <div class="panel-head panel-head-center">
-        <img class="login-logo" src="/static/logo.png" alt="" onerror="this.style.display='none'">
-        <div class="login-title">Pay4You Cards</div>
-        <div class="hint">Accedi alla dashboard</div>
-      </div>
-
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-wrap">
-            {% for cat,msg in messages %}
-              <div class="flash flash-{{cat}}">{{ msg }}</div>
-            {% endfor %}
+  <div class="app-shell">
+    <main class="app-main">
+      <div class="page-main">
+        <div class="panel panel-login">
+          <div class="panel-head panel-head-center">
+            <img class="login-logo" src="/static/logo-pay4you.png" alt="Pay4You" onerror="this.style.display='none'">
+            <div class="login-title">Pay4You Cards</div>
+            <div class="hint">Accedi con le tue credenziali</div>
           </div>
-        {% endif %}
-      {% endwith %}
 
-      <form method="post" class="panel-body">
-        <div class="field">
-          <label>Username</label>
-          <input type="text" name="username" autocomplete="username" required>
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="flash-wrap">
+                {% for cat,msg in messages %}
+                  <div class="flash flash-{{cat}}">{{ msg }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          <form method="post" class="panel-body">
+            <div class="form-grid">
+              <div class="field full">
+                <label>Username</label>
+                <input type="text" name="username" autocomplete="username" required>
+              </div>
+              <div class="field full">
+                <label>Password</label>
+                <input type="password" name="password" autocomplete="current-password" required>
+              </div>
+            </div>
+
+            <div class="actions-footer" style="margin-top:14px">
+              <button class="btn primary" type="submit">Entra</button>
+            </div>
+          </form>
         </div>
-        <div class="field" style="margin-top:12px;">
-          <label>Password</label>
-          <input type="password" name="password" autocomplete="current-password" required>
-        </div>
-        <div style="margin-top:14px; display:flex; justify-content:flex-end;">
-          <button class="btn primary" type="submit">Entra</button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </main>
   </div>
 </body>
 </html>
