@@ -65,7 +65,6 @@
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <!-- ✅ QR MODAL -->
             <button class="btn-mini ghost" type="button"
                     onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
@@ -79,7 +78,18 @@
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
               {% endif %}
 
-              <!-- ✅ CREDENZIALI MODAL -->
+              {% if a.p2_enabled == 1 %}
+                <form class="inline" method="post" action="/area/admin/deactivate-p2/{{ a.slug }}"
+                      onsubmit="return confirm('Disattivare P2? (verrà svuotato)');">
+                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post" action="/area/admin/activate-p2/{{ a.slug }}"
+                      onsubmit="return confirm('Attivare P2 vuoto?');">
+                  <button class="btn-mini" type="submit">Attiva P2</button>
+                </form>
+              {% endif %}
+
               <form class="inline" method="post" action="/area/admin/credentials/{{ a.slug }}"
                     onsubmit="return confirm('Generare una nuova password per questo cliente?');">
                 <button class="btn-mini" type="submit">Invia credenziali</button>
@@ -91,36 +101,6 @@
               {% endif %}
             {% endif %}
           </div>
-        </div>
-
-        <div class="dash-bottom">
-          <div class="dash-p2">
-            {% if a.p2_enabled == 1 %}
-              <span class="pill">Profilo 2 attivo</span>
-              {% if not is_admin %}
-                <form class="inline" method="post" action="/area/me/deactivate-p2">
-                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
-                </form>
-              {% endif %}
-            {% else %}
-              <span class="pill">Profilo 2 non attivo</span>
-              {% if not is_admin %}
-                <form class="inline" method="post" action="/area/me/activate-p2">
-                  <button class="btn-mini" type="submit">Attiva P2 (vuoto)</button>
-                </form>
-              {% endif %}
-            {% endif %}
-          </div>
-
-          {% if is_admin %}
-            <div class="dash-danger">
-              <form class="inline" method="post" action="/area/admin/delete/{{ a.slug }}"
-                    onsubmit="return confirm('ATTENZIONE: eliminazione definitiva. Sei sicuro?');">
-                <input type="hidden" name="confirm" value="si">
-                <button class="btn-mini danger" type="submit">Elimina</button>
-              </form>
-            </div>
-          {% endif %}
         </div>
 
         <div class="dash-preview">
@@ -197,10 +177,10 @@
 
 </div>
 
-<!-- ✅ QR MODAL -->
-<div id="qrModal" class="modal-overlay" style="display:none">
-  <div class="modal-box">
-    <button class="modal-x" onclick="closeModal('qrModal')">✕</button>
+<!-- QR MODAL -->
+<div id="qrModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'qrModal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-x" type="button" onclick="closeModal('qrModal')">✕</button>
     <div class="modal-title" id="qrTitle">QR</div>
 
     <div class="qr-wrap">
@@ -217,18 +197,26 @@
   </div>
 </div>
 
-<!-- ✅ CREDENTIALS MODAL (usa session.last_credentials, aperto dopo redirect) -->
-{% set creds = session.get("last_credentials") %}
-<div id="credModal" class="modal-overlay" style="display:none">
-  <div class="modal-box">
-    <button class="modal-x" onclick="closeCred()">✕</button>
-    <div class="modal-title">Credenziali generate</div>
+<!-- CREDENTIALS MODAL -->
+<div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-x" type="button" onclick="closeCred()">✕</button>
+    <div class="modal-title">Credenziali (mostrate una sola volta)</div>
 
     <div class="cred-box">
       <div class="cred-row"><span>Username</span><code id="cUser"></code></div>
       <div class="cred-row"><span>Password</span><code id="cPass"></code></div>
+
+      <div class="sep" style="margin:12px 0"></div>
+
+      <div class="cred-links">
+        <div class="cred-row"><span>Link Login</span><a id="cLogin" target="_blank" href="">Apri</a></div>
+        <div class="cred-row"><span>Link Card P1</span><a id="cCard1" target="_blank" href="">Apri</a></div>
+        <div class="cred-row" id="cCard2Row" style="display:none"><span>Link Card P2</span><a id="cCard2" target="_blank" href="">Apri</a></div>
+      </div>
+
       <div class="hint" style="margin-top:10px">
-        Queste credenziali sono mostrate una sola volta. (Invio via Email/WhatsApp lo attiviamo dopo.)
+        Invio via Email/WhatsApp lo attiviamo dopo (SMTP + WhatsApp).
       </div>
     </div>
 
@@ -242,6 +230,11 @@
 </div>
 
 <script>
+  function overlayClose(e, id){
+    if(e.target && e.target.id === id){
+      closeModal(id);
+    }
+  }
   function closeModal(id){
     const el = document.getElementById(id);
     if(el) el.style.display = 'none';
@@ -258,7 +251,6 @@
 
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
-
     sInp.value = slug;
     pInp.value = profile;
 
@@ -269,24 +261,32 @@
     document.getElementById('cSlug').value = slug;
     document.getElementById('cUser').textContent = username;
     document.getElementById('cPass').textContent = password;
+
+    // link login e card
+    const base = window.location.origin;
+    document.getElementById('cLogin').href = base + "/area/login";
+    document.getElementById('cCard1').href = base + "/" + slug;
+
+    // P2 (se attivo, lo capiamo dal DOM: se esiste bottone Apri P2 nel tile)
+    const card = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
+    const row = document.getElementById('cCard2Row');
+    if(card){
+      row.style.display = '';
+      document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
+    }else{
+      row.style.display = 'none';
+    }
+
     document.getElementById('credModal').style.display = 'flex';
   }
 
-  function closeCred(){
-    document.getElementById('credModal').style.display = 'none';
-  }
+  function closeCred(){ closeModal('credModal'); }
 
-  // ✅ auto-open cred modal se last_credentials presente
+  // auto-open cred modal if session data present
   (function(){
     const creds = {{ (session.get("last_credentials") or {}) | tojson }};
     if(creds && creds.slug){
       openCred(creds.slug, creds.username, creds.password);
-      // pulizia: così non riappare al refresh
-      fetch('/area/logout', {method:'GET', credentials:'same-origin'})
-        .catch(()=>{});
-      // NOTA: logout non lo vogliamo. Quindi niente.
-      // puliamo in modo soft con replaceState e basta:
-      // (la session la puliremo quando attiviamo invio reale; per ora non insistiamo)
     }
   })();
 </script>
