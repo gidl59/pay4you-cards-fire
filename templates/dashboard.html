@@ -1,1 +1,199 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | Pay4You</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell">
 
+  <header class="app-header">
+    <a class="brand" href="/area">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Pay4You Cards</div>
+        <div class="hint">{{ "Admin" if is_admin else "Cliente" }}</div>
+      </div>
+    </a>
+
+    <div class="toolbar">
+      {% if is_admin %}
+        <a class="btn primary" href="/area/new">+ Nuova Card</a>
+      {% endif %}
+      <a class="btn danger" href="/area/logout">Logout</a>
+    </div>
+  </header>
+
+  <main class="app-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat,msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="dash-grid">
+      {% for a in agents %}
+      <section class="dash-card">
+        <div class="dash-head">
+          <div class="dash-left">
+            <div class="dash-avatar">
+              {% if a.photo_url %}
+                <img src="{{ a.photo_url }}" alt="foto">
+              {% else %}
+                <div class="dash-ph">👤</div>
+              {% endif %}
+            </div>
+            <div>
+              <div class="dash-name">{{ a.name or a.slug }}</div>
+              <div class="dash-sub">{{ a.company or "—" }}</div>
+              <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
+            </div>
+          </div>
+
+          <div class="dash-actions">
+            <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
+            {% if a.p2_enabled == 1 %}
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
+            {% endif %}
+            <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
+
+            <a class="btn-mini ghost" href="/qr/{{ a.slug }}.png">QR P1</a>
+            {% if a.p2_enabled == 1 %}
+              <a class="btn-mini ghost" href="/qr/{{ a.slug }}.png?p=p2">QR P2</a>
+            {% endif %}
+
+            {% if is_admin %}
+              <a class="btn-mini warn" href="/area/edit/{{ a.slug }}">Modifica P1</a>
+              {% if a.p2_enabled == 1 %}
+                <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
+              {% endif %}
+              <form class="inline" method="post" action="/area/admin/reset-password/{{ a.slug }}">
+                <button class="btn-mini" type="submit">Invia credenziali</button>
+              </form>
+            {% else %}
+              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
+              {% if a.p2_enabled == 1 %}
+                <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="dash-bottom">
+          <div class="dash-p2">
+            {% if a.p2_enabled == 1 %}
+              <span class="pill">Profilo 2 attivo</span>
+              {% if not is_admin %}
+                <form class="inline" method="post" action="/area/me/deactivate-p2">
+                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <span class="pill">Profilo 2 non attivo</span>
+              {% if not is_admin %}
+                <form class="inline" method="post" action="/area/me/activate-p2">
+                  <button class="btn-mini" type="submit">Attiva P2 (vuoto)</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          {% if is_admin %}
+            <div class="dash-danger">
+              <form class="inline" method="post" action="/area/admin/delete/{{ a.slug }}"
+                    onsubmit="return confirm('ATTENZIONE: eliminazione definitiva. Sei sicuro?');">
+                <input type="hidden" name="confirm" value="si">
+                <button class="btn-mini danger" type="submit">Elimina</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Preview media -->
+        <div class="dash-preview">
+          <div class="dash-preview-col">
+            <div class="dash-preview-title">Foto</div>
+            <div class="dash-mini-grid">
+              {% set imgs = (a.gallery_urls or "").split("|") %}
+              {% set imgs2 = [] %}
+              {% for x in imgs %}
+                {% if x and x.strip() %}
+                  {% set _ = imgs2.append(x) %}
+                {% endif %}
+              {% endfor %}
+
+              {% for g in imgs2[:6] %}
+                <img class="dash-mini" src="{{ g }}" alt="">
+              {% endfor %}
+
+              {% if imgs2|length == 0 %}
+                <div class="dash-mini-empty">—</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="dash-preview-col">
+            <div class="dash-preview-title">Video</div>
+            <div class="dash-mini-grid">
+              {% set vids = (a.video_urls or "").split("|") %}
+              {% set vids2 = [] %}
+              {% for x in vids %}
+                {% if x and x.strip() %}
+                  {% set _ = vids2.append(x) %}
+                {% endif %}
+              {% endfor %}
+
+              {% for v in vids2[:4] %}
+                <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
+              {% endfor %}
+
+              {% if vids2|length == 0 %}
+                <div class="dash-mini-empty">—</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="dash-preview-col">
+            <div class="dash-preview-title">PDF</div>
+            <div class="dash-pdf-list">
+              {% set pdfs = (a.pdf1_url or "").split("|") %}
+              {% set pdfs2 = [] %}
+              {% for x in pdfs %}
+                {% if x and x.strip() %}
+                  {% set _ = pdfs2.append(x) %}
+                {% endif %}
+              {% endfor %}
+
+              {% for p in pdfs2[:6] %}
+                {% if "||" in p %}
+                  {% set nm = p.split("||")[0] %}
+                {% else %}
+                  {% set nm = p %}
+                {% endif %}
+                <div class="dash-pdf-pill" title="{{ nm }}">{{ nm }}</div>
+              {% endfor %}
+
+              {% if pdfs2|length == 0 %}
+                <div class="dash-mini-empty">—</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+      </section>
+      {% endfor %}
+    </div>
+
+    <div class="footer">Pay4You.store</div>
+  </main>
+
+</div>
+</body>
+</html>
