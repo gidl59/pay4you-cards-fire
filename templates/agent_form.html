@@ -1,698 +1,298 @@
-{% extends "base.html" %}
-{% block title %}
-  {% if agent %}Modifica card | {{ agent.name }}{% else %}Nuova card | Pay4You{% endif %}
-{% endblock %}
-
-{% block content %}
-<div class="form-wrap">
-  <div class="form-head">
-    <div>
-      <h1 class="form-title">
-        {% if not agent %}
-          Crea nuova card
-        {% else %}
-          {% if editing_profile2 %}Modifica Profilo 2{% else %}Modifica Profilo 1{% endif %}
-        {% endif %}
-      </h1>
-      <div class="form-sub">
-        {% if not agent %}
-          Nome obbligatorio, cognome opzionale. Lo slug diventa anche username.
-        {% else %}
-          Compila i dati, carica media e salva. Le modifiche sono immediate sulla card pubblica.
-        {% endif %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ "Nuova Card" if not agent else "Modifica Card" }} | Pay4You</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="t1">Pay4You Cards</div>
+        <div class="t2">{{ "Profilo 2" if editing_profile2 else "Profilo 1" }}</div>
       </div>
     </div>
-
-    <div class="form-toolbar">
-      <a class="btn-mini ghost" href="{{ url_for('dashboard') }}">← Dashboard</a>
-
-      {% if agent %}
-        <a class="btn-mini" href="/{{ agent.slug }}" target="_blank" rel="noopener">Apri P1</a>
-        {% if (agent.p2_enabled or 0)|int == 1 %}
-          <a class="btn-mini ghost" href="/{{ agent.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-        {% endif %}
-      {% endif %}
-
-      <a class="btn-mini ghost" href="{{ url_for('logout') }}">Esci</a>
+    <div class="topbar-right">
+      <a class="btn" href="/area">← Dashboard</a>
+      <a class="btn danger" href="/area/logout">Logout</a>
     </div>
-  </div>
+  </header>
 
-  {% with msgs = get_flashed_messages(with_categories=true) %}
-    {% if msgs %}
-      {% for cat, msg in msgs %}
-        <div class="flash {{ cat }}">{{ msg }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  {% if not agent %}
-    <!-- CREA NUOVA CARD -->
-    <div class="panel">
-      <div class="panel-title">Dati iniziali</div>
-
-      <form method="post" class="grid-2">
-        <div class="field">
-          <label>Nome *</label>
-          <input name="first_name" placeholder="Giuseppe" required>
-          <div class="help">Obbligatorio.</div>
-        </div>
-
-        <div class="field">
-          <label>Cognome (opzionale)</label>
-          <input name="last_name" placeholder="Di Lisio">
-          <div class="help">Se lo lasci vuoto va bene.</div>
-        </div>
-
-        <div class="field">
-          <label>Slug (opzionale)</label>
-          <input name="slug" placeholder="es: giuseppe-di-lisio">
-          <div class="help">Se vuoto lo creiamo dal nome. Lo slug diventa anche l’username.</div>
-        </div>
-
-        <div class="field">
-          <label>Password (min 4 caratteri) *</label>
-          <input type="password" name="password" placeholder="••••" required>
-          <div class="help">Questa password serve per entrare nell’area riservata come agente.</div>
-        </div>
-
-        <div class="field full">
-          <button class="btn primary" type="submit">Crea card</button>
-        </div>
-      </form>
-    </div>
-
-  {% else %}
-    <!-- EDIT CARD -->
-    <form method="post" enctype="multipart/form-data" class="panel-stack">
-
-      {% if editing_profile2 %}
-        <div class="panel warn">
-          <div class="panel-title">Profilo 2</div>
-          <div class="help">
-            Il Profilo 2 è indipendente: parte <b>vuoto</b> e non copia i campi del Profilo 1.
-          </div>
+  <main class="container narrow">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat,msg in messages %}
+            <div class="flash {{cat}}">{{ msg }}</div>
+          {% endfor %}
         </div>
       {% endif %}
+    {% endwith %}
 
-      <!-- Dati principali -->
+    {% if not agent %}
+      <!-- CREAZIONE -->
       <div class="panel">
-        <div class="panel-title">Dati principali</div>
-
-        <div class="grid-2">
+        <h2>Nuova Card</h2>
+        <form method="post" class="form-grid">
           <div class="field">
-            <label>Nome e cognome</label>
-            <input name="name" value="{{ agent.name or '' }}" placeholder="Nome Cognome">
-            <div class="help">Per Profilo 2 puoi mettere un nome diverso (es: Azienda / Reparto).</div>
+            <label>Nome *</label>
+            <input name="first_name" required>
           </div>
+          <div class="field">
+            <label>Cognome (opzionale)</label>
+            <input name="last_name">
+          </div>
+          <div class="field">
+            <label>Slug (opzionale)</label>
+            <input name="slug" placeholder="es: giuseppe-dilisio">
+          </div>
+          <div class="field">
+            <label>Password *</label>
+            <input name="password" required>
+          </div>
+          <div class="field full">
+            <button class="btn primary" type="submit">Crea Card</button>
+          </div>
+        </form>
+      </div>
+    {% else %}
 
+      <form method="post" enctype="multipart/form-data" class="panel">
+        <h2>{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }}</h2>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Nome</label>
+            <input name="name" value="{{ agent.name if agent else '' }}">
+          </div>
           <div class="field">
             <label>Azienda</label>
-            <input name="company" value="{{ agent.company or '' }}" placeholder="Pay4You / Buffetti / ...">
+            <input name="company" value="{{ agent.company if agent else '' }}">
           </div>
-
           <div class="field">
             <label>Ruolo</label>
-            <input name="role" value="{{ agent.role or '' }}" placeholder="Consulente, Agente, ...">
+            <input name="role" value="{{ agent.role if agent else '' }}">
           </div>
-
-          <div class="field">
+          <div class="field full">
             <label>Bio</label>
-            <input name="bio" value="{{ agent.bio or '' }}" placeholder="Una frase breve (facoltativa)">
+            <textarea name="bio" rows="3">{{ agent.bio if agent else '' }}</textarea>
           </div>
         </div>
-      </div>
 
-      <!-- Contatti -->
-      <div class="panel">
-        <div class="panel-title">Contatti</div>
+        <hr>
 
-        <div class="grid-2">
+        <h3>Contatti</h3>
+        <div class="grid2">
           <div class="field">
             <label>Cellulare</label>
-            <input name="phone_mobile" value="{{ agent.phone_mobile or '' }}" placeholder="+39 3xx ...">
+            <input name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}" placeholder="+39...">
           </div>
-
           <div class="field">
-            <label>Cellulare 2 (opzionale)</label>
-            <input name="phone_mobile2" value="{{ agent.phone_mobile2 or '' }}" placeholder="+39 3xx ...">
+            <label>Cellulare 2</label>
+            <input name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
           </div>
-
           <div class="field">
-            <label>Telefono ufficio</label>
-            <input name="phone_office" value="{{ agent.phone_office or '' }}" placeholder="08xx ...">
+            <label>Ufficio</label>
+            <input name="phone_office" value="{{ agent.phone_office if agent else '' }}">
           </div>
-
           <div class="field">
             <label>WhatsApp</label>
-            <input name="whatsapp" value="{{ agent.whatsapp or '' }}" placeholder="+39 3xx ... oppure https://wa.me/...">
-            <div class="help">Consiglio: numero con +39.</div>
+            <input name="whatsapp" value="{{ agent.whatsapp if agent else '' }}" placeholder="+39... oppure https://wa.me/...">
           </div>
-
-          <div class="field">
+          <div class="field full">
             <label>Email (separate da virgola)</label>
-            <input name="emails" value="{{ agent.emails or '' }}" placeholder="info@..., commerciale@...">
+            <input name="emails" value="{{ agent.emails if agent else '' }}" placeholder="nome@dominio.it, altro@dominio.it">
           </div>
-
-          <div class="field">
+          <div class="field full">
             <label>Siti web (separati da virgola)</label>
-            <input name="websites" value="{{ agent.websites or '' }}" placeholder="https://pay4you.store, https://...">
+            <input name="websites" value="{{ agent.websites if agent else '' }}" placeholder="https://..., https://...">
           </div>
-
           <div class="field">
             <label>PEC</label>
-            <input name="pec" value="{{ agent.pec or '' }}" placeholder="pec@pec.it">
+            <input name="pec" value="{{ agent.pec if agent else '' }}">
           </div>
-
           <div class="field full">
             <label>Indirizzi (uno per riga)</label>
-            <textarea name="addresses" rows="3" placeholder="Via ...&#10;Via ...">{{ agent.addresses or '' }}</textarea>
-            <div class="help">Ogni riga diventa un link Google Maps.</div>
+            <textarea name="addresses" rows="3">{{ agent.addresses if agent else '' }}</textarea>
           </div>
         </div>
-      </div>
 
-      <!-- Dati fiscali -->
-      <div class="panel">
-        <div class="panel-title">Dati fiscali (opzionali)</div>
-        <div class="grid-2">
+        <hr>
+
+        <h3>Dati fiscali</h3>
+        <div class="grid2">
           <div class="field">
             <label>P.IVA</label>
-            <input name="piva" value="{{ agent.piva or '' }}" placeholder="IT...">
+            <input name="piva" value="{{ agent.piva if agent else '' }}">
           </div>
           <div class="field">
             <label>SDI</label>
-            <input name="sdi" value="{{ agent.sdi or '' }}" placeholder="XXXXXXX">
+            <input name="sdi" value="{{ agent.sdi if agent else '' }}">
           </div>
         </div>
-      </div>
 
-      <!-- Social -->
-      <div class="panel">
-        <div class="panel-title">Social / Link</div>
-        <div class="help">
-          Inserisci sempre il link completo. Esempi:
-          <span class="kbd">https://www.facebook.com/share/...</span>
-          <span class="kbd">https://www.instagram.com/tuo_profilo</span>
-          <span class="kbd">https://www.linkedin.com/in/...</span>
-        </div>
+        <hr>
 
-        <div class="grid-2">
+        <h3>Social (inserisci URL completi)</h3>
+        <div class="grid2">
           <div class="field">
             <label>Facebook</label>
-            <input name="facebook" value="{{ agent.facebook or '' }}" placeholder="https://www.facebook.com/share/...">
+            <input name="facebook" value="{{ agent.facebook if agent else '' }}" placeholder="https://www.facebook.com/...">
           </div>
           <div class="field">
             <label>Instagram</label>
-            <input name="instagram" value="{{ agent.instagram or '' }}" placeholder="https://www.instagram.com/...">
+            <input name="instagram" value="{{ agent.instagram if agent else '' }}" placeholder="https://www.instagram.com/...">
           </div>
-
           <div class="field">
             <label>LinkedIn</label>
-            <input name="linkedin" value="{{ agent.linkedin or '' }}" placeholder="https://www.linkedin.com/in/...">
+            <input name="linkedin" value="{{ agent.linkedin if agent else '' }}" placeholder="https://www.linkedin.com/in/...">
           </div>
           <div class="field">
             <label>TikTok</label>
-            <input name="tiktok" value="{{ agent.tiktok or '' }}" placeholder="https://www.tiktok.com/@...">
+            <input name="tiktok" value="{{ agent.tiktok if agent else '' }}" placeholder="https://www.tiktok.com/@...">
           </div>
-
           <div class="field">
             <label>Telegram</label>
-            <input name="telegram" value="{{ agent.telegram or '' }}" placeholder="https://t.me/...">
+            <input name="telegram" value="{{ agent.telegram if agent else '' }}" placeholder="https://t.me/...">
           </div>
           <div class="field">
             <label>YouTube</label>
-            <input name="youtube" value="{{ agent.youtube or '' }}" placeholder="https://www.youtube.com/@...">
+            <input name="youtube" value="{{ agent.youtube if agent else '' }}" placeholder="https://www.youtube.com/@...">
           </div>
-
           <div class="field">
             <label>Spotify</label>
-            <input name="spotify" value="{{ agent.spotify or '' }}" placeholder="https://open.spotify.com/...">
-          </div>
-        </div>
-      </div>
-
-      {% if not editing_profile2 %}
-      <!-- Immagini + Crop -->
-      <div class="panel">
-        <div class="panel-title">Immagini + Crop</div>
-
-        <div class="grid-2">
-          <div class="field">
-            <label>Foto profilo (principale)</label>
-            <input type="file" name="photo" accept="image/*">
-            <div class="help">Consiglio: JPG/PNG verticale, buona qualità.</div>
-
-            {% if agent.photo_url %}
-              <div class="preview-box">
-                <div class="mini-title">Anteprima</div>
-                <img src="{{ agent.photo_url }}" class="preview-img" alt="foto attuale">
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="field">
-            <label>Logo (Pay4You)</label>
-            <input type="file" name="logo" accept="image/*">
-            <div class="help">Il logo viene usato anche per l’orbita/retro se selezionato.</div>
-
-            {% if agent.logo_url %}
-              <div class="preview-box">
-                <div class="mini-title">Anteprima</div>
-                <img src="{{ agent.logo_url }}" class="preview-img" alt="logo attuale">
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="field">
-            <label>Retro immagine (se vuoi una foto personale dietro)</label>
-            <input type="file" name="back_media" accept="image/*">
-            <div class="help">Se carichi questa, puoi impostare “Retro: Personale”.</div>
-
-            {% if agent.back_media_url %}
-              <div class="preview-box">
-                <div class="mini-title">Anteprima</div>
-                <img src="{{ agent.back_media_url }}" class="preview-img" alt="retro attuale">
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="field">
-            <label>Retro (scelta)</label>
-            <select name="back_media_mode">
-              <option value="company" {% if (agent.back_media_mode or 'company') == 'company' %}selected{% endif %}>Azienda (logo)</option>
-              <option value="personal" {% if (agent.back_media_mode or 'company') == 'personal' %}selected{% endif %}>Personale (immagine retro)</option>
-            </select>
-            <div class="help">Se scegli “Personale”, assicurati di caricare “Retro immagine”.</div>
+            <input name="spotify" value="{{ agent.spotify if agent else '' }}" placeholder="https://open.spotify.com/...">
           </div>
         </div>
 
-        <div class="divider"></div>
+        <hr>
 
-        <!-- Crop controls -->
-        <div class="crop-wrap">
-          <div>
-            <div class="mini-title">Crop: centra la foto (live preview)</div>
+        {% if not editing_profile2 %}
+          <h3>Immagini & Media</h3>
 
-            <div class="grid-3">
-              <div class="field">
-                <label>Posizione X (0-100)</label>
-                <input id="photo_pos_x" type="range" min="0" max="100" name="photo_pos_x" value="{{ agent.photo_pos_x if agent.photo_pos_x is not none else 50 }}">
-                <div class="help"><span id="xVal"></span>%</div>
-              </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Foto profilo</label>
+              <input type="file" name="photo" accept="image/*">
+              <small>Consiglio: 800x800 o più</small>
+            </div>
 
-              <div class="field">
-                <label>Posizione Y (0-100)</label>
-                <input id="photo_pos_y" type="range" min="0" max="100" name="photo_pos_y" value="{{ agent.photo_pos_y if agent.photo_pos_y is not none else 35 }}">
-                <div class="help"><span id="yVal"></span>%</div>
-              </div>
+            <div class="field">
+              <label>Logo</label>
+              <input type="file" name="logo" accept="image/*">
+              <small>PNG trasparente consigliato</small>
+            </div>
 
-              <div class="field">
-                <label>Zoom (1.00 - 2.20)</label>
-                <input id="photo_zoom" type="range" min="1.00" max="2.20" step="0.01" name="photo_zoom" value="{{ agent.photo_zoom or '1.0' }}">
-                <div class="help"><span id="zVal"></span>x</div>
-              </div>
+            <div class="field">
+              <label>Background (immagine)</label>
+              <input type="file" name="back_media" accept="image/*">
+            </div>
+
+            <div class="field">
+              <label>Modalità background</label>
+              <select name="back_media_mode">
+                <option value="company" {{ "selected" if agent.back_media_mode=="company" else "" }}>Azienda</option>
+                <option value="personal" {{ "selected" if agent.back_media_mode=="personal" else "" }}>Personale</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Posizione foto X (0-100)</label>
+              <input name="photo_pos_x" value="{{ agent.photo_pos_x }}" type="number" min="0" max="100">
+            </div>
+
+            <div class="field">
+              <label>Posizione foto Y (0-100)</label>
+              <input name="photo_pos_y" value="{{ agent.photo_pos_y }}" type="number" min="0" max="100">
+            </div>
+
+            <div class="field">
+              <label>Zoom foto (es. 1.0 / 1.2 / 1.5)</label>
+              <input name="photo_zoom" value="{{ agent.photo_zoom }}">
             </div>
           </div>
 
-          <div class="crop-preview">
-            <div class="mini-title">Preview card</div>
-            <div class="crop-frame">
-              {% if agent.photo_url %}
-                <img id="cropPreviewImg" src="{{ agent.photo_url }}" alt="preview crop">
-              {% else %}
-                <div class="crop-empty">Carica una foto per vedere la preview</div>
-              {% endif %}
+          <div class="panel mini">
+            <h4>Effetti grafici</h4>
+            <div class="checks">
+              <label><input type="checkbox" name="orbit_spin" {{ "checked" if agent.orbit_spin==1 else "" }}> Orbita</label>
+              <label><input type="checkbox" name="logo_spin" {{ "checked" if agent.logo_spin==1 else "" }}> Logo spin</label>
+              <label><input type="checkbox" name="avatar_spin" {{ "checked" if agent.avatar_spin==1 else "" }}> Foto ruota</label>
+              <label><input type="checkbox" name="allow_flip" {{ "checked" if agent.allow_flip==1 else "" }}> Foto flip</label>
             </div>
-            <div class="help">Sposta X/Y e Zoom finché il viso è perfettamente centrato.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Effetti -->
-      <div class="panel">
-        <div class="panel-title">Effetti (regola: alcuni si escludono)</div>
-        <div class="help">
-          <b>Ruota foto</b> e <b>Flip foto</b> non possono essere attivi insieme. Se attivi uno, l’altro si spegne.
-        </div>
-
-        <div class="grid-2">
-          <div class="field">
-            <label class="check">
-              <input id="orbit_spin" type="checkbox" name="orbit_spin" {% if (agent.orbit_spin or 0)|int == 1 %}checked{% endif %}>
-              Orbita logo (gira intorno)
-            </label>
+            <small>Nota: “Foto ruota” e “Foto flip” non possono stare insieme (si escludono).</small>
           </div>
 
-          <div class="field">
-            <label class="check">
-              <input id="logo_spin" type="checkbox" name="logo_spin" {% if (agent.logo_spin or 0)|int == 1 %}checked{% endif %}>
-              Ruota logo (su se stesso)
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="check">
-              <input id="avatar_spin" type="checkbox" name="avatar_spin" {% if (agent.avatar_spin or 0)|int == 1 %}checked{% endif %}>
-              Ruota foto (su se stessa)
-            </label>
-            <div class="help">Esclusivo con Flip.</div>
-          </div>
-
-          <div class="field">
-            <label class="check">
-              <input id="allow_flip" type="checkbox" name="allow_flip" {% if (agent.allow_flip or 0)|int == 1 %}checked{% endif %}>
-              Flip foto (clic per girare fronte/retro)
-            </label>
-            <div class="help">Esclusivo con Ruota foto.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Media: Foto -->
-      <div class="panel">
-        <div class="panel-title">Galleria Foto</div>
-        <div class="help">Carica più foto (max {{ 30 }}) — se carichi qui, sostituisce la galleria esistente.</div>
-
-        <div class="field">
-          <input type="file" name="gallery" accept="image/*" multiple>
-        </div>
-
-        {% set gal = (agent.gallery_urls or '').split('|') if agent.gallery_urls else [] %}
-        {% if gal and gal|length > 0 %}
-        <div class="media-grid">
-          {% for g in gal %}
-            {% if g %}
-            <div class="media-item">
-              <img src="{{ g }}" alt="foto">
-              <form method="post" action="{{ url_for('delete_media', slug=agent.slug) }}">
-                <input type="hidden" name="type" value="gallery">
-                <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                <input type="hidden" name="target" value="edit">
-                <button class="x-mini" type="submit" title="Elimina">✕</button>
-              </form>
+          <div class="grid2">
+            <div class="field">
+              <label>Galleria foto (max {{ 30 }})</label>
+              <input type="file" name="gallery" accept="image/*" multiple>
             </div>
-            {% endif %}
+            <div class="field">
+              <label>Video (max {{ 10 }})</label>
+              <input type="file" name="videos" accept="video/*" multiple>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>PDF (fino a {{ 12 }})</label>
+            <div class="pdf-grid">
+              {% for i in range(1,13) %}
+                <div><input type="file" name="pdf{{i}}" accept="application/pdf"></div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <hr>
+
+          <h3>Lingue estere (opzionale)</h3>
+          <p class="hint">Compila solo ciò che vuoi tradurre. Se un campo è vuoto, resta in Italiano.</p>
+          {% set L = i18n_data or {} %}
+          {% for code,label in [("en","English"),("fr","Français"),("es","Español"),("de","Deutsch")] %}
+            {% set D = L.get(code, {}) %}
+            <div class="panel mini">
+              <h4>{{ label }}</h4>
+              <div class="grid2">
+                <div class="field">
+                  <label>Nome</label>
+                  <input name="name_{{code}}" value="{{ D.get('name','') }}">
+                </div>
+                <div class="field">
+                  <label>Azienda</label>
+                  <input name="company_{{code}}" value="{{ D.get('company','') }}">
+                </div>
+                <div class="field">
+                  <label>Ruolo</label>
+                  <input name="role_{{code}}" value="{{ D.get('role','') }}">
+                </div>
+                <div class="field full">
+                  <label>Bio</label>
+                  <textarea name="bio_{{code}}" rows="2">{{ D.get('bio','') }}</textarea>
+                </div>
+                <div class="field full">
+                  <label>Indirizzi</label>
+                  <textarea name="addresses_{{code}}" rows="2">{{ D.get('addresses','') }}</textarea>
+                </div>
+              </div>
+            </div>
           {% endfor %}
-        </div>
         {% else %}
-          <div class="empty">Nessuna foto in galleria.</div>
+          <p class="hint">Profilo 2: solo dati testuali. Media/immagini restano nel Profilo 1.</p>
         {% endif %}
-      </div>
 
-      <!-- Media: Video -->
-      <div class="panel">
-        <div class="panel-title">Video</div>
-        <div class="help">Carica più video (max {{ 10 }}) — se carichi qui, sostituisce i video esistenti.</div>
-
-        <div class="field">
-          <input type="file" name="videos" accept="video/*" multiple>
+        <div class="bottom-actions">
+          <button class="btn primary" type="submit">Salva</button>
+          <a class="btn" target="_blank" href="/{{ agent.slug }}">Apri Card</a>
+          {% if agent.p2_enabled == 1 %}
+            <a class="btn" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>
+          {% endif %}
         </div>
-
-        {% set vids = (agent.video_urls or '').split('|') if agent.video_urls else [] %}
-        {% if vids and vids|length > 0 %}
-        <div class="media-grid">
-          {% for v in vids %}
-            {% if v %}
-            <div class="media-item">
-              <video class="vid" src="{{ v }}" muted playsinline preload="metadata"></video>
-              <span class="badge">PLAY</span>
-              <form method="post" action="{{ url_for('delete_media', slug=agent.slug) }}">
-                <input type="hidden" name="type" value="video">
-                <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                <input type="hidden" name="target" value="edit">
-                <button class="x-mini" type="submit" title="Elimina">✕</button>
-              </form>
-            </div>
-            {% endif %}
-          {% endfor %}
-        </div>
-        {% else %}
-          <div class="empty">Nessun video.</div>
-        {% endif %}
-      </div>
-
-      <!-- Media: PDF -->
-      <div class="panel">
-        <div class="panel-title">PDF / Documenti</div>
-        <div class="help">
-          Carica fino a 12 PDF. Se carichi in uno slot, sostituisce quel PDF.
-        </div>
-
-        {% set pdfraw = (agent.pdf1_url or '') %}
-        {% set pdfs = pdfraw.split('|') if pdfraw else [] %}
-
-        <div class="pdf-slots">
-          {% for i in range(1, 13) %}
-            <div class="pdf-slot">
-              <div class="mini-title">PDF {{ i }}</div>
-              <input type="file" name="pdf{{ i }}" accept="application/pdf">
-
-              {% set idx = i-1 %}
-              {% if pdfs and idx < (pdfs|length) %}
-                {% set item = pdfs[idx] %}
-                {% if '||' in item %}
-                  {% set parts = item.split('||') %}
-                  <div class="pdf-row">
-                    <span class="pdf-name" title="{{ parts[0] }}">{{ parts[0] }}</span>
-                    <form method="post" action="{{ url_for('delete_media', slug=agent.slug) }}">
-                      <input type="hidden" name="type" value="pdf">
-                      <input type="hidden" name="idx" value="{{ idx }}">
-                      <input type="hidden" name="target" value="edit">
-                      <button class="btn-mini danger" type="submit">Elimina</button>
-                    </form>
-                  </div>
-                {% endif %}
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if i18n_data is not none and i18n_data != {} %}
-      {% endif %}
-
-      {% if (i18n_data is not none) and (not editing_profile2) %}
-      <!-- Lingue (solo admin normalmente; se non vuoi farle vedere agli agenti, tieni la logica in app.py) -->
-      <div class="panel">
-        <div class="panel-title">Lingue (EN / FR / ES / DE)</div>
-        <div class="help">Compila solo i campi che vuoi tradurre. Se lasci vuoto, in card resta l’italiano.</div>
-
-        {% for L in ['en','fr','es','de'] %}
-          {% set d = i18n_data.get(L, {}) if i18n_data else {} %}
-          <div class="lang-box">
-            <div class="lang-title">Lingua: {{ L|upper }}</div>
-            <div class="grid-2">
-              <div class="field">
-                <label>Nome ({{ L|upper }})</label>
-                <input name="name_{{ L }}" value="{{ d.get('name','') }}" placeholder="">
-              </div>
-              <div class="field">
-                <label>Azienda ({{ L|upper }})</label>
-                <input name="company_{{ L }}" value="{{ d.get('company','') }}" placeholder="">
-              </div>
-              <div class="field">
-                <label>Ruolo ({{ L|upper }})</label>
-                <input name="role_{{ L }}" value="{{ d.get('role','') }}" placeholder="">
-              </div>
-              <div class="field full">
-                <label>Bio ({{ L|upper }})</label>
-                <textarea name="bio_{{ L }}" rows="2">{{ d.get('bio','') }}</textarea>
-              </div>
-              <div class="field full">
-                <label>Indirizzi ({{ L|upper }})</label>
-                <textarea name="addresses_{{ L }}" rows="2">{{ d.get('addresses','') }}</textarea>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <div class="panel">
-        <div class="panel-title">Salva</div>
-        <div class="save-row">
-          <button class="btn primary" type="submit">Salva modifiche</button>
-          <a class="btn ghost" href="{{ url_for('dashboard') }}">Torna alla dashboard</a>
-        </div>
-      </div>
-    </form>
-
-    <!-- JS: crop preview + toggle esclusivi + preview 1° frame video -->
-    <script>
-      (function(){
-        const img = document.getElementById('cropPreviewImg');
-        const x = document.getElementById('photo_pos_x');
-        const y = document.getElementById('photo_pos_y');
-        const z = document.getElementById('photo_zoom');
-        const xVal = document.getElementById('xVal');
-        const yVal = document.getElementById('yVal');
-        const zVal = document.getElementById('zVal');
-
-        function apply(){
-          if(!img) return;
-          const xv = parseInt(x?.value || 50,10);
-          const yv = parseInt(y?.value || 35,10);
-          const zv = parseFloat(z?.value || 1.0);
-          xVal && (xVal.textContent = xv);
-          yVal && (yVal.textContent = yv);
-          zVal && (zVal.textContent = zv.toFixed(2));
-
-          img.style.transform = 'scale(' + zv.toFixed(2) + ')';
-          img.style.objectPosition = xv + '% ' + yv + '%';
-        }
-        [x,y,z].forEach(el=>{
-          if(!el) return;
-          el.addEventListener('input', apply);
-        });
-        apply();
-      })();
-
-      // Toggle esclusivi: avatar_spin vs allow_flip
-      (function(){
-        const a = document.getElementById('avatar_spin');
-        const f = document.getElementById('allow_flip');
-        if(!a || !f) return;
-
-        function sync(from){
-          if(from === 'a' && a.checked){
-            f.checked = false;
-          }
-          if(from === 'f' && f.checked){
-            a.checked = false;
-          }
-        }
-        a.addEventListener('change', ()=>sync('a'));
-        f.addEventListener('change', ()=>sync('f'));
-      })();
-
-      // preview primo frame video mini
-      (function(){
-        document.querySelectorAll('video.vid').forEach(v=>{
-          v.addEventListener('loadedmetadata', ()=>{
-            try{ v.currentTime = 0.05; }catch(e){}
-          });
-          v.addEventListener('seeked', ()=>{ try{ v.pause(); }catch(e){} });
-        });
-      })();
-    </script>
-
-  {% endif %}
-</div>
-
-<style>
-  .form-wrap{width:min(1180px, 94vw); margin:26px auto; padding:10px}
-  .form-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap}
-  .form-title{margin:0; font-size:28px}
-  .form-sub{margin-top:6px; opacity:.75}
-  .form-toolbar{display:flex; gap:10px; flex-wrap:wrap}
-
-  .panel-stack{display:grid; gap:14px}
-  .panel{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius:22px; padding:16px}
-  .panel.warn{border-color:rgba(246,195,74,.35); background:rgba(246,195,74,.08)}
-  .panel-title{font-weight:900; margin-bottom:12px}
-  .divider{height:1px; background:rgba(255,255,255,.10); margin:14px 0}
-
-  .grid-2{display:grid; gap:12px; grid-template-columns:1fr 1fr}
-  .grid-3{display:grid; gap:12px; grid-template-columns:1fr 1fr 1fr}
-  @media(max-width:900px){
-    .grid-2,.grid-3{grid-template-columns:1fr}
-  }
-
-  .field{display:grid; gap:6px}
-  label{font-weight:700; opacity:.95}
-  input, textarea, select{
-    width:100%;
-    padding:12px 12px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(0,0,0,.25);
-    color:var(--txt);
-    outline:none;
-  }
-  textarea{resize:vertical}
-  .help{opacity:.75; font-size:13px; line-height:1.35}
-  .field.full{grid-column:1/-1}
-
-  .check{display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.15)}
-  .check input{width:auto}
-
-  .kbd{
-    display:inline-flex;
-    padding:6px 10px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(0,0,0,.18);
-    margin:4px 6px 0 0;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size:12px;
-    opacity:.9;
-  }
-
-  .preview-box{margin-top:10px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18); border-radius:16px; padding:10px}
-  .mini-title{font-weight:800; opacity:.9; margin-bottom:8px}
-  .preview-img{width:100%; max-height:220px; object-fit:contain; border-radius:14px; background:rgba(255,255,255,.04)}
-
-  .crop-wrap{display:grid; gap:14px; grid-template-columns: 1.2fr .8fr; align-items:start}
-  @media(max-width:900px){ .crop-wrap{grid-template-columns:1fr} }
-  .crop-preview{border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18); border-radius:16px; padding:10px}
-  .crop-frame{
-    width:220px; height:220px;
-    border-radius:999px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.14);
-    background:rgba(255,255,255,.05);
-    display:flex; align-items:center; justify-content:center;
-    margin:6px 0 10px;
-  }
-  #cropPreviewImg{
-    width:100%; height:100%;
-    object-fit:cover;
-    object-position: 50% 35%;
-    transform: scale(1.0);
-    display:block;
-  }
-  .crop-empty{opacity:.65; padding:18px; text-align:center}
-
-  .media-grid{display:grid; gap:12px; grid-template-columns: repeat(6, 1fr)}
-  @media(max-width:1100px){ .media-grid{grid-template-columns: repeat(4, 1fr)} }
-  @media(max-width:700px){ .media-grid{grid-template-columns: repeat(2, 1fr)} }
-
-  .media-item{
-    position:relative;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(0,0,0,.18);
-    border-radius:16px;
-    overflow:hidden;
-    min-height:120px;
-  }
-  .media-item img, .media-item video{
-    width:100%; height:100%;
-    object-fit:cover;
-    display:block;
-  }
-  .media-item video{background:#000}
-  .badge{
-    position:absolute;
-    bottom:10px; left:10px;
-    padding:6px 10px;
-    border-radius:999px;
-    background:rgba(0,0,0,.60);
-    border:1px solid rgba(255,255,255,.12);
-    font-weight:900;
-    font-size:12px;
-  }
-
-  .empty{opacity:.65; padding:8px 0}
-
-  .pdf-slots{display:grid; gap:12px; grid-template-columns: repeat(3, 1fr)}
-  @media(max-width:900px){ .pdf-slots{grid-template-columns:1fr} }
-  .pdf-slot{border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18); border-radius:16px; padding:12px}
-  .pdf-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px}
-  .pdf-name{max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.9}
-
-  .save-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-  .lang-box{margin-top:12px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18); border-radius:16px; padding:12px}
-  .lang-title{font-weight:900; margin-bottom:10px; opacity:.9}
-</style>
-{% endblock %}
+      </form>
+    {% endif %}
+  </main>
+</body>
+</html>
