@@ -190,7 +190,6 @@
       <img id="qrImg" src="" alt="QR">
     </div>
 
-    <!-- ✅ invio via link (whatsapp/email) con testo precompilato -->
     <div class="modal-actions">
       <input type="hidden" id="qrSlug" value="">
       <input type="hidden" id="qrProfile" value="p1">
@@ -201,7 +200,7 @@
   </div>
 </div>
 
-<!-- CREDENTIALS MODAL -->
+<!-- CREDENTIALS MODAL (resta com’è, lo aggiustiamo dopo) -->
 <div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
   <div class="modal-box" onclick="event.stopPropagation()">
     <button class="modal-x" type="button" onclick="closeCred()">✕</button>
@@ -210,7 +209,6 @@
     <div class="cred-box">
       <div class="cred-row"><span>Username</span><code id="cUser"></code></div>
       <div class="cred-row"><span>Password</span><code id="cPass"></code></div>
-
       <div class="sep" style="margin:12px 0"></div>
 
       <div class="cred-links">
@@ -252,21 +250,35 @@
     return base + '/' + u;
   }
 
+  function mailtoOpen(subject, body){
+    // body robusto (CRLF)
+    const s = encodeURIComponent(subject || "");
+    const b = encodeURIComponent(body || "");
+    const href = `mailto:?subject=${s}&body=${b}`;
+    window.location.href = href;
+  }
+
+  async function copyToClipboard(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      alert("Testo copiato negli appunti ✅\nIncollalo nella mail se il client non lo inserisce automaticamente.");
+    }catch(e){
+      alert("Il client email non ha inserito il testo.\nCopia manualmente questo testo:\n\n" + text);
+    }
+  }
+
   function openQr(slug, profile){
     const modal = document.getElementById('qrModal');
     const img = document.getElementById('qrImg');
     const title = document.getElementById('qrTitle');
 
-    const sInp = document.getElementById('qrSlug');
-    const pInp = document.getElementById('qrProfile');
+    document.getElementById('qrSlug').value = slug;
+    document.getElementById('qrProfile').value = profile;
 
     const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
 
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
-
-    sInp.value = slug;
-    pInp.value = profile;
 
     modal.style.display = 'flex';
   }
@@ -278,17 +290,20 @@
     const cardUrl = absUrl(profile === 'p2' ? `/${slug}?p=p2` : `/${slug}`);
     const qrPngUrl = absUrl(profile === 'p2' ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`);
 
-    const msg = `Pay4You Card (${profile.toUpperCase()})\nLink: ${cardUrl}\nQR: ${qrPngUrl}`;
+    const msg = [
+      `Pay4You Card (${profile.toUpperCase()})`,
+      `Link: ${cardUrl}`,
+      `QR: ${qrPngUrl}`
+    ].join("\r\n");
 
     if(channel === 'whatsapp'){
-      const w = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      window.open(w, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
 
-    const subj = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`;
-    const mail = `mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(msg)}`;
-    window.location.href = mail;
+    // Email: prova mailto, e fallback clipboard
+    mailtoOpen(`Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`, msg);
+    setTimeout(() => { copyToClipboard(msg); }, 700);
   }
 
   function openCred(slug, username, password){
@@ -311,7 +326,6 @@
 
     document.getElementById('credModal').style.display = 'flex';
   }
-
   function closeCred(){ closeModal('credModal'); }
 
   (function(){
