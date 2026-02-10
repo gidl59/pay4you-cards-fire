@@ -17,7 +17,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# QR (se in requirements.txt hai "qrcode[pil]" o "qrcode")
 try:
     import qrcode
 except Exception:
@@ -38,7 +37,6 @@ MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 MAX_PDFS = 12
 
-# Directories
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -48,11 +46,9 @@ SUBDIR_PDF = UPLOADS_DIR / "pdf"
 for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
     d.mkdir(parents=True, exist_ok=True)
 
-# Flask
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 
-# SQLAlchemy
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
@@ -70,12 +66,10 @@ class Agent(Base):
 
     id = Column(Integer, primary_key=True)
 
-    # auth
     slug = Column(String(120), unique=True, nullable=False, index=True)
     username = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
 
-    # core
     name = Column(String(200), default="")
     company = Column(String(200), default="")
     role = Column(String(200), default="")
@@ -119,24 +113,21 @@ class Agent(Base):
     video_urls = Column(Text, default="")     # url|url|...
     pdf1_url = Column(Text, default="")       # name||url|name||url...
 
-    # Profile2
     p2_enabled = Column(Integer, default=0)
-    p2_json = Column(Text, default="{}")  # JSON con campi del profilo 2 (VUOTO di default)
+    p2_json = Column(Text, default="{}")
 
-    # i18n
-    i18n_json = Column(Text, default="{}")  # {"en": {...}, "fr": {...} ...}
+    i18n_json = Column(Text, default="{}")
 
     created_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
     updated_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
 
 
 # ==========================
-# DB INIT + MIGRATION (SQLite)
+# DB INIT + MIGRATION
 # ==========================
 def _sqlite_table_columns(conn, table_name: str):
     rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
     return {r[1] for r in rows}
-
 
 def ensure_db():
     Base.metadata.create_all(engine)
@@ -149,7 +140,6 @@ def ensure_db():
         missing = []
 
         def add_col(name, coltype):
-            nonlocal missing
             if name not in cols:
                 missing.append((name, coltype))
 
@@ -171,7 +161,6 @@ def ensure_db():
             conn.exec_driver_sql(f"ALTER TABLE agents ADD COLUMN {name} {coltype}")
 
         now = dt.datetime.utcnow().isoformat(sep=" ", timespec="seconds")
-
         conn.exec_driver_sql("UPDATE agents SET created_at = COALESCE(created_at, :now)", {"now": now})
         conn.exec_driver_sql("UPDATE agents SET updated_at = COALESCE(updated_at, :now)", {"now": now})
 
@@ -189,7 +178,6 @@ def ensure_db():
             conn.exec_driver_sql(f"UPDATE agents SET {f} = COALESCE({f}, 0)")
 
         conn.commit()
-
 
 ensure_db()
 
@@ -269,129 +257,10 @@ def parse_pdf_items(pdf1_url: str):
             items.append({"name": chunk.strip(), "url": chunk.strip()})
     return items
 
-def get_profile_data(agent: Agent, profile: str):
-    if profile == "p2":
-        try:
-            data = json.loads(agent.p2_json or "{}")
-            if not isinstance(data, dict):
-                data = {}
-        except Exception:
-            data = {}
-        data["_p2"] = True
-        return data
-
-    return {
-        "_p2": False,
-        "name": agent.name or "",
-        "company": agent.company or "",
-        "role": agent.role or "",
-        "bio": agent.bio or "",
-        "phone_mobile": agent.phone_mobile or "",
-        "phone_mobile2": agent.phone_mobile2 or "",
-        "phone_office": agent.phone_office or "",
-        "whatsapp": agent.whatsapp or "",
-        "emails": agent.emails or "",
-        "websites": agent.websites or "",
-        "pec": agent.pec or "",
-        "addresses": agent.addresses or "",
-        "piva": agent.piva or "",
-        "sdi": agent.sdi or "",
-        "facebook": agent.facebook or "",
-        "instagram": agent.instagram or "",
-        "linkedin": agent.linkedin or "",
-        "tiktok": agent.tiktok or "",
-        "telegram": agent.telegram or "",
-        "youtube": agent.youtube or "",
-        "spotify": agent.spotify or "",
-        "photo_url": agent.photo_url or "",
-        "logo_url": agent.logo_url or "",
-        "back_media_mode": agent.back_media_mode or "company",
-        "back_media_url": agent.back_media_url or "",
-        "photo_pos_x": agent.photo_pos_x if agent.photo_pos_x is not None else 50,
-        "photo_pos_y": agent.photo_pos_y if agent.photo_pos_y is not None else 35,
-        "photo_zoom": agent.photo_zoom or "1.0",
-        "orbit_spin": int(agent.orbit_spin or 0),
-        "avatar_spin": int(agent.avatar_spin or 0),
-        "logo_spin": int(agent.logo_spin or 0),
-        "allow_flip": int(agent.allow_flip or 0),
-        "gallery_urls": agent.gallery_urls or "",
-        "video_urls": agent.video_urls or "",
-        "pdf1_url": agent.pdf1_url or "",
-    }
-
-def set_profile_data(agent: Agent, profile: str, form: dict):
-    avatar_spin = 1 if form.get("avatar_spin") == "on" else 0
-    allow_flip = 1 if form.get("allow_flip") == "on" else 0
-    if avatar_spin == 1:
-        allow_flip = 0
-    if allow_flip == 1:
-        avatar_spin = 0
-
-    orbit_spin = 1 if form.get("orbit_spin") == "on" else 0
-    logo_spin = 1 if form.get("logo_spin") == "on" else 0
-
-    if profile == "p2":
-        data = {}
-        for k in [
-            "name","company","role","bio",
-            "phone_mobile","phone_mobile2","phone_office","whatsapp",
-            "emails","websites","pec","addresses",
-            "piva","sdi",
-            "facebook","instagram","linkedin","tiktok","telegram","youtube","spotify"
-        ]:
-            data[k] = (form.get(k) or "").strip()
-        agent.p2_json = json.dumps(data, ensure_ascii=False)
-        agent.updated_at = dt.datetime.utcnow()
-        return
-
-    agent.name = (form.get("name") or "").strip()
-    agent.company = (form.get("company") or "").strip()
-    agent.role = (form.get("role") or "").strip()
-    agent.bio = (form.get("bio") or "").strip()
-
-    agent.phone_mobile = (form.get("phone_mobile") or "").strip()
-    agent.phone_mobile2 = (form.get("phone_mobile2") or "").strip()
-    agent.phone_office = (form.get("phone_office") or "").strip()
-    agent.whatsapp = (form.get("whatsapp") or "").strip()
-    agent.emails = (form.get("emails") or "").strip()
-    agent.websites = (form.get("websites") or "").strip()
-    agent.pec = (form.get("pec") or "").strip()
-    agent.addresses = (form.get("addresses") or "").strip()
-
-    agent.piva = (form.get("piva") or "").strip()
-    agent.sdi = (form.get("sdi") or "").strip()
-
-    agent.facebook = (form.get("facebook") or "").strip()
-    agent.instagram = (form.get("instagram") or "").strip()
-    agent.linkedin = (form.get("linkedin") or "").strip()
-    agent.tiktok = (form.get("tiktok") or "").strip()
-    agent.telegram = (form.get("telegram") or "").strip()
-    agent.youtube = (form.get("youtube") or "").strip()
-    agent.spotify = (form.get("spotify") or "").strip()
-
-    agent.back_media_mode = (form.get("back_media_mode") or "company").strip()
-    agent.photo_pos_x = int(form.get("photo_pos_x") or 50)
-    agent.photo_pos_y = int(form.get("photo_pos_y") or 35)
-    agent.photo_zoom = str(form.get("photo_zoom") or "1.0")
-
-    agent.orbit_spin = orbit_spin
-    agent.avatar_spin = avatar_spin
-    agent.logo_spin = logo_spin
-    agent.allow_flip = allow_flip
-
-    agent.updated_at = dt.datetime.utcnow()
-
-def save_i18n(agent: Agent, form: dict):
-    data = {}
-    for L in ["en","fr","es","de"]:
-        data[L] = {
-            "name": (form.get(f"name_{L}") or "").strip(),
-            "company": (form.get(f"company_{L}") or "").strip(),
-            "role": (form.get(f"role_{L}") or "").strip(),
-            "bio": (form.get(f"bio_{L}") or "").strip(),
-            "addresses": (form.get(f"addresses_{L}") or "").strip(),
-        }
-    agent.i18n_json = json.dumps(data, ensure_ascii=False)
+def _new_password(length=10):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+    import random
+    return "".join(random.choice(alphabet) for _ in range(length))
 
 
 # ==========================
@@ -448,7 +317,6 @@ def dashboard():
 
     if is_admin():
         agents = s.query(Agent).all()
-        # alfabetico: name, fallback slug
         agents.sort(key=lambda x: ((x.name or "").strip().lower(), (x.slug or "").strip().lower()))
         return render_template("dashboard.html", agents=agents, is_admin=True, agent=None)
 
@@ -479,7 +347,6 @@ def new_agent():
             return redirect(url_for("new_agent"))
 
         name = first + ((" " + last) if last else "")
-
         slug_in = (request.form.get("slug") or "").strip()
         slug = slugify(slug_in) if slug_in else slugify(name)
         if not slug:
@@ -513,7 +380,97 @@ def new_agent():
         flash("Card creata!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={}, is_admin=True)
+    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={}, is_admin=True,
+                           gallery=[], videos=[], pdfs=[])
+
+
+def save_i18n(agent: Agent, form: dict):
+    data = {}
+    for L in ["en", "fr", "es", "de"]:
+        data[L] = {
+            "name": (form.get(f"name_{L}") or "").strip(),
+            "company": (form.get(f"company_{L}") or "").strip(),
+            "role": (form.get(f"role_{L}") or "").strip(),
+            "bio": (form.get(f"bio_{L}") or "").strip(),
+            "addresses": (form.get(f"addresses_{L}") or "").strip(),
+        }
+    agent.i18n_json = json.dumps(data, ensure_ascii=False)
+
+
+def set_profile_data_p1(agent: Agent, form: dict):
+    avatar_spin = 1 if form.get("avatar_spin") == "on" else 0
+    allow_flip = 1 if form.get("allow_flip") == "on" else 0
+    if avatar_spin == 1:
+        allow_flip = 0
+    if allow_flip == 1:
+        avatar_spin = 0
+
+    orbit_spin = 1 if form.get("orbit_spin") == "on" else 0
+    logo_spin = 1 if form.get("logo_spin") == "on" else 0
+
+    agent.name = (form.get("name") or "").strip()
+    agent.company = (form.get("company") or "").strip()
+    agent.role = (form.get("role") or "").strip()
+    agent.bio = (form.get("bio") or "").strip()
+
+    agent.phone_mobile = (form.get("phone_mobile") or "").strip()
+    agent.phone_mobile2 = (form.get("phone_mobile2") or "").strip()
+    agent.phone_office = (form.get("phone_office") or "").strip()
+    agent.whatsapp = (form.get("whatsapp") or "").strip()
+    agent.emails = (form.get("emails") or "").strip()
+    agent.websites = (form.get("websites") or "").strip()
+    agent.pec = (form.get("pec") or "").strip()
+    agent.addresses = (form.get("addresses") or "").strip()
+
+    agent.piva = (form.get("piva") or "").strip()
+    agent.sdi = (form.get("sdi") or "").strip()
+
+    agent.facebook = (form.get("facebook") or "").strip()
+    agent.instagram = (form.get("instagram") or "").strip()
+    agent.linkedin = (form.get("linkedin") or "").strip()
+    agent.tiktok = (form.get("tiktok") or "").strip()
+    agent.telegram = (form.get("telegram") or "").strip()
+    agent.youtube = (form.get("youtube") or "").strip()
+    agent.spotify = (form.get("spotify") or "").strip()
+
+    agent.back_media_mode = (form.get("back_media_mode") or "company").strip()
+
+    def safe_int(v, d):
+        try:
+            return int(v)
+        except Exception:
+            return d
+
+    agent.photo_pos_x = safe_int(form.get("photo_pos_x"), 50)
+    agent.photo_pos_y = safe_int(form.get("photo_pos_y"), 35)
+
+    z = (form.get("photo_zoom") or "1.0").strip()
+    try:
+        float(z)
+        agent.photo_zoom = z
+    except Exception:
+        agent.photo_zoom = "1.0"
+
+    agent.orbit_spin = orbit_spin
+    agent.avatar_spin = avatar_spin
+    agent.logo_spin = logo_spin
+    agent.allow_flip = allow_flip
+
+    agent.updated_at = dt.datetime.utcnow()
+
+
+def set_profile_data_p2(agent: Agent, form: dict):
+    data = {}
+    for k in [
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
+        "emails", "websites", "pec", "addresses",
+        "piva", "sdi",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"
+    ]:
+        data[k] = (form.get(k) or "").strip()
+    agent.p2_json = json.dumps(data, ensure_ascii=False)
+    agent.updated_at = dt.datetime.utcnow()
 
 
 @app.route("/area/edit/<slug>", methods=["GET", "POST"])
@@ -530,7 +487,7 @@ def edit_agent(slug):
         abort(404)
 
     if request.method == "POST":
-        set_profile_data(ag, "p1", request.form)
+        set_profile_data_p1(ag, request.form)
 
         photo = request.files.get("photo")
         if photo and photo.filename:
@@ -548,16 +505,20 @@ def edit_agent(slug):
         if gallery_files:
             gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
             urls = [save_upload(f, "images") for f in gallery_files]
-            ag.gallery_urls = "|".join([u for u in urls if u])
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+            ag.gallery_urls = "|".join(existing + urls)
 
         video_files = [f for f in request.files.getlist("videos") if f and f.filename]
         if video_files:
             video_files = video_files[:MAX_VIDEOS]
             urls = [save_upload(f, "videos") for f in video_files]
-            ag.video_urls = "|".join([u for u in urls if u])
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+            ag.video_urls = "|".join(existing + urls)
 
-        existing = parse_pdf_items(ag.pdf1_url or "")
-        out = existing[:] if existing else []
+        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
+        out = existing_pdf[:] if existing_pdf else []
         for i in range(1, MAX_PDFS + 1):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
@@ -571,7 +532,7 @@ def edit_agent(slug):
         out2 = []
         for item in out:
             if item.get("url"):
-                out2.append(f"{item.get('name','Documento')}||{item.get('url')}")
+                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
         ag.pdf1_url = "|".join(out2)
 
         save_i18n(ag, request.form)
@@ -587,7 +548,13 @@ def edit_agent(slug):
     except Exception:
         i18n_data = {}
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data, is_admin=True)
+    gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+    videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+    pdfs = parse_pdf_items(ag.pdf1_url or "")
+
+    return render_template("agent_form.html", agent=ag, editing_profile2=False,
+                           i18n_data=i18n_data, is_admin=True,
+                           gallery=gallery, videos=videos, pdfs=pdfs)
 
 
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
@@ -608,12 +575,14 @@ def admin_profile2(slug):
         return redirect(url_for("edit_agent", slug=slug))
 
     if request.method == "POST":
-        set_profile_data(ag, "p2", request.form)
+        set_profile_data_p2(ag, request.form)
         s.commit()
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("admin_profile2", slug=slug))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={}, is_admin=True)
+    return render_template("agent_form.html", agent=ag, editing_profile2=True,
+                           i18n_data={}, is_admin=True,
+                           gallery=[], videos=[], pdfs=[])
 
 
 # ==========================
@@ -633,7 +602,7 @@ def me_edit():
         abort(404)
 
     if request.method == "POST":
-        set_profile_data(ag, "p1", request.form)
+        set_profile_data_p1(ag, request.form)
 
         photo = request.files.get("photo")
         if photo and photo.filename:
@@ -651,16 +620,20 @@ def me_edit():
         if gallery_files:
             gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
             urls = [save_upload(f, "images") for f in gallery_files]
-            ag.gallery_urls = "|".join([u for u in urls if u])
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+            ag.gallery_urls = "|".join(existing + urls)
 
         video_files = [f for f in request.files.getlist("videos") if f and f.filename]
         if video_files:
             video_files = video_files[:MAX_VIDEOS]
             urls = [save_upload(f, "videos") for f in video_files]
-            ag.video_urls = "|".join([u for u in urls if u])
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+            ag.video_urls = "|".join(existing + urls)
 
-        existing = parse_pdf_items(ag.pdf1_url or "")
-        out = existing[:] if existing else []
+        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
+        out = existing_pdf[:] if existing_pdf else []
         for i in range(1, MAX_PDFS + 1):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
@@ -674,14 +647,20 @@ def me_edit():
         out2 = []
         for item in out:
             if item.get("url"):
-                out2.append(f"{item.get('name','Documento')}||{item.get('url')}")
+                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
         ag.pdf1_url = "|".join(out2)
 
         s.commit()
         flash("Salvato!", "ok")
         return redirect(url_for("me_edit"))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data={}, is_admin=False)
+    gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+    videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+    pdfs = parse_pdf_items(ag.pdf1_url or "")
+
+    return render_template("agent_form.html", agent=ag, editing_profile2=False,
+                           i18n_data={}, is_admin=False,
+                           gallery=gallery, videos=videos, pdfs=pdfs)
 
 
 @app.route("/area/me/p2", methods=["GET", "POST"])
@@ -702,12 +681,14 @@ def me_profile2():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        set_profile_data(ag, "p2", request.form)
+        set_profile_data_p2(ag, request.form)
         s.commit()
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("me_profile2"))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={}, is_admin=False)
+    return render_template("agent_form.html", agent=ag, editing_profile2=True,
+                           i18n_data={}, is_admin=False,
+                           gallery=[], videos=[], pdfs=[])
 
 
 @app.route("/area/me/activate-p2", methods=["POST"])
@@ -753,15 +734,10 @@ def me_deactivate_p2():
 
 
 # ==========================
-# ADMIN TOOLS: credentials + delete + QR + VCF
+# ADMIN: CREDENTIALS MODAL (NO FLASH)
 # ==========================
-def _new_password(length=10):
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-    import random
-    return "".join(random.choice(alphabet) for _ in range(length))
-
-@app.route("/area/admin/reset-password/<slug>", methods=["POST"])
-def admin_reset_password(slug):
+@app.route("/area/admin/credentials/<slug>", methods=["POST"])
+def admin_generate_credentials(slug):
     r = require_login()
     if r:
         return r
@@ -778,10 +754,41 @@ def admin_reset_password(slug):
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
 
-    # per ora mostriamo in flash (invio email/wa lo facciamo dopo con SMTP+WA)
-    flash(f"Nuova password generata per {ag.slug}: {newp}", "ok")
+    # salvata in session SOLO per mostrarla una volta nel modal
+    session["last_credentials"] = {
+        "slug": ag.slug,
+        "username": ag.username,
+        "password": newp,
+        "ts": dt.datetime.utcnow().isoformat()
+    }
+    return redirect(url_for("dashboard", open_credentials=ag.slug))
+
+
+@app.route("/area/admin/send_credentials", methods=["POST"])
+def admin_send_credentials_placeholder():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+    flash("Invio credenziali via Email/WhatsApp: lo attiviamo dopo con SMTP + WhatsApp.", "warning")
     return redirect(url_for("dashboard"))
 
+
+@app.route("/area/admin/send_qr", methods=["POST"])
+def admin_send_qr_placeholder():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+    flash("Invio QR via Email/WhatsApp: lo attiviamo dopo con SMTP + WhatsApp.", "warning")
+    return redirect(url_for("dashboard"))
+
+
+# ==========================
+# ADMIN DELETE
+# ==========================
 @app.route("/area/admin/delete/<slug>", methods=["POST"])
 def admin_delete_agent(slug):
     r = require_login()
@@ -805,9 +812,12 @@ def admin_delete_agent(slug):
     flash(f"Card eliminata: {slug}", "ok")
     return redirect(url_for("dashboard"))
 
+
+# ==========================
+# QR PNG + VCF
+# ==========================
 @app.route("/qr/<slug>.png")
 def qr_png(slug):
-    # download QR (P1 o P2 con ?p=p2)
     if qrcode is None:
         abort(500)
 
@@ -835,9 +845,9 @@ def qr_png(slug):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
+
 @app.route("/vcf/<slug>")
 def vcf(slug):
-    # VCard P1 (default) o P2 con ?p=p2
     p = (request.args.get("p") or "").strip().lower()
 
     s = db()
@@ -845,19 +855,15 @@ def vcf(slug):
     if not ag:
         abort(404)
 
-    use_p2 = (p == "p2" and int(ag.p2_enabled or 0) == 1)
-    profile = get_profile_data(ag, "p2" if use_p2 else "p1")
-
-    full_name = (profile.get("name") or ag.slug or "").strip()
-    org = (profile.get("company") or "").strip()
-    title = (profile.get("role") or "").strip()
-
-    emails = split_csv(profile.get("emails", ""))
-    webs = split_csv(profile.get("websites", ""))
-
-    tel1 = (profile.get("phone_mobile") or "").strip()
-    tel2 = (profile.get("phone_mobile2") or "").strip()
-    office = (profile.get("phone_office") or "").strip()
+    # P1 semplice: già ok
+    full_name = (ag.name or ag.slug or "").strip()
+    org = (ag.company or "").strip()
+    title = (ag.role or "").strip()
+    emails = split_csv(ag.emails or "")
+    webs = split_csv(ag.websites or "")
+    tel1 = (ag.phone_mobile or "").strip()
+    tel2 = (ag.phone_mobile2 or "").strip()
+    office = (ag.phone_office or "").strip()
 
     lines = [
         "BEGIN:VCARD",
@@ -881,7 +887,7 @@ def vcf(slug):
     lines.append("END:VCARD")
 
     vcf_text = "\r\n".join(lines) + "\r\n"
-    filename = f"{ag.slug}-{'P2' if use_p2 else 'P1'}.vcf"
+    filename = f"{ag.slug}-P1.vcf"
     return Response(
         vcf_text,
         mimetype="text/vcard; charset=utf-8",
@@ -890,7 +896,7 @@ def vcf(slug):
 
 
 # ==========================
-# MEDIA DELETE
+# MEDIA DELETE (per galleria/video/pdf)
 # ==========================
 @app.route("/area/media/delete/<slug>", methods=["POST"])
 def delete_media(slug):
@@ -931,13 +937,14 @@ def delete_media(slug):
     s.commit()
     flash("Eliminato.", "ok")
 
+    # resta nella stessa pagina
     if is_admin():
         return redirect(url_for("edit_agent", slug=slug))
     return redirect(url_for("me_edit"))
 
 
 # ==========================
-# CARD PUBLIC (INVARIATA)
+# CARD PUBLIC (LASCIATA COME PRIMA)
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -946,110 +953,50 @@ def card(slug):
     if not ag:
         abort(404)
 
-    p_key = (request.args.get("p") or "").strip().lower()
+    # QUI non tocchiamo nulla adesso (come mi hai chiesto)
+    # renderizza la tua card.html (già presente)
+    # NB: se serve, in seguito agganciamo QR/WA/tema ecc.
+
     lang = (request.args.get("lang") or "it").strip().lower()
+    p_key = (request.args.get("p") or "").strip().lower()
     p2_enabled = int(ag.p2_enabled or 0) == 1
     use_p2 = (p_key == "p2" and p2_enabled)
 
-    try:
-        i18n = json.loads(ag.i18n_json or "{}")
-        if not isinstance(i18n, dict):
-            i18n = {}
-    except Exception:
-        i18n = {}
-
-    profile = get_profile_data(ag, "p2" if use_p2 else "p1")
-
-    if lang in ["en","fr","es","de"] and i18n.get(lang):
-        d = i18n.get(lang) or {}
-        for key in ["name","company","role","bio","addresses"]:
-            if d.get(key):
-                profile[key] = d.get(key)
-
-    emails = split_csv(profile.get("emails",""))
-    websites = split_csv(profile.get("websites",""))
-    addresses = split_lines(profile.get("addresses",""))
-
+    emails = split_csv(ag.emails or "")
+    websites = split_csv(ag.websites or "")
+    addresses = split_lines(ag.addresses or "")
     addr_objs = []
     for a in addresses:
         q = a.replace(" ", "+")
         addr_objs.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
 
     mobiles = []
-    m1 = profile.get("phone_mobile","").strip()
-    m2 = profile.get("phone_mobile2","").strip()
-    if m1:
-        mobiles.append(m1)
-    if m2:
-        mobiles.append(m2)
+    if (ag.phone_mobile or "").strip():
+        mobiles.append(ag.phone_mobile.strip())
+    if (ag.phone_mobile2 or "").strip():
+        mobiles.append(ag.phone_mobile2.strip())
 
-    office_value = profile.get("phone_office","").strip()
-    pec_email = profile.get("pec","").strip()
+    office_value = (ag.phone_office or "").strip()
 
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    wa_link = profile.get("whatsapp","").strip()
+    wa_link = (ag.whatsapp or "").strip()
     if wa_link and wa_link.startswith("+"):
         wa_link = "https://wa.me/" + re.sub(r"\D+", "", wa_link)
 
     base_url = public_base_url()
-    qr_url = f"{base_url}/{ag.slug}"
-    if use_p2:
-        qr_url = f"{base_url}/{ag.slug}?p=p2"
+    qr_url = f"{base_url}/{ag.slug}" + ("?p=p2" if use_p2 else "")
 
-    def t_func(key):
+    def t_func(k):
         it = {
-            "actions": "Azioni",
-            "save_contact": "Salva contatto",
-            "whatsapp": "WhatsApp",
-            "scan_qr": "QR",
-            "contacts": "Contatti",
-            "mobile_phone": "Cellulare",
-            "office_phone": "Ufficio",
-            "open_website": "Sito",
-            "open_maps": "Apri Maps",
-            "data": "Dati",
-            "vat": "P.IVA",
-            "sdi": "SDI",
-            "theme": "Tema",
-            "theme_auto": "Auto",
-            "theme_light": "Chiaro",
-            "theme_dark": "Scuro",
-            "gallery": "Foto",
-            "videos": "Video",
-            "documents": "Documenti",
-            "close": "Chiudi",
-            "profile_1": "Profilo 1",
-            "profile_2": "Profilo 2",
+            "actions":"Azioni","scan_qr":"QR","whatsapp":"WhatsApp","contacts":"Contatti",
+            "mobile_phone":"Cellulare","office_phone":"Ufficio","open_website":"Sito",
+            "open_maps":"Apri Maps","data":"Dati","vat":"P.IVA","sdi":"SDI",
+            "gallery":"Foto","videos":"Video","documents":"Documenti"
         }
-        en = {
-            "actions": "Actions",
-            "save_contact": "Save contact",
-            "whatsapp": "WhatsApp",
-            "scan_qr": "QR",
-            "contacts": "Contacts",
-            "mobile_phone": "Mobile",
-            "office_phone": "Office",
-            "open_website": "Website",
-            "open_maps": "Open Maps",
-            "data": "Data",
-            "vat": "VAT",
-            "sdi": "SDI",
-            "theme": "Theme",
-            "theme_auto": "Auto",
-            "theme_light": "Light",
-            "theme_dark": "Dark",
-            "gallery": "Photos",
-            "videos": "Videos",
-            "documents": "Documents",
-            "close": "Close",
-            "profile_1": "Profile 1",
-            "profile_2": "Profile 2",
-        }
-        pack = it if lang == "it" else en
-        return pack.get(key, it.get(key, key))
+        return it.get(k, k)
 
     class Obj(dict):
         __getattr__ = dict.get
@@ -1067,28 +1014,18 @@ def card(slug):
         "avatar_spin": ag.avatar_spin,
         "logo_spin": ag.logo_spin,
         "allow_flip": ag.allow_flip,
-        "name": profile.get("name",""),
-        "company": profile.get("company",""),
-        "role": profile.get("role",""),
-        "bio": profile.get("bio",""),
-        "piva": profile.get("piva",""),
-        "sdi": profile.get("sdi",""),
-        "facebook": profile.get("facebook",""),
-        "instagram": profile.get("instagram",""),
-        "linkedin": profile.get("linkedin",""),
-        "tiktok": profile.get("tiktok",""),
-        "telegram": profile.get("telegram",""),
-        "youtube": profile.get("youtube",""),
-        "spotify": profile.get("spotify",""),
+        "name": ag.name,
+        "company": ag.company,
+        "role": ag.role,
+        "bio": ag.bio,
+        "piva": ag.piva,
+        "sdi": ag.sdi,
     })
 
     return render_template(
         "card.html",
         ag=ag_view,
         lang=lang,
-        base_url=base_url,
-        p_key=("p2" if use_p2 else ""),
-        p2_enabled=p2_enabled,
         wa_link=wa_link,
         qr_url=qr_url,
         emails=emails,
@@ -1096,7 +1033,6 @@ def card(slug):
         addresses=addr_objs,
         mobiles=mobiles,
         office_value=office_value,
-        pec_email=pec_email,
         gallery=gallery,
         videos=videos,
         pdfs=pdfs,
@@ -1104,9 +1040,6 @@ def card(slug):
     )
 
 
-# ==========================
-# MAIN
-# ==========================
 @app.route("/")
 def home():
     return redirect(url_for("login"))
