@@ -4,6 +4,7 @@ import json
 import uuid
 import datetime as dt
 from pathlib import Path
+from typing import Dict, Any, Optional, List, Tuple
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -262,13 +263,71 @@ def _new_password(length=10):
     import random
     return "".join(random.choice(alphabet) for _ in range(length))
 
+def empty_p2_payload() -> Dict[str, str]:
+    """P2 deve partire VUOTO ma con tutte le chiavi disponibili."""
+    return {
+        "name": "", "company": "", "role": "", "bio": "",
+        "phone_mobile": "", "phone_mobile2": "", "phone_office": "", "whatsapp": "",
+        "emails": "", "websites": "", "pec": "", "addresses": "",
+        "piva": "", "sdi": "",
+        "facebook": "", "instagram": "", "linkedin": "", "tiktok": "",
+        "telegram": "", "youtube": "", "spotify": ""
+    }
+
+def safe_json_load(s: str, default):
+    try:
+        obj = json.loads(s or "")
+        return obj if isinstance(obj, type(default)) else default
+    except Exception:
+        return default
+
+def detect_lang_from_header() -> str:
+    """
+    Se non passo ?lang=, usa Accept-Language del telefono.
+    Supporto: it/en/fr/es/de. Default: it
+    """
+    supported = ["it", "en", "fr", "es", "de"]
+    h = (request.headers.get("Accept-Language") or "").lower()
+    if not h:
+        return "it"
+    # esempio: "fr-FR,fr;q=0.9,en;q=0.8,it;q=0.7"
+    for token in h.split(","):
+        code = token.strip().split(";")[0].strip()
+        code = code.split("-")[0].strip()
+        if code in supported:
+            return code
+    return "it"
+
+def apply_i18n_to_profile(base: Dict[str, Any], i18n_data: Dict[str, Any], lang: str) -> Dict[str, Any]:
+    """
+    Applica traduzioni se presenti per lang (en/fr/es/de).
+    Sostituisce SOLO se la traduzione non è vuota.
+    """
+    if lang not in ("en", "fr", "es", "de"):
+        return base
+
+    pack = i18n_data.get(lang) if isinstance(i18n_data, dict) else None
+    if not isinstance(pack, dict):
+        return base
+
+    for k in ["name", "company", "role", "bio", "addresses"]:
+        v = (pack.get(k) or "").strip()
+        if v:
+            base[k] = v
+    return base
+
 
 # ==========================
-# STATIC UPLOADS
+# STATIC: uploads + favicon
 # ==========================
 @app.route("/uploads/<path:filename>")
 def serve_uploads(filename):
     return send_from_directory(str(UPLOADS_DIR), filename)
+
+@app.route("/favicon.ico")
+def favicon():
+    # deve esistere in static/favicon.ico
+    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
 
 
 # ==========================
@@ -297,6 +356,9 @@ def login():
 
     return render_template("login.html")
 
+@app.route("/login")
+def login_alias():
+    return redirect(url_for("login"))
 
 @app.route("/area/logout")
 def logout():
@@ -317,6 +379,7 @@ def dashboard():
 
     if is_admin():
         agents = s.query(Agent).all()
+        # ordinamento alfabetico come richiesto
         agents.sort(key=lambda x: ((x.name or "").strip().lower(), (x.slug or "").strip().lower()))
         return render_template("dashboard.html", agents=agents, is_admin=True, agent=None)
 
@@ -371,7 +434,7 @@ def new_agent():
             created_at=dt.datetime.utcnow(),
             updated_at=dt.datetime.utcnow(),
             p2_enabled=0,
-            p2_json="{}",
+            p2_json=json.dumps(empty_p2_payload(), ensure_ascii=False),
             i18n_json="{}",
         )
         s.add(ag)
@@ -460,14 +523,8 @@ def set_profile_data_p1(agent: Agent, form: dict):
 
 
 def set_profile_data_p2(agent: Agent, form: dict):
-    data = {}
-    for k in [
-        "name", "company", "role", "bio",
-        "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
-        "emails", "websites", "pec", "addresses",
-        "piva", "sdi",
-        "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"
-    ]:
+    data = empty_p2_payload()
+    for k in list(data.keys()):
         data[k] = (form.get(k) or "").strip()
     agent.p2_json = json.dumps(data, ensure_ascii=False)
     agent.updated_at = dt.datetime.utcnow()
@@ -541,12 +598,7 @@ def edit_agent(slug):
         flash("Salvato!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    try:
-        i18n_data = json.loads(ag.i18n_json or "{}")
-        if not isinstance(i18n_data, dict):
-            i18n_data = {}
-    except Exception:
-        i18n_data = {}
+    i18n_data = safe_json_load(ag.i18n_json or "{}", {})
 
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
@@ -705,7 +757,7 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
-    ag.p2_json = "{}"
+    ag.p2_json = json.dumps(empty_p2_payload(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("Profilo 2 attivato (vuoto).", "ok")
@@ -726,7 +778,7 @@ def me_deactivate_p2():
         abort(404)
 
     ag.p2_enabled = 0
-    ag.p2_json = "{}"
+    ag.p2_json = json.dumps(empty_p2_payload(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("Profilo 2 disattivato.", "ok")
@@ -734,7 +786,7 @@ def me_deactivate_p2():
 
 
 # ==========================
-# ✅ ADMIN: activate / deactivate P2
+# ADMIN: activate / deactivate P2
 # ==========================
 @app.route("/area/admin/activate-p2/<slug>", methods=["POST"])
 def admin_activate_p2(slug):
@@ -750,8 +802,7 @@ def admin_activate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 1
-    if not ag.p2_json:
-        ag.p2_json = "{}"
+    ag.p2_json = json.dumps(empty_p2_payload(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("P2 attivato (vuoto).", "ok")
@@ -771,7 +822,7 @@ def admin_deactivate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 0
-    ag.p2_json = "{}"
+    ag.p2_json = json.dumps(empty_p2_payload(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("P2 disattivato.", "ok")
@@ -892,19 +943,40 @@ def qr_png(slug):
 
 @app.route("/vcf/<slug>")
 def vcf(slug):
+    """
+    Supporta:
+      - /vcf/<slug>        -> P1
+      - /vcf/<slug>?p=p2   -> P2 (se attivo)
+    """
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
-    full_name = (ag.name or ag.slug or "").strip()
-    org = (ag.company or "").strip()
-    title = (ag.role or "").strip()
-    emails = split_csv(ag.emails or "")
-    webs = split_csv(ag.websites or "")
-    tel1 = (ag.phone_mobile or "").strip()
-    tel2 = (ag.phone_mobile2 or "").strip()
-    office = (ag.phone_office or "").strip()
+    p = (request.args.get("p") or "").strip().lower()
+    use_p2 = (p == "p2" and int(ag.p2_enabled or 0) == 1)
+
+    if use_p2:
+        p2 = safe_json_load(ag.p2_json or "{}", empty_p2_payload())
+        full_name = (p2.get("name") or ag.slug or "").strip()
+        org = (p2.get("company") or "").strip()
+        title = (p2.get("role") or "").strip()
+        emails = split_csv(p2.get("emails") or "")
+        webs = split_csv(p2.get("websites") or "")
+        tel1 = (p2.get("phone_mobile") or "").strip()
+        tel2 = (p2.get("phone_mobile2") or "").strip()
+        office = (p2.get("phone_office") or "").strip()
+        filename = f"{ag.slug}-P2.vcf"
+    else:
+        full_name = (ag.name or ag.slug or "").strip()
+        org = (ag.company or "").strip()
+        title = (ag.role or "").strip()
+        emails = split_csv(ag.emails or "")
+        webs = split_csv(ag.websites or "")
+        tel1 = (ag.phone_mobile or "").strip()
+        tel2 = (ag.phone_mobile2 or "").strip()
+        office = (ag.phone_office or "").strip()
+        filename = f"{ag.slug}-P1.vcf"
 
     lines = [
         "BEGIN:VCARD",
@@ -928,7 +1000,6 @@ def vcf(slug):
     lines.append("END:VCARD")
 
     vcf_text = "\r\n".join(lines) + "\r\n"
-    filename = f"{ag.slug}-P1.vcf"
     return Response(
         vcf_text,
         mimetype="text/vcard; charset=utf-8",
@@ -984,7 +1055,7 @@ def delete_media(slug):
 
 
 # ==========================
-# CARD PUBLIC (non tocchiamo ora)
+# CARD PUBLIC
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -993,32 +1064,81 @@ def card(slug):
     if not ag:
         abort(404)
 
-    lang = (request.args.get("lang") or "it").strip().lower()
+    # lang: se non passato -> auto da Accept-Language
+    lang = (request.args.get("lang") or "").strip().lower()
+    if not lang:
+        lang = detect_lang_from_header()
+    if lang not in ("it", "en", "fr", "es", "de"):
+        lang = "it"
+
     p_key = (request.args.get("p") or "").strip().lower()
     p2_enabled = int(ag.p2_enabled or 0) == 1
     use_p2 = (p_key == "p2" and p2_enabled)
 
-    emails = split_csv(ag.emails or "")
-    websites = split_csv(ag.websites or "")
-    addresses = split_lines(ag.addresses or "")
+    i18n_data = safe_json_load(ag.i18n_json or "{}", {})
+
+    # base profile data
+    if use_p2:
+        p2 = safe_json_load(ag.p2_json or "{}", empty_p2_payload())
+        profile = {
+            "name": p2.get("name", ""),
+            "company": p2.get("company", ""),
+            "role": p2.get("role", ""),
+            "bio": p2.get("bio", ""),
+            "phone_mobile": p2.get("phone_mobile", ""),
+            "phone_mobile2": p2.get("phone_mobile2", ""),
+            "phone_office": p2.get("phone_office", ""),
+            "whatsapp": p2.get("whatsapp", ""),
+            "emails": p2.get("emails", ""),
+            "websites": p2.get("websites", ""),
+            "pec": p2.get("pec", ""),
+            "addresses": p2.get("addresses", ""),
+            "piva": p2.get("piva", ""),
+            "sdi": p2.get("sdi", ""),
+        }
+    else:
+        profile = {
+            "name": ag.name,
+            "company": ag.company,
+            "role": ag.role,
+            "bio": ag.bio,
+            "phone_mobile": ag.phone_mobile,
+            "phone_mobile2": ag.phone_mobile2,
+            "phone_office": ag.phone_office,
+            "whatsapp": ag.whatsapp,
+            "emails": ag.emails,
+            "websites": ag.websites,
+            "pec": ag.pec,
+            "addresses": ag.addresses,
+            "piva": ag.piva,
+            "sdi": ag.sdi,
+        }
+
+    # applica traduzioni (se presenti)
+    profile = apply_i18n_to_profile(profile, i18n_data, lang)
+
+    emails = split_csv(profile.get("emails") or "")
+    websites = split_csv(profile.get("websites") or "")
+    addresses = split_lines(profile.get("addresses") or "")
+
     addr_objs = []
     for a in addresses:
         q = a.replace(" ", "+")
         addr_objs.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
 
     mobiles = []
-    if (ag.phone_mobile or "").strip():
-        mobiles.append(ag.phone_mobile.strip())
-    if (ag.phone_mobile2 or "").strip():
-        mobiles.append(ag.phone_mobile2.strip())
+    if (profile.get("phone_mobile") or "").strip():
+        mobiles.append((profile.get("phone_mobile") or "").strip())
+    if (profile.get("phone_mobile2") or "").strip():
+        mobiles.append((profile.get("phone_mobile2") or "").strip())
 
-    office_value = (ag.phone_office or "").strip()
+    office_value = (profile.get("phone_office") or "").strip()
 
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    wa_link = (ag.whatsapp or "").strip()
+    wa_link = (profile.get("whatsapp") or "").strip()
     if wa_link and wa_link.startswith("+"):
         wa_link = "https://wa.me/" + re.sub(r"\D+", "", wa_link)
 
@@ -1032,6 +1152,7 @@ def card(slug):
             "open_maps":"Apri Maps","data":"Dati","vat":"P.IVA","sdi":"SDI",
             "gallery":"Foto","videos":"Video","documents":"Documenti"
         }
+        # per ora lasciamo IT come prima (poi facciamo traduzioni UI se vuoi)
         return it.get(k, k)
 
     class Obj(dict):
@@ -1050,12 +1171,14 @@ def card(slug):
         "avatar_spin": ag.avatar_spin,
         "logo_spin": ag.logo_spin,
         "allow_flip": ag.allow_flip,
-        "name": ag.name,
-        "company": ag.company,
-        "role": ag.role,
-        "bio": ag.bio,
-        "piva": ag.piva,
-        "sdi": ag.sdi,
+
+        # dati profilo (P1 o P2)
+        "name": profile.get("name") or "",
+        "company": profile.get("company") or "",
+        "role": profile.get("role") or "",
+        "bio": profile.get("bio") or "",
+        "piva": profile.get("piva") or "",
+        "sdi": profile.get("sdi") or "",
     })
 
     return render_template(
