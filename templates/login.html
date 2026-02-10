@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
 
-  <!-- ✅ favicon anche qui -->
-  <link rel="icon" href="/favicon.ico">
+  <!-- ✅ favicon corretta (come hai detto: sta in static/logo.png) -->
+  <link rel="icon" href="/static/logo.png">
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="app-shell">
@@ -16,7 +16,7 @@
       <div class="page-main">
         <div class="panel panel-login">
           <div class="panel-head panel-head-center">
-            <img class="login-logo" src="/static/logo-pay4you.png" alt="Pay4You" onerror="this.style.display='none'">
+            <img class="login-logo" src="/static/logo.png" alt="Pay4You">
             <div class="login-title">Pay4You Cards</div>
             <div class="hint">Accedi con le tue credenziali</div>
           </div>
