@@ -1,588 +1,170 @@
 <!doctype html>
-<html lang="{{ lang|default('it') }}">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="color-scheme" content="light dark">
-  <title>{{ ag.name }} | Pay4You</title>
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
-  <style>
-    .top-left-logo{
-      position: fixed;
-      top: 14px;
-      left: 14px;
-      z-index: 50;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent !important;
-      border: 0 !important;
-      box-shadow: none !important;
-      padding: 0 !important;
-      pointer-events: none; /* NON cliccabile */
-    }
-    .top-left-logo img{
-      width: 84px;
-      height: 84px;
-      max-width: 92px;
-      max-height: 92px;
-      object-fit: contain;
-      background: transparent;
-      border-radius: 22px;
-      display: block;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
-    }
-
-    .avatar-img{
-      width: 100%;
-      height: 100%;
-      object-fit: cover !important;
-      object-position: center center !important;
-      display: block;
-    }
-    .avatar-img.zoomable{
-      transform-origin: center center;
-      will-change: transform;
-    }
-
-    #mWeb{
-      width: min(980px, 92vw);
-      height: min(78vh, 720px);
-      border: 0;
-      border-radius: 14px;
-      background: rgba(0,0,0,.06);
-      display:none;
-    }
-    #mShare{ display:none; width:min(980px, 92vw); }
-
-    /* piccolo fallback pdf */
-    #mPdfFallback{ display:none; margin-top:10px; }
-  </style>
+  <title>{{ ag.name or ag.slug }} | Pay4You</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/card.css">
 </head>
+<body>
+  <div class="card-wrap">
 
-<body data-theme="">
-  <div class="page-main">
-    <div class="card-outer">
+    <div class="hero" style="
+      {% if ag.back_media_url %}background-image:url('{{ ag.back_media_url }}');{% endif %}
+    ">
+      <div class="hero-overlay"></div>
 
-      {% if ag.logo_url %}
-        <div class="top-left-logo" aria-label="Pay4You">
-          <img src="{{ ag.logo_url }}" alt="Logo Pay4You">
+      <div class="top">
+        {% if ag.logo_url %}
+          <img class="logo {{ 'spin' if ag.logo_spin==1 else '' }}" src="{{ ag.logo_url }}" alt="logo">
+        {% endif %}
+      </div>
+
+      <div class="avatar-wrap {{ 'orbit' if ag.orbit_spin==1 else '' }}">
+        <div class="avatar {{ 'spin' if ag.avatar_spin==1 else '' }} {{ 'flip' if ag.allow_flip==1 else '' }}">
+          {% if ag.photo_url %}
+            <img src="{{ ag.photo_url }}" alt="foto" style="
+              object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%;
+              transform: scale({{ ag.photo_zoom }});
+            ">
+          {% else %}
+            <div class="avatar-ph">👤</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="title">
+        <h1>{{ ag.name }}</h1>
+        {% if ag.role %}<div class="sub">{{ ag.role }}</div>{% endif %}
+        {% if ag.company %}<div class="sub2">{{ ag.company }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="content">
+      {% if ag.bio %}
+        <div class="box">
+          <h3>Info</h3>
+          <p>{{ ag.bio }}</p>
         </div>
       {% endif %}
 
-      <div class="hero hero-center">
-        <div class="avatar-wrap">
-
-          {% if ag.logo_url %}
-          <div class="orbit {% if (ag.orbit_spin or 0)|int == 1 %}spin{% endif %}">
-            <img src="{{ ag.logo_url }}" alt="Logo orbit">
-          </div>
-          {% endif %}
-
-          {% set auto_flip = (ag.avatar_spin or 0)|int == 1 %}
-          {% set can_flip  = ((ag.allow_flip or 0)|int == 1) and (not auto_flip) %}
-
-          {% set back_mode = ag.back_media_mode if ag.back_media_mode else 'company' %}
-          {% set back_url = '' %}
-          {% if back_mode == 'personal' and ag.back_media_url %}
-            {% set back_url = ag.back_media_url %}
-          {% elif ag.logo_url %}
-            {% set back_url = ag.logo_url %}
-          {% endif %}
-
-          {% set px = (ag.photo_pos_x if ag.photo_pos_x is not none else 50) %}
-          {% set py = (ag.photo_pos_y if ag.photo_pos_y is not none else 35) %}
-          {% set pz = (ag.photo_zoom if ag.photo_zoom is not none else 1.0) %}
-
-          <div class="flip {% if can_flip %}is-flippable{% endif %} {% if auto_flip %}auto-flip{% endif %}" id="flipBox">
-            <div class="flip-inner">
-
-              <div class="flip-front">
-                <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg('{{ ag.photo_url if ag.photo_url else '' }}')"
-                        aria-label="Apri foto">
-                  {% if ag.photo_url %}
-                    <img class="avatar-img zoomable"
-                         src="{{ ag.photo_url }}"
-                         alt="Foto"
-                         style="object-position: {{ px|int }}% {{ py|int }}% !important; transform: scale({{ '%.2f'|format(pz|float) }});">
-                  {% else %}
-                    <div class="avatar-placeholder">👤</div>
-                  {% endif %}
-                </button>
-              </div>
-
-              <div class="flip-back">
-                <button class="avatar avatar-btn" type="button"
-                        onclick="event.stopPropagation(); openImg('{{ back_url }}')"
-                        aria-label="Apri immagine retro">
-                  {% if back_url %}
-                    <img class="avatar-img back-img {% if (ag.logo_spin or 0)|int == 1 %}spin-logo{% endif %}"
-                         src="{{ back_url }}" alt="Retro">
-                  {% else %}
-                    <div class="avatar-placeholder">★</div>
-                  {% endif %}
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-
-        <div class="hero-text hero-text-center">
-          {% if ag.name %}<div class="name name-center">{{ ag.name }}</div>{% endif %}
-          {% if ag.company %}<div class="company-badge">{{ ag.company }}</div>{% endif %}
-          {% if ag.role %}<div class="role role-center">{{ ag.role }}</div>{% endif %}
-          {% if ag.bio %}<div class="bio bio-center">{{ ag.bio }}</div>{% endif %}
-
-          {% if p2_enabled %}
-            <div class="profile-switch profile-switch-center">
-              {% if p_key == 'p2' %}
-                <a class="profile-pill" href="/{{ ag.slug }}?lang={{ lang }}">{{ t_func('profile_1') }}</a>
-              {% else %}
-                <a class="profile-pill" href="/{{ ag.slug }}?p=p2&lang={{ lang }}">{{ t_func('profile_2') }}</a>
-              {% endif %}
-            </div>
-          {% endif %}
-
-          <div class="social-icons social-icons-center">
-            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.87v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.25c-1.23 0-1.61.77-1.61 1.55V12h2.74l-.44 2.88h-2.3v6.99A10 10 0 0 0 22 12z"/></svg></a>{% endif %}
-            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><svg viewBox="0 0 24 24" width="22" height="22"><defs><linearGradient id="ig" x1="0" y1="24" x2="24" y2="0"><stop offset="0" stop-color="#F58529"/><stop offset="0.5" stop-color="#DD2A7B"/><stop offset="1" stop-color="#515BD4"/></linearGradient></defs><path fill="url(#ig)" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.7 6.1a1.1 1.1 0 1 1-1.1 1.1 1.1 1.1 0 0 1 1.1-1.1z"/></svg></a>{% endif %}
-            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" title="LinkedIn"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#0A66C2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.86-3.04-1.86 0-2.14 1.45-2.14 2.95v5.66H9.31V9h3.41v1.56h.05c.47-.9 1.62-1.86 3.34-1.86 3.57 0 4.23 2.35 4.23 5.4v6.35zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg></a>{% endif %}
-            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#25F4EE" d="M14.5 3v11.1a3.6 3.6 0 1 1-3.1-3.6V7.6a7.3 7.3 0 1 0 6.6 7.3V9.2a6.1 6.1 0 0 1-3.5-1.7V3z"/><path fill="#FE2C55" d="M14.5 3v3.5a6.1 6.1 0 0 0 3.5 1.7V6.1A6.8 6.8 0 0 1 14.5 3z"/><path fill="#111111" d="M11.4 7.6v2.9a3.6 3.6 0 1 0 3.1 3.6V3h-2.1v4.6z"/></svg></a>{% endif %}
-            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#2AABEE" d="M21.9 4.6 19 20.2c-.2 1.1-.8 1.4-1.6.9l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.8.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2l-10.6 6.7-4.6-1.4c-1-.3-1-1 .2-1.5L20 3.8c.9-.3 1.7.2 1.4.8z"/></svg></a>{% endif %}
-            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#FF0000" d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.7 4.6 12 4.6 12 4.6s-5.7 0-7.5.5A3 3 0 0 0 2.4 7.2 31 31 0 0 0 2 12a31 31 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.8.5 7.5.5 7.5.5s5.7 0 7.5-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.4-4.8z"/><path fill="#fff" d="M10 15.5V8.5L16 12l-6 3.5z"/></svg></a>{% endif %}
-            {% if ag.spotify %}<a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify" title="Spotify"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#1DB954" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.5a.9.9 0 0 1-1.2.3c-3.3-2-7.4-2.5-12.2-1.4a.9.9 0 1 1-.4-1.7c5.2-1.2 9.8-.6 13.5 1.6.4.2.6.8.3 1.2zm1.4-3a1 1 0 0 1-1.4.3c-3.8-2.3-9.7-3-14.3-1.6a1 1 0 1 1-.6-1.9c5.2-1.6 11.6-.8 15.9 1.8.5.3.7.9.4 1.4zm.1-3.2c-4.6-2.7-12.1-3-16.5-1.7a1.1 1.1 0 1 1-.7-2.1c5.1-1.6 13.3-1.2 18.6 1.9a1.1 1.1 0 0 1-1.4 1.9z"/></svg></a>{% endif %}
-          </div>
-        </div>
-      </div>
-
-      <div class="section actions-box">
-        <div class="section-title">{{ t_func('actions') }}</div>
-        <div class="actions-row">
-          <a class="action-btn action-vcf" href="/{{ ag.slug }}.vcf">{{ t_func('save_contact') }}</a>
-
+      <div class="box">
+        <h3>{{ t_func("actions") }}</h3>
+        <div class="actions">
+          <a class="btn" href="{{ qr_url }}" target="_blank">{{ t_func("scan_qr") }}</a>
           {% if wa_link %}
-            <!-- invece di aprire WhatsApp diretto, apri MODAL share (come ieri) -->
-            <button class="action-btn action-wa" type="button"
-                    onclick="openSharePage('Ciao! Ti scrivo dalla mia Pay4You Card:\\n{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}')">
-              {{ t_func('whatsapp') }}
-            </button>
+            <a class="btn" href="{{ wa_link }}" target="_blank">{{ t_func("whatsapp") }}</a>
           {% endif %}
-
-          <button class="action-btn action-qr" type="button" onclick="openQrModal('{{ qr_url }}')">{{ t_func('scan_qr') }}</button>
         </div>
-        <div class="actions-hint">{{ t_func('save_contact') }}: aggiunge i dati in rubrica.</div>
       </div>
 
-      {% if mobiles or office_value or emails or pec_email or websites %}
-      <div class="section">
-        <div class="section-title">{{ t_func('contacts') }}</div>
+      <div class="box">
+        <h3>{{ t_func("contacts") }}</h3>
 
         {% if mobiles %}
-          <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('mobile_phone') }}</span>
-            <div class="right-stack">
+          <div class="row">
+            <div class="k">{{ t_func("mobile_phone") }}</div>
+            <div class="v">
               {% for m in mobiles %}
-                <div class="stack-item"><a href="tel:{{ m|replace(' ','') }}">{{ m }}</a></div>
+                <a href="tel:{{ m }}">{{ m }}</a>{% if not loop.last %} · {% endif %}
               {% endfor %}
             </div>
-          </div>
-        {% endif %}
-
-        {% if emails %}
-          <div class="row row-email">
-            <span class="row-tag tag-email">Email</span>
-            <div class="right-stack">
-              {% for e in emails %}
-                <div class="stack-item"><a href="mailto:{{ e }}">{{ e }}</a></div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if pec_email %}
-          <div class="row row-email">
-            <span class="row-tag tag-email">PEC</span>
-            <a href="mailto:{{ pec_email }}">{{ pec_email }}</a>
           </div>
         {% endif %}
 
         {% if office_value %}
-          <div class="row row-phone">
-            <span class="row-tag tag-phone">{{ t_func('office_phone') }}</span>
-            <a href="tel:{{ office_value|replace(' ','') }}">{{ office_value }}</a>
+          <div class="row">
+            <div class="k">{{ t_func("office_phone") }}</div>
+            <div class="v"><a href="tel:{{ office_value }}">{{ office_value }}</a></div>
+          </div>
+        {% endif %}
+
+        {% if emails %}
+          <div class="row">
+            <div class="k">Email</div>
+            <div class="v">
+              {% for e in emails %}
+                <a href="mailto:{{ e }}">{{ e }}</a>{% if not loop.last %}<br>{% endif %}
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
 
         {% if websites %}
-          <div class="row row-web">
-            <span class="row-tag tag-web">{{ t_func('open_website') }}</span>
-            <div class="right-stack">
+          <div class="row">
+            <div class="k">{{ t_func("open_website") }}</div>
+            <div class="v">
               {% for w in websites %}
-                <div class="stack-item">
-                  <button type="button" class="linklike" onclick="openWebsite('{{ w }}')">
-                    {{ w|replace('https://','')|replace('http://','') }}
-                  </button>
+                <a target="_blank" href="{{ w }}">{{ w }}</a>{% if not loop.last %}<br>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if addresses %}
+          <div class="row">
+            <div class="k">Indirizzi</div>
+            <div class="v">
+              {% for a in addresses %}
+                <div class="addr">
+                  <div>{{ a.text }}</div>
+                  <a target="_blank" href="{{ a.maps }}">{{ t_func("open_maps") }}</a>
                 </div>
               {% endfor %}
             </div>
           </div>
         {% endif %}
       </div>
-      {% endif %}
 
-      {% if ag.piva or ag.sdi %}
-      <div class="section">
-        <div class="section-title">{{ t_func('data') }}</div>
+      <div class="box">
+        <h3>{{ t_func("data") }}</h3>
         {% if ag.piva %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('vat') }}</span><span class="mono">{{ ag.piva }}</span></div>
+          <div class="row"><div class="k">{{ t_func("vat") }}</div><div class="v">{{ ag.piva }}</div></div>
         {% endif %}
         {% if ag.sdi %}
-          <div class="row"><span class="row-tag tag-data">{{ t_func('sdi') }}</span><span class="mono">{{ ag.sdi }}</span></div>
+          <div class="row"><div class="k">{{ t_func("sdi") }}</div><div class="v">{{ ag.sdi }}</div></div>
         {% endif %}
-      </div>
-      {% endif %}
-
-      {% if addresses %}
-      <div class="section">
-        <div class="section-title">{{ t_func('open_maps') }}</div>
-        <div class="addr-list">
-          {% for a in addresses %}
-            <a class="addr-item" href="{{ a.maps }}" target="_blank" rel="noopener">
-              <div>{{ a.text }}</div>
-              <div class="addr-mini">{{ t_func('open_maps') }}</div>
-            </a>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <div class="section">
-        <div class="section-title">{{ t_func('theme') }}</div>
-        <div class="theme-toggle theme-toggle-compact">
-          <span class="theme-label">{{ t_func('theme') }}:</span>
-          <button class="theme-pill" type="button" data-theme="auto">{{ t_func('theme_auto') }}</button>
-          <button class="theme-pill" type="button" data-theme="light">{{ t_func('theme_light') }}</button>
-          <button class="theme-pill" type="button" data-theme="dark">{{ t_func('theme_dark') }}</button>
-        </div>
       </div>
 
       {% if gallery %}
-      <div class="section">
-        <div class="section-title">{{ t_func('gallery') }}</div>
-        <div class="gallery-scroll">
-          {% for g in gallery %}
-            <button class="thumb" type="button" onclick="openImg('{{ g }}')">
-              <img src="{{ g }}" alt="Foto">
-            </button>
-          {% endfor %}
+        <div class="box">
+          <h3>{{ t_func("gallery") }}</h3>
+          <div class="media-grid">
+            {% for g in gallery %}
+              <a class="thumb" href="{{ g }}" target="_blank"><img src="{{ g }}" alt=""></a>
+            {% endfor %}
+          </div>
         </div>
-      </div>
       {% endif %}
 
       {% if videos %}
-      <div class="section">
-        <div class="section-title">{{ t_func('videos') }}</div>
-        <div class="gallery-scroll">
-          {% for v in videos %}
-            <div class="video-thumb">
-              <video class="video-mini"
-                     src="{{ v }}"
-                     muted
-                     playsinline
-                     preload="metadata"
-                     aria-label="Video"></video>
-              <div class="video-play">PLAY</div>
-              <button class="thumb" type="button" style="position:absolute; inset:0;" onclick="openVideo('{{ v }}')"></button>
-            </div>
-          {% endfor %}
+        <div class="box">
+          <h3>{{ t_func("videos") }}</h3>
+          <div class="media-grid">
+            {% for v in videos %}
+              <video controls playsinline preload="metadata" src="{{ v }}"></video>
+            {% endfor %}
+          </div>
         </div>
-      </div>
       {% endif %}
 
       {% if pdfs %}
-      <div class="section">
-        <div class="section-title">{{ t_func('documents') }}</div>
-        <div class="pdf-list">
-          {% for p in pdfs %}
-            <button class="pdf-btn" type="button" onclick="openPdf('{{ p.url }}', '{{ p.name|e }}')">{{ p.name }}</button>
-          {% endfor %}
+        <div class="box">
+          <h3>{{ t_func("documents") }}</h3>
+          <ul class="docs">
+            {% for p in pdfs %}
+              <li><a target="_blank" href="{{ p.url }}">{{ p.name }}</a></li>
+            {% endfor %}
+          </ul>
         </div>
-      </div>
       {% endif %}
-
-      <div class="footer">© 2026 Realizzato Pay4You — Giuseppe Di Lisio</div>
     </div>
+
+    <footer class="foot">
+      <small>Pay4You Cards</small>
+    </footer>
+
   </div>
-
-  <div id="modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box modal-big">
-      <button class="modal-x" type="button" onclick="closeModal()">✕</button>
-
-      <img id="mImg" src="" alt="" style="display:none;">
-      <video id="mVideo" controls playsinline style="display:none;"></video>
-      <iframe id="mPdf" src="" style="display:none;"></iframe>
-
-      <!-- ✅ sandbox per siti esterni -->
-      <iframe id="mWeb" src=""
-              style="display:none;"
-              sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-same-origin"
-              referrerpolicy="no-referrer"></iframe>
-
-      <!-- SHARE MODAL (finestra nella finestra) -->
-      <div id="mShare">
-        <div class="section" style="margin:0;">
-          <div class="section-title">Condivisione</div>
-          <div id="mShareText" style="white-space:pre-wrap; line-height:1.35;"></div>
-          <div class="modal-actions" style="margin-top:12px;">
-            <a id="mShareBtn" class="btn primary" href="#" target="_blank" rel="noopener">Apri WhatsApp</a>
-            <button class="btn ghost" type="button" onclick="goTop()">Torna alla card</button>
-            <button class="btn ghost" type="button" onclick="closeModal()">Chiudi</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ✅ fallback pdf (iphone) -->
-      <div id="mPdfFallback">
-        <a id="mPdfOpen" class="btn primary" href="#" target="_blank" rel="noopener">Apri documento</a>
-        <div class="hint" style="margin-top:8px;">Se il PDF non si vede nel riquadro, aprilo con questo tasto.</div>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn ghost" type="button" onclick="shareMediaWhatsApp()">Invia via WhatsApp</button>
-        <button class="btn ghost" type="button" onclick="shareMediaEmail()">Invia via Email</button>
-        <button class="btn ghost" type="button" onclick="goTop()">Torna alla card</button>
-        <button class="btn primary" type="button" onclick="closeModal()">{{ t_func('close') }}</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="qr-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-      <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
-      <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
-      <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
-        <button class="btn ghost" type="button" onclick="shareQrWhatsApp()">Invia via WhatsApp</button>
-        <button class="btn ghost" type="button" onclick="shareQrEmail()">Invia via Email</button>
-        <button class="btn primary" type="button" onclick="closeQrModal()">{{ t_func('close') }}</button>
-      </div>
-    </div>
-  </div>
-
-<script>
-  window.__QR_URL = "";
-  window.__MEDIA_URL = "";
-  window.__MEDIA_TITLE = "";
-  window.__BACK_URL = "{{ base_url }}/{{ ag.slug }}{% if p_key %}?p={{ p_key }}{% endif %}";
-
-  function absUrl(u){
-    if(!u) return "";
-    if(u.startsWith("http://") || u.startsWith("https://")) return u;
-    if(u.startsWith("//")) return window.location.protocol + u;
-    if(u.startsWith("/")) return "{{ base_url }}" + u;
-    return "{{ base_url }}/" + u;
-  }
-
-  // ESC per chiudere modali
-  document.addEventListener('keydown', (e)=>{
-    if(e.key === 'Escape'){
-      try{ closeQrModal(); }catch(err){}
-      try{ closeModal(); }catch(err){}
-    }
-  });
-
-  (function(){
-    const canFlip = {{ 1 if can_flip else 0 }};
-    if(!canFlip) return;
-    const box = document.getElementById('flipBox');
-    if(!box) return;
-    box.addEventListener('click', ()=> box.classList.toggle('flipped'));
-  })();
-
-  (function(){
-    const KEY = "p4y_theme";
-    const buttons = document.querySelectorAll(".theme-pill");
-    function apply(theme){
-      const body = document.body;
-      body.setAttribute("data-theme", theme === "auto" ? "" : theme);
-      buttons.forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
-    }
-    const saved = localStorage.getItem(KEY) || "auto";
-    apply(saved);
-    buttons.forEach(b => {
-      b.addEventListener("click", () => {
-        localStorage.setItem(KEY, b.dataset.theme);
-        apply(b.dataset.theme);
-      });
-    });
-  })();
-
-  function goTop(){
-    try{ closeQrModal(); }catch(e){}
-    try{ closeModal(); }catch(e){}
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function openModal(type){
-    const modal = document.getElementById('modal');
-    modal.style.display='flex';
-    document.getElementById('mImg').style.display   = (type==='img') ? 'block' : 'none';
-    document.getElementById('mVideo').style.display = (type==='video') ? 'block' : 'none';
-    document.getElementById('mPdf').style.display   = (type==='pdf') ? 'block' : 'none';
-    document.getElementById('mWeb').style.display   = (type==='web') ? 'block' : 'none';
-    document.getElementById('mShare').style.display = (type==='share') ? 'block' : 'none';
-
-    const fb = document.getElementById('mPdfFallback');
-    if(fb) fb.style.display = (type === 'pdf') ? 'block' : 'none';
-  }
-
-  function closeModal(){
-    const modal = document.getElementById('modal');
-    if(!modal) return;
-    modal.style.display='none';
-
-    const img = document.getElementById('mImg');
-    const vid = document.getElementById('mVideo');
-    const pdf = document.getElementById('mPdf');
-    const web = document.getElementById('mWeb');
-
-    if(img) img.src = '';
-    if(vid){
-      try{ vid.pause(); }catch(e){}
-      vid.removeAttribute('src');
-      try{ vid.load(); }catch(e){}
-    }
-    if(pdf) pdf.src = '';
-    if(web) web.src = '';
-
-    // chiudi share
-    document.getElementById('mShareText').textContent = "";
-    document.getElementById('mShareBtn').href = "#";
-
-    // reset pdf fallback
-    const open = document.getElementById('mPdfOpen');
-    if(open) open.href = "#";
-
-    window.__MEDIA_URL = "";
-    window.__MEDIA_TITLE = "";
-  }
-
-  function openImg(src){
-    if(!src) return;
-    const u = absUrl(src);
-    document.getElementById('mImg').src = u;
-    window.__MEDIA_URL = u;
-    window.__MEDIA_TITLE = "Foto - {{ ag.name }}";
-    openModal('img');
-  }
-  function openVideo(src){
-    const v = document.getElementById('mVideo');
-    const u = absUrl(src);
-    v.src = u;
-    window.__MEDIA_URL = u;
-    window.__MEDIA_TITLE = "Video - {{ ag.name }}";
-    openModal('video');
-    v.play().catch(()=>{});
-  }
-  function openPdf(src, name){
-    const f = document.getElementById('mPdf');
-    const u = absUrl(src);
-
-    f.src = u;
-    window.__MEDIA_URL = u;
-    window.__MEDIA_TITLE = (name ? ("Documento: " + name) : "Documento - {{ ag.name }}");
-
-    const open = document.getElementById('mPdfOpen');
-    if(open) open.href = u;
-
-    openModal('pdf');
-  }
-
-  // ✅ SITO ESTERNO: dentro la MODAL (finestra nella finestra)
-  function openWebsite(url){
-    if(!url) return;
-    const f = document.getElementById('mWeb');
-    f.src = url;
-    window.__MEDIA_URL = url;
-    window.__MEDIA_TITLE = "Sito";
-    openModal('web');
-  }
-
-  document.getElementById('modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeModal();
-  });
-  document.getElementById('qr-modal')?.addEventListener('click', function(e){
-    if(e.target === this) closeQrModal();
-  });
-
-  function openQrModal(src){
-    const u = absUrl(src || "");
-    window.__QR_URL = u;
-    document.getElementById('qr-img').src = u;
-    document.getElementById('qr-modal').style.display = 'flex';
-  }
-  function closeQrModal(){
-    document.getElementById('qr-img').src = '';
-    document.getElementById('qr-modal').style.display = 'none';
-    window.__QR_URL = "";
-  }
-
-  // ✅ SHARE: dentro la MODAL
-  function openSharePage(text){
-    const t = (text || "").trim();
-    if(!t) return;
-    const wa = "https://wa.me/?text=" + encodeURIComponent(t);
-    document.getElementById("mShareText").textContent = t;
-    document.getElementById("mShareBtn").href = wa;
-    openModal('share');
-  }
-
-  function shareQrWhatsApp(){
-    const url = window.__QR_URL || "";
-    if(!url) return;
-    const text = "Ecco il QR della mia Pay4You Card:\n" + url;
-    openSharePage(text);
-  }
-  function shareQrEmail(){
-    const url = window.__QR_URL || "";
-    if(!url) return;
-    const subject = "QR Pay4You Card";
-    const body = "Ciao!\n\nEcco il QR della mia Pay4You Card:\n" + url + "\n";
-    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-  }
-
-  function shareMediaWhatsApp(){
-    const url = window.__MEDIA_URL || "";
-    if(!url) return;
-    const text = (window.__MEDIA_TITLE ? (window.__MEDIA_TITLE + "\n") : "") + url;
-    openSharePage(text);
-  }
-  function shareMediaEmail(){
-    const url = window.__MEDIA_URL || "";
-    if(!url) return;
-    const subject = window.__MEDIA_TITLE || "Pay4You";
-    const body = "Ciao!\n\nTi invio questo contenuto:\n" + url + "\n";
-    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-  }
-
-  // 1° frame video mini
-  (function(){
-    const vids = document.querySelectorAll('.video-mini');
-    vids.forEach(v=>{
-      v.addEventListener('loadedmetadata', ()=>{
-        try{
-          if(v.duration && v.duration > 0.2){ v.currentTime = 0.05; }
-        }catch(e){}
-      });
-      v.addEventListener('seeked', ()=>{ try{ v.pause(); }catch(e){} });
-    });
-  })();
-</script>
 </body>
 </html>
