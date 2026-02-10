@@ -5,52 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
 
-  <!-- ✅ favicon corretta (come hai detto: sta in static/logo.png) -->
-  <link rel="icon" href="/static/logo.png">
-<link rel="icon" href="/static/logo-png/favicon.ico/pay4you-logo.png">
+  <!-- favicon: robusto -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/static/favicon.ico">
 
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="app-shell">
-    <main class="app-main">
-      <div class="page-main">
-        <div class="panel panel-login">
-          <div class="panel-head panel-head-center">
-            <img class="login-logo" src="/static/logo.png" alt="Pay4You">
-            <div class="login-title">Pay4You Cards</div>
-            <div class="hint">Accedi con le tue credenziali</div>
-          </div>
 
-          {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-              <div class="flash-wrap">
-                {% for cat,msg in messages %}
-                  <div class="flash flash-{{cat}}">{{ msg }}</div>
-                {% endfor %}
-              </div>
-            {% endif %}
-          {% endwith %}
+<div class="login-shell">
+  <div class="login-card">
 
-          <form method="post" class="panel-body">
-            <div class="form-grid">
-              <div class="field full">
-                <label>Username</label>
-                <input type="text" name="username" autocomplete="username" required>
-              </div>
-              <div class="field full">
-                <label>Password</label>
-                <input type="password" name="password" autocomplete="current-password" required>
-              </div>
-            </div>
-
-            <div class="actions-footer" style="margin-top:14px">
-              <button class="btn primary" type="submit">Entra</button>
-            </div>
-          </form>
-        </div>
+    <div class="login-brand">
+      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
+      <div>
+        <div class="login-title">Pay4You Cards</div>
+        <div class="hint">Accesso Area Riservata</div>
       </div>
-    </main>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap" style="margin-top:12px">
+          {% for cat,msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="/area/login" class="login-form">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </div>
+
+      <button class="btn primary" type="submit" style="width:100%">Accedi</button>
+    </form>
+
+    <div class="hint" style="margin-top:12px; text-align:center;">
+      Pay4You.store
+    </div>
+
   </div>
+</div>
+
 </body>
 </html>
