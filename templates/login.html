@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
 
-  <!-- favicon: robusto -->
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
 
@@ -16,8 +15,14 @@
 <div class="login-shell">
   <div class="login-card">
 
-    <div class="login-brand">
-      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
+    <div class="login-brand" style="display:flex; align-items:center; gap:12px;">
+      <!-- ✅ LOGO: dimensione controllata -->
+      <img
+        class="login-logo"
+        src="/static/pay4you-logo.png"
+        alt="Pay4You"
+        style="width:64px; height:64px; object-fit:contain; display:block;"
+      >
       <div>
         <div class="login-title">Pay4You Cards</div>
         <div class="hint">Accesso Area Riservata</div>
