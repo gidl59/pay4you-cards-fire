@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard | Pay4You</title>
-  <link rel="icon" href="/favicon.ico">
+
+  <!-- ✅ favicon corretta -->
+  <link rel="icon" href="/static/logo-png/favicon.ico">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -187,13 +189,12 @@
       <img id="qrImg" src="" alt="QR">
     </div>
 
-    <form method="post" action="/area/admin/send_qr" class="modal-actions">
-      <input type="hidden" name="slug" id="qrSlug" value="">
-      <input type="hidden" name="profile" id="qrProfile" value="p1">
-      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
-      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
+    <!-- ✅ invio funziona con link precompilati -->
+    <div class="modal-actions">
+      <a id="qrWa" class="btn" target="_blank" href="#">Invia WhatsApp</a>
+      <a id="qrMail" class="btn" href="#">Invia Email</a>
       <button class="btn ghost" type="button" onclick="closeModal('qrModal')">Chiudi</button>
-    </form>
+    </div>
   </div>
 </div>
 
@@ -214,18 +215,14 @@
         <div class="cred-row"><span>Link Card P1</span><a id="cCard1" target="_blank" href="">Apri</a></div>
         <div class="cred-row" id="cCard2Row" style="display:none"><span>Link Card P2</span><a id="cCard2" target="_blank" href="">Apri</a></div>
       </div>
-
-      <div class="hint" style="margin-top:10px">
-        Invio via Email/WhatsApp lo attiviamo dopo (SMTP + WhatsApp).
-      </div>
     </div>
 
-    <form method="post" action="/area/admin/send_credentials" class="modal-actions">
-      <input type="hidden" name="slug" id="cSlug" value="">
-      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
-      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
+    <!-- ✅ invio anche qui con link precompilati -->
+    <div class="modal-actions">
+      <a id="credWa" class="btn" target="_blank" href="#">Invia WhatsApp</a>
+      <a id="credMail" class="btn" href="#">Invia Email</a>
       <button class="btn ghost" type="button" onclick="closeCred()">Chiudi</button>
-    </form>
+    </div>
   </div>
 </div>
 
@@ -240,49 +237,63 @@
     if(el) el.style.display = 'none';
   }
 
+  function absUrl(u){
+    if(!u) return '';
+    if(u.startsWith('http://') || u.startsWith('https://')) return u;
+    return window.location.origin + u;
+  }
+
   function openQr(slug, profile){
     const modal = document.getElementById('qrModal');
     const img = document.getElementById('qrImg');
     const title = document.getElementById('qrTitle');
-    const sInp = document.getElementById('qrSlug');
-    const pInp = document.getElementById('qrProfile');
 
-    const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
-
+    const qrPng = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
+    img.src = qrPng;
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
-    img.src = url;
-    sInp.value = slug;
-    pInp.value = profile;
+
+    const cardUrl = absUrl(`/${slug}` + (profile === 'p2' ? `?p=p2` : ``));
+    const txt = encodeURIComponent(`Pay4You - Link Card: ${cardUrl}`);
+
+    document.getElementById('qrWa').href = `https://wa.me/?text=${txt}`;
+    document.getElementById('qrMail').href = `mailto:?subject=${encodeURIComponent("Pay4You - QR")}&body=${txt}`;
 
     modal.style.display = 'flex';
   }
 
   function openCred(slug, username, password){
-    document.getElementById('cSlug').value = slug;
     document.getElementById('cUser').textContent = username;
     document.getElementById('cPass').textContent = password;
 
-    // link login e card
     const base = window.location.origin;
-    document.getElementById('cLogin').href = base + "/area/login";
-    document.getElementById('cCard1').href = base + "/" + slug;
+    const loginUrl = base + "/area/login";
+    const p1 = base + "/" + slug;
 
-    // P2 (se attivo, lo capiamo dal DOM: se esiste bottone Apri P2 nel tile)
+    document.getElementById('cLogin').href = loginUrl;
+    document.getElementById('cCard1').href = p1;
+
     const card = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
     const row = document.getElementById('cCard2Row');
+    let p2 = "";
     if(card){
       row.style.display = '';
-      document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
-    }else{
+      p2 = base + "/" + slug + "?p=p2";
+      document.getElementById('cCard2').href = p2;
+    } else {
       row.style.display = 'none';
     }
+
+    const msg = `Pay4You - Credenziali\\nUsername: ${username}\\nPassword: ${password}\\nLogin: ${loginUrl}\\nCard P1: ${p1}` + (p2 ? `\\nCard P2: ${p2}` : ``);
+    const txt = encodeURIComponent(msg);
+
+    document.getElementById('credWa').href = `https://wa.me/?text=${txt}`;
+    document.getElementById('credMail').href = `mailto:?subject=${encodeURIComponent("Pay4You - Credenziali")}&body=${txt}`;
 
     document.getElementById('credModal').style.display = 'flex';
   }
 
   function closeCred(){ closeModal('credModal'); }
 
-  // auto-open cred modal if session data present
   (function(){
     const creds = {{ (session.get("last_credentials") or {}) | tojson }};
     if(creds && creds.slug){
