@@ -74,8 +74,8 @@
                 <div class="hint">È il link pubblico della card.</div>
               </div>
               <div class="field">
-                <label>Link card</label>
-                <input type="text" value="{{ base_url ~ '/' ~ agent.slug if base_url else ('/' ~ agent.slug) }}" readonly>
+                <label>Username</label>
+                <input type="text" value="{{ agent.username }}" readonly>
               </div>
             </div>
           </div>
@@ -157,6 +157,51 @@
 
           {% if not editing_profile2 %}
           <div class="section-box">
+            <div class="h3">Social</div>
+            <div class="form-grid">
+              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ agent.facebook }}"></div>
+              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ agent.instagram }}"></div>
+              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ agent.linkedin }}"></div>
+              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ agent.tiktok }}"></div>
+              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ agent.telegram }}"></div>
+              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ agent.youtube }}"></div>
+              <div class="field full"><label>Spotify</label><input type="text" name="spotify" value="{{ agent.spotify }}"></div>
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Crop / posizione foto agente</div>
+            <div class="hint">Serve per centrare meglio il volto sulla card.</div>
+
+            <div class="crop-preview">
+              {% if agent.photo_url %}
+                <div class="crop-circle">
+                  <img id="cropImg" src="{{ agent.photo_url }}" alt=""
+                       style="object-position: {{ agent.photo_pos_x }}% {{ agent.photo_pos_y }}%;
+                              transform: scale({{ agent.photo_zoom }});">
+                </div>
+              {% else %}
+                <div class="crop-circle crop-empty">Carica prima una foto</div>
+              {% endif %}
+            </div>
+
+            <div class="form-grid" style="margin-top:12px">
+              <div class="field">
+                <label>X (0–100)</label>
+                <input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ agent.photo_pos_x }}">
+              </div>
+              <div class="field">
+                <label>Y (0–100)</label>
+                <input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ agent.photo_pos_y }}">
+              </div>
+              <div class="field full">
+                <label>Zoom (1.0 – 2.5)</label>
+                <input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom" value="{{ agent.photo_zoom or '1.0' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="section-box">
             <div class="h3">Media</div>
             <div class="form-grid">
               <div class="field">
@@ -172,17 +217,16 @@
                 <input type="file" name="back_media" accept="image/*">
               </div>
               <div class="field full">
-                <label>Galleria (multipla)</label>
+                <label>Galleria (aggiunge nuove foto)</label>
                 <input type="file" name="gallery" accept="image/*" multiple>
               </div>
               <div class="field full">
-                <label>Video (multipli)</label>
+                <label>Video (aggiunge nuovi video)</label>
                 <input type="file" name="videos" accept="video/*" multiple>
               </div>
 
               <div class="field full">
                 <label>PDF (fino a {{ 12 }})</label>
-                <div class="hint">Carica nei campi sottostanti: ogni upload sostituisce lo “slot”.</div>
                 <div class="grid-3">
                   {% for i in range(1, 13) %}
                     <div class="field">
@@ -193,6 +237,112 @@
                 </div>
               </div>
             </div>
+
+            <!-- ✅ PREVIEW ESISTENTI con elimina + apri grande -->
+            <div class="media-preview">
+              <div class="media-title">Contenuti caricati</div>
+
+              <div class="media-block">
+                <div class="media-sub">Foto</div>
+                <div class="media-grid">
+                  {% for g in gallery %}
+                    <div class="media-item">
+                      <img src="{{ g }}" alt="" onclick="openViewer('img','{{ g }}')">
+                      <button type="button" class="media-del"
+                        onclick="confirmDelete('{{ agent.slug }}','gallery',{{ loop.index0 }})">🗑</button>
+                    </div>
+                  {% endfor %}
+                  {% if gallery|length == 0 %}
+                    <div class="hint">Nessuna foto in galleria.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="media-block">
+                <div class="media-sub">Video</div>
+                <div class="media-grid">
+                  {% for v in videos %}
+                    <div class="media-item">
+                      <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
+                             onclick="openViewer('video','{{ v }}')"></video>
+                      <span class="media-play">video</span>
+                      <button type="button" class="media-del"
+                        onclick="confirmDelete('{{ agent.slug }}','video',{{ loop.index0 }})">🗑</button>
+                    </div>
+                  {% endfor %}
+                  {% if videos|length == 0 %}
+                    <div class="hint">Nessun video caricato.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="media-block">
+                <div class="media-sub">PDF</div>
+                <div class="pdf-preview">
+                  {% for p in pdfs %}
+                    <div class="pdf-row">
+                      <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}')">{{ p.name }}</div>
+                      <button type="button" class="pdf-del"
+                        onclick="confirmDelete('{{ agent.slug }}','pdf',{{ loop.index0 }})">🗑</button>
+                    </div>
+                  {% endfor %}
+                  {% if pdfs|length == 0 %}
+                    <div class="hint">Nessun PDF caricato.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Traduzioni (visibili quando apri la card con ?lang=...)</div>
+
+            <div class="hint">Compila solo i campi che vuoi tradurre.</div>
+
+            <details>
+              <summary>English (EN)</summary>
+              <div class="form-grid" style="margin-top:10px">
+                <div class="field"><label>Name</label><input type="text" name="name_en" value="{{ (i18n_data.get('en',{})).get('name','') }}"></div>
+                <div class="field"><label>Company</label><input type="text" name="company_en" value="{{ (i18n_data.get('en',{})).get('company','') }}"></div>
+                <div class="field"><label>Role</label><input type="text" name="role_en" value="{{ (i18n_data.get('en',{})).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_en">{{ (i18n_data.get('en',{})).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Addresses</label><textarea name="addresses_en">{{ (i18n_data.get('en',{})).get('addresses','') }}</textarea></div>
+              </div>
+            </details>
+
+            <details>
+              <summary>Français (FR)</summary>
+              <div class="form-grid" style="margin-top:10px">
+                <div class="field"><label>Nom</label><input type="text" name="name_fr" value="{{ (i18n_data.get('fr',{})).get('name','') }}"></div>
+                <div class="field"><label>Entreprise</label><input type="text" name="company_fr" value="{{ (i18n_data.get('fr',{})).get('company','') }}"></div>
+                <div class="field"><label>Rôle</label><input type="text" name="role_fr" value="{{ (i18n_data.get('fr',{})).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_fr">{{ (i18n_data.get('fr',{})).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Adresses</label><textarea name="addresses_fr">{{ (i18n_data.get('fr',{})).get('addresses','') }}</textarea></div>
+              </div>
+            </details>
+
+            <details>
+              <summary>Español (ES)</summary>
+              <div class="form-grid" style="margin-top:10px">
+                <div class="field"><label>Nombre</label><input type="text" name="name_es" value="{{ (i18n_data.get('es',{})).get('name','') }}"></div>
+                <div class="field"><label>Empresa</label><input type="text" name="company_es" value="{{ (i18n_data.get('es',{})).get('company','') }}"></div>
+                <div class="field"><label>Rol</label><input type="text" name="role_es" value="{{ (i18n_data.get('es',{})).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_es">{{ (i18n_data.get('es',{})).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Direcciones</label><textarea name="addresses_es">{{ (i18n_data.get('es',{})).get('addresses','') }}</textarea></div>
+              </div>
+            </details>
+
+            <details>
+              <summary>Deutsch (DE)</summary>
+              <div class="form-grid" style="margin-top:10px">
+                <div class="field"><label>Name</label><input type="text" name="name_de" value="{{ (i18n_data.get('de',{})).get('name','') }}"></div>
+                <div class="field"><label>Firma</label><input type="text" name="company_de" value="{{ (i18n_data.get('de',{})).get('company','') }}"></div>
+                <div class="field"><label>Rolle</label><input type="text" name="role_de" value="{{ (i18n_data.get('de',{})).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_de">{{ (i18n_data.get('de',{})).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Adressen</label><textarea name="addresses_de">{{ (i18n_data.get('de',{})).get('addresses','') }}</textarea></div>
+              </div>
+            </details>
           </div>
           {% endif %}
 
@@ -208,5 +358,82 @@
   </main>
 
 </div>
+
+<!-- VIEWER MODAL -->
+<div id="viewer" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-big">
+    <button class="modal-x" onclick="closeViewer()">✕</button>
+    <div class="modal-title">Anteprima</div>
+    <img id="vImg" style="display:none" src="" alt="">
+    <video id="vVideo" style="display:none" controls playsinline></video>
+    <iframe id="vPdf" style="display:none" src=""></iframe>
+  </div>
+</div>
+
+<!-- DELETE FORM (hidden) -->
+<form id="delForm" method="post" style="display:none"></form>
+
+<script>
+  // crop live preview
+  const img = document.getElementById('cropImg');
+  const posX = document.getElementById('posX');
+  const posY = document.getElementById('posY');
+  const zoom = document.getElementById('zoom');
+
+  function updateCrop(){
+    if(!img) return;
+    img.style.objectPosition = `${posX.value}% ${posY.value}%`;
+    img.style.transform = `scale(${zoom.value})`;
+  }
+  if(posX) posX.addEventListener('input', updateCrop);
+  if(posY) posY.addEventListener('input', updateCrop);
+  if(zoom) zoom.addEventListener('input', updateCrop);
+
+  // viewer
+  function openViewer(type, url){
+    const modal = document.getElementById('viewer');
+    const vImg = document.getElementById('vImg');
+    const vVideo = document.getElementById('vVideo');
+    const vPdf = document.getElementById('vPdf');
+
+    vImg.style.display = 'none';
+    vVideo.style.display = 'none';
+    vPdf.style.display = 'none';
+    vVideo.pause();
+
+    if(type === 'img'){
+      vImg.src = url;
+      vImg.style.display = 'block';
+    } else if(type === 'video'){
+      vVideo.src = url;
+      vVideo.style.display = 'block';
+    } else {
+      vPdf.src = url;
+      vPdf.style.display = 'block';
+    }
+    modal.style.display = 'flex';
+  }
+  function closeViewer(){
+    const modal = document.getElementById('viewer');
+    const vVideo = document.getElementById('vVideo');
+    vVideo.pause();
+    modal.style.display = 'none';
+  }
+
+  // delete with double confirm
+  function confirmDelete(slug, type, idx){
+    if(!confirm('Vuoi eliminare questo contenuto?')) return;
+    if(!confirm('Conferma definitiva: una volta eliminato NON sarà ripristinabile.')) return;
+
+    const form = document.getElementById('delForm');
+    form.action = `/area/media/delete/${slug}`;
+    form.innerHTML = `
+      <input type="hidden" name="type" value="${type}">
+      <input type="hidden" name="idx" value="${idx}">
+    `;
+    form.submit();
+  }
+</script>
+
 </body>
 </html>
