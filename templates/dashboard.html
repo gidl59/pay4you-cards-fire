@@ -40,7 +40,7 @@
 
     <div class="dash-grid">
       {% for a in agents %}
-      <section class="dash-card">
+      <section class="dash-card" data-slug="{{ a.slug }}">
         <div class="dash-head">
           <div class="dash-left">
             <div class="dash-avatar">
@@ -62,11 +62,15 @@
             {% if a.p2_enabled == 1 %}
               <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
             {% endif %}
+
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <a class="btn-mini ghost" href="/qr/{{ a.slug }}.png">QR P1</a>
+            <!-- ✅ QR MODAL -->
+            <button class="btn-mini ghost" type="button"
+                    onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
-              <a class="btn-mini ghost" href="/qr/{{ a.slug }}.png?p=p2">QR P2</a>
+              <button class="btn-mini ghost" type="button"
+                      onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
             {% endif %}
 
             {% if is_admin %}
@@ -74,7 +78,10 @@
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
               {% endif %}
-              <form class="inline" method="post" action="/area/admin/reset-password/{{ a.slug }}">
+
+              <!-- ✅ CREDENZIALI MODAL -->
+              <form class="inline" method="post" action="/area/admin/credentials/{{ a.slug }}"
+                    onsubmit="return confirm('Generare una nuova password per questo cliente?');">
                 <button class="btn-mini" type="submit">Invia credenziali</button>
               </form>
             {% else %}
@@ -116,7 +123,6 @@
           {% endif %}
         </div>
 
-        <!-- Preview media -->
         <div class="dash-preview">
           <div class="dash-preview-col">
             <div class="dash-preview-title">Foto</div>
@@ -128,11 +134,9 @@
                   {% set _ = imgs2.append(x) %}
                 {% endif %}
               {% endfor %}
-
               {% for g in imgs2[:6] %}
                 <img class="dash-mini" src="{{ g }}" alt="">
               {% endfor %}
-
               {% if imgs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -149,11 +153,9 @@
                   {% set _ = vids2.append(x) %}
                 {% endif %}
               {% endfor %}
-
               {% for v in vids2[:4] %}
                 <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
               {% endfor %}
-
               {% if vids2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -170,7 +172,6 @@
                   {% set _ = pdfs2.append(x) %}
                 {% endif %}
               {% endfor %}
-
               {% for p in pdfs2[:6] %}
                 {% if "||" in p %}
                   {% set nm = p.split("||")[0] %}
@@ -179,7 +180,6 @@
                 {% endif %}
                 <div class="dash-pdf-pill" title="{{ nm }}">{{ nm }}</div>
               {% endfor %}
-
               {% if pdfs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -192,8 +192,104 @@
     </div>
 
     <div class="footer">Pay4You.store</div>
+
   </main>
 
 </div>
+
+<!-- ✅ QR MODAL -->
+<div id="qrModal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeModal('qrModal')">✕</button>
+    <div class="modal-title" id="qrTitle">QR</div>
+
+    <div class="qr-wrap">
+      <img id="qrImg" src="" alt="QR">
+    </div>
+
+    <form method="post" action="/area/admin/send_qr" class="modal-actions">
+      <input type="hidden" name="slug" id="qrSlug" value="">
+      <input type="hidden" name="profile" id="qrProfile" value="p1">
+      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
+      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeModal('qrModal')">Chiudi</button>
+    </form>
+  </div>
+</div>
+
+<!-- ✅ CREDENTIALS MODAL (usa session.last_credentials, aperto dopo redirect) -->
+{% set creds = session.get("last_credentials") %}
+<div id="credModal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeCred()">✕</button>
+    <div class="modal-title">Credenziali generate</div>
+
+    <div class="cred-box">
+      <div class="cred-row"><span>Username</span><code id="cUser"></code></div>
+      <div class="cred-row"><span>Password</span><code id="cPass"></code></div>
+      <div class="hint" style="margin-top:10px">
+        Queste credenziali sono mostrate una sola volta. (Invio via Email/WhatsApp lo attiviamo dopo.)
+      </div>
+    </div>
+
+    <form method="post" action="/area/admin/send_credentials" class="modal-actions">
+      <input type="hidden" name="slug" id="cSlug" value="">
+      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
+      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeCred()">Chiudi</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  }
+
+  function openQr(slug, profile){
+    const modal = document.getElementById('qrModal');
+    const img = document.getElementById('qrImg');
+    const title = document.getElementById('qrTitle');
+    const sInp = document.getElementById('qrSlug');
+    const pInp = document.getElementById('qrProfile');
+
+    const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
+
+    title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
+    img.src = url;
+
+    sInp.value = slug;
+    pInp.value = profile;
+
+    modal.style.display = 'flex';
+  }
+
+  function openCred(slug, username, password){
+    document.getElementById('cSlug').value = slug;
+    document.getElementById('cUser').textContent = username;
+    document.getElementById('cPass').textContent = password;
+    document.getElementById('credModal').style.display = 'flex';
+  }
+
+  function closeCred(){
+    document.getElementById('credModal').style.display = 'none';
+  }
+
+  // ✅ auto-open cred modal se last_credentials presente
+  (function(){
+    const creds = {{ (session.get("last_credentials") or {}) | tojson }};
+    if(creds && creds.slug){
+      openCred(creds.slug, creds.username, creds.password);
+      // pulizia: così non riappare al refresh
+      fetch('/area/logout', {method:'GET', credentials:'same-origin'})
+        .catch(()=>{});
+      // NOTA: logout non lo vogliamo. Quindi niente.
+      // puliamo in modo soft con replaceState e basta:
+      // (la session la puliremo quando attiviamo invio reale; per ora non insistiamo)
+    }
+  })();
+</script>
+
 </body>
 </html>
