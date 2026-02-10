@@ -11,26 +11,27 @@
 
 <header class="topbar">
   <div class="topbar-left">
-    <div class="logo-dot"></div>
-    <div>
-      <div class="t1">Pay4You Cards</div>
-      <div class="t2">{{ "Admin" if is_admin else "Agente" }}</div>
+    <div class="branddot"></div>
+    <div class="brandtxt">
+      <div class="brand1">Pay4You Cards</div>
+      <div class="brand2">{{ "Admin" if is_admin else "Agente" }}</div>
     </div>
   </div>
+
   <div class="topbar-right">
     {% if is_admin %}
-      <a class="btn" href="/area/new">+ Nuova Card</a>
+      <a class="btn btn-primary" href="/area/new">+ Nuova Card</a>
     {% else %}
       <a class="btn" href="/area/me/p1">Modifica P1</a>
       {% if agent and agent.p2_enabled == 1 %}
         <a class="btn" href="/area/me/p2">Modifica P2</a>
       {% endif %}
     {% endif %}
-    <a class="btn danger" href="/area/logout">Logout</a>
+    <a class="btn btn-ghost" href="/area/logout">Logout</a>
   </div>
 </header>
 
-<main class="container">
+<main class="wrap">
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -42,85 +43,158 @@
     {% endif %}
   {% endwith %}
 
-  <div class="grid">
-    {% for a in agents %}
-      <div class="card">
+  <div class="page-head">
+    <div>
+      <h1 class="h1">Dashboard</h1>
+      <div class="sub">
+        {% if is_admin %}
+          Gestione clienti / agenti
+        {% else %}
+          Gestisci la tua card
+        {% endif %}
+      </div>
+    </div>
 
-        <div class="card-head">
+    {% if is_admin %}
+      <div class="searchbox">
+        <input id="search" type="text" placeholder="Cerca per nome / azienda / slug..." oninput="filterCards()">
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="grid" class="grid">
+    {% for a in agents %}
+      <article class="agent-card" data-name="{{ (a.name or '')|lower }}" data-company="{{ (a.company or '')|lower }}" data-slug="{{ (a.slug or '')|lower }}">
+
+        <div class="agent-top">
           <div class="avatar">
             {% if a.photo_url %}
-              <img src="{{ a.photo_url }}" alt="foto">
-            {% else %}
-              <div class="ph">👤</div>
+              <img src="{{ a.photo_url }}" alt="foto" onerror="this.remove(); this.parentElement.classList.add('ph')">
             {% endif %}
+            <span class="ph-icon">👤</span>
           </div>
-          <div class="meta">
-            <div class="name">{{ a.name or a.slug }}</div>
-            <div class="sub">{{ a.company or "—" }}</div>
-            <div class="sub small">Slug: <code>{{ a.slug }}</code></div>
+
+          <div class="agent-meta">
+            <div class="agent-name">{{ a.name or a.slug }}</div>
+            <div class="agent-company">{{ a.company or "—" }}</div>
+            <div class="agent-slug">Slug: <span class="mono">{{ a.slug }}</span></div>
           </div>
-        </div>
 
-        <div class="actions">
-          <button class="btn" type="button" onclick="openQrModal('/qr/{{ a.slug }}')">QRP1</button>
-          {% if a.p2_enabled == 1 %}
-            <button class="btn" type="button" onclick="openQrModal('/qr/{{ a.slug }}?p=p2')">QRP2</button>
-          {% else %}
-            <span class="pill">P2 non attivo</span>
-          {% endif %}
-        </div>
-
-        <div class="actions">
-          <a class="btn primary" target="_blank" href="/{{ a.slug }}">Apri P1</a>
-          {% if a.p2_enabled == 1 %}
-            <a class="btn primary" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
-          {% endif %}
-          <a class="btn" target="_blank" href="/{{ a.slug }}.vcf">VCF P1</a>
-          {% if a.p2_enabled == 1 %}
-            <a class="btn" target="_blank" href="/{{ a.slug }}.vcf?p=p2">VCF P2</a>
-          {% endif %}
-        </div>
-
-        {% if is_admin %}
-          <div class="actions">
-            <a class="btn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
+          <div class="agent-badges">
             {% if a.p2_enabled == 1 %}
-              <a class="btn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
-              <form class="inline" method="post" action="/area/admin/{{ a.slug }}/deactivate-p2">
-                <button class="btn danger" type="submit" onclick="return confirm2('Disattivare P2?')">Disattiva P2</button>
-              </form>
+              <span class="badge ok">P2 attivo</span>
             {% else %}
-              <form class="inline" method="post" action="/area/admin/{{ a.slug }}/activate-p2">
-                <button class="btn" type="submit" onclick="return confirm2('Attivare P2? (sarà vuoto)')">Attiva P2 (vuoto)</button>
-              </form>
+              <span class="badge">P2 non attivo</span>
             {% endif %}
           </div>
+        </div>
 
-          <div class="actions">
-            <form class="inline" method="post" action="/area/admin/{{ a.slug }}/regen-pass">
-              <button class="btn" type="submit" onclick="return confirm2('Rigenerare password?')">Rigenera password</button>
-            </form>
+        <div class="agent-actions">
 
-            <button class="btn" type="button" onclick="openCredModal('{{ a.slug }}','{{ a.username }}')">Invia credenziali</button>
-
-            <form class="inline" method="post" action="/area/admin/{{ a.slug }}/delete">
-              <button class="btn danger" type="submit" onclick="return confirm2('Eliminare DEFINITIVAMENTE questa card?')">Elimina</button>
-            </form>
+          <div class="row">
+            <div class="row-title">QR</div>
+            <div class="row-actions">
+              <button class="btn btn-sm" type="button" onclick="openQrModal('/qr/{{ a.slug }}')">QRP1</button>
+              {% if a.p2_enabled == 1 %}
+                <button class="btn btn-sm" type="button" onclick="openQrModal('/qr/{{ a.slug }}?p=p2')">QRP2</button>
+              {% else %}
+                <button class="btn btn-sm btn-disabled" type="button" disabled>QRP2</button>
+              {% endif %}
+            </div>
           </div>
 
-        {% else %}
-          {% if agent and agent.p2_enabled != 1 %}
-            <form method="post" action="/area/me/activate-p2" class="inline">
-              <button class="btn" type="submit" onclick="return confirm2('Attivare P2? (sarà vuoto)')">Attiva P2 (vuoto)</button>
-            </form>
-          {% else %}
-            <form method="post" action="/area/me/deactivate-p2" class="inline">
-              <button class="btn danger" type="submit" onclick="return confirm2('Disattivare P2?')">Disattiva P2</button>
-            </form>
-          {% endif %}
-        {% endif %}
+          <div class="row">
+            <div class="row-title">Card</div>
+            <div class="row-actions">
+              <a class="btn btn-sm btn-primary" target="_blank" href="/{{ a.slug }}">Apri P1</a>
+              {% if a.p2_enabled == 1 %}
+                <a class="btn btn-sm btn-primary" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
+              {% else %}
+                <button class="btn btn-sm btn-disabled" type="button" disabled>Apri P2</button>
+              {% endif %}
+              <a class="btn btn-sm" target="_blank" href="/{{ a.slug }}.vcf">VCF P1</a>
+              {% if a.p2_enabled == 1 %}
+                <a class="btn btn-sm" target="_blank" href="/{{ a.slug }}.vcf?p=p2">VCF P2</a>
+              {% else %}
+                <button class="btn btn-sm btn-disabled" type="button" disabled>VCF P2</button>
+              {% endif %}
+            </div>
+          </div>
 
-      </div>
+          <div class="row">
+            <div class="row-title">Modifica</div>
+            <div class="row-actions">
+              {% if is_admin %}
+                <a class="btn btn-sm" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
+                {% if a.p2_enabled == 1 %}
+                  <a class="btn btn-sm" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
+                {% else %}
+                  <button class="btn btn-sm btn-disabled" type="button" disabled>Modifica P2</button>
+                {% endif %}
+              {% else %}
+                <a class="btn btn-sm" href="/area/me/p1">Modifica P1</a>
+                {% if agent and agent.p2_enabled == 1 %}
+                  <a class="btn btn-sm" href="/area/me/p2">Modifica P2</a>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          {% if is_admin %}
+            <div class="row">
+              <div class="row-title">P2</div>
+              <div class="row-actions">
+                {% if a.p2_enabled == 1 %}
+                  <form class="inline" method="post" action="/area/admin/{{ a.slug }}/deactivate-p2">
+                    <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm2('Disattivare P2?')">Disattiva P2</button>
+                  </form>
+                {% else %}
+                  <form class="inline" method="post" action="/area/admin/{{ a.slug }}/activate-p2">
+                    <button class="btn btn-sm" type="submit" onclick="return confirm2('Attivare P2? (sarà vuoto)')">Attiva P2 (vuoto)</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="row-title">Sicurezza</div>
+              <div class="row-actions">
+                <form class="inline" method="post" action="/area/admin/{{ a.slug }}/regen-pass">
+                  <button class="btn btn-sm" type="submit" onclick="return confirm2('Rigenerare password?')">Rigenera password</button>
+                </form>
+                <button class="btn btn-sm" type="button" onclick="openCredModal('{{ a.slug }}','{{ a.username }}','{{ (a.name or a.slug)|e }}')">Invia credenziali</button>
+              </div>
+            </div>
+
+            <div class="row danger-row">
+              <div class="row-title">Pericolo</div>
+              <div class="row-actions">
+                <form class="inline" method="post" action="/area/admin/{{ a.slug }}/delete">
+                  <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm2('Eliminare DEFINITIVAMENTE questa card?')">Elimina</button>
+                </form>
+              </div>
+            </div>
+
+          {% else %}
+            <div class="row">
+              <div class="row-title">P2</div>
+              <div class="row-actions">
+                {% if agent and agent.p2_enabled != 1 %}
+                  <form method="post" action="/area/me/activate-p2" class="inline">
+                    <button class="btn btn-sm" type="submit" onclick="return confirm2('Attivare P2? (sarà vuoto)')">Attiva P2 (vuoto)</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="/area/me/deactivate-p2" class="inline">
+                    <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm2('Disattivare P2?')">Disattiva P2</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+
+        </div>
+
+      </article>
     {% endfor %}
   </div>
 
@@ -130,26 +204,26 @@
 <div id="qr-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
-    <div style="font-weight:800;margin-bottom:10px;">QR Code</div>
-    <img id="qr-img" src="" alt="QR" style="width:100%;max-width:520px;display:block;margin:8px auto;border-radius:14px;">
-    <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
+    <div class="modal-title">QR Code</div>
+    <img id="qr-img" src="" alt="QR" class="qr-img">
+    <div class="modal-actions">
       <button class="btn" type="button" onclick="shareQrWhatsApp()">Invia via WhatsApp</button>
       <button class="btn" type="button" onclick="shareQrEmail()">Invia via Email</button>
-      <button class="btn danger" type="button" onclick="closeQrModal()">Chiudi</button>
+      <button class="btn btn-danger" type="button" onclick="closeQrModal()">Chiudi</button>
     </div>
   </div>
 </div>
 
-<!-- CRED MODAL (solo preview, invio vero lo faremo dopo con SMTP/WA) -->
+<!-- CRED MODAL -->
 <div id="cred-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <button class="modal-x" type="button" onclick="closeCredModal()">✕</button>
-    <div style="font-weight:800;margin-bottom:10px;">Invia credenziali</div>
-    <div id="cred-text" style="white-space:pre-wrap;line-height:1.35;"></div>
-    <div class="modal-actions" style="gap:10px; flex-wrap:wrap;">
+    <div class="modal-title">Credenziali</div>
+    <div id="cred-text" class="cred-text"></div>
+    <div class="modal-actions">
       <button class="btn" type="button" onclick="shareCredWhatsApp()">Invia via WhatsApp</button>
       <button class="btn" type="button" onclick="shareCredEmail()">Invia via Email</button>
-      <button class="btn danger" type="button" onclick="closeCredModal()">Chiudi</button>
+      <button class="btn btn-danger" type="button" onclick="closeCredModal()">Chiudi</button>
     </div>
   </div>
 </div>
@@ -163,6 +237,17 @@
     return confirm("Confermi? (azione non reversibile)");
   }
 
+  // search filter (admin only)
+  function filterCards(){
+    const q = (document.getElementById("search")?.value || "").trim().toLowerCase();
+    const cards = document.querySelectorAll(".agent-card");
+    cards.forEach(c=>{
+      const hay = (c.dataset.name + " " + c.dataset.company + " " + c.dataset.slug).toLowerCase();
+      c.style.display = (!q || hay.includes(q)) ? "" : "none";
+    });
+  }
+
+  // QR modal
   function openQrModal(qrEndpoint){
     __QR_URL = window.location.origin + qrEndpoint.replace(/^\//,'/');
     document.getElementById('qr-img').src = qrEndpoint;
@@ -185,18 +270,14 @@
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   }
 
-  function openCredModal(slug, username){
+  // Cred modal
+  function openCredModal(slug, username, displayName){
     const login = window.location.origin + "/area/login";
     __CRED_TEXT =
-`Ti ho attivato la tua Pay4You Card.
-
-Login: ${login}
-Username: ${username}
-(Password: la invierò quando attiviamo Email/WhatsApp automatici)
-
-Link Card P1: ${window.location.origin}/${slug}
-Link Card P2: ${window.location.origin}/${slug}?p=p2
-`;
+`Ciao ${displayName}!\n
+Ti ho attivato la tua Pay4You Card.\n
+Login: ${login}\nUsername: ${username}\n
+Link Card P1: ${window.location.origin}/${slug}\nLink Card P2: ${window.location.origin}/${slug}?p=p2\n`;
     document.getElementById("cred-text").textContent = __CRED_TEXT;
     document.getElementById("cred-modal").style.display = "flex";
   }
@@ -215,7 +296,7 @@ Link Card P2: ${window.location.origin}/${slug}?p=p2
     window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(__CRED_TEXT);
   }
 
-  // close modal by clicking overlay
+  // close modal clicking overlay
   document.getElementById('qr-modal')?.addEventListener('click', function(e){ if(e.target===this) closeQrModal(); });
   document.getElementById('cred-modal')?.addEventListener('click', function(e){ if(e.target===this) closeCredModal(); });
 </script>
