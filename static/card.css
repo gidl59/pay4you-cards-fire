@@ -36,3 +36,32 @@ video{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);backg
 .orbit{animation:orbit 14s linear infinite}
 @keyframes flip {0%,100%{transform:rotateY(0)}50%{transform:rotateY(180deg)}}
 .flip{animation:flip 5.5s ease-in-out infinite}
+.qr-modal{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:9999;
+}
+.qr-box{
+  width:min(420px, 100%);
+  background:rgba(10,14,22,.92);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:14px;
+  backdrop-filter: blur(16px);
+  text-align:center;
+  position:relative;
+}
+.qr-close{
+  position:absolute; right:10px; top:10px;
+  width:38px; height:38px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  cursor:pointer;
+  font-weight:900;
+}
