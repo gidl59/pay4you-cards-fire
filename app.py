@@ -10,15 +10,13 @@ from flask import (
     url_for, session, abort, flash, send_from_directory
 )
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Text, DateTime, text
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# ============================================================
-# FLASK APP (DEVE STARE PRIMA DI QUALSIASI @app.route)
-# ============================================================
-app = Flask(__name__)
 
 # ==========================
 # CONFIG
@@ -27,16 +25,14 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 APP_SECRET = os.getenv("APP_SECRET", "dev_secret")
 BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 
-# Consiglio Render Disk:
-# DATABASE_URL = sqlite:////var/data/data.db  (persistente)
+# ✅ usa data.db come stai facendo ora
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////var/data/data.db").strip()
+
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").strip()
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 MAX_PDFS = 12
-
-app.secret_key = APP_SECRET
 
 # Directories
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
@@ -48,6 +44,10 @@ SUBDIR_PDF = UPLOADS_DIR / "pdf"
 for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
     d.mkdir(parents=True, exist_ok=True)
 
+# Flask
+app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = APP_SECRET
+
 # SQLAlchemy
 engine = create_engine(
     DATABASE_URL,
@@ -56,6 +56,7 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
+
 
 # ==========================
 # MODEL
@@ -116,7 +117,7 @@ class Agent(Base):
 
     # Profile2
     p2_enabled = Column(Integer, default=0)
-    p2_json = Column(Text, default="{}")  # JSON profilo 2 (vuoto di default)
+    p2_json = Column(Text, default="{}")  # JSON profilo 2 (VUOTO di default)
 
     # i18n
     i18n_json = Column(Text, default="{}")  # {"en": {...}, "fr": {...} ...}
@@ -126,11 +127,12 @@ class Agent(Base):
 
 
 # ==========================
-# DB INIT + MIGRATION (SQLite, SQLAlchemy 2.x safe)
+# DB INIT + MIGRATION (SQLite)
 # ==========================
 def _sqlite_table_columns(conn, table_name: str):
     rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
-    return {r[1] for r in rows}  # r[1] = name
+    return {r[1] for r in rows}
+
 
 def ensure_db():
     Base.metadata.create_all(engine)
@@ -140,30 +142,36 @@ def ensure_db():
 
     with engine.connect() as conn:
         cols = _sqlite_table_columns(conn, "agents")
+        missing = []
 
-        def add_col_if_missing(col_name: str, col_type: str):
-            if col_name not in cols:
-                conn.exec_driver_sql(f"ALTER TABLE agents ADD COLUMN {col_name} {col_type}")
+        def add_col(name, coltype):
+            if name not in cols:
+                missing.append((name, coltype))
 
-        # Add missing columns if older DB
-        add_col_if_missing("created_at", "DATETIME")
-        add_col_if_missing("updated_at", "DATETIME")
-        add_col_if_missing("p2_json", "TEXT")
-        add_col_if_missing("i18n_json", "TEXT")
-        add_col_if_missing("photo_pos_x", "INTEGER")
-        add_col_if_missing("photo_pos_y", "INTEGER")
-        add_col_if_missing("photo_zoom", "TEXT")
-        add_col_if_missing("back_media_mode", "TEXT")
-        add_col_if_missing("back_media_url", "TEXT")
-        add_col_if_missing("orbit_spin", "INTEGER")
-        add_col_if_missing("avatar_spin", "INTEGER")
-        add_col_if_missing("logo_spin", "INTEGER")
-        add_col_if_missing("allow_flip", "INTEGER")
-        add_col_if_missing("p2_enabled", "INTEGER")
+        # aggiunte schema nel tempo
+        for name, coltype in [
+            ("created_at", "DATETIME"),
+            ("updated_at", "DATETIME"),
+            ("p2_json", "TEXT"),
+            ("i18n_json", "TEXT"),
+            ("photo_pos_x", "INTEGER"),
+            ("photo_pos_y", "INTEGER"),
+            ("photo_zoom", "TEXT"),
+            ("back_media_mode", "TEXT"),
+            ("back_media_url", "TEXT"),
+            ("orbit_spin", "INTEGER"),
+            ("avatar_spin", "INTEGER"),
+            ("logo_spin", "INTEGER"),
+            ("allow_flip", "INTEGER"),
+        ]:
+            add_col(name, coltype)
+
+        for (name, coltype) in missing:
+            conn.exec_driver_sql(f"ALTER TABLE agents ADD COLUMN {name} {coltype}")
 
         now = dt.datetime.utcnow().isoformat(sep=" ", timespec="seconds")
 
-        # Backfill defaults (SQLite default non retroattivo)
+        # backfill (SQLAlchemy 2.x: usare exec_driver_sql / text)
         conn.exec_driver_sql("UPDATE agents SET created_at = COALESCE(created_at, ?)", (now,))
         conn.exec_driver_sql("UPDATE agents SET updated_at = COALESCE(updated_at, ?)", (now,))
         conn.exec_driver_sql("UPDATE agents SET p2_json = COALESCE(p2_json, '{}')")
@@ -173,15 +181,14 @@ def ensure_db():
         conn.exec_driver_sql("UPDATE agents SET photo_zoom = COALESCE(photo_zoom, '1.0')")
         conn.exec_driver_sql("UPDATE agents SET back_media_mode = COALESCE(back_media_mode, 'company')")
         conn.exec_driver_sql("UPDATE agents SET back_media_url = COALESCE(back_media_url, '')")
-        conn.exec_driver_sql("UPDATE agents SET orbit_spin = COALESCE(orbit_spin, 0)")
-        conn.exec_driver_sql("UPDATE agents SET avatar_spin = COALESCE(avatar_spin, 0)")
-        conn.exec_driver_sql("UPDATE agents SET logo_spin = COALESCE(logo_spin, 0)")
-        conn.exec_driver_sql("UPDATE agents SET allow_flip = COALESCE(allow_flip, 0)")
-        conn.exec_driver_sql("UPDATE agents SET p2_enabled = COALESCE(p2_enabled, 0)")
+        for f in ["orbit_spin", "avatar_spin", "logo_spin", "allow_flip", "p2_enabled"]:
+            conn.exec_driver_sql(f"UPDATE agents SET {f} = COALESCE({f}, 0)")
 
         conn.commit()
 
+
 ensure_db()
+
 
 # ==========================
 # HELPERS
@@ -309,6 +316,7 @@ def get_profile_data(agent: Agent, profile: str):
     }
 
 def set_profile_data(agent: Agent, profile: str, form: dict):
+    # ✅ Mutua esclusione: flip vs avatar spin
     avatar_spin = 1 if form.get("avatar_spin") == "on" else 0
     allow_flip = 1 if form.get("allow_flip") == "on" else 0
     if avatar_spin == 1:
@@ -383,26 +391,23 @@ def save_i18n(agent: Agent, form: dict):
         }
     agent.i18n_json = json.dumps(data, ensure_ascii=False)
 
+
 # ==========================
-# STATIC: uploads + favicon
+# STATIC / FAVICON / UPLOADS
 # ==========================
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(app.static_folder, "favicon.ico")
+
 @app.route("/uploads/<path:filename>")
 def serve_uploads(filename):
     return send_from_directory(str(UPLOADS_DIR), filename)
 
-@app.route("/favicon.ico")
-def favicon():
-    # se hai static/favicon.ico nel repo
-    return send_from_directory("static", "favicon.ico")
-
-# Alias /login -> /area/login (così non hai 404)
-@app.route("/login")
-def login_alias():
-    return redirect(url_for("login"))
 
 # ==========================
 # AUTH
 # ==========================
+@app.route("/login", methods=["GET", "POST"])
 @app.route("/area/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -426,10 +431,12 @@ def login():
 
     return render_template("login.html")
 
+
 @app.route("/area/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
 
 # ==========================
 # DASHBOARD
@@ -451,6 +458,7 @@ def dashboard():
             return redirect(url_for("login"))
         return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
 
+
 # ==========================
 # ADMIN: NEW / EDIT
 # ==========================
@@ -465,6 +473,7 @@ def new_agent():
     if request.method == "POST":
         first = (request.form.get("first_name") or "").strip()
         last = (request.form.get("last_name") or "").strip()
+
         if not first:
             flash("Nome obbligatorio", "error")
             return redirect(url_for("new_agent"))
@@ -505,6 +514,7 @@ def new_agent():
         return redirect(url_for("edit_agent", slug=slug))
 
     return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={})
+
 
 @app.route("/area/edit/<slug>", methods=["GET", "POST"])
 def edit_agent(slug):
@@ -579,6 +589,7 @@ def edit_agent(slug):
 
     return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data)
 
+
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
 def admin_profile2(slug):
     r = require_login()
@@ -592,7 +603,7 @@ def admin_profile2(slug):
     if not ag:
         abort(404)
 
-    if int(ag.p2_enabled or 0) != 1:
+    if (ag.p2_enabled or 0) != 1:
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("edit_agent", slug=slug))
 
@@ -603,6 +614,7 @@ def admin_profile2(slug):
         return redirect(url_for("admin_profile2", slug=slug))
 
     return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={})
+
 
 # ==========================
 # AGENT SELF EDIT
@@ -658,7 +670,6 @@ def me_edit():
                 while len(out) <= idx:
                     out.append({"name": "", "url": ""})
                 out[idx] = {"name": name, "url": url}
-
         out2 = []
         for item in out:
             if item.get("url"):
@@ -670,6 +681,7 @@ def me_edit():
         return redirect(url_for("me_edit"))
 
     return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data={})
+
 
 @app.route("/area/me/p2", methods=["GET", "POST"])
 def me_profile2():
@@ -683,8 +695,7 @@ def me_profile2():
     ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
     if not ag:
         abort(404)
-
-    if int(ag.p2_enabled or 0) != 1:
+    if (ag.p2_enabled or 0) != 1:
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("dashboard"))
 
@@ -695,6 +706,7 @@ def me_profile2():
         return redirect(url_for("me_profile2"))
 
     return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={})
+
 
 @app.route("/area/me/activate-p2", methods=["POST"])
 def me_activate_p2():
@@ -710,11 +722,12 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
-    ag.p2_json = "{}"  # vuoto
+    ag.p2_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("Profilo 2 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
+
 
 @app.route("/area/me/deactivate-p2", methods=["POST"])
 def me_deactivate_p2():
@@ -736,6 +749,7 @@ def me_deactivate_p2():
     flash("Profilo 2 disattivato.", "ok")
     return redirect(url_for("dashboard"))
 
+
 # ==========================
 # MEDIA DELETE
 # ==========================
@@ -745,7 +759,7 @@ def delete_media(slug):
     if r:
         return r
 
-    t = (request.form.get("type") or "").strip()  # gallery | video | pdf
+    t = (request.form.get("type") or "").strip()
     idx = int(request.form.get("idx") or -1)
     target = (request.form.get("target") or "dashboard").strip()
 
@@ -785,6 +799,7 @@ def delete_media(slug):
         return redirect(url_for("me_edit"))
     return redirect(url_for("dashboard"))
 
+
 # ==========================
 # CARD PUBLIC
 # ==========================
@@ -797,7 +812,6 @@ def card(slug):
 
     p_key = (request.args.get("p") or "").strip().lower()
     lang = (request.args.get("lang") or "it").strip().lower()
-
     p2_enabled = int(ag.p2_enabled or 0) == 1
     use_p2 = (p_key == "p2" and p2_enabled)
 
@@ -826,21 +840,19 @@ def card(slug):
         addr_objs.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
 
     mobiles = []
-    m1 = profile.get("phone_mobile","").strip()
-    m2 = profile.get("phone_mobile2","").strip()
-    if m1:
-        mobiles.append(m1)
-    if m2:
-        mobiles.append(m2)
+    m1 = (profile.get("phone_mobile","") or "").strip()
+    m2 = (profile.get("phone_mobile2","") or "").strip()
+    if m1: mobiles.append(m1)
+    if m2: mobiles.append(m2)
 
-    office_value = profile.get("phone_office","").strip()
-    pec_email = profile.get("pec","").strip()
+    office_value = (profile.get("phone_office","") or "").strip()
+    pec_email = (profile.get("pec","") or "").strip()
 
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    wa_link = profile.get("whatsapp","").strip()
+    wa_link = (profile.get("whatsapp","") or "").strip()
     if wa_link and wa_link.startswith("+"):
         wa_link = "https://wa.me/" + re.sub(r"\D+", "", wa_link)
 
@@ -954,6 +966,7 @@ def card(slug):
         pdfs=pdfs,
         t_func=t_func
     )
+
 
 # ==========================
 # MAIN
