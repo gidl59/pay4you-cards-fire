@@ -252,3 +252,83 @@ input:focus, textarea:focus{
 @media (max-width: 520px){
   .dash-mini-grid{grid-template-columns:repeat(3,1fr);}
 }
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.65);
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999; padding:18px;
+}
+.modal-box{
+  width:min(980px, 100%);
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(10,14,22,.82);
+  backdrop-filter:blur(18px);
+  box-shadow:0 18px 60px rgba(0,0,0,.45);
+  position:relative;
+  padding:12px;
+}
+.modal-box.modal-big{ width:min(1100px, 100%); }
+.modal-x{
+  position:absolute; right:10px; top:10px;
+  width:42px; height:42px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.25);
+  color:#fff; cursor:pointer; font-weight:950;
+}
+.modal-title{font-weight:950; margin:6px 6px 10px 6px; opacity:.95;}
+.modal-actions{display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:12px;}
+.qr-wrap{display:flex; justify-content:center; padding:10px;}
+.qr-wrap img{width:min(420px, 92%); border-radius:16px; background:#fff; padding:10px;}
+
+.cred-box{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  padding:12px;
+}
+.cred-row{display:flex; justify-content:space-between; gap:10px; padding:10px 8px;}
+.cred-row code{
+  background:rgba(255,255,255,.10);
+  padding:6px 10px;
+  border-radius:12px;
+}
+
+/* ===== CROP PREVIEW ===== */
+.crop-preview{display:flex; justify-content:center; margin-top:10px;}
+.crop-circle{
+  width:220px; height:220px;
+  border-radius:999px;
+  border:3px solid rgba(243,198,43,.55);
+  overflow:hidden;
+  background:rgba(0,0,0,.22);
+  box-shadow:0 18px 40px rgba(0,0,0,.55);
+  display:flex; align-items:center; justify-content:center;
+}
+.crop-circle img{
+  width:100%; height:100%;
+  object-fit:cover;
+}
+.crop-empty{color:rgba(255,255,255,.7); font-weight:900;}
+
+/* ===== MEDIA PREVIEW + DELETE ===== */
+.media-preview{ margin-top:14px; padding:14px; border-radius:18px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+.media-title{ font-weight:950; margin-bottom:10px; }
+.media-block{ margin-top:12px; }
+.media-sub{ font-weight:950; margin-bottom:8px; opacity:.92; }
+.media-grid{ display:flex; gap:10px; flex-wrap:wrap; }
+.media-item{ width:94px; height:94px; border-radius:18px; overflow:hidden; position:relative; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+.media-item img, .media-item video{ width:100%; height:100%; object-fit:cover; display:block; cursor:pointer; }
+.media-play{ position:absolute; left:10px; bottom:10px; background:rgba(0,0,0,.55); color:#fff; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:950; }
+.media-del{ position:absolute; top:8px; right:8px; border:0; cursor:pointer; width:34px; height:34px; border-radius:999px; background: rgba(0,0,0,.55); color:#fff; }
+.pdf-preview{ display:flex; flex-direction:column; gap:8px; }
+.pdf-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:14px; background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); }
+.pdf-name{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; font-weight:900; }
+.pdf-del{ border:0; cursor:pointer; width:34px; height:34px; border-radius:999px; background: rgba(0,0,0,.55); color:#fff; }
+
+/* viewer */
+#vImg{ width:100%; max-height:85vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.25); }
+#vVideo{ width:100%; max-height:85vh; border-radius:16px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.25); }
+#vPdf{ width:100%; height:85vh; border-radius:16px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.25); }
