@@ -35,7 +35,7 @@ PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").stri
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_PDFS = 30   # ✅ tu hai 22 PDF -> alziamo a 30
+MAX_PDFS = 12   
 
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
