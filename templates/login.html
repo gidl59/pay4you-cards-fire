@@ -5,46 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="auth-page">
-  <div class="auth-wrap">
-    <div class="auth-card">
-      <div class="auth-head">
-        <a class="back-link" href="javascript:history.back()">← Torna indietro</a>
-        <div class="brand">
-          <img src="/static/pay4you-logo.png" alt="Pay4You" onerror="this.style.display='none'">
-          <div>
-            <div class="brand-title">Pay4You Cards</div>
-            <div class="brand-sub">Area riservata</div>
-          </div>
-        </div>
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <a class="brand" href="/">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Pay4You Cards</div>
+        <div class="hint">Accesso riservato</div>
       </div>
+    </a>
+  </header>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-wrap">
-            {% for cat,msg in messages %}
-              <div class="flash {{cat}}">{{ msg }}</div>
-            {% endfor %}
+  <main class="app-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat,msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-main">
+      <div class="panel panel-login">
+        <div class="panel-head panel-head-center">
+          <div class="page-title">Login</div>
+          <div class="hint">Inserisci username e password</div>
+        </div>
+
+        <form method="post" action="/area/login" class="panel-body">
+          <div class="form-grid">
+            <div class="field full">
+              <label>Username</label>
+              <input type="text" name="username" autocomplete="username" required>
+            </div>
+            <div class="field full">
+              <label>Password</label>
+              <input type="password" name="password" autocomplete="current-password" required>
+            </div>
           </div>
-        {% endif %}
-      {% endwith %}
 
-      <form method="post" class="auth-form">
-        <label>Username</label>
-        <input name="username" autocomplete="username" required>
-
-        <label>Password</label>
-        <input name="password" type="password" autocomplete="current-password" required>
-
-        <button class="btn primary" type="submit">Accedi</button>
-      </form>
-
-      <div class="auth-foot">
-        <span>URL card: <code>{{ request.host_url }}</code></span>
+          <div class="actions-footer" style="margin-top:14px">
+            <button class="btn primary" type="submit">Entra</button>
+          </div>
+        </form>
       </div>
     </div>
-  </div>
+  </main>
+
+</div>
 </body>
 </html>
