@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }} | Pay4You</title>
-
   <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -45,7 +44,7 @@
             <h1 class="page-title">{{ "Modifica Profilo 2" if editing_profile2 else "Modifica Profilo 1" }}</h1>
             <div class="hint">
               {% if editing_profile2 %}
-                Questo è il Profilo 2 (se attivo). Se è vuoto, resta vuoto: non copia il Profilo 1.
+                Questo è il Profilo 2 (se attivo). Può essere completamente diverso dal Profilo 1.
               {% else %}
                 Qui modifichi i dati principali della tua Pay4You Card.
               {% endif %}
@@ -87,19 +86,19 @@
             <div class="form-grid">
               <div class="field">
                 <label>Nome</label>
-                <input type="text" name="name" value="{{ agent.name if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="name" value="{{ agent.name if agent else '' }}">
               </div>
               <div class="field">
                 <label>Azienda</label>
-                <input type="text" name="company" value="{{ agent.company if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="company" value="{{ agent.company if agent else '' }}">
               </div>
               <div class="field">
                 <label>Ruolo</label>
-                <input type="text" name="role" value="{{ agent.role if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="role" value="{{ agent.role if agent else '' }}">
               </div>
               <div class="field">
                 <label>Bio</label>
-                <textarea name="bio" placeholder="Breve descrizione...">{{ agent.bio if (agent and not editing_profile2) else '' }}</textarea>
+                <textarea name="bio" placeholder="Breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
               </div>
             </div>
           </div>
@@ -109,36 +108,35 @@
             <div class="form-grid">
               <div class="field">
                 <label>Cellulare</label>
-                <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
               </div>
               <div class="field">
                 <label>Cellulare 2</label>
-                <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
               </div>
               <div class="field">
                 <label>Ufficio</label>
-                <input type="text" name="phone_office" value="{{ agent.phone_office if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
               </div>
               <div class="field">
                 <label>WhatsApp</label>
-                <input type="text" name="whatsapp" value="{{ agent.whatsapp if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Formato consigliato: +39XXXXXXXXXX oppure link https://wa.me/...</div>
+                <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
               </div>
               <div class="field full">
                 <label>Email (separate da virgola)</label>
-                <input type="text" name="emails" value="{{ agent.emails if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
               </div>
               <div class="field full">
                 <label>Siti web (separati da virgola)</label>
-                <input type="text" name="websites" value="{{ agent.websites if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
               </div>
               <div class="field">
                 <label>PEC</label>
-                <input type="text" name="pec" value="{{ agent.pec if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
               </div>
               <div class="field full">
                 <label>Indirizzi (uno per riga)</label>
-                <textarea name="addresses">{{ agent.addresses if (agent and not editing_profile2) else '' }}</textarea>
+                <textarea name="addresses">{{ agent.addresses if agent else '' }}</textarea>
               </div>
             </div>
           </div>
@@ -148,62 +146,34 @@
             <div class="form-grid">
               <div class="field">
                 <label>P.IVA</label>
-                <input type="text" name="piva" value="{{ agent.piva if (agent and not editing_profile2) else '' }}">
+                <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
               </div>
               <div class="field">
                 <label>SDI</label>
-                <input type="text" name="sdi" value="{{ agent.sdi if (agent and not editing_profile2) else '' }}">
-              </div>
-            </div>
-          </div>
-
-          <div class="section-box">
-            <div class="h3">Social</div>
-
-            <div class="hint-box">
-              ✅ Inserisci sempre il link completo (https://...). Se un campo è vuoto NON verrà mostrato nella card.
-            </div>
-
-            <div class="form-grid" style="margin-top:12px">
-              <div class="field">
-                <label>Facebook</label>
-                <input type="text" name="facebook" value="{{ agent.facebook if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://www.facebook.com/share/... (oppure https://www.facebook.com/tuapagina)</div>
-              </div>
-              <div class="field">
-                <label>Instagram</label>
-                <input type="text" name="instagram" value="{{ agent.instagram if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://www.instagram.com/tuonome</div>
-              </div>
-              <div class="field">
-                <label>LinkedIn</label>
-                <input type="text" name="linkedin" value="{{ agent.linkedin if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://www.linkedin.com/in/tuonome (oppure /company/...)</div>
-              </div>
-              <div class="field">
-                <label>TikTok</label>
-                <input type="text" name="tiktok" value="{{ agent.tiktok if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://www.tiktok.com/@tuonome</div>
-              </div>
-              <div class="field">
-                <label>Telegram</label>
-                <input type="text" name="telegram" value="{{ agent.telegram if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://t.me/tuonome</div>
-              </div>
-              <div class="field">
-                <label>YouTube</label>
-                <input type="text" name="youtube" value="{{ agent.youtube if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://www.youtube.com/@tuonome (o link canale completo)</div>
-              </div>
-              <div class="field full">
-                <label>Spotify</label>
-                <input type="text" name="spotify" value="{{ agent.spotify if (agent and not editing_profile2) else '' }}">
-                <div class="hint">Usa: https://open.spotify.com/artist/... (o playlist/album)</div>
+                <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
               </div>
             </div>
           </div>
 
           {% if not editing_profile2 %}
+          <div class="section-box">
+            <div class="h3">Social</div>
+            <div class="hint-box">
+              ✅ Inserisci sempre il link completo (https://...). <br>
+              Esempio Instagram: https://instagram.com/tuonome (non mettere solo @).<br>
+              Se un campo è vuoto NON verrà mostrato nella card.
+            </div>
+            <div class="form-grid" style="margin-top:12px">
+              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ agent.facebook }}"></div>
+              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ agent.instagram }}"></div>
+              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ agent.linkedin }}"></div>
+              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ agent.tiktok }}"></div>
+              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ agent.telegram }}"></div>
+              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ agent.youtube }}"></div>
+              <div class="field full"><label>Spotify</label><input type="text" name="spotify" value="{{ agent.spotify }}"></div>
+            </div>
+          </div>
+
           <div class="section-box">
             <div class="h3">Crop / posizione foto agente</div>
             <div class="hint">Carica una foto e regolala subito qui sotto (anche prima di salvare).</div>
@@ -240,6 +210,7 @@
           <div class="section-box">
             <div class="h3">Media</div>
 
+            <!-- FOTO PROFILO -->
             <div class="field">
               <label>Foto profilo</label>
               <input id="photoInput" type="file" name="photo" accept="image/*">
@@ -268,7 +239,8 @@
                   {% for g in gallery %}
                     <div class="media-item">
                       <img src="{{ g }}" alt="" onclick="openViewer('gallery','{{ g }}','{{ agent.slug }}',{{ loop.index0 }})">
-                      <button type="button" class="media-del" onclick="confirmDelete('{{ agent.slug }}','gallery',{{ loop.index0 }})">🗑</button>
+                      <button type="button" class="media-del"
+                        onclick="confirmDelete('{{ agent.slug }}','gallery',{{ loop.index0 }})">🗑</button>
                     </div>
                   {% endfor %}
                   {% if gallery|length == 0 %}
@@ -291,7 +263,8 @@
                       <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
                              onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }})"></video>
                       <span class="media-play">video</span>
-                      <button type="button" class="media-del" onclick="confirmDelete('{{ agent.slug }}','video',{{ loop.index0 }})">🗑</button>
+                      <button type="button" class="media-del"
+                        onclick="confirmDelete('{{ agent.slug }}','video',{{ loop.index0 }})">🗑</button>
                     </div>
                   {% endfor %}
                   {% if videos|length == 0 %}
@@ -318,7 +291,8 @@
                   {% for p in pdfs %}
                     <div class="pdf-row">
                       <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug }}',{{ loop.index0 }})">{{ p.name }}</div>
-                      <button type="button" class="pdf-del" onclick="confirmDelete('{{ agent.slug }}','pdf',{{ loop.index0 }})">🗑</button>
+                      <button type="button" class="pdf-del"
+                        onclick="confirmDelete('{{ agent.slug }}','pdf',{{ loop.index0 }})">🗑</button>
                     </div>
                   {% endfor %}
                   {% if pdfs|length == 0 %}
@@ -327,14 +301,15 @@
                 </div>
               </div>
             </div>
+
           </div>
 
           <div class="section-box">
             <div class="h3">Traduzioni</div>
             <div class="hint">Compila solo i campi che vuoi tradurre.</div>
 
-            <details style="margin-top:10px">
-              <summary style="padding:10px 0; cursor:pointer; font-weight:900;">English (EN)</summary>
+            <details>
+              <summary>English (EN)</summary>
               <div class="form-grid" style="margin-top:10px">
                 <div class="field"><label>Name</label><input type="text" name="name_en" value="{{ (i18n_data.get('en',{})).get('name','') }}"></div>
                 <div class="field"><label>Company</label><input type="text" name="company_en" value="{{ (i18n_data.get('en',{})).get('company','') }}"></div>
@@ -345,7 +320,7 @@
             </details>
 
             <details>
-              <summary style="padding:10px 0; cursor:pointer; font-weight:900;">Français (FR)</summary>
+              <summary>Français (FR)</summary>
               <div class="form-grid" style="margin-top:10px">
                 <div class="field"><label>Nom</label><input type="text" name="name_fr" value="{{ (i18n_data.get('fr',{})).get('name','') }}"></div>
                 <div class="field"><label>Entreprise</label><input type="text" name="company_fr" value="{{ (i18n_data.get('fr',{})).get('company','') }}"></div>
@@ -356,7 +331,7 @@
             </details>
 
             <details>
-              <summary style="padding:10px 0; cursor:pointer; font-weight:900;">Español (ES)</summary>
+              <summary>Español (ES)</summary>
               <div class="form-grid" style="margin-top:10px">
                 <div class="field"><label>Nombre</label><input type="text" name="name_es" value="{{ (i18n_data.get('es',{})).get('name','') }}"></div>
                 <div class="field"><label>Empresa</label><input type="text" name="company_es" value="{{ (i18n_data.get('es',{})).get('company','') }}"></div>
@@ -367,7 +342,7 @@
             </details>
 
             <details>
-              <summary style="padding:10px 0; cursor:pointer; font-weight:900;">Deutsch (DE)</summary>
+              <summary>Deutsch (DE)</summary>
               <div class="form-grid" style="margin-top:10px">
                 <div class="field"><label>Name</label><input type="text" name="name_de" value="{{ (i18n_data.get('de',{})).get('name','') }}"></div>
                 <div class="field"><label>Firma</label><input type="text" name="company_de" value="{{ (i18n_data.get('de',{})).get('company','') }}"></div>
@@ -389,33 +364,29 @@
     </div>
 
   </main>
+
 </div>
 
 <!-- VIEWER MODAL -->
 <div id="viewer" class="modal-overlay" style="display:none" onclick="overlayCloseViewer(event)">
   <div class="modal-box modal-big" onclick="event.stopPropagation()">
-
-    <!-- ✅ chiudi + cestino funzionanti -->
     <button class="modal-x" type="button" onclick="closeViewer()">✕</button>
-    <button id="viewerDel" type="button" class="modal-back" style="left:auto; right:58px;" onclick="deleteFromViewer()">🗑</button>
 
+    <!-- ✅ cestino dentro viewer -->
+    <button id="viewerDel" class="viewer-del" type="button" onclick="deleteFromViewer()">🗑</button>
+
+    <div class="modal-title">Anteprima</div>
     <img id="vImg" style="display:none" src="" alt="">
     <video id="vVideo" style="display:none" controls playsinline></video>
     <iframe id="vPdf" style="display:none" src=""></iframe>
-
-    <!-- ✅ invia wa / email + chiudi -->
-    <div class="modal-actions">
-      <a id="shareWa" class="btn" target="_blank" href="#">Invia per WhatsApp</a>
-      <a id="shareMail" class="btn" href="#">Invia per Email</a>
-      <button class="btn danger" type="button" onclick="closeViewer()">Chiudi</button>
-    </div>
   </div>
 </div>
 
+<!-- DELETE FORM (hidden) -->
 <form id="delForm" method="post" style="display:none"></form>
 
 <script>
-  // ===== CROP LIVE PREVIEW =====
+  // ===== CROP LIVE PREVIEW (anche prima del salva) =====
   const cropImg = document.getElementById('cropImg');
   const cropEmpty = document.getElementById('cropEmpty');
   const photoInput = document.getElementById('photoInput');
@@ -425,30 +396,15 @@
   const zoom = document.getElementById('zoom');
 
   function updateCrop(){
-    if(!cropImg || !posX || !posY || !zoom) return;
+    if(!cropImg) return;
     cropImg.style.objectPosition = `${posX.value}% ${posY.value}%`;
     cropImg.style.transform = `scale(${zoom.value})`;
   }
+  if(posX) posX.addEventListener('input', updateCrop);
+  if(posY) posY.addEventListener('input', updateCrop);
+  if(zoom) zoom.addEventListener('input', updateCrop);
 
-  if(posX){
-    posX.addEventListener('input', updateCrop);
-    posX.addEventListener('change', updateCrop);
-  }
-  if(posY){
-    posY.addEventListener('input', updateCrop);
-    posY.addEventListener('change', updateCrop);
-  }
-  if(zoom){
-    zoom.addEventListener('input', updateCrop);
-    zoom.addEventListener('change', updateCrop);
-  }
-
-  // init (così X non resta “bloccato”)
-  document.addEventListener('DOMContentLoaded', () => {
-    updateCrop();
-  });
-
-  if(photoInput && cropImg){
+  if(photoInput){
     photoInput.addEventListener('change', () => {
       const f = photoInput.files && photoInput.files[0];
       if(!f) return;
@@ -457,21 +413,11 @@
       cropImg.style.display = 'block';
       if(cropEmpty) cropEmpty.style.display = 'none';
       updateCrop();
-      cropImg.onload = () => { try{ URL.revokeObjectURL(url); }catch(e){} };
     });
   }
 
-  // ===== VIEWER + DELETE INSIDE + SHARE =====
+  // ===== VIEWER + DELETE INSIDE =====
   let viewerState = { slug:'', type:'', idx:-1, url:'' };
-
-  function setShareLinks(url){
-    const wa = document.getElementById('shareWa');
-    const mail = document.getElementById('shareMail');
-    const txt = encodeURIComponent("Pay4You - Contenuto: " + url);
-
-    if(wa) wa.href = `https://wa.me/?text=${txt}`;
-    if(mail) mail.href = `mailto:?subject=${encodeURIComponent("Pay4You - Contenuto")}&body=${txt}`;
-  }
 
   function openViewer(type, url, slug, idx){
     viewerState = { slug, type, idx, url };
@@ -484,7 +430,6 @@
     vImg.style.display = 'none';
     vVideo.style.display = 'none';
     vPdf.style.display = 'none';
-
     try{ vVideo.pause(); }catch(e){}
 
     if(type === 'gallery'){
@@ -497,8 +442,6 @@
       vPdf.src = url;
       vPdf.style.display = 'block';
     }
-
-    setShareLinks(url);
     modal.style.display = 'flex';
   }
 
@@ -532,36 +475,6 @@
     if(!viewerState.slug) return;
     confirmDelete(viewerState.slug, viewerState.type, viewerState.idx);
   }
-
-  // ===== P2: carica SOLO p2_json (se vuoto, resta vuoto) =====
-  document.addEventListener('DOMContentLoaded', () => {
-    const isP2 = {{ 'true' if editing_profile2 else 'false' }};
-    if(!isP2) return;
-
-    // Forza vuoto prima (così non resta niente di P1)
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => {
-      const n = el.getAttribute('name');
-      // non toccare i file input
-      if(el.type === 'file') return;
-      // lascia i campi “nascosti” eventuali
-      if(!n) return;
-      el.value = '';
-    });
-
-    try{
-      const p2 = JSON.parse({{ (agent.p2_json if agent else '{}')|tojson }});
-      if(p2 && typeof p2 === 'object'){
-        Object.keys(p2).forEach(k => {
-          const el = document.querySelector(`[name="${k}"]`);
-          if(!el) return;
-          if(el.type === 'file') return;
-          el.value = (p2[k] ?? '');
-        });
-      }
-    }catch(e){
-      // se JSON rotto: meglio vuoto che copiare P1
-    }
-  });
 </script>
 
 </body>
