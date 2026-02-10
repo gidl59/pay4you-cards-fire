@@ -734,6 +734,51 @@ def me_deactivate_p2():
 
 
 # ==========================
+# ✅ ADMIN: activate / deactivate P2
+# ==========================
+@app.route("/area/admin/activate-p2/<slug>", methods=["POST"])
+def admin_activate_p2(slug):
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    ag.p2_enabled = 1
+    if not ag.p2_json:
+        ag.p2_json = "{}"
+    ag.updated_at = dt.datetime.utcnow()
+    s.commit()
+    flash("P2 attivato (vuoto).", "ok")
+    return redirect(url_for("dashboard"))
+
+@app.route("/area/admin/deactivate-p2/<slug>", methods=["POST"])
+def admin_deactivate_p2(slug):
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    ag.p2_enabled = 0
+    ag.p2_json = "{}"
+    ag.updated_at = dt.datetime.utcnow()
+    s.commit()
+    flash("P2 disattivato.", "ok")
+    return redirect(url_for("dashboard"))
+
+
+# ==========================
 # ADMIN: CREDENTIALS MODAL (NO FLASH)
 # ==========================
 @app.route("/area/admin/credentials/<slug>", methods=["POST"])
@@ -754,14 +799,13 @@ def admin_generate_credentials(slug):
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
 
-    # salvata in session SOLO per mostrarla una volta nel modal
     session["last_credentials"] = {
         "slug": ag.slug,
         "username": ag.username,
         "password": newp,
         "ts": dt.datetime.utcnow().isoformat()
     }
-    return redirect(url_for("dashboard", open_credentials=ag.slug))
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/area/admin/send_credentials", methods=["POST"])
@@ -848,14 +892,11 @@ def qr_png(slug):
 
 @app.route("/vcf/<slug>")
 def vcf(slug):
-    p = (request.args.get("p") or "").strip().lower()
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
 
-    # P1 semplice: già ok
     full_name = (ag.name or ag.slug or "").strip()
     org = (ag.company or "").strip()
     title = (ag.role or "").strip()
@@ -896,7 +937,7 @@ def vcf(slug):
 
 
 # ==========================
-# MEDIA DELETE (per galleria/video/pdf)
+# MEDIA DELETE
 # ==========================
 @app.route("/area/media/delete/<slug>", methods=["POST"])
 def delete_media(slug):
@@ -937,14 +978,13 @@ def delete_media(slug):
     s.commit()
     flash("Eliminato.", "ok")
 
-    # resta nella stessa pagina
     if is_admin():
         return redirect(url_for("edit_agent", slug=slug))
     return redirect(url_for("me_edit"))
 
 
 # ==========================
-# CARD PUBLIC (LASCIATA COME PRIMA)
+# CARD PUBLIC (non tocchiamo ora)
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -952,10 +992,6 @@ def card(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
-    # QUI non tocchiamo nulla adesso (come mi hai chiesto)
-    # renderizza la tua card.html (già presente)
-    # NB: se serve, in seguito agganciamo QR/WA/tema ecc.
 
     lang = (request.args.get("lang") or "it").strip().lower()
     p_key = (request.args.get("p") or "").strip().lower()
