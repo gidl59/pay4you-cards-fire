@@ -35,7 +35,7 @@ PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").stri
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_PDFS = 12   
+MAX_PDFS = 12
 
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -114,9 +114,9 @@ class Agent(Base):
     pdf1_url = Column(Text, default="")       # name||url|name||url...
 
     p2_enabled = Column(Integer, default=0)
-    p2_json = Column(Text, default="{}")      # ✅ anche crop + traduzioni P2 dentro qui
+    p2_json = Column(Text, default="{}")
 
-    i18n_json = Column(Text, default="{}")    # P1 translations
+    i18n_json = Column(Text, default="{}")
 
     created_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
     updated_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
@@ -263,14 +263,6 @@ def _new_password(length=10):
     return "".join(random.choice(alphabet) for _ in range(length))
 
 
-def _json_load(s: str, default):
-    try:
-        x = json.loads(s or "")
-        return x if isinstance(x, dict) else default
-    except Exception:
-        return default
-
-
 # ==========================
 # STATIC UPLOADS
 # ==========================
@@ -326,14 +318,14 @@ def dashboard():
     if is_admin():
         agents = s.query(Agent).all()
         agents.sort(key=lambda x: ((x.name or "").strip().lower(), (x.slug or "").strip().lower()))
-        return render_template("dashboard.html", agents=agents, is_admin=True, agent=None, pdf_max=MAX_PDFS)
+        return render_template("dashboard.html", agents=agents, is_admin=True, agent=None)
 
     ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
     if not ag:
         session.clear()
         return redirect(url_for("login"))
 
-    return render_template("dashboard.html", agents=[ag], is_admin=False, agent=ag, pdf_max=MAX_PDFS)
+    return render_template("dashboard.html", agents=[ag], is_admin=False, agent=ag)
 
 
 # ==========================
@@ -388,20 +380,11 @@ def new_agent():
         flash("Card creata!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    return render_template(
-        "agent_form.html",
-        agent=None,
-        editing_profile2=False,
-        i18n_data={},
-        is_admin=True,
-        gallery=[],
-        videos=[],
-        pdfs=[],
-        pdf_max=MAX_PDFS
-    )
+    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={}, is_admin=True,
+                           gallery=[], videos=[], pdfs=[])
 
 
-def save_i18n_p1(agent: Agent, form: dict):
+def save_i18n(agent: Agent, form: dict):
     data = {}
     for L in ["en", "fr", "es", "de"]:
         data[L] = {
@@ -413,19 +396,6 @@ def save_i18n_p1(agent: Agent, form: dict):
         }
     agent.i18n_json = json.dumps(data, ensure_ascii=False)
 
-def save_i18n_p2(agent: Agent, form: dict):
-    p2 = _json_load(agent.p2_json or "{}", {})
-    data = {}
-    for L in ["en", "fr", "es", "de"]:
-        data[L] = {
-            "name": (form.get(f"name_{L}") or "").strip(),
-            "company": (form.get(f"company_{L}") or "").strip(),
-            "role": (form.get(f"role_{L}") or "").strip(),
-            "bio": (form.get(f"bio_{L}") or "").strip(),
-            "addresses": (form.get(f"addresses_{L}") or "").strip(),
-        }
-    p2["__i18n"] = data
-    agent.p2_json = json.dumps(p2, ensure_ascii=False)
 
 def set_profile_data_p1(agent: Agent, form: dict):
     avatar_spin = 1 if form.get("avatar_spin") == "on" else 0
@@ -488,10 +458,9 @@ def set_profile_data_p1(agent: Agent, form: dict):
 
     agent.updated_at = dt.datetime.utcnow()
 
-def set_profile_data_p2(agent: Agent, form: dict):
-    # ✅ P2: tutti i campi testo + crop dentro p2_json
-    data = _json_load(agent.p2_json or "{}", {})
 
+def set_profile_data_p2(agent: Agent, form: dict):
+    data = {}
     for k in [
         "name", "company", "role", "bio",
         "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
@@ -500,74 +469,8 @@ def set_profile_data_p2(agent: Agent, form: dict):
         "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"
     ]:
         data[k] = (form.get(k) or "").strip()
-
-    # crop P2 (indipendente da P1)
-    def safe_int(v, d):
-        try:
-            return int(v)
-        except Exception:
-            return d
-
-    data["photo_pos_x"] = safe_int(form.get("photo_pos_x"), 50)
-    data["photo_pos_y"] = safe_int(form.get("photo_pos_y"), 35)
-
-    z = (form.get("photo_zoom") or "1.0").strip()
-    try:
-        float(z)
-        data["photo_zoom"] = z
-    except Exception:
-        data["photo_zoom"] = "1.0"
-
     agent.p2_json = json.dumps(data, ensure_ascii=False)
     agent.updated_at = dt.datetime.utcnow()
-
-def handle_media_uploads(agent: Agent):
-    # ✅ media condivisi (un solo set) ma gestibili anche da P2 per comodità admin/cliente
-    photo = request.files.get("photo")
-    if photo and photo.filename:
-        agent.photo_url = save_upload(photo, "images")
-
-    logo = request.files.get("logo")
-    if logo and logo.filename:
-        agent.logo_url = save_upload(logo, "images")
-
-    back_media = request.files.get("back_media")
-    if back_media and back_media.filename:
-        agent.back_media_url = save_upload(back_media, "images")
-
-    gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
-    if gallery_files:
-        gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
-        urls = [save_upload(f, "images") for f in gallery_files]
-        urls = [u for u in urls if u]
-        existing = [x for x in (agent.gallery_urls or "").split("|") if x.strip()]
-        agent.gallery_urls = "|".join(existing + urls)
-
-    video_files = [f for f in request.files.getlist("videos") if f and f.filename]
-    if video_files:
-        video_files = video_files[:MAX_VIDEOS]
-        urls = [save_upload(f, "videos") for f in video_files]
-        urls = [u for u in urls if u]
-        existing = [x for x in (agent.video_urls or "").split("|") if x.strip()]
-        agent.video_urls = "|".join(existing + urls)
-
-    existing_pdf = parse_pdf_items(agent.pdf1_url or "")
-    out = existing_pdf[:] if existing_pdf else []
-    for i in range(1, MAX_PDFS + 1):
-        f = request.files.get(f"pdf{i}")
-        if f and f.filename:
-            url = save_upload(f, "pdf")
-            name = secure_filename(f.filename) or f"PDF {i}"
-            idx = i - 1
-            while len(out) <= idx:
-                out.append({"name": "", "url": ""})
-            out[idx] = {"name": name, "url": url}
-
-    out2 = []
-    for item in out:
-        if item.get("url"):
-            out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
-    agent.pdf1_url = "|".join(out2)
 
 
 @app.route("/area/edit/<slug>", methods=["GET", "POST"])
@@ -585,29 +488,73 @@ def edit_agent(slug):
 
     if request.method == "POST":
         set_profile_data_p1(ag, request.form)
-        handle_media_uploads(ag)
-        save_i18n_p1(ag, request.form)
+
+        photo = request.files.get("photo")
+        if photo and photo.filename:
+            ag.photo_url = save_upload(photo, "images")
+
+        logo = request.files.get("logo")
+        if logo and logo.filename:
+            ag.logo_url = save_upload(logo, "images")
+
+        back_media = request.files.get("back_media")
+        if back_media and back_media.filename:
+            ag.back_media_url = save_upload(back_media, "images")
+
+        gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
+        if gallery_files:
+            gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
+            urls = [save_upload(f, "images") for f in gallery_files]
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+            ag.gallery_urls = "|".join(existing + urls)
+
+        video_files = [f for f in request.files.getlist("videos") if f and f.filename]
+        if video_files:
+            video_files = video_files[:MAX_VIDEOS]
+            urls = [save_upload(f, "videos") for f in video_files]
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+            ag.video_urls = "|".join(existing + urls)
+
+        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
+        out = existing_pdf[:] if existing_pdf else []
+        for i in range(1, MAX_PDFS + 1):
+            f = request.files.get(f"pdf{i}")
+            if f and f.filename:
+                url = save_upload(f, "pdf")
+                name = secure_filename(f.filename) or f"PDF {i}"
+                idx = i - 1
+                while len(out) <= idx:
+                    out.append({"name": "", "url": ""})
+                out[idx] = {"name": name, "url": url}
+
+        out2 = []
+        for item in out:
+            if item.get("url"):
+                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
+        ag.pdf1_url = "|".join(out2)
+
+        save_i18n(ag, request.form)
 
         s.commit()
         flash("Salvato!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    i18n_data = _json_load(ag.i18n_json or "{}", {})
+    try:
+        i18n_data = json.loads(ag.i18n_json or "{}")
+        if not isinstance(i18n_data, dict):
+            i18n_data = {}
+    except Exception:
+        i18n_data = {}
+
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=False,
-        i18n_data=i18n_data,
-        is_admin=True,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        pdf_max=MAX_PDFS
-    )
+    return render_template("agent_form.html", agent=ag, editing_profile2=False,
+                           i18n_data=i18n_data, is_admin=True,
+                           gallery=gallery, videos=videos, pdfs=pdfs)
 
 
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
@@ -629,31 +576,13 @@ def admin_profile2(slug):
 
     if request.method == "POST":
         set_profile_data_p2(ag, request.form)
-        handle_media_uploads(ag)
-        save_i18n_p2(ag, request.form)
-
         s.commit()
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("admin_profile2", slug=slug))
 
-    p2 = _json_load(ag.p2_json or "{}", {})
-    i18n_data = p2.get("__i18n", {}) if isinstance(p2.get("__i18n", {}), dict) else {}
-
-    gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
-    videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-    pdfs = parse_pdf_items(ag.pdf1_url or "")
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=True,
-        i18n_data=i18n_data,
-        is_admin=True,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        pdf_max=MAX_PDFS
-    )
+    return render_template("agent_form.html", agent=ag, editing_profile2=True,
+                           i18n_data={}, is_admin=True,
+                           gallery=[], videos=[], pdfs=[])
 
 
 # ==========================
@@ -674,7 +603,52 @@ def me_edit():
 
     if request.method == "POST":
         set_profile_data_p1(ag, request.form)
-        handle_media_uploads(ag)
+
+        photo = request.files.get("photo")
+        if photo and photo.filename:
+            ag.photo_url = save_upload(photo, "images")
+
+        logo = request.files.get("logo")
+        if logo and logo.filename:
+            ag.logo_url = save_upload(logo, "images")
+
+        back_media = request.files.get("back_media")
+        if back_media and back_media.filename:
+            ag.back_media_url = save_upload(back_media, "images")
+
+        gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
+        if gallery_files:
+            gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
+            urls = [save_upload(f, "images") for f in gallery_files]
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+            ag.gallery_urls = "|".join(existing + urls)
+
+        video_files = [f for f in request.files.getlist("videos") if f and f.filename]
+        if video_files:
+            video_files = video_files[:MAX_VIDEOS]
+            urls = [save_upload(f, "videos") for f in video_files]
+            urls = [u for u in urls if u]
+            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+            ag.video_urls = "|".join(existing + urls)
+
+        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
+        out = existing_pdf[:] if existing_pdf else []
+        for i in range(1, MAX_PDFS + 1):
+            f = request.files.get(f"pdf{i}")
+            if f and f.filename:
+                url = save_upload(f, "pdf")
+                name = secure_filename(f.filename) or f"PDF {i}"
+                idx = i - 1
+                while len(out) <= idx:
+                    out.append({"name": "", "url": ""})
+                out[idx] = {"name": name, "url": url}
+
+        out2 = []
+        for item in out:
+            if item.get("url"):
+                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
+        ag.pdf1_url = "|".join(out2)
 
         s.commit()
         flash("Salvato!", "ok")
@@ -684,17 +658,9 @@ def me_edit():
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=False,
-        i18n_data={},
-        is_admin=False,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        pdf_max=MAX_PDFS
-    )
+    return render_template("agent_form.html", agent=ag, editing_profile2=False,
+                           i18n_data={}, is_admin=False,
+                           gallery=gallery, videos=videos, pdfs=pdfs)
 
 
 @app.route("/area/me/p2", methods=["GET", "POST"])
@@ -716,31 +682,13 @@ def me_profile2():
 
     if request.method == "POST":
         set_profile_data_p2(ag, request.form)
-        handle_media_uploads(ag)
-        save_i18n_p2(ag, request.form)
-
         s.commit()
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("me_profile2"))
 
-    p2 = _json_load(ag.p2_json or "{}", {})
-    i18n_data = p2.get("__i18n", {}) if isinstance(p2.get("__i18n", {}), dict) else {}
-
-    gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
-    videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-    pdfs = parse_pdf_items(ag.pdf1_url or "")
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=True,
-        i18n_data=i18n_data,
-        is_admin=False,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        pdf_max=MAX_PDFS
-    )
+    return render_template("agent_form.html", agent=ag, editing_profile2=True,
+                           i18n_data={}, is_admin=False,
+                           gallery=[], videos=[], pdfs=[])
 
 
 @app.route("/area/me/activate-p2", methods=["POST"])
@@ -757,7 +705,7 @@ def me_activate_p2():
         abort(404)
 
     ag.p2_enabled = 1
-    ag.p2_json = "{}"  # ✅ vuoto
+    ag.p2_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("Profilo 2 attivato (vuoto).", "ok")
@@ -802,7 +750,8 @@ def admin_activate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 1
-    ag.p2_json = "{}"  # ✅ sempre vuoto
+    if not ag.p2_json:
+        ag.p2_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("P2 attivato (vuoto).", "ok")
@@ -867,6 +816,17 @@ def admin_send_credentials_placeholder():
     if not is_admin():
         abort(403)
     flash("Invio credenziali via Email/WhatsApp: lo attiviamo dopo con SMTP + WhatsApp.", "warning")
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/area/admin/send_qr", methods=["POST"])
+def admin_send_qr_placeholder():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+    flash("Invio QR via Email/WhatsApp: lo attiviamo dopo con SMTP + WhatsApp.", "warning")
     return redirect(url_for("dashboard"))
 
 
@@ -1018,21 +978,13 @@ def delete_media(slug):
     s.commit()
     flash("Eliminato.", "ok")
 
-    # torna alla pagina corretta (P1 o P2)
     if is_admin():
-        referer = request.headers.get("Referer", "")
-        if "/p2" in referer:
-            return redirect(url_for("admin_profile2", slug=slug))
         return redirect(url_for("edit_agent", slug=slug))
-
-    referer = request.headers.get("Referer", "")
-    if "/me/p2" in referer:
-        return redirect(url_for("me_profile2"))
     return redirect(url_for("me_edit"))
 
 
 # ==========================
-# CARD PUBLIC (non tocchiamo ancora UI, ma P2 già pronto nei dati)
+# CARD PUBLIC (non tocchiamo ora)
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -1045,31 +997,6 @@ def card(slug):
     p_key = (request.args.get("p") or "").strip().lower()
     p2_enabled = int(ag.p2_enabled or 0) == 1
     use_p2 = (p_key == "p2" and p2_enabled)
-
-    # base data
-    base_data = {
-        "name": ag.name,
-        "company": ag.company,
-        "role": ag.role,
-        "bio": ag.bio,
-        "photo_pos_x": ag.photo_pos_x,
-        "photo_pos_y": ag.photo_pos_y,
-        "photo_zoom": ag.photo_zoom or "1.0",
-    }
-
-    # P2 overrides
-    if use_p2:
-        p2 = _json_load(ag.p2_json or "{}", {})
-        for k in ["name","company","role","bio"]:
-            if (p2.get(k) or "").strip():
-                base_data[k] = p2.get(k)
-        # crop P2
-        if isinstance(p2.get("photo_pos_x"), int):
-            base_data["photo_pos_x"] = p2.get("photo_pos_x")
-        if isinstance(p2.get("photo_pos_y"), int):
-            base_data["photo_pos_y"] = p2.get("photo_pos_y")
-        if (p2.get("photo_zoom") or "").strip():
-            base_data["photo_zoom"] = p2.get("photo_zoom")
 
     emails = split_csv(ag.emails or "")
     websites = split_csv(ag.websites or "")
@@ -1116,17 +1043,17 @@ def card(slug):
         "photo_url": ag.photo_url,
         "back_media_mode": ag.back_media_mode,
         "back_media_url": ag.back_media_url,
-        "photo_pos_x": base_data["photo_pos_x"],
-        "photo_pos_y": base_data["photo_pos_y"],
-        "photo_zoom": float(base_data["photo_zoom"] or "1.0"),
+        "photo_pos_x": ag.photo_pos_x,
+        "photo_pos_y": ag.photo_pos_y,
+        "photo_zoom": float(ag.photo_zoom or "1.0"),
         "orbit_spin": ag.orbit_spin,
         "avatar_spin": ag.avatar_spin,
         "logo_spin": ag.logo_spin,
         "allow_flip": ag.allow_flip,
-        "name": base_data["name"],
-        "company": base_data["company"],
-        "role": base_data["role"],
-        "bio": base_data["bio"],
+        "name": ag.name,
+        "company": ag.company,
+        "role": ag.role,
+        "bio": ag.bio,
         "piva": ag.piva,
         "sdi": ag.sdi,
     })
