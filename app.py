@@ -2,28 +2,26 @@ import os
 import re
 import json
 import uuid
-import secrets
-import string
 import datetime as dt
 from pathlib import Path
-from urllib import request as urlreq
-from urllib.parse import urlencode, quote_plus
-
-import qrcode
-from io import BytesIO
 
 from flask import (
     Flask, render_template, request, redirect,
     url_for, session, abort, flash, send_from_directory, Response
 )
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Text, DateTime
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
-import smtplib
-from email.message import EmailMessage
+# QR (se in requirements.txt hai "qrcode[pil]" o "qrcode")
+try:
+    import qrcode
+except Exception:
+    qrcode = None
 
 
 # ==========================
@@ -40,22 +38,7 @@ MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
 MAX_PDFS = 12
 
-# SMTP (optional)
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "").strip()
-SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER).strip()
-
-# WhatsApp Cloud API (optional)
-WA_TOKEN = os.getenv("WA_TOKEN", "").strip()
-WA_PHONE_NUMBER_ID = os.getenv("WA_PHONE_NUMBER_ID", "").strip()
-WA_TO_FALLBACK = os.getenv("WA_TO_FALLBACK", "").strip()  # opzionale: +39...
-
-
-# ==========================
-# DIRECTORIES
-# ==========================
+# Directories
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -65,17 +48,11 @@ SUBDIR_PDF = UPLOADS_DIR / "pdf"
 for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
     d.mkdir(parents=True, exist_ok=True)
 
-
-# ==========================
-# FLASK
-# ==========================
+# Flask
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 
-
-# ==========================
-# SQLALCHEMY
-# ==========================
+# SQLAlchemy
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
@@ -144,21 +121,22 @@ class Agent(Base):
 
     # Profile2
     p2_enabled = Column(Integer, default=0)
-    p2_json = Column(Text, default="{}")      # JSON campi del profilo 2
+    p2_json = Column(Text, default="{}")  # JSON con campi del profilo 2 (VUOTO di default)
 
     # i18n
-    i18n_json = Column(Text, default="{}")    # {"en": {...}, "fr": {...} ...}
+    i18n_json = Column(Text, default="{}")  # {"en": {...}, "fr": {...} ...}
 
     created_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
     updated_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
 
 
 # ==========================
-# DB INIT + SAFE MIGRATIONS (SQLite)
+# DB INIT + MIGRATION (SQLite)
 # ==========================
 def _sqlite_table_columns(conn, table_name: str):
     rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
     return {r[1] for r in rows}
+
 
 def ensure_db():
     Base.metadata.create_all(engine)
@@ -211,6 +189,7 @@ def ensure_db():
             conn.exec_driver_sql(f"UPDATE agents SET {f} = COALESCE({f}, 0)")
 
         conn.commit()
+
 
 ensure_db()
 
@@ -414,66 +393,13 @@ def save_i18n(agent: Agent, form: dict):
         }
     agent.i18n_json = json.dumps(data, ensure_ascii=False)
 
-def make_temp_password(length: int = 12) -> str:
-    # password leggibile ma robusta: lettere + numeri (e 2 simboli)
-    letters = string.ascii_letters
-    digits = string.digits
-    symbols = "!@#%?"
-    core = ''.join(secrets.choice(letters + digits) for _ in range(max(8, length-2)))
-    extra = secrets.choice(symbols) + secrets.choice(symbols)
-    pw = list(core + extra)
-    secrets.SystemRandom().shuffle(pw)
-    return ''.join(pw)
-
-def send_email(to_email: str, subject: str, body: str):
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASS and SMTP_FROM and to_email):
-        return False, "SMTP non configurato o email mancante"
-    msg = EmailMessage()
-    msg["From"] = SMTP_FROM
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.set_content(body)
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=25) as s:
-            s.starttls()
-            s.login(SMTP_USER, SMTP_PASS)
-            s.send_message(msg)
-        return True, "Email inviata"
-    except Exception as e:
-        return False, f"Errore email: {e}"
-
-def send_whatsapp_text(to_number: str, text: str):
-    if not (WA_TOKEN and WA_PHONE_NUMBER_ID and to_number):
-        return False, "WhatsApp non configurato o numero mancante"
-    try:
-        url = f"https://graph.facebook.com/v20.0/{WA_PHONE_NUMBER_ID}/messages"
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": re.sub(r"\D+", "", to_number),
-            "type": "text",
-            "text": {"body": text}
-        }
-        data = json.dumps(payload).encode("utf-8")
-        req = urlreq.Request(url, data=data, method="POST")
-        req.add_header("Authorization", f"Bearer {WA_TOKEN}")
-        req.add_header("Content-Type", "application/json")
-        with urlreq.urlopen(req, timeout=25) as resp:
-            _ = resp.read()
-        return True, "WhatsApp inviato"
-    except Exception as e:
-        return False, f"Errore WhatsApp: {e}"
-
 
 # ==========================
-# STATIC UPLOADS + FAVICON
+# STATIC UPLOADS
 # ==========================
 @app.route("/uploads/<path:filename>")
 def serve_uploads(filename):
     return send_from_directory(str(UPLOADS_DIR), filename)
-
-@app.route("/favicon.ico")
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico")
 
 
 # ==========================
@@ -502,9 +428,6 @@ def login():
 
     return render_template("login.html")
 
-@app.route("/login")
-def login_alias():
-    return redirect(url_for("login"))
 
 @app.route("/area/logout")
 def logout():
@@ -522,19 +445,23 @@ def dashboard():
         return r
 
     s = db()
+
     if is_admin():
-        agents = s.query(Agent).order_by(Agent.created_at.desc()).all()
-        return render_template("admin_list.html", agents=agents, is_admin=True, agent=None)
-    else:
-        ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-        if not ag:
-            session.clear()
-            return redirect(url_for("login"))
-        return render_template("admin_list.html", agents=[ag], is_admin=False, agent=ag)
+        agents = s.query(Agent).all()
+        # alfabetico: name, fallback slug
+        agents.sort(key=lambda x: ((x.name or "").strip().lower(), (x.slug or "").strip().lower()))
+        return render_template("dashboard.html", agents=agents, is_admin=True, agent=None)
+
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    if not ag:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("dashboard.html", agents=[ag], is_admin=False, agent=ag)
 
 
 # ==========================
-# ADMIN: CREATE / EDIT
+# ADMIN: NEW / EDIT
 # ==========================
 @app.route("/area/new", methods=["GET", "POST"])
 def new_agent():
@@ -586,7 +513,8 @@ def new_agent():
         flash("Card creata!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={})
+    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={}, is_admin=True)
+
 
 @app.route("/area/edit/<slug>", methods=["GET", "POST"])
 def edit_agent(slug):
@@ -659,7 +587,8 @@ def edit_agent(slug):
     except Exception:
         i18n_data = {}
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data)
+    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data=i18n_data, is_admin=True)
+
 
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
 def admin_profile2(slug):
@@ -674,7 +603,7 @@ def admin_profile2(slug):
     if not ag:
         abort(404)
 
-    if int(ag.p2_enabled or 0) != 1:
+    if (ag.p2_enabled or 0) != 1:
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("edit_agent", slug=slug))
 
@@ -684,60 +613,7 @@ def admin_profile2(slug):
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("admin_profile2", slug=slug))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={})
-
-
-# ==========================
-# ADMIN: TOGGLE P2 + DELETE
-# ==========================
-@app.route("/area/admin/p2/toggle/<slug>", methods=["POST"])
-def admin_toggle_p2(slug):
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    action = (request.form.get("action") or "").strip().lower()
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    if action == "enable":
-        ag.p2_enabled = 1
-        ag.p2_json = "{}"  # VUOTO
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("P2 attivato (vuoto).", "ok")
-    elif action == "disable":
-        ag.p2_enabled = 0
-        ag.p2_json = "{}"
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("P2 disattivato.", "ok")
-    else:
-        flash("Azione non valida", "error")
-
-    return redirect(url_for("dashboard"))
-
-@app.route("/area/delete/<slug>", methods=["POST"])
-def admin_delete(slug):
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    s.delete(ag)
-    s.commit()
-    flash("Card eliminata.", "ok")
-    return redirect(url_for("dashboard"))
+    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={}, is_admin=True)
 
 
 # ==========================
@@ -805,7 +681,8 @@ def me_edit():
         flash("Salvato!", "ok")
         return redirect(url_for("me_edit"))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data={})
+    return render_template("agent_form.html", agent=ag, editing_profile2=False, i18n_data={}, is_admin=False)
+
 
 @app.route("/area/me/p2", methods=["GET", "POST"])
 def me_profile2():
@@ -819,7 +696,8 @@ def me_profile2():
     ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
     if not ag:
         abort(404)
-    if int(ag.p2_enabled or 0) != 1:
+
+    if (ag.p2_enabled or 0) != 1:
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("dashboard"))
 
@@ -829,7 +707,8 @@ def me_profile2():
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("me_profile2"))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={})
+    return render_template("agent_form.html", agent=ag, editing_profile2=True, i18n_data={}, is_admin=False)
+
 
 @app.route("/area/me/activate-p2", methods=["POST"])
 def me_activate_p2():
@@ -850,6 +729,7 @@ def me_activate_p2():
     s.commit()
     flash("Profilo 2 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
+
 
 @app.route("/area/me/deactivate-p2", methods=["POST"])
 def me_deactivate_p2():
@@ -873,10 +753,15 @@ def me_deactivate_p2():
 
 
 # ==========================
-# SEND CREDENTIALS (ADMIN): REGENERATE PASSWORD + EMAIL + WHATSAPP
+# ADMIN TOOLS: credentials + delete + QR + VCF
 # ==========================
-@app.route("/area/send-credentials/<slug>", methods=["POST"])
-def send_credentials(slug):
+def _new_password(length=10):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+    import random
+    return "".join(random.choice(alphabet) for _ in range(length))
+
+@app.route("/area/admin/reset-password/<slug>", methods=["POST"])
+def admin_reset_password(slug):
     r = require_login()
     if r:
         return r
@@ -888,93 +773,171 @@ def send_credentials(slug):
     if not ag:
         abort(404)
 
-    # 1) rigenera password
-    new_pw = make_temp_password(12)
-    ag.password_hash = generate_password_hash(new_pw)
+    newp = _new_password(10)
+    ag.password_hash = generate_password_hash(newp)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
 
-    base = public_base_url()
-    card_url = f"{base}/{ag.slug}"
-    login_url = f"{base}/area/login"
-    username = ag.username or ag.slug
-
-    text = (
-        "✅ Ti ho attivato la tua Pay4You Card\n\n"
-        f"Ciao {ag.name or ''}!\n"
-        f"🔗 La tua Card: {card_url}\n"
-        f"🔐 Area riservata: {login_url}\n\n"
-        f"👤 Username: {username}\n"
-        f"🔑 Password temporanea: {new_pw}\n\n"
-        "Al primo accesso ti consiglio di cambiare la password.\n"
-        "— Pay4You (Giuseppe)"
-    )
-
-    # email (prima email utile)
-    email_to = ""
-    if ag.emails:
-        arr = split_csv(ag.emails)
-        email_to = arr[0] if arr else ""
-
-    okE, msgE = send_email(email_to, "✅ Ti ho attivato la tua Pay4You Card", text)
-
-    # whatsapp (numero in campo whatsapp, altrimenti fallback)
-    wa_to = (ag.whatsapp or "").strip()
-    if wa_to.startswith("https://"):
-        wa_to = ""
-    if not wa_to:
-        wa_to = WA_TO_FALLBACK
-
-    okW, msgW = send_whatsapp_text(wa_to, text)
-
-    if okE or okW:
-        flash(f"Credenziali inviate. {msgE} — {msgW}", "ok")
-    else:
-        flash(f"Non inviate. {msgE} — {msgW}. Copia il testo dal popup e invia manualmente.", "error")
-
+    # per ora mostriamo in flash (invio email/wa lo facciamo dopo con SMTP+WA)
+    flash(f"Nuova password generata per {ag.slug}: {newp}", "ok")
     return redirect(url_for("dashboard"))
 
+@app.route("/area/admin/delete/<slug>", methods=["POST"])
+def admin_delete_agent(slug):
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
-# ==========================
-# QR ROUTES
-# ==========================
-@app.route("/qr/<slug>")
-def qr_redirect(slug):
-    # Questo è il link contenuto nel QR (scansionato) -> reindirizza alla card
+    confirm = (request.form.get("confirm") or "").strip().lower()
+    if confirm != "si":
+        flash("Conferma mancante: scrivi SI per eliminare.", "error")
+        return redirect(url_for("dashboard"))
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    s.delete(ag)
+    s.commit()
+    flash(f"Card eliminata: {slug}", "ok")
+    return redirect(url_for("dashboard"))
+
+@app.route("/qr/<slug>.png")
+def qr_png(slug):
+    # download QR (P1 o P2 con ?p=p2)
+    if qrcode is None:
+        abort(500)
+
     p = (request.args.get("p") or "").strip().lower()
-    if p == "p2":
-        return redirect(f"/{slug}?p=p2")
-    return redirect(f"/{slug}")
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
 
-@app.route("/qr-img")
-def qr_img():
-    # Genera PNG del QR per qualunque URL passato in u=
-    u = (request.args.get("u") or "").strip()
-    if not u:
-        abort(400)
+    base = public_base_url()
+    url = f"{base}/{ag.slug}"
+    if p == "p2" and int(ag.p2_enabled or 0) == 1:
+        url = f"{base}/{ag.slug}?p=p2"
 
-    # sicurezza base: evita schemi strani
-    if not (u.startswith("http://") or u.startswith("https://")):
-        abort(400)
-
-    qr = qrcode.QRCode(
-        version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=10,
-        border=3,
-    )
-    qr.add_data(u)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-
+    img = qrcode.make(url)
+    from io import BytesIO
     buf = BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
-    return Response(buf.getvalue(), mimetype="image/png")
+
+    filename = f"QR-{ag.slug}-{'P2' if (p=='p2') else 'P1'}.png"
+    return Response(
+        buf.getvalue(),
+        mimetype="image/png",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@app.route("/vcf/<slug>")
+def vcf(slug):
+    # VCard P1 (default) o P2 con ?p=p2
+    p = (request.args.get("p") or "").strip().lower()
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    use_p2 = (p == "p2" and int(ag.p2_enabled or 0) == 1)
+    profile = get_profile_data(ag, "p2" if use_p2 else "p1")
+
+    full_name = (profile.get("name") or ag.slug or "").strip()
+    org = (profile.get("company") or "").strip()
+    title = (profile.get("role") or "").strip()
+
+    emails = split_csv(profile.get("emails", ""))
+    webs = split_csv(profile.get("websites", ""))
+
+    tel1 = (profile.get("phone_mobile") or "").strip()
+    tel2 = (profile.get("phone_mobile2") or "").strip()
+    office = (profile.get("phone_office") or "").strip()
+
+    lines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"FN:{full_name}",
+    ]
+    if org:
+        lines.append(f"ORG:{org}")
+    if title:
+        lines.append(f"TITLE:{title}")
+    if tel1:
+        lines.append(f"TEL;TYPE=CELL:{tel1}")
+    if tel2:
+        lines.append(f"TEL;TYPE=CELL:{tel2}")
+    if office:
+        lines.append(f"TEL;TYPE=WORK:{office}")
+    for e in emails[:5]:
+        lines.append(f"EMAIL;TYPE=INTERNET:{e}")
+    for w in webs[:3]:
+        lines.append(f"URL:{w}")
+    lines.append("END:VCARD")
+
+    vcf_text = "\r\n".join(lines) + "\r\n"
+    filename = f"{ag.slug}-{'P2' if use_p2 else 'P1'}.vcf"
+    return Response(
+        vcf_text,
+        mimetype="text/vcard; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # ==========================
-# PUBLIC CARD
+# MEDIA DELETE
+# ==========================
+@app.route("/area/media/delete/<slug>", methods=["POST"])
+def delete_media(slug):
+    r = require_login()
+    if r:
+        return r
+
+    t = (request.form.get("type") or "").strip()  # gallery | video | pdf
+    idx = int(request.form.get("idx") or -1)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    if not is_admin() and ag.slug != session.get("slug"):
+        abort(403)
+
+    if t == "gallery":
+        items = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        if 0 <= idx < len(items):
+            items.pop(idx)
+            ag.gallery_urls = "|".join(items)
+    elif t == "video":
+        items = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+        if 0 <= idx < len(items):
+            items.pop(idx)
+            ag.video_urls = "|".join(items)
+    elif t == "pdf":
+        items = parse_pdf_items(ag.pdf1_url or "")
+        if 0 <= idx < len(items):
+            items.pop(idx)
+            ag.pdf1_url = "|".join([f"{x['name']}||{x['url']}" for x in items])
+    else:
+        abort(400)
+
+    ag.updated_at = dt.datetime.utcnow()
+    s.commit()
+    flash("Eliminato.", "ok")
+
+    if is_admin():
+        return redirect(url_for("edit_agent", slug=slug))
+    return redirect(url_for("me_edit"))
+
+
+# ==========================
+# CARD PUBLIC (INVARIATA)
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -1009,30 +972,32 @@ def card(slug):
 
     addr_objs = []
     for a in addresses:
-        q = quote_plus(a)
+        q = a.replace(" ", "+")
         addr_objs.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
 
     mobiles = []
-    m1 = (profile.get("phone_mobile","") or "").strip()
-    m2 = (profile.get("phone_mobile2","") or "").strip()
-    if m1: mobiles.append(m1)
-    if m2: mobiles.append(m2)
+    m1 = profile.get("phone_mobile","").strip()
+    m2 = profile.get("phone_mobile2","").strip()
+    if m1:
+        mobiles.append(m1)
+    if m2:
+        mobiles.append(m2)
 
-    office_value = (profile.get("phone_office","") or "").strip()
-    pec_email = (profile.get("pec","") or "").strip()
+    office_value = profile.get("phone_office","").strip()
+    pec_email = profile.get("pec","").strip()
 
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    wa_link = (profile.get("whatsapp","") or "").strip()
+    wa_link = profile.get("whatsapp","").strip()
     if wa_link and wa_link.startswith("+"):
         wa_link = "https://wa.me/" + re.sub(r"\D+", "", wa_link)
 
     base_url = public_base_url()
-    qr_url = f"{base_url}/qr/{ag.slug}"
+    qr_url = f"{base_url}/{ag.slug}"
     if use_p2:
-        qr_url = f"{base_url}/qr/{ag.slug}?p=p2"
+        qr_url = f"{base_url}/{ag.slug}?p=p2"
 
     def t_func(key):
         it = {
@@ -1102,14 +1067,12 @@ def card(slug):
         "avatar_spin": ag.avatar_spin,
         "logo_spin": ag.logo_spin,
         "allow_flip": ag.allow_flip,
-
         "name": profile.get("name",""),
         "company": profile.get("company",""),
         "role": profile.get("role",""),
         "bio": profile.get("bio",""),
         "piva": profile.get("piva",""),
         "sdi": profile.get("sdi",""),
-
         "facebook": profile.get("facebook",""),
         "instagram": profile.get("instagram",""),
         "linkedin": profile.get("linkedin",""),
@@ -1142,7 +1105,7 @@ def card(slug):
 
 
 # ==========================
-# HOME
+# MAIN
 # ==========================
 @app.route("/")
 def home():
