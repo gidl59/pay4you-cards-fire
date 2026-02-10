@@ -347,3 +347,25 @@ input:focus, textarea:focus{
 }
 .viewer-del:hover{opacity:.95; transform:translateY(-1px)}
 .viewer-del:active{transform:translateY(0)}
+/* ===== Fix viewer actions + click ===== */
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:14px;
+  flex-wrap:wrap;
+}
+.viewer-del{
+  position:absolute;
+  top:14px;
+  right:54px;
+  z-index:5;
+}
+
+/* ===== traduzioni più compatte ===== */
+.form-grid.compact{
+  gap:10px !important;
+}
+.form-grid.compact .field label{
+  margin-bottom:6px;
+}
