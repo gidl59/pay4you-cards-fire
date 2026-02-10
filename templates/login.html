@@ -5,59 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="app-shell">
-
-  <header class="app-header">
-    <a class="brand" href="/">
-      <div class="logo-dot"></div>
-      <div>
-        <div class="brand-title">Pay4You Cards</div>
-        <div class="hint">Accesso riservato</div>
+  <div class="page-main">
+    <div class="panel panel-login">
+      <div class="panel-head panel-head-center">
+        <img class="login-logo" src="/static/logo.png" alt="" onerror="this.style.display='none'">
+        <div class="login-title">Pay4You Cards</div>
+        <div class="hint">Accedi alla dashboard</div>
       </div>
-    </a>
-  </header>
 
-  <main class="app-main">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap">
-          {% for cat,msg in messages %}
-            <div class="flash flash-{{cat}}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <div class="page-main">
-      <div class="panel panel-login">
-        <div class="panel-head panel-head-center">
-          <div class="page-title">Login</div>
-          <div class="hint">Inserisci username e password</div>
-        </div>
-
-        <form method="post" action="/area/login" class="panel-body">
-          <div class="form-grid">
-            <div class="field full">
-              <label>Username</label>
-              <input type="text" name="username" autocomplete="username" required>
-            </div>
-            <div class="field full">
-              <label>Password</label>
-              <input type="password" name="password" autocomplete="current-password" required>
-            </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for cat,msg in messages %}
+              <div class="flash flash-{{cat}}">{{ msg }}</div>
+            {% endfor %}
           </div>
+        {% endif %}
+      {% endwith %}
 
-          <div class="actions-footer" style="margin-top:14px">
-            <button class="btn primary" type="submit">Entra</button>
-          </div>
-        </form>
-      </div>
+      <form method="post" class="panel-body">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" autocomplete="username" required>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>Password</label>
+          <input type="password" name="password" autocomplete="current-password" required>
+        </div>
+        <div style="margin-top:14px; display:flex; justify-content:flex-end;">
+          <button class="btn primary" type="submit">Entra</button>
+        </div>
+      </form>
     </div>
-  </main>
-
-</div>
+  </div>
 </body>
 </html>
