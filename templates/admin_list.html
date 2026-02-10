@@ -1,188 +1,90 @@
-{% extends "base.html" %}
-{% block title %}Dashboard | Pay4You{% endblock %}
-
-{% block content %}
-<div class="admin-wrap">
-  <div class="admin-head">
-    <div>
-      <h1 class="admin-title">{% if is_admin %}Cards{% else %}La tua card{% endif %}</h1>
-      <div class="admin-sub">
-        {% if is_admin %}
-          Gestisci le card (profilo 1 e profilo 2).
-        {% else %}
-          Qui puoi gestire la tua card e attivare/disattivare il profilo 2.
-        {% endif %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | Pay4You</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="t1">Pay4You Cards</div>
+        <div class="t2">{{ "Admin" if is_admin else "Agente" }}</div>
       </div>
     </div>
-
-    <div class="toolbar">
+    <div class="topbar-right">
       {% if is_admin %}
-        <a class="btn-mini ghost" href="{{ url_for('new_agent') }}">+ Nuova card</a>
-        <a class="btn-mini ghost" href="{{ url_for('logout') }}">Esci</a>
+        <a class="btn" href="/area/new">+ Nuova Card</a>
       {% else %}
-        <a class="btn-mini ghost" href="{{ url_for('me_edit') }}">Modifica Profilo 1</a>
-
-        {% if agent and (agent.p2_enabled or 0)|int == 1 %}
-          <a class="btn-mini ghost" href="{{ url_for('me_profile2') }}">Modifica Profilo 2</a>
-          <form method="post" action="{{ url_for('me_deactivate_p2') }}">
-            <button class="btn-mini warn" type="submit">Disattiva Profilo 2</button>
-          </form>
-        {% else %}
-          <form method="post" action="{{ url_for('me_activate_p2') }}">
-            <button class="btn-mini" type="submit">Attiva Profilo 2</button>
-          </form>
+        <a class="btn" href="/area/me/edit">Modifica profilo</a>
+        {% if agent and agent.p2_enabled == 1 %}
+          <a class="btn" href="/area/me/p2">Profilo 2</a>
         {% endif %}
-
-        <a class="btn-mini ghost" href="{{ url_for('logout') }}">Esci</a>
       {% endif %}
+      <a class="btn danger" href="/area/logout">Logout</a>
     </div>
-  </div>
+  </header>
 
-  {% with msgs = get_flashed_messages(with_categories=true) %}
-    {% if msgs %}
-      {% for cat, msg in msgs %}
-        <div class="flash {{ cat }}">{{ msg }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <div class="table-card">
-    <div class="table-row table-head" style="grid-template-columns: 240px 200px 320px 1fr;">
-      <div>Nome</div>
-      <div>Slug</div>
-      <div>Anteprima</div>
-      <div>Azioni</div>
-    </div>
-
-    {% for a in agents %}
-    {% set gal = (a.gallery_urls or '').split('|') if a.gallery_urls else [] %}
-    {% set vids = (a.video_urls or '').split('|') if a.video_urls else [] %}
-    {% set pdfraw = (a.pdf1_url or '') %}
-    {% set pdfs = pdfraw.split('|') if pdfraw else [] %}
-
-    <div class="table-row" style="grid-template-columns: 240px 200px 320px 1fr;">
-      <div><span class="name-badge">{{ a.name }}</span></div>
-      <div><span class="slug-badge">{{ a.slug }}</span></div>
-
-      <div class="dash-preview">
-        <div class="dash-media-grid">
-          <!-- FOTO -->
-          <div class="dash-block">
-            <div class="dash-label">Foto</div>
-            <div class="dash-strip">
-              {% if a.photo_url %}
-                <div class="dash-thumb-wrap">
-                  <img class="dash-thumb" src="{{ a.photo_url }}" alt="foto">
-                </div>
-              {% endif %}
-
-              {% for item in gal[:6] %}
-                {% if item %}
-                  <div class="dash-thumb-wrap">
-                    <img class="dash-thumb" src="{{ item }}" alt="galleria">
-                    <form method="post" action="{{ url_for('delete_media', slug=a.slug) }}">
-                      <input type="hidden" name="type" value="gallery">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="target" value="dashboard">
-                      <button class="x-mini" type="submit" title="Elimina">✕</button>
-                    </form>
-                  </div>
-                {% endif %}
-              {% endfor %}
-              {% if gal|length == 0 and not a.photo_url %}
-                <div class="dash-empty">—</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- VIDEO -->
-          <div class="dash-block">
-            <div class="dash-label">Video</div>
-            <div class="dash-strip">
-              {% for v in vids[:4] %}
-                {% if v %}
-                  <div class="dash-thumb-wrap">
-                    <video class="dash-video-mini" src="{{ v }}" muted playsinline preload="metadata"></video>
-                    <span class="dash-video-badge">PLAY</span>
-                    <form method="post" action="{{ url_for('delete_media', slug=a.slug) }}">
-                      <input type="hidden" name="type" value="video">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="target" value="dashboard">
-                      <button class="x-mini" type="submit" title="Elimina">✕</button>
-                    </form>
-                  </div>
-                {% endif %}
-              {% endfor %}
-              {% if vids|length == 0 %}
-                <div class="dash-empty">—</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- PDF -->
-          <div class="dash-block">
-            <div class="dash-label">PDF</div>
-            <div class="dash-pdf-list">
-              {% if pdfs %}
-                {% for item in pdfs[:5] %}
-                  {% if '||' in item %}
-                    {% set parts = item.split('||') %}
-                    <div class="pdf-row">
-                      <span class="dash-pdf-name" title="{{ parts[0] }}">{{ parts[0] }}</span>
-                      <form method="post" action="{{ url_for('delete_media', slug=a.slug) }}">
-                        <input type="hidden" name="type" value="pdf">
-                        <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                        <input type="hidden" name="target" value="dashboard">
-                        <button class="x-mini text" type="submit" title="Elimina">Elimina</button>
-                      </form>
-                    </div>
-                  {% else %}
-                    <div class="pdf-row">
-                      <span class="dash-pdf-name" title="{{ item }}">{{ item }}</span>
-                    </div>
-                  {% endif %}
-                {% endfor %}
-              {% else %}
-                <div class="dash-empty">—</div>
-              {% endif %}
-            </div>
-          </div>
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat,msg in messages %}
+            <div class="flash {{cat}}">{{ msg }}</div>
+          {% endfor %}
         </div>
-      </div>
+      {% endif %}
+    {% endwith %}
 
-      <div class="actions-cell">
-        <a class="btn-mini" href="/{{ a.slug }}" target="_blank" rel="noopener">Apri P1</a>
+    <div class="grid">
+      {% for a in agents %}
+        <div class="card">
+          <div class="card-head">
+            <div class="avatar">
+              {% if a.photo_url %}
+                <img src="{{ a.photo_url }}" alt="foto">
+              {% else %}
+                <div class="ph">👤</div>
+              {% endif %}
+            </div>
+            <div class="meta">
+              <div class="name">{{ a.name or a.slug }}</div>
+              <div class="sub">{{ a.company or "—" }}</div>
+              <div class="sub small">Slug: <code>{{ a.slug }}</code></div>
+            </div>
+          </div>
 
-        {% if (a.p2_enabled or 0)|int == 1 %}
-          <a class="btn-mini ghost" href="/{{ a.slug }}?p=p2" target="_blank" rel="noopener">Apri P2</a>
-        {% endif %}
+          <div class="actions">
+            <a class="btn" target="_blank" href="/{{ a.slug }}">Apri Card</a>
+            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=en">EN</a>
+            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=fr">FR</a>
+            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=es">ES</a>
+            <a class="btn" target="_blank" href="/{{ a.slug }}?lang=de">DE</a>
+          </div>
 
-        <a class="btn-mini ghost" href="{{ url_for('edit_agent', slug=a.slug) if is_admin else url_for('me_edit') }}">Modifica P1</a>
-
-        {% if is_admin %}
-          {% if (a.p2_enabled or 0)|int == 1 %}
-            <a class="btn-mini ghost" href="{{ url_for('admin_profile2', slug=a.slug) }}">Modifica P2</a>
+          {% if is_admin %}
+            <div class="actions">
+              <a class="btn primary" href="/area/edit/{{ a.slug }}">Modifica</a>
+              {% if a.p2_enabled == 1 %}
+                <a class="btn" href="/area/edit/{{ a.slug }}/p2">Profilo 2</a>
+              {% else %}
+                <span class="pill">P2 non attivo</span>
+              {% endif %}
+            </div>
+          {% else %}
+            {% if agent and agent.p2_enabled != 1 %}
+              <form method="post" action="/area/me/activate-p2" class="inline">
+                <button class="btn" type="submit">Attiva Profilo 2 (vuoto)</button>
+              </form>
+            {% endif %}
           {% endif %}
-        {% endif %}
-      </div>
+        </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-
-  <div class="footer">© 2026 Pay4You — Giuseppe Di Lisio</div>
-</div>
-
-<script>
-  // Preview primo frame video (Safari)
-  (function(){
-    document.querySelectorAll('.dash-video-mini').forEach(v=>{
-      v.addEventListener('loadedmetadata', ()=>{
-        try{ v.currentTime = 0.05; }catch(e){}
-      });
-      v.addEventListener('seeked', ()=>{
-        try{ v.pause(); }catch(e){}
-      });
-    });
-  })();
-</script>
-{% endblock %}
+  </main>
+</body>
+</html>
