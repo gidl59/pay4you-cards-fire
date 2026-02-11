@@ -32,12 +32,12 @@ BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////var/data/pay4you.db").strip()
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").strip()
 
-# ✅ LIMITI (come richiesto)
+# ✅ LIMITI
 MAX_GALLERY_IMAGES = 15
 MAX_VIDEOS = 8
 MAX_PDFS = 10
 
-# ✅ LIMITI PESO (modificabili qui)
+# ✅ LIMITI PESO (MB)
 MAX_IMAGE_MB = 4
 MAX_VIDEO_MB = 25
 MAX_PDF_MB = 10
@@ -53,6 +53,15 @@ for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
+
+# ✅ JINJA FILTER: loads (serve per dashboard.html)
+@app.template_filter("loads")
+def _loads_filter(s):
+    try:
+        v = json.loads(s or "{}")
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
 
 engine = create_engine(
     DATABASE_URL,
@@ -75,7 +84,6 @@ class Agent(Base):
     username = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
 
-    # ✅ Tutto dentro un JSON: p1/p2/p3 separati e completi
     profiles_json = Column(Text, default="{}")
 
     created_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
@@ -168,10 +176,7 @@ def save_upload(file_storage, kind: str, max_mb: int):
         return ""
 
     size = _file_size_bytes(file_storage)
-    if size <= 0:
-        # Se non riesco a leggerlo, lascio passare (non blocco).
-        pass
-    else:
+    if size > 0:
         if _mb(size) > float(max_mb):
             raise ValueError(f"File troppo grande: max {max_mb}MB.")
 
@@ -194,7 +199,6 @@ def save_upload(file_storage, kind: str, max_mb: int):
     return uploads_url(rel)
 
 def _empty_profile():
-    # ✅ tutti i campi + media + traduzioni
     return {
         "enabled": 0,
         "data": {
@@ -230,7 +234,7 @@ def _empty_profile():
             "photo_zoom": "1.0",
             "gallery": [],
             "videos": [],
-            "pdfs": []   # [{name,url}]
+            "pdfs": []
         },
         "i18n": {
             "en": {"name":"","company":"","role":"","bio":"","addresses":""},
@@ -254,18 +258,9 @@ def _ensure_profiles(agent: Agent):
             pj[k] = _empty_profile()
             changed = True
 
-    # P1 di default attivo se non è mai stato impostato
-    if int(pj["p1"].get("enabled", 0)) not in (0, 1):
-        pj["p1"]["enabled"] = 1
-        changed = True
     if "enabled" not in pj["p1"]:
         pj["p1"]["enabled"] = 1
         changed = True
-
-    # Se P1 è vuoto e agent nuovo: attiva p1
-    if pj["p1"]["enabled"] == 0 and (agent.created_at is not None) and (agent.updated_at is not None):
-        # non forzo
-        pass
 
     if changed:
         agent.profiles_json = json.dumps(pj, ensure_ascii=False)
@@ -351,7 +346,6 @@ def dashboard():
     if is_admin():
         agents = s.query(Agent).all()
         agents.sort(key=lambda x: ((x.slug or "").strip().lower(),))
-        # assicura profiles
         for a in agents:
             _ensure_profiles(a)
         s.commit()
@@ -368,80 +362,10 @@ def dashboard():
 
 
 # ==========================
-# ADMIN: NEW
-# ==========================
-@app.route("/area/new", methods=["GET", "POST"])
-def new_agent():
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    if request.method == "POST":
-        first = (request.form.get("first_name") or "").strip()
-        last = (request.form.get("last_name") or "").strip()
-        if not first:
-            flash("Nome obbligatorio", "error")
-            return redirect(url_for("new_agent"))
-
-        name = first + ((" " + last) if last else "")
-        slug_in = (request.form.get("slug") or "").strip()
-        slug = slugify(slug_in) if slug_in else slugify(name)
-        if not slug:
-            flash("Slug non valido", "error")
-            return redirect(url_for("new_agent"))
-
-        password = (request.form.get("password") or "").strip()
-        if not password or len(password) < 4:
-            flash("Password troppo corta", "error")
-            return redirect(url_for("new_agent"))
-
-        s = db()
-        if s.query(Agent).filter(Agent.slug == slug).first():
-            flash("Slug già esistente", "error")
-            return redirect(url_for("new_agent"))
-
-        ag = Agent(
-            slug=slug,
-            username=slug,
-            password_hash=generate_password_hash(password),
-            created_at=dt.datetime.utcnow(),
-            updated_at=dt.datetime.utcnow(),
-            profiles_json="{}",
-        )
-        pj = _ensure_profiles(ag)
-        pj["p1"]["enabled"] = 1
-        pj["p1"]["data"]["name"] = name
-        _save_profiles(ag, pj)
-
-        s.add(ag)
-        s.commit()
-
-        flash("Card creata!", "ok")
-        return redirect(url_for("edit_agent_profile", slug=slug, profile="p1"))
-
-    # riuso agent_form per creazione non ha senso: lasciamo la tua pagina new (se esiste).
-    return render_template("new_agent.html") if os.path.exists("templates/new_agent.html") else render_template(
-        "agent_form.html",
-        agent=None,
-        profile_key="p1",
-        profile={"enabled": 1, **_empty_profile()},
-        is_admin=True,
-        limits={
-            "imgs": MAX_GALLERY_IMAGES, "img_mb": MAX_IMAGE_MB,
-            "vids": MAX_VIDEOS, "vid_mb": MAX_VIDEO_MB,
-            "pdfs": MAX_PDFS, "pdf_mb": MAX_PDF_MB
-        }
-    )
-
-
-# ==========================
 # PROFILE UPDATE HELPERS
 # ==========================
 def _set_profile_data(profile: dict, form: dict):
     d = profile["data"]
-
     for k in [
         "name","company","role","bio",
         "phone_mobile","phone_mobile2","phone_office","whatsapp",
@@ -451,7 +375,6 @@ def _set_profile_data(profile: dict, form: dict):
     ]:
         d[k] = (form.get(k) or "").strip()
 
-    # media
     m = profile["media"]
     m["back_media_mode"] = (form.get("back_media_mode") or "company").strip() or "company"
 
@@ -510,7 +433,6 @@ def edit_agent_profile(slug, profile):
     if request.method == "POST":
         _set_profile_data(prof, request.form)
 
-        # Upload principali
         photo = request.files.get("photo")
         if photo and photo.filename:
             try:
@@ -535,7 +457,6 @@ def edit_agent_profile(slug, profile):
                 flash(str(e), "error")
                 return redirect(url_for("edit_agent_profile", slug=slug, profile=profile_key))
 
-        # GALLERIA
         gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
         if gallery_files:
             current = prof["media"].get("gallery") or []
@@ -550,7 +471,6 @@ def edit_agent_profile(slug, profile):
                     return redirect(url_for("edit_agent_profile", slug=slug, profile=profile_key))
             prof["media"]["gallery"] = current + [u for u in new_urls if u]
 
-        # VIDEO
         video_files = [f for f in request.files.getlist("videos") if f and f.filename]
         if video_files:
             current = prof["media"].get("videos") or []
@@ -565,7 +485,6 @@ def edit_agent_profile(slug, profile):
                     return redirect(url_for("edit_agent_profile", slug=slug, profile=profile_key))
             prof["media"]["videos"] = current + [u for u in new_urls if u]
 
-        # PDF (fino a MAX_PDFS)
         pdfs = prof["media"].get("pdfs") or []
         for i in range(1, MAX_PDFS + 1):
             f = request.files.get(f"pdf{i}")
@@ -580,7 +499,6 @@ def edit_agent_profile(slug, profile):
                 while len(pdfs) <= idx:
                     pdfs.append({"name": "", "url": ""})
                 pdfs[idx] = {"name": name, "url": url}
-
         prof["media"]["pdfs"] = [x for x in pdfs if x.get("url")]
 
         _save_i18n(prof, request.form)
@@ -725,7 +643,7 @@ def me_profile(profile):
 
 
 # ==========================
-# ✅ ACTIVATE / DELETE P1 P2 P3 (ADMIN + ME)
+# ACTIVATE / DELETE P1 P2 P3
 # ==========================
 def _reset_profile(pj: dict, key: str, enable: int):
     p = _empty_profile()
@@ -748,10 +666,8 @@ def admin_activate_profile(slug, profile):
     pj = _ensure_profiles(ag)
     profile_key, _ = _get_profile(pj, profile)
 
-    # ✅ attiva = nuovo vuoto
     _reset_profile(pj, profile_key, enable=1)
 
-    # Se attivo P1: lo rendo attivo e basta (non copio dati)
     _save_profiles(ag, pj)
     s.commit()
     flash(f"{profile_key.upper()} attivato (nuovo e vuoto).", "ok")
@@ -773,7 +689,6 @@ def admin_delete_profile(slug, profile):
     pj = _ensure_profiles(ag)
     profile_key, _ = _get_profile(pj, profile)
 
-    # ✅ ELIMINA P1 = cancella tutto e disattiva tutto
     if profile_key == "p1":
         _reset_profile(pj, "p1", enable=0)
         _reset_profile(pj, "p2", enable=0)
@@ -783,7 +698,6 @@ def admin_delete_profile(slug, profile):
         flash("P1 eliminato: reset totale (P1/P2/P3 svuotati e disattivati).", "ok")
         return redirect(url_for("dashboard"))
 
-    # ✅ Elimina P2/P3: svuota e disattiva solo quello
     _reset_profile(pj, profile_key, enable=0)
     _save_profiles(ag, pj)
     s.commit()
@@ -805,6 +719,7 @@ def me_activate_profile(profile):
 
     pj = _ensure_profiles(ag)
     profile_key, _ = _get_profile(pj, profile)
+
     _reset_profile(pj, profile_key, enable=1)
 
     _save_profiles(ag, pj)
@@ -883,8 +798,7 @@ def qr_png(slug):
 
 
 # ==========================
-# CARD PUBLIC (per ora SOLO routing a p1/p2/p3)
-# Nota: la grafica card la facciamo dopo, ma qui abilitiamo i 3 profili.
+# CARD PUBLIC (placeholder per ora)
 # ==========================
 @app.route("/<slug>")
 def card(slug):
@@ -902,9 +816,6 @@ def card(slug):
     if int(prof.get("enabled", 0)) != 1:
         abort(404)
 
-    # per ora renderizziamo la tua card.html (la sistemiamo dopo),
-    # passando un oggetto compatibile.
-    # Se la tua card.html non usa questi campi, non rompe nulla.
     return render_template("card.html", agent=ag, profile_key=p, profile=prof)
 
 
