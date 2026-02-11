@@ -61,8 +61,8 @@
           </div>
 
           <div class="dash-actions">
+            <!-- APRI -->
             <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
-
             {% if a.p2_enabled == 1 %}
               <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
             {% endif %}
@@ -72,20 +72,18 @@
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <button class="btn-mini ghost" type="button"
-                    onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
+            <!-- QR -->
+            <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
-              <button class="btn-mini ghost" type="button"
-                      onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
             {% endif %}
             {% if a.p3_enabled == 1 %}
-              <button class="btn-mini ghost" type="button"
-                      onclick="openQr('{{ a.slug }}','p3')">QR P3</button>
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p3')">QR P3</button>
             {% endif %}
 
             {% if is_admin %}
-              <a class="btn-mini warn" href="/area/edit/{{ a.slug }}">Modifica P1</a>
-
+              <!-- MODIFICA -->
+              <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
               {% endif %}
@@ -93,25 +91,26 @@
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>
               {% endif %}
 
+              <!-- ATTIVA/DISATTIVA -->
               {% if a.p2_enabled == 1 %}
-                <form class="inline" method="post" action="/area/admin/deactivate-p2/{{ a.slug }}"
-                      onsubmit="return confirm('Disattivare P2? (verrà svuotato)');">
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"
+                      onsubmit="return confirm('Disattivare P2? Verrà svuotato.');">
                   <button class="btn-mini danger" type="submit">Disattiva P2</button>
                 </form>
               {% else %}
-                <form class="inline" method="post" action="/area/admin/activate-p2/{{ a.slug }}"
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p2"
                       onsubmit="return confirm('Attivare P2 vuoto?');">
                   <button class="btn-mini" type="submit">Attiva P2</button>
                 </form>
               {% endif %}
 
               {% if a.p3_enabled == 1 %}
-                <form class="inline" method="post" action="/area/admin/deactivate-p3/{{ a.slug }}"
-                      onsubmit="return confirm('Disattivare P3? (verrà svuotato)');">
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p3"
+                      onsubmit="return confirm('Disattivare P3? Verrà svuotato.');">
                   <button class="btn-mini danger" type="submit">Disattiva P3</button>
                 </form>
               {% else %}
-                <form class="inline" method="post" action="/area/admin/activate-p3/{{ a.slug }}"
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p3"
                       onsubmit="return confirm('Attivare P3 vuoto?');">
                   <button class="btn-mini" type="submit">Attiva P3</button>
                 </form>
@@ -121,14 +120,18 @@
                     onsubmit="return confirm('Generare una nuova password per questo cliente?');">
                 <button class="btn-mini" type="submit">Invia credenziali</button>
               </form>
-
             {% else %}
-              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
+              <!-- CLIENTE -->
+              <a class="btn-mini warn" href="/area/me/p1">Modifica P1</a>
 
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
+                <form class="inline" method="post" action="/area/me/deactivate/p2"
+                      onsubmit="return confirm('Disattivare P2? Verrà svuotato.');">
+                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
+                </form>
               {% else %}
-                <form class="inline" method="post" action="/area/me/activate-p2"
+                <form class="inline" method="post" action="/area/me/activate/p2"
                       onsubmit="return confirm('Attivare P2 vuoto?');">
                   <button class="btn-mini" type="submit">Attiva P2</button>
                 </form>
@@ -136,23 +139,14 @@
 
               {% if a.p3_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/me/p3">Modifica P3</a>
+                <form class="inline" method="post" action="/area/me/deactivate/p3"
+                      onsubmit="return confirm('Disattivare P3? Verrà svuotato.');">
+                  <button class="btn-mini danger" type="submit">Disattiva P3</button>
+                </form>
               {% else %}
-                <form class="inline" method="post" action="/area/me/activate-p3"
+                <form class="inline" method="post" action="/area/me/activate/p3"
                       onsubmit="return confirm('Attivare P3 vuoto?');">
                   <button class="btn-mini" type="submit">Attiva P3</button>
-                </form>
-              {% endif %}
-
-              {% if a.p2_enabled == 1 %}
-                <form class="inline" method="post" action="/area/me/deactivate-p2"
-                      onsubmit="return confirm('Disattivare P2? (verrà svuotato)');">
-                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
-                </form>
-              {% endif %}
-              {% if a.p3_enabled == 1 %}
-                <form class="inline" method="post" action="/area/me/deactivate-p3"
-                      onsubmit="return confirm('Disattivare P3? (verrà svuotato)');">
-                  <button class="btn-mini danger" type="submit">Disattiva P3</button>
                 </form>
               {% endif %}
             {% endif %}
@@ -253,7 +247,7 @@
   </div>
 </div>
 
-<!-- CREDENTIALS MODAL (resta com’è) -->
+<!-- CREDENTIALS MODAL (come prima) -->
 <div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
   <div class="modal-box" onclick="event.stopPropagation()">
     <button class="modal-x" type="button" onclick="closeCred()">✕</button>
@@ -304,15 +298,15 @@
     return base + '/' + u;
   }
 
-  async function copyToClipboard(text){
-    try{ await navigator.clipboard.writeText(text); return true; }
-    catch(e){ return false; }
+  function gmailCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${bd}`;
   }
-
-  function mailtoOpen(subject, body){
-    const s = encodeURIComponent(subject || "");
-    const b = encodeURIComponent(body || "");
-    window.location.href = `mailto:?subject=${s}&body=${b}`;
+  function outlookCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
   }
 
   function openQr(slug, profile){
@@ -323,22 +317,19 @@
     document.getElementById('qrSlug').value = slug;
     document.getElementById('qrProfile').value = profile;
 
-    let url = `/qr/${slug}.png`;
-    if(profile === 'p2') url += `?p=p2`;
-    if(profile === 'p3') url += `?p=p3`;
-
+    const url = (profile === 'p2' || profile === 'p3') ? `/qr/${slug}.png?p=${profile}` : `/qr/${slug}.png`;
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
 
     modal.style.display = 'flex';
   }
 
-  async function shareQr(channel){
+  function shareQr(channel){
     const slug = document.getElementById('qrSlug').value;
     const profile = document.getElementById('qrProfile').value || 'p1';
 
-    const cardUrl = absUrl(profile === 'p2' ? `/${slug}?p=p2` : (profile === 'p3' ? `/${slug}?p=p3` : `/${slug}`));
-    const qrPngUrl = absUrl(profile === 'p2' ? `/qr/${slug}.png?p=p2` : (profile === 'p3' ? `/qr/${slug}.png?p=p3` : `/qr/${slug}.png`));
+    const cardUrl = absUrl(profile === 'p1' ? `/${slug}` : `/${slug}?p=${profile}`);
+    const qrPngUrl = absUrl(profile === 'p1' ? `/qr/${slug}.png` : `/qr/${slug}.png?p=${profile}`);
 
     const msg = [
       `Pay4You Card (${profile.toUpperCase()})`,
@@ -351,13 +342,10 @@
       return;
     }
 
-    const ok = await copyToClipboard(msg);
-    alert(
-      (ok ? "Testo copiato ✅\n\n" : "Copia manualmente questo testo:\n\n") +
-      msg +
-      "\n\nOra si aprirà l'email: se il testo non compare, incolla con CTRL+V."
-    );
-    mailtoOpen(`Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`, msg);
+    // ✅ Email senza CTRL+V (Gmail)
+    const subject = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`.trim();
+    const g = gmailCompose(subject, msg);
+    window.open(g, '_blank');
   }
 
   function openCred(slug, username, password){
@@ -369,24 +357,21 @@
     document.getElementById('cLogin').href = base + "/area/login";
     document.getElementById('cCard1').href = base + "/" + slug;
 
-    // P2
-    const card2 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
     const row2 = document.getElementById('cCard2Row');
-    if(card2){
+    const row3 = document.getElementById('cCard3Row');
+    row2.style.display = 'none';
+    row3.style.display = 'none';
+
+    const hasP2 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
+    const hasP3 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p3"]`);
+
+    if(hasP2){
       row2.style.display = '';
       document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
-    }else{
-      row2.style.display = 'none';
     }
-
-    // P3
-    const card3 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p3"]`);
-    const row3 = document.getElementById('cCard3Row');
-    if(card3){
+    if(hasP3){
       row3.style.display = '';
       document.getElementById('cCard3').href = base + "/" + slug + "?p=p3";
-    }else{
-      row3.style.display = 'none';
     }
 
     document.getElementById('credModal').style.display = 'flex';
