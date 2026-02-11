@@ -33,14 +33,14 @@ BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////var/data/pay4you.db").strip()
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").strip()
 
-# ✅ LIMITI QUANTITÀ
+# ✅ LIMITI richiesti
 MAX_GALLERY_IMAGES = 15
 MAX_VIDEOS = 8
 MAX_PDFS = 10
 
-# ✅ LIMITI PESO (MB)
+# ✅ LIMITI peso (MB)
 MAX_IMAGE_MB = 5
-MAX_VIDEO_MB = 30
+MAX_VIDEO_MB = 25
 MAX_PDF_MB = 10
 
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
@@ -106,8 +106,8 @@ class Agent(Base):
     back_media_mode = Column(String(30), default="company")  # company | personal
     back_media_url = Column(String(255), default="")
 
-    photo_pos_x = Column(Integer, default=50)
-    photo_pos_y = Column(Integer, default=35)
+    photo_pos_x = Column(Integer, default=50)   # 0-100
+    photo_pos_y = Column(Integer, default=35)   # 0-100
     photo_zoom = Column(String(20), default="1.0")
 
     orbit_spin = Column(Integer, default=0)
@@ -228,36 +228,39 @@ def uploads_url(rel_path: str) -> str:
     rel_path = rel_path.lstrip("/")
     return f"/uploads/{rel_path}"
 
-def _file_size_bytes(file_storage) -> int:
-    """
-    Ritorna la dimensione in bytes senza consumare lo stream.
-    """
+def file_size_bytes(file_storage) -> int:
+    # robusto: misura stream senza caricare tutto in RAM
     try:
-        st = file_storage.stream
-        pos = st.tell()
-        st.seek(0, os.SEEK_END)
-        size = st.tell()
-        st.seek(pos)
+        stream = file_storage.stream
+        pos = stream.tell()
+        stream.seek(0, os.SEEK_END)
+        size = stream.tell()
+        stream.seek(pos, os.SEEK_SET)
         return int(size)
     except Exception:
-        # fallback: se non leggibile, lasciamo passare
         return 0
 
-def _limit_for_kind(kind: str):
-    if kind == "images":
-        return MAX_IMAGE_MB, "Foto"
-    if kind == "videos":
-        return MAX_VIDEO_MB, "Video"
-    return MAX_PDF_MB, "PDF"
+def enforce_size(kind: str, file_storage):
+    size = file_size_bytes(file_storage)
+    if size <= 0:
+        return True, ""
+
+    mb = size / (1024 * 1024)
+    if kind == "images" and mb > MAX_IMAGE_MB:
+        return False, f"Immagine troppo grande ({mb:.1f} MB). Max {MAX_IMAGE_MB} MB."
+    if kind == "videos" and mb > MAX_VIDEO_MB:
+        return False, f"Video troppo grande ({mb:.1f} MB). Max {MAX_VIDEO_MB} MB."
+    if kind == "pdf" and mb > MAX_PDF_MB:
+        return False, f"PDF troppo grande ({mb:.1f} MB). Max {MAX_PDF_MB} MB."
+    return True, ""
 
 def save_upload(file_storage, kind: str):
     if not file_storage or not file_storage.filename:
         return ""
 
-    max_mb, label = _limit_for_kind(kind)
-    size = _file_size_bytes(file_storage)
-    if size and size > (max_mb * 1024 * 1024):
-        raise ValueError(f"{label} troppo grande: max {max_mb}MB")
+    ok, err = enforce_size(kind, file_storage)
+    if not ok:
+        raise ValueError(err)
 
     filename = secure_filename(file_storage.filename)
     ext = os.path.splitext(filename)[1].lower()
@@ -295,6 +298,33 @@ def _new_password(length=10):
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
     import random
     return "".join(random.choice(alphabet) for _ in range(length))
+
+
+def load_p2_data(agent: Agent) -> dict:
+    try:
+        d = json.loads(agent.p2_json or "{}")
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def load_i18n(agent: Agent) -> dict:
+    try:
+        d = json.loads(agent.i18n_json or "{}")
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def save_i18n(agent: Agent, form: dict):
+    data = {}
+    for L in ["en", "fr", "es", "de"]:
+        data[L] = {
+            "name": (form.get(f"name_{L}") or "").strip(),
+            "company": (form.get(f"company_{L}") or "").strip(),
+            "role": (form.get(f"role_{L}") or "").strip(),
+            "bio": (form.get(f"bio_{L}") or "").strip(),
+            "addresses": (form.get(f"addresses_{L}") or "").strip(),
+        }
+    agent.i18n_json = json.dumps(data, ensure_ascii=False)
 
 
 # ==========================
@@ -422,21 +452,21 @@ def new_agent():
         flash("Card creata!", "ok")
         return redirect(url_for("edit_agent", slug=slug))
 
-    return render_template("agent_form.html", agent=None, editing_profile2=False, i18n_data={}, is_admin=True,
-                           gallery=[], videos=[], pdfs=[])
-
-
-def save_i18n(agent: Agent, form: dict):
-    data = {}
-    for L in ["en", "fr", "es", "de"]:
-        data[L] = {
-            "name": (form.get(f"name_{L}") or "").strip(),
-            "company": (form.get(f"company_{L}") or "").strip(),
-            "role": (form.get(f"role_{L}") or "").strip(),
-            "bio": (form.get(f"bio_{L}") or "").strip(),
-            "addresses": (form.get(f"addresses_{L}") or "").strip(),
+    return render_template(
+        "agent_form.html",
+        agent=None,
+        editing_profile2=False,
+        is_admin=True,
+        p2_data={},
+        i18n_data={},
+        gallery=[],
+        videos=[],
+        pdfs=[],
+        limits={
+            "max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
+            "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB
         }
-    agent.i18n_json = json.dumps(data, ensure_ascii=False)
+    )
 
 
 def set_profile_data_p1(agent: Agent, form: dict):
@@ -515,6 +545,63 @@ def set_profile_data_p2(agent: Agent, form: dict):
     agent.updated_at = dt.datetime.utcnow()
 
 
+def handle_media_uploads(ag: Agent):
+    # foto profilo
+    photo = request.files.get("photo")
+    if photo and photo.filename:
+        ag.photo_url = save_upload(photo, "images")
+
+    # logo
+    logo = request.files.get("logo")
+    if logo and logo.filename:
+        ag.logo_url = save_upload(logo, "images")
+
+    # background
+    back_media = request.files.get("back_media")
+    if back_media and back_media.filename:
+        ag.back_media_url = save_upload(back_media, "images")
+
+    # galleria
+    gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
+    if gallery_files:
+        gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
+        urls = [save_upload(f, "images") for f in gallery_files]
+        urls = [u for u in urls if u]
+        existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        # rispetto max totale
+        combined = (existing + urls)[:MAX_GALLERY_IMAGES]
+        ag.gallery_urls = "|".join(combined)
+
+    # video
+    video_files = [f for f in request.files.getlist("videos") if f and f.filename]
+    if video_files:
+        video_files = video_files[:MAX_VIDEOS]
+        urls = [save_upload(f, "videos") for f in video_files]
+        urls = [u for u in urls if u]
+        existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+        combined = (existing + urls)[:MAX_VIDEOS]
+        ag.video_urls = "|".join(combined)
+
+    # pdf
+    existing_pdf = parse_pdf_items(ag.pdf1_url or "")
+    out = existing_pdf[:] if existing_pdf else []
+    for i in range(1, MAX_PDFS + 1):
+        f = request.files.get(f"pdf{i}")
+        if f and f.filename:
+            url = save_upload(f, "pdf")
+            name = secure_filename(f.filename) or f"PDF {i}"
+            idx = i - 1
+            while len(out) <= idx:
+                out.append({"name": "", "url": ""})
+            out[idx] = {"name": name, "url": url}
+
+    out2 = []
+    for item in out[:MAX_PDFS]:
+        if item.get("url"):
+            out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
+    ag.pdf1_url = "|".join(out2)
+
+
 @app.route("/area/edit/<slug>", methods=["GET", "POST"])
 def edit_agent(slug):
     r = require_login()
@@ -529,104 +616,39 @@ def edit_agent(slug):
         abort(404)
 
     if request.method == "POST":
-        set_profile_data_p1(ag, request.form)
+        try:
+            set_profile_data_p1(ag, request.form)
+            handle_media_uploads(ag)
+            save_i18n(ag, request.form)
+            s.commit()
+            flash("Salvato!", "ok")
+            return redirect(url_for("edit_agent", slug=slug))
+        except ValueError as e:
+            s.rollback()
+            flash(str(e), "error")
+            return redirect(url_for("edit_agent", slug=slug))
 
-        photo = request.files.get("photo")
-        if photo and photo.filename:
-            try:
-                ag.photo_url = save_upload(photo, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        logo = request.files.get("logo")
-        if logo and logo.filename:
-            try:
-                ag.logo_url = save_upload(logo, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        back_media = request.files.get("back_media")
-        if back_media and back_media.filename:
-            try:
-                ag.back_media_url = save_upload(back_media, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        # ✅ GALLERY: rispetto il totale (max 15)
-        existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
-        remaining = max(0, MAX_GALLERY_IMAGES - len(existing))
-        gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
-        if gallery_files and remaining > 0:
-            gallery_files = gallery_files[:remaining]
-            urls = []
-            for f in gallery_files:
-                try:
-                    u = save_upload(f, "images")
-                    if u:
-                        urls.append(u)
-                except ValueError as e:
-                    flash(str(e), "error")
-            ag.gallery_urls = "|".join(existing + urls)
-
-        # ✅ VIDEOS: rispetto il totale (max 8)
-        existing_v = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-        remaining_v = max(0, MAX_VIDEOS - len(existing_v))
-        video_files = [f for f in request.files.getlist("videos") if f and f.filename]
-        if video_files and remaining_v > 0:
-            video_files = video_files[:remaining_v]
-            urls = []
-            for f in video_files:
-                try:
-                    u = save_upload(f, "videos")
-                    if u:
-                        urls.append(u)
-                except ValueError as e:
-                    flash(str(e), "error")
-            ag.video_urls = "|".join(existing_v + urls)
-
-        # ✅ PDF: max 10 (slot)
-        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
-        out = existing_pdf[:] if existing_pdf else []
-        for i in range(1, MAX_PDFS + 1):
-            f = request.files.get(f"pdf{i}")
-            if f and f.filename:
-                try:
-                    url = save_upload(f, "pdf")
-                except ValueError as e:
-                    flash(str(e), "error")
-                    continue
-                name = secure_filename(f.filename) or f"PDF {i}"
-                idx = i - 1
-                while len(out) <= idx:
-                    out.append({"name": "", "url": ""})
-                out[idx] = {"name": name, "url": url}
-
-        out2 = []
-        for item in out[:MAX_PDFS]:
-            if item.get("url"):
-                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
-        ag.pdf1_url = "|".join(out2)
-
-        save_i18n(ag, request.form)
-
-        s.commit()
-        flash("Salvato!", "ok")
-        return redirect(url_for("edit_agent", slug=slug))
-
-    try:
-        i18n_data = json.loads(ag.i18n_json or "{}")
-        if not isinstance(i18n_data, dict):
-            i18n_data = {}
-    except Exception:
-        i18n_data = {}
-
+    i18n_data = load_i18n(ag)
+    p2_data = load_p2_data(ag)
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False,
-                           i18n_data=i18n_data, is_admin=True,
-                           gallery=gallery, videos=videos, pdfs=pdfs)
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        editing_profile2=False,
+        is_admin=True,
+        p2_data=p2_data,
+        i18n_data=i18n_data,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+        limits={
+            "max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
+            "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB
+        }
+    )
 
 
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
@@ -652,9 +674,23 @@ def admin_profile2(slug):
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("admin_profile2", slug=slug))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True,
-                           i18n_data={}, is_admin=True,
-                           gallery=[], videos=[], pdfs=[])
+    p2_data = load_p2_data(ag)
+
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        editing_profile2=True,
+        is_admin=True,
+        p2_data=p2_data,
+        i18n_data={},      # traduzioni solo su P1
+        gallery=[],
+        videos=[],
+        pdfs=[],
+        limits={
+            "max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
+            "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB
+        }
+    )
 
 
 # ==========================
@@ -674,92 +710,40 @@ def me_edit():
         abort(404)
 
     if request.method == "POST":
-        set_profile_data_p1(ag, request.form)
+        try:
+            set_profile_data_p1(ag, request.form)
+            handle_media_uploads(ag)
+            # ✅ anche il cliente salva traduzioni (se vuoi tenerle solo admin dimmelo)
+            save_i18n(ag, request.form)
+            s.commit()
+            flash("Salvato!", "ok")
+            return redirect(url_for("me_edit"))
+        except ValueError as e:
+            s.rollback()
+            flash(str(e), "error")
+            return redirect(url_for("me_edit"))
 
-        photo = request.files.get("photo")
-        if photo and photo.filename:
-            try:
-                ag.photo_url = save_upload(photo, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        logo = request.files.get("logo")
-        if logo and logo.filename:
-            try:
-                ag.logo_url = save_upload(logo, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        back_media = request.files.get("back_media")
-        if back_media and back_media.filename:
-            try:
-                ag.back_media_url = save_upload(back_media, "images")
-            except ValueError as e:
-                flash(str(e), "error")
-
-        existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
-        remaining = max(0, MAX_GALLERY_IMAGES - len(existing))
-        gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
-        if gallery_files and remaining > 0:
-            gallery_files = gallery_files[:remaining]
-            urls = []
-            for f in gallery_files:
-                try:
-                    u = save_upload(f, "images")
-                    if u:
-                        urls.append(u)
-                except ValueError as e:
-                    flash(str(e), "error")
-            ag.gallery_urls = "|".join(existing + urls)
-
-        existing_v = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-        remaining_v = max(0, MAX_VIDEOS - len(existing_v))
-        video_files = [f for f in request.files.getlist("videos") if f and f.filename]
-        if video_files and remaining_v > 0:
-            video_files = video_files[:remaining_v]
-            urls = []
-            for f in video_files:
-                try:
-                    u = save_upload(f, "videos")
-                    if u:
-                        urls.append(u)
-                except ValueError as e:
-                    flash(str(e), "error")
-            ag.video_urls = "|".join(existing_v + urls)
-
-        existing_pdf = parse_pdf_items(ag.pdf1_url or "")
-        out = existing_pdf[:] if existing_pdf else []
-        for i in range(1, MAX_PDFS + 1):
-            f = request.files.get(f"pdf{i}")
-            if f and f.filename:
-                try:
-                    url = save_upload(f, "pdf")
-                except ValueError as e:
-                    flash(str(e), "error")
-                    continue
-                name = secure_filename(f.filename) or f"PDF {i}"
-                idx = i - 1
-                while len(out) <= idx:
-                    out.append({"name": "", "url": ""})
-                out[idx] = {"name": name, "url": url}
-
-        out2 = []
-        for item in out[:MAX_PDFS]:
-            if item.get("url"):
-                out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
-        ag.pdf1_url = "|".join(out2)
-
-        s.commit()
-        flash("Salvato!", "ok")
-        return redirect(url_for("me_edit"))
-
+    i18n_data = load_i18n(ag)
+    p2_data = load_p2_data(ag)
     gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
     videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
     pdfs = parse_pdf_items(ag.pdf1_url or "")
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=False,
-                           i18n_data={}, is_admin=False,
-                           gallery=gallery, videos=videos, pdfs=pdfs)
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        editing_profile2=False,
+        is_admin=False,
+        p2_data=p2_data,
+        i18n_data=i18n_data,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+        limits={
+            "max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
+            "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB
+        }
+    )
 
 
 @app.route("/area/me/p2", methods=["GET", "POST"])
@@ -785,9 +769,23 @@ def me_profile2():
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("me_profile2"))
 
-    return render_template("agent_form.html", agent=ag, editing_profile2=True,
-                           i18n_data={}, is_admin=False,
-                           gallery=[], videos=[], pdfs=[])
+    p2_data = load_p2_data(ag)
+
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        editing_profile2=True,
+        is_admin=False,
+        p2_data=p2_data,
+        i18n_data={},
+        gallery=[],
+        videos=[],
+        pdfs=[],
+        limits={
+            "max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
+            "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB
+        }
+    )
 
 
 @app.route("/area/me/activate-p2", methods=["POST"])
@@ -849,12 +847,12 @@ def admin_activate_p2(slug):
         abort(404)
 
     ag.p2_enabled = 1
-    if not ag.p2_json:
-        ag.p2_json = "{}"
+    ag.p2_json = "{}"  # ✅ sempre vuoto
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("P2 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
+
 
 @app.route("/area/admin/deactivate-p2/<slug>", methods=["POST"])
 def admin_deactivate_p2(slug):
@@ -878,7 +876,7 @@ def admin_deactivate_p2(slug):
 
 
 # ==========================
-# ADMIN: CREDENTIALS MODAL (NO FLASH)
+# ADMIN: CREDENTIALS MODAL (placeholder)
 # ==========================
 @app.route("/area/admin/credentials/<slug>", methods=["POST"])
 def admin_generate_credentials(slug):
