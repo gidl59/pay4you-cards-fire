@@ -43,130 +43,63 @@
 
     <div class="dash-grid">
       {% for a in agents %}
+      {% set pj = (a.profiles_json or "{}") | tojson %}
       <section class="dash-card" data-slug="{{ a.slug }}">
         <div class="dash-head">
           <div class="dash-left">
             <div class="dash-avatar">
-              {% if a.photo_url %}
-                <img src="{{ a.photo_url }}" alt="foto">
-              {% else %}
-                <div class="dash-ph">👤</div>
-              {% endif %}
+              <div class="dash-ph">👤</div>
             </div>
             <div>
-              <div class="dash-name">{{ a.name or a.slug }}</div>
-              <div class="dash-sub">{{ a.company or "—" }}</div>
+              <div class="dash-name">{{ a.slug }}</div>
+              <div class="dash-sub">—</div>
               <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
             </div>
           </div>
 
           <div class="dash-actions">
-            <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
-            {% if a.p2_enabled == 1 %}
-              <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
-            {% endif %}
+            {% set profiles = ['p1','p2','p3'] %}
+            {% for p in profiles %}
+              {% set prof = ( (a.profiles_json|default('{}')) | loads ).get(p, {}) %}
+              {% set en = prof.get('enabled', 0) %}
+              {% if en == 1 %}
+                <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p={{p}}">Apri {{p|upper}}</a>
+                <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','{{p}}')">QR {{p|upper}}</button>
 
-            <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
-
-            <button class="btn-mini ghost" type="button"
-                    onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
-            {% if a.p2_enabled == 1 %}
-              <button class="btn-mini ghost" type="button"
-                      onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
-            {% endif %}
+                {% if is_admin %}
+                  <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/{{p}}">Modifica {{p|upper}}</a>
+                  <form class="inline" method="post" action="/area/admin/delete/{{ a.slug }}/{{p}}"
+                        onsubmit="return confirm('Eliminare {{p|upper}}?\\n\\nVerrà svuotato e NON sarà ripristinabile.');">
+                    <button class="btn-mini danger" type="submit">Elimina {{p|upper}}</button>
+                  </form>
+                {% else %}
+                  <a class="btn-mini warn" href="/area/me/{{p}}">Modifica {{p|upper}}</a>
+                  <form class="inline" method="post" action="/area/me/delete/{{p}}"
+                        onsubmit="return confirm('Eliminare {{p|upper}}?\\n\\nVerrà svuotato e NON sarà ripristinabile.');">
+                    <button class="btn-mini danger" type="submit">Elimina {{p|upper}}</button>
+                  </form>
+                {% endif %}
+              {% else %}
+                {% if is_admin %}
+                  <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/{{p}}"
+                        onsubmit="return confirm('Attivare {{p|upper}} (nuovo e vuoto)?');">
+                    <button class="btn-mini" type="submit">Attiva {{p|upper}}</button>
+                  </form>
+                {% else %}
+                  <form class="inline" method="post" action="/area/me/activate/{{p}}"
+                        onsubmit="return confirm('Attivare {{p|upper}} (nuovo e vuoto)?');">
+                    <button class="btn-mini" type="submit">Attiva {{p|upper}}</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
 
             {% if is_admin %}
-              <a class="btn-mini warn" href="/area/edit/{{ a.slug }}">Modifica P1</a>
-              {% if a.p2_enabled == 1 %}
-                <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
-              {% endif %}
-
-              {% if a.p2_enabled == 1 %}
-                <form class="inline" method="post" action="/area/admin/deactivate-p2/{{ a.slug }}"
-                      onsubmit="return confirm('Disattivare P2? (verrà svuotato)');">
-                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
-                </form>
-              {% else %}
-                <form class="inline" method="post" action="/area/admin/activate-p2/{{ a.slug }}"
-                      onsubmit="return confirm('Attivare P2 vuoto?');">
-                  <button class="btn-mini" type="submit">Attiva P2</button>
-                </form>
-              {% endif %}
-
               <form class="inline" method="post" action="/area/admin/credentials/{{ a.slug }}"
                     onsubmit="return confirm('Generare una nuova password per questo cliente?');">
                 <button class="btn-mini" type="submit">Invia credenziali</button>
               </form>
-            {% else %}
-              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
-              {% if a.p2_enabled == 1 %}
-                <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
-              {% endif %}
             {% endif %}
-          </div>
-        </div>
-
-        <div class="dash-preview">
-          <div class="dash-preview-col">
-            <div class="dash-preview-title">Foto</div>
-            <div class="dash-mini-grid">
-              {% set imgs = (a.gallery_urls or "").split("|") %}
-              {% set imgs2 = [] %}
-              {% for x in imgs %}
-                {% if x and x.strip() %}
-                  {% set _ = imgs2.append(x) %}
-                {% endif %}
-              {% endfor %}
-              {% for g in imgs2[:6] %}
-                <img class="dash-mini" src="{{ g }}" alt="">
-              {% endfor %}
-              {% if imgs2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="dash-preview-col">
-            <div class="dash-preview-title">Video</div>
-            <div class="dash-mini-grid">
-              {% set vids = (a.video_urls or "").split("|") %}
-              {% set vids2 = [] %}
-              {% for x in vids %}
-                {% if x and x.strip() %}
-                  {% set _ = vids2.append(x) %}
-                {% endif %}
-              {% endfor %}
-              {% for v in vids2[:4] %}
-                <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
-              {% endfor %}
-              {% if vids2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="dash-preview-col">
-            <div class="dash-preview-title">PDF</div>
-            <div class="dash-pdf-list">
-              {% set pdfs = (a.pdf1_url or "").split("|") %}
-              {% set pdfs2 = [] %}
-              {% for x in pdfs %}
-                {% if x and x.strip() %}
-                  {% set _ = pdfs2.append(x) %}
-                {% endif %}
-              {% endfor %}
-              {% for p in pdfs2[:6] %}
-                {% if "||" in p %}
-                  {% set nm = p.split("||")[0] %}
-                {% else %}
-                  {% set nm = p %}
-                {% endif %}
-                <div class="dash-pdf-pill" title="{{ nm }}">{{ nm }}</div>
-              {% endfor %}
-              {% if pdfs2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
           </div>
         </div>
 
@@ -200,37 +133,6 @@
   </div>
 </div>
 
-<!-- CREDENTIALS MODAL (resta com’è, lo aggiustiamo dopo) -->
-<div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-x" type="button" onclick="closeCred()">✕</button>
-    <div class="modal-title">Credenziali (mostrate una sola volta)</div>
-
-    <div class="cred-box">
-      <div class="cred-row"><span>Username</span><code id="cUser"></code></div>
-      <div class="cred-row"><span>Password</span><code id="cPass"></code></div>
-      <div class="sep" style="margin:12px 0"></div>
-
-      <div class="cred-links">
-        <div class="cred-row"><span>Link Login</span><a id="cLogin" target="_blank" href="">Apri</a></div>
-        <div class="cred-row"><span>Link Card P1</span><a id="cCard1" target="_blank" href="">Apri</a></div>
-        <div class="cred-row" id="cCard2Row" style="display:none"><span>Link Card P2</span><a id="cCard2" target="_blank" href="">Apri</a></div>
-      </div>
-
-      <div class="hint" style="margin-top:10px">
-        Invio via Email/WhatsApp lo attiviamo dopo (SMTP + WhatsApp).
-      </div>
-    </div>
-
-    <form method="post" action="/area/admin/send_credentials" class="modal-actions">
-      <input type="hidden" name="slug" id="cSlug" value="">
-      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
-      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
-      <button class="btn ghost" type="button" onclick="closeCred()">Chiudi</button>
-    </form>
-  </div>
-</div>
-
 <script>
   function overlayClose(e, id){
     if(e.target && e.target.id === id){
@@ -250,19 +152,19 @@
     return base + '/' + u;
   }
 
-  async function copyToClipboard(text){
-    try{
-      await navigator.clipboard.writeText(text);
-      return true;
-    }catch(e){
-      return false;
-    }
-  }
-
   function mailtoOpen(subject, body){
     const s = encodeURIComponent(subject || "");
     const b = encodeURIComponent(body || "");
     window.location.href = `mailto:?subject=${s}&body=${b}`;
+  }
+
+  async function copyToClipboard(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      alert("Il client email non ha inserito il testo.\nCopia manualmente questo testo (già copiato negli appunti) ✅");
+    }catch(e){
+      alert("Il client email non ha inserito il testo.\nCopia manualmente questo testo:\n\n" + text);
+    }
   }
 
   function openQr(slug, profile){
@@ -273,19 +175,19 @@
     document.getElementById('qrSlug').value = slug;
     document.getElementById('qrProfile').value = profile;
 
-    const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
+    const url = `/qr/${slug}.png?p=${profile}`; // inline => apre subito
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
 
     modal.style.display = 'flex';
   }
 
-  async function shareQr(channel){
+  function shareQr(channel){
     const slug = document.getElementById('qrSlug').value;
     const profile = document.getElementById('qrProfile').value || 'p1';
 
-    const cardUrl = absUrl(profile === 'p2' ? `/${slug}?p=p2` : `/${slug}`);
-    const qrPngUrl = absUrl(profile === 'p2' ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`);
+    const cardUrl = absUrl(`/${slug}?p=${profile}`);
+    const qrPngUrl = absUrl(`/qr/${slug}.png?p=${profile}`);
 
     const msg = [
       `Pay4You Card (${profile.toUpperCase()})`,
@@ -298,44 +200,10 @@
       return;
     }
 
-    // ✅ EMAIL: prima copia, poi apre mailto (così il testo non si perde mai)
-    const ok = await copyToClipboard(msg);
+    // Email: molti client bloccano body => fallback clipboard
     mailtoOpen(`Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`, msg);
-    if(ok){
-      alert("Testo copiato negli appunti ✅\nApri la mail e incolla (CTRL+V) se non compare automaticamente.");
-    }else{
-      alert("Non riesco a copiare automaticamente.\nCopia manualmente questo testo:\n\n" + msg);
-    }
+    setTimeout(() => { copyToClipboard(msg); }, 700);
   }
-
-  function openCred(slug, username, password){
-    document.getElementById('cSlug').value = slug;
-    document.getElementById('cUser').textContent = username;
-    document.getElementById('cPass').textContent = password;
-
-    const base = window.location.origin;
-    document.getElementById('cLogin').href = base + "/area/login";
-    document.getElementById('cCard1').href = base + "/" + slug;
-
-    const card = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
-    const row = document.getElementById('cCard2Row');
-    if(card){
-      row.style.display = '';
-      document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
-    }else{
-      row.style.display = 'none';
-    }
-
-    document.getElementById('credModal').style.display = 'flex';
-  }
-  function closeCred(){ closeModal('credModal'); }
-
-  (function(){
-    const creds = {{ (session.get("last_credentials") or {}) | tojson }};
-    if(creds && creds.slug){
-      openCred(creds.slug, creds.username, creds.password);
-    }
-  })();
 </script>
 
 </body>
