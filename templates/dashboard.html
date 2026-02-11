@@ -250,21 +250,19 @@
     return base + '/' + u;
   }
 
-  function mailtoOpen(subject, body){
-    // body robusto (CRLF)
-    const s = encodeURIComponent(subject || "");
-    const b = encodeURIComponent(body || "");
-    const href = `mailto:?subject=${s}&body=${b}`;
-    window.location.href = href;
-  }
-
   async function copyToClipboard(text){
     try{
       await navigator.clipboard.writeText(text);
-      alert("Testo copiato negli appunti ✅\nIncollalo nella mail se il client non lo inserisce automaticamente.");
+      return true;
     }catch(e){
-      alert("Il client email non ha inserito il testo.\nCopia manualmente questo testo:\n\n" + text);
+      return false;
     }
+  }
+
+  function mailtoOpen(subject, body){
+    const s = encodeURIComponent(subject || "");
+    const b = encodeURIComponent(body || "");
+    window.location.href = `mailto:?subject=${s}&body=${b}`;
   }
 
   function openQr(slug, profile){
@@ -276,14 +274,13 @@
     document.getElementById('qrProfile').value = profile;
 
     const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
-
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
 
     modal.style.display = 'flex';
   }
 
-  function shareQr(channel){
+  async function shareQr(channel){
     const slug = document.getElementById('qrSlug').value;
     const profile = document.getElementById('qrProfile').value || 'p1';
 
@@ -301,9 +298,14 @@
       return;
     }
 
-    // Email: prova mailto, e fallback clipboard
+    // ✅ EMAIL: prima copia, poi apre mailto (così il testo non si perde mai)
+    const ok = await copyToClipboard(msg);
     mailtoOpen(`Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`, msg);
-    setTimeout(() => { copyToClipboard(msg); }, 700);
+    if(ok){
+      alert("Testo copiato negli appunti ✅\nApri la mail e incolla (CTRL+V) se non compare automaticamente.");
+    }else{
+      alert("Non riesco a copiare automaticamente.\nCopia manualmente questo testo:\n\n" + msg);
+    }
   }
 
   function openCred(slug, username, password){
