@@ -7,7 +7,6 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
-
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -61,35 +60,73 @@
           </div>
 
           <div class="dash-actions">
+            <!-- APRI -->
             <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
             {% if a.p2_enabled == 1 %}
               <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
             {% endif %}
+            {% if a.p3_enabled == 1 %}
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p3">Apri P3</a>
+            {% endif %}
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <button class="btn-mini ghost" type="button"
-                    onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
+            <!-- QR -->
+            <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR1</button>
             {% if a.p2_enabled == 1 %}
-              <button class="btn-mini ghost" type="button"
-                      onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR2</button>
+            {% endif %}
+            {% if a.p3_enabled == 1 %}
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p3')">QR3</button>
             {% endif %}
 
+            <!-- MODIFICA -->
             {% if is_admin %}
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}">Modifica P1</a>
-              {% if a.p2_enabled == 1 %}
-                <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
-              {% endif %}
+              {% if a.p2_enabled == 1 %}<a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>{% endif %}
+              {% if a.p3_enabled == 1 %}<a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>{% endif %}
+            {% else %}
+              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
+              {% if a.p2_enabled == 1 %}<a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>{% endif %}
+              {% if a.p3_enabled == 1 %}<a class="btn-mini warn" href="/area/me/p3">Modifica P3</a>{% endif %}
+            {% endif %}
+
+            <!-- ATTIVA/DISATTIVA/ELIMINA (reset) -->
+            {% if is_admin %}
+              <form class="inline" method="post" action="/area/admin/reset/{{ a.slug }}/p1"
+                    onsubmit="return confirm('ELIMINA P1 = reset totale (svuota tutto e disattiva P2/P3). Confermi?');">
+                <button class="btn-mini danger" type="submit">Elimina P1</button>
+              </form>
 
               {% if a.p2_enabled == 1 %}
-                <form class="inline" method="post" action="/area/admin/deactivate-p2/{{ a.slug }}"
-                      onsubmit="return confirm('Disattivare P2? (verrà svuotato)');">
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"
+                      onsubmit="return confirm('Disattiva P2? (verrà svuotato)');">
                   <button class="btn-mini danger" type="submit">Disattiva P2</button>
                 </form>
+                <form class="inline" method="post" action="/area/admin/reset/{{ a.slug }}/p2"
+                      onsubmit="return confirm('Elimina P2 (svuota e disattiva). Confermi?');">
+                  <button class="btn-mini danger" type="submit">Elimina P2</button>
+                </form>
               {% else %}
-                <form class="inline" method="post" action="/area/admin/activate-p2/{{ a.slug }}"
-                      onsubmit="return confirm('Attivare P2 vuoto?');">
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p2"
+                      onsubmit="return confirm('Attiva P2 vuoto?');">
                   <button class="btn-mini" type="submit">Attiva P2</button>
+                </form>
+              {% endif %}
+
+              {% if a.p3_enabled == 1 %}
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p3"
+                      onsubmit="return confirm('Disattiva P3? (verrà svuotato)');">
+                  <button class="btn-mini danger" type="submit">Disattiva P3</button>
+                </form>
+                <form class="inline" method="post" action="/area/admin/reset/{{ a.slug }}/p3"
+                      onsubmit="return confirm('Elimina P3 (svuota e disattiva). Confermi?');">
+                  <button class="btn-mini danger" type="submit">Elimina P3</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p3"
+                      onsubmit="return confirm('Attiva P3 vuoto?');">
+                  <button class="btn-mini" type="submit">Attiva P3</button>
                 </form>
               {% endif %}
 
@@ -98,9 +135,28 @@
                 <button class="btn-mini" type="submit">Invia credenziali</button>
               </form>
             {% else %}
-              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
-                <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
+                <form class="inline" method="post" action="/area/me/deactivate/p2"
+                      onsubmit="return confirm('Disattiva P2? (verrà svuotato)');">
+                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post" action="/area/me/activate/p2"
+                      onsubmit="return confirm('Attiva P2 vuoto?');">
+                  <button class="btn-mini" type="submit">Attiva P2</button>
+                </form>
+              {% endif %}
+
+              {% if a.p3_enabled == 1 %}
+                <form class="inline" method="post" action="/area/me/deactivate/p3"
+                      onsubmit="return confirm('Disattiva P3? (verrà svuotato)');">
+                  <button class="btn-mini danger" type="submit">Disattiva P3</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post" action="/area/me/activate/p3"
+                      onsubmit="return confirm('Attiva P3 vuoto?');">
+                  <button class="btn-mini" type="submit">Attiva P3</button>
+                </form>
               {% endif %}
             {% endif %}
           </div>
@@ -113,9 +169,7 @@
               {% set imgs = (a.gallery_urls or "").split("|") %}
               {% set imgs2 = [] %}
               {% for x in imgs %}
-                {% if x and x.strip() %}
-                  {% set _ = imgs2.append(x) %}
-                {% endif %}
+                {% if x and x.strip() %}{% set _ = imgs2.append(x) %}{% endif %}
               {% endfor %}
               {% for g in imgs2[:6] %}
                 <img class="dash-mini" src="{{ g }}" alt="">
@@ -132,9 +186,7 @@
               {% set vids = (a.video_urls or "").split("|") %}
               {% set vids2 = [] %}
               {% for x in vids %}
-                {% if x and x.strip() %}
-                  {% set _ = vids2.append(x) %}
-                {% endif %}
+                {% if x and x.strip() %}{% set _ = vids2.append(x) %}{% endif %}
               {% endfor %}
               {% for v in vids2[:4] %}
                 <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
@@ -151,16 +203,10 @@
               {% set pdfs = (a.pdf1_url or "").split("|") %}
               {% set pdfs2 = [] %}
               {% for x in pdfs %}
-                {% if x and x.strip() %}
-                  {% set _ = pdfs2.append(x) %}
-                {% endif %}
+                {% if x and x.strip() %}{% set _ = pdfs2.append(x) %}{% endif %}
               {% endfor %}
               {% for p in pdfs2[:6] %}
-                {% if "||" in p %}
-                  {% set nm = p.split("||")[0] %}
-                {% else %}
-                  {% set nm = p %}
-                {% endif %}
+                {% if "||" in p %}{% set nm = p.split("||")[0] %}{% else %}{% set nm = p %}{% endif %}
                 <div class="dash-pdf-pill" title="{{ nm }}">{{ nm }}</div>
               {% endfor %}
               {% if pdfs2|length == 0 %}
@@ -175,9 +221,7 @@
     </div>
 
     <div class="footer">Pay4You.store</div>
-
   </main>
-
 </div>
 
 <!-- QR MODAL -->
@@ -200,7 +244,7 @@
   </div>
 </div>
 
-<!-- CREDENTIALS MODAL (resta com’è, lo aggiustiamo dopo) -->
+<!-- CREDENTIALS MODAL (come prima) -->
 <div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
   <div class="modal-box" onclick="event.stopPropagation()">
     <button class="modal-x" type="button" onclick="closeCred()">✕</button>
@@ -215,6 +259,7 @@
         <div class="cred-row"><span>Link Login</span><a id="cLogin" target="_blank" href="">Apri</a></div>
         <div class="cred-row"><span>Link Card P1</span><a id="cCard1" target="_blank" href="">Apri</a></div>
         <div class="cred-row" id="cCard2Row" style="display:none"><span>Link Card P2</span><a id="cCard2" target="_blank" href="">Apri</a></div>
+        <div class="cred-row" id="cCard3Row" style="display:none"><span>Link Card P3</span><a id="cCard3" target="_blank" href="">Apri</a></div>
       </div>
 
       <div class="hint" style="margin-top:10px">
@@ -251,12 +296,8 @@
   }
 
   async function copyToClipboard(text){
-    try{
-      await navigator.clipboard.writeText(text);
-      return true;
-    }catch(e){
-      return false;
-    }
+    try{ await navigator.clipboard.writeText(text); return true; }
+    catch(e){ return false; }
   }
 
   function mailtoOpen(subject, body){
@@ -273,7 +314,10 @@
     document.getElementById('qrSlug').value = slug;
     document.getElementById('qrProfile').value = profile;
 
-    const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`;
+    const url = (profile === 'p2') ? `/qr/${slug}.png?p=p2`
+              : (profile === 'p3') ? `/qr/${slug}.png?p=p3`
+              : `/qr/${slug}.png`;
+
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
 
@@ -284,31 +328,30 @@
     const slug = document.getElementById('qrSlug').value;
     const profile = document.getElementById('qrProfile').value || 'p1';
 
-    const cardUrl = absUrl(profile === 'p2' ? `/${slug}?p=p2` : `/${slug}`);
-    const qrPngUrl = absUrl(profile === 'p2' ? `/qr/${slug}.png?p=p2` : `/qr/${slug}.png`);
+    const cardUrl = absUrl(profile === 'p2' ? `/${slug}?p=p2` : (profile === 'p3' ? `/${slug}?p=p3` : `/${slug}`));
+    const qrPngUrl = absUrl(profile === 'p2' ? `/qr/${slug}.png?p=p2` : (profile === 'p3' ? `/qr/${slug}.png?p=p3` : `/qr/${slug}.png`));
 
     const msg = [
       `Pay4You Card (${profile.toUpperCase()})`,
       `Link: ${cardUrl}`,
       `QR: ${qrPngUrl}`
-    ].join("\r\n");
+    ].join("\n");
 
     if(channel === 'whatsapp'){
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
 
-    // ✅ EMAIL: prima copia, poi apre mailto (così il testo non si perde mai)
-    const ok = await copyToClipboard(msg);
-    mailtoOpen(`Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`, msg);
-    if(ok){
-      alert("Testo copiato negli appunti ✅\nApri la mail e incolla (CTRL+V) se non compare automaticamente.");
-    }else{
-      alert("Non riesco a copiare automaticamente.\nCopia manualmente questo testo:\n\n" + msg);
+    const subject = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`;
+    mailtoOpen(subject, msg);
+
+    const copied = await copyToClipboard(msg);
+    if(!copied){
+      window.prompt("Copia questo testo e incollalo nella mail:", msg);
     }
   }
 
-  function openCred(slug, username, password){
+  function openCred(slug, username, password, p2Enabled, p3Enabled){
     document.getElementById('cSlug').value = slug;
     document.getElementById('cUser').textContent = username;
     document.getElementById('cPass').textContent = password;
@@ -317,13 +360,19 @@
     document.getElementById('cLogin').href = base + "/area/login";
     document.getElementById('cCard1').href = base + "/" + slug;
 
-    const card = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
-    const row = document.getElementById('cCard2Row');
-    if(card){
-      row.style.display = '';
+    const row2 = document.getElementById('cCard2Row');
+    const row3 = document.getElementById('cCard3Row');
+    if(p2Enabled){
+      row2.style.display = '';
       document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
     }else{
-      row.style.display = 'none';
+      row2.style.display = 'none';
+    }
+    if(p3Enabled){
+      row3.style.display = '';
+      document.getElementById('cCard3').href = base + "/" + slug + "?p=p3";
+    }else{
+      row3.style.display = 'none';
     }
 
     document.getElementById('credModal').style.display = 'flex';
@@ -333,7 +382,7 @@
   (function(){
     const creds = {{ (session.get("last_credentials") or {}) | tojson }};
     if(creds && creds.slug){
-      openCred(creds.slug, creds.username, creds.password);
+      openCred(creds.slug, creds.username, creds.password, !!creds.p2_enabled, !!creds.p3_enabled);
     }
   })();
 </script>
