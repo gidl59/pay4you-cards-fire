@@ -122,7 +122,8 @@
               </form>
             {% else %}
               <!-- CLIENTE -->
-              <a class="btn-mini warn" href="/area/me/p1">Modifica P1</a>
+              <!-- ✅ nel tuo app.py P1 è /area/me/edit -->
+              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
 
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
@@ -298,11 +299,14 @@
     return base + '/' + u;
   }
 
+  // ✅ Gmail compose (con tf=1, spesso risolve body vuoto)
   function gmailCompose(subject, body){
     const su = encodeURIComponent(subject || "");
     const bd = encodeURIComponent(body || "");
-    return `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${bd}`;
+    return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
   }
+
+  // fallback Outlook Web
   function outlookCompose(subject, body){
     const su = encodeURIComponent(subject || "");
     const bd = encodeURIComponent(body || "");
@@ -342,10 +346,15 @@
       return;
     }
 
-    // ✅ Email senza CTRL+V (Gmail)
+    // ✅ Email senza CTRL+V: prima Gmail, poi fallback Outlook se serve
     const subject = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`.trim();
     const g = gmailCompose(subject, msg);
-    window.open(g, '_blank');
+    const w = window.open(g, '_blank');
+
+    // se popup bloccato o window null, prova Outlook
+    if(!w){
+      window.open(outlookCompose(subject, msg), '_blank');
+    }
   }
 
   function openCred(slug, username, password){
