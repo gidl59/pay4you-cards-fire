@@ -7,7 +7,6 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
-
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -47,21 +46,17 @@
             <h1 class="page-title">Modifica Profilo {{ profile|upper }}</h1>
             <div class="hint">
               {% if profile != "p1" %}
-                Questo è {{ profile|upper }}: è una card separata e può essere completamente diversa da P1.
+                Questo profilo è indipendente: può essere diverso da P1.
               {% else %}
-                Qui modifichi i dati principali della tua Pay4You Card (P1).
+                Profilo principale (sempre attivo).
               {% endif %}
             </div>
           </div>
           <div class="toolbar">
             {% if agent %}
               <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}">Apri P1</a>
-              {% if agent.p2_enabled == 1 %}
-                <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>
-              {% endif %}
-              {% if agent.p3_enabled == 1 %}
-                <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p3">Apri P3</a>
-              {% endif %}
+              {% if agent.p2_enabled == 1 %}<a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>{% endif %}
+              {% if agent.p3_enabled == 1 %}<a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p3">Apri P3</a>{% endif %}
             {% endif %}
           </div>
         </div>
@@ -75,9 +70,8 @@
             <div class="h3">Identificativo</div>
             <div class="form-grid">
               <div class="field">
-                <label>Slug (non modificabile)</label>
+                <label>Slug</label>
                 <input type="text" value="{{ agent.slug }}" readonly>
-                <div class="hint">È il link pubblico della card.</div>
               </div>
               <div class="field">
                 <label>Profilo</label>
@@ -87,311 +81,202 @@
           </div>
           {% endif %}
 
-          <!-- ===================== DATI PRINCIPALI ===================== -->
+          <!-- ===== Effetti (come prima) ===== -->
           <div class="section-box">
-            <div class="h3">Dati principali</div>
+            <div class="h3">Effetti grafici</div>
+            <div class="hint">Le opzioni “ruota” e “flip” si escludono automaticamente.</div>
+
             <div class="form-grid">
               <div class="field">
-                <label>Nome</label>
-                <input type="text" name="name" value="{{ data.get('name','') }}">
+                <label><input type="checkbox" name="orbit_spin" {% if vis and vis.orbit_spin == 1 %}checked{% endif %}> Ruota orbita</label>
               </div>
               <div class="field">
-                <label>Azienda</label>
-                <input type="text" name="company" value="{{ data.get('company','') }}">
+                <label><input type="checkbox" name="logo_spin" {% if vis and vis.logo_spin == 1 %}checked{% endif %}> Ruota logo</label>
               </div>
               <div class="field">
-                <label>Ruolo</label>
-                <input type="text" name="role" value="{{ data.get('role','') }}">
+                <label><input type="checkbox" name="avatar_spin" {% if vis and vis.avatar_spin == 1 %}checked{% endif %}> Ruota foto</label>
               </div>
               <div class="field">
-                <label>Bio</label>
-                <textarea name="bio" placeholder="Breve descrizione...">{{ data.get('bio','') }}</textarea>
+                <label><input type="checkbox" name="allow_flip" {% if vis and vis.allow_flip == 1 %}checked{% endif %}> Flip card</label>
               </div>
             </div>
           </div>
 
-          <!-- ===================== CROP + FOTO ===================== -->
+          <!-- ===== Dati ===== -->
           <div class="section-box">
-            <div class="h3">Foto profilo + Crop</div>
-            <div class="hint">Carica una foto e regolala subito qui sotto (X/Y e Zoom).</div>
+            <div class="h3">Dati principali</div>
+            <div class="form-grid">
+              <div class="field"><label>Nome</label><input type="text" name="name" value="{{ data.get('name','') }}"></div>
+              <div class="field"><label>Azienda</label><input type="text" name="company" value="{{ data.get('company','') }}"></div>
+              <div class="field"><label>Ruolo</label><input type="text" name="role" value="{{ data.get('role','') }}"></div>
+              <div class="field"><label>Bio</label><textarea name="bio">{{ data.get('bio','') }}</textarea></div>
+            </div>
+          </div>
+
+          <!-- ===== Foto + Logo + Background + Crop ===== -->
+          <div class="section-box">
+            <div class="h3">Foto / Logo / Background</div>
 
             <div class="form-grid">
-              <div class="field full">
-                <label>Carica foto profilo</label>
+              <div class="field">
+                <label>Foto personale</label>
                 <input id="photoInput" type="file" name="photo" accept="image/*">
-                <div class="hint">Max {{ limits.max_imgs }} foto galleria — la foto profilo non conta nella galleria.</div>
               </div>
+              <div class="field">
+                <label>Logo</label>
+                <input id="logoInput" type="file" name="logo" accept="image/*">
+              </div>
+              <div class="field full">
+                <label>Background (immagine)</label>
+                <input id="backInput" type="file" name="back_media" accept="image/*">
+                <div class="hint">Se vuoto: usa sfondo “azienda”.</div>
+              </div>
+              <div class="field full">
+                <label>Background mode</label>
+                <select name="back_media_mode">
+                  <option value="company" {% if vis and vis.back_media_mode == 'company' %}selected{% endif %}>Azienda</option>
+                  <option value="custom" {% if vis and vis.back_media_mode == 'custom' %}selected{% endif %}>Custom</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="hint" style="margin-top:8px">
+              Preview foto: se non carichi una foto, usa il logo (così P2/P3 “vuoti” non mostrano P1).
             </div>
 
             <div class="crop-preview">
               <div class="crop-circle-bg" id="cropCircleBg"
-                   data-url="{{ (ag_photo_url if ag_photo_url is defined else (agent.photo_url if agent else '')) }}"
-                   data-x="{{ (ag_photo_pos_x if ag_photo_pos_x is defined else (agent.photo_pos_x if agent else 50)) }}"
-                   data-y="{{ (ag_photo_pos_y if ag_photo_pos_y is defined else (agent.photo_pos_y if agent else 35)) }}"
-                   data-z="{{ (ag_photo_zoom if ag_photo_zoom is defined else (agent.photo_zoom if agent else '1.0')) }}">
-                <div class="crop-empty" id="cropEmptyBg" style="display:none">Carica una foto profilo</div>
+                   data-url="{{ preview_photo or '' }}"
+                   data-x="{{ (vis.photo_pos_x if vis else 50) }}"
+                   data-y="{{ (vis.photo_pos_y if vis else 35) }}"
+                   data-z="{{ (vis.photo_zoom if vis else '1.0') }}">
+                <div class="crop-empty" id="cropEmptyBg" style="display:none">Nessuna immagine</div>
               </div>
             </div>
 
             <div class="form-grid" style="margin-top:12px">
               <div class="field">
                 <label>X (0–100)</label>
-                <input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ (ag_photo_pos_x if ag_photo_pos_x is defined else (agent.photo_pos_x if agent else 50)) }}">
+                <input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ (vis.photo_pos_x if vis else 50) }}">
               </div>
               <div class="field">
                 <label>Y (0–100)</label>
-                <input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ (ag_photo_pos_y if ag_photo_pos_y is defined else (agent.photo_pos_y if agent else 35)) }}">
+                <input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ (vis.photo_pos_y if vis else 35) }}">
               </div>
               <div class="field full">
-                <label>Zoom (1.0 – 2.5)</label>
-                <input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom"
-                       value="{{ (ag_photo_zoom if ag_photo_zoom is defined else ((agent.photo_zoom if agent else '1.0') or '1.0')) }}">
+                <label>Zoom (1.0–2.5)</label>
+                <input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom" value="{{ (vis.photo_zoom if vis else '1.0') }}">
               </div>
             </div>
           </div>
 
-          <!-- ===================== CONTATTI ===================== -->
+          <!-- ===== Contatti ===== -->
           <div class="section-box">
             <div class="h3">Contatti</div>
             <div class="form-grid">
-              <div class="field">
-                <label>Telefono (mobile)</label>
-                <input type="text" name="phone_mobile" value="{{ data.get('phone_mobile','') }}">
-              </div>
-              <div class="field">
-                <label>Telefono (mobile 2)</label>
-                <input type="text" name="phone_mobile2" value="{{ data.get('phone_mobile2','') }}">
-              </div>
-              <div class="field">
-                <label>Telefono ufficio</label>
-                <input type="text" name="phone_office" value="{{ data.get('phone_office','') }}">
-              </div>
-              <div class="field">
-                <label>WhatsApp</label>
-                <input type="text" name="whatsapp" value="{{ data.get('whatsapp','') }}">
-                <div class="hint">Esempio: +39350.... oppure link wa.me</div>
-              </div>
-              <div class="field full">
-                <label>Email (separate da virgola)</label>
-                <input type="text" name="emails" value="{{ data.get('emails','') }}">
-                <div class="hint">Esempio: nome@dominio.it, info@dominio.it</div>
-              </div>
-              <div class="field full">
-                <label>Siti (separati da virgola)</label>
-                <input type="text" name="websites" value="{{ data.get('websites','') }}">
-                <div class="hint">Esempio: https://www.pay4you.store</div>
-              </div>
-              <div class="field">
-                <label>PEC</label>
-                <input type="text" name="pec" value="{{ data.get('pec','') }}">
-              </div>
-              <div class="field full">
-                <label>Indirizzi (uno per riga)</label>
-                <textarea name="addresses" placeholder="Via..., Città...">{{ data.get('addresses','') }}</textarea>
-              </div>
+              <div class="field"><label>Cellulare</label><input type="text" name="phone_mobile" value="{{ data.get('phone_mobile','') }}"></div>
+              <div class="field"><label>Cellulare 2</label><input type="text" name="phone_mobile2" value="{{ data.get('phone_mobile2','') }}"></div>
+              <div class="field"><label>Telefono ufficio</label><input type="text" name="phone_office" value="{{ data.get('phone_office','') }}"></div>
+              <div class="field"><label>WhatsApp</label><input type="text" name="whatsapp" value="{{ data.get('whatsapp','') }}"></div>
+
+              <div class="field full"><label>Email (virgola)</label><input type="text" name="emails" value="{{ data.get('emails','') }}"></div>
+              <div class="field full"><label>Siti (virgola)</label><input type="text" name="websites" value="{{ data.get('websites','') }}"></div>
+
+              <div class="field"><label>PEC</label><input type="text" name="pec" value="{{ data.get('pec','') }}"></div>
+              <div class="field full"><label>Indirizzi (1 per riga)</label><textarea name="addresses">{{ data.get('addresses','') }}</textarea></div>
             </div>
           </div>
 
-          <!-- ===================== DATI AZIENDALI ===================== -->
-          <div class="section-box">
-            <div class="h3">Dati aziendali</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>P.IVA</label>
-                <input type="text" name="piva" value="{{ data.get('piva','') }}">
-              </div>
-              <div class="field">
-                <label>SDI</label>
-                <input type="text" name="sdi" value="{{ data.get('sdi','') }}">
-              </div>
-            </div>
-          </div>
-
-          <!-- ===================== SOCIAL (con istruzioni) ===================== -->
+          <!-- ===== Social ===== -->
           <div class="section-box">
             <div class="h3">Social</div>
-            <div class="hint">Inserisci URL completi. Se non è un URL valido, non verrà mostrato sulla card.</div>
-
             <div class="form-grid">
-              <div class="field">
-                <label>Facebook</label>
-                <input type="text" name="facebook" value="{{ data.get('facebook','') }}">
-                <div class="hint">Esempio: https://www.facebook.com/yourpage</div>
-              </div>
-              <div class="field">
-                <label>Instagram</label>
-                <input type="text" name="instagram" value="{{ data.get('instagram','') }}">
-                <div class="hint">Esempio: https://www.instagram.com/yourprofile</div>
-              </div>
-              <div class="field">
-                <label>LinkedIn</label>
-                <input type="text" name="linkedin" value="{{ data.get('linkedin','') }}">
-                <div class="hint">Esempio: https://www.linkedin.com/in/yourprofile</div>
-              </div>
-              <div class="field">
-                <label>TikTok</label>
-                <input type="text" name="tiktok" value="{{ data.get('tiktok','') }}">
-                <div class="hint">Esempio: https://www.tiktok.com/@yourprofile</div>
-              </div>
-              <div class="field">
-                <label>Telegram</label>
-                <input type="text" name="telegram" value="{{ data.get('telegram','') }}">
-                <div class="hint">Esempio: https://t.me/username</div>
-              </div>
-              <div class="field">
-                <label>YouTube</label>
-                <input type="text" name="youtube" value="{{ data.get('youtube','') }}">
-                <div class="hint">Esempio: https://www.youtube.com/@channel</div>
-              </div>
-              <div class="field">
-                <label>Spotify</label>
-                <input type="text" name="spotify" value="{{ data.get('spotify','') }}">
-                <div class="hint">Esempio: https://open.spotify.com/artist/...</div>
-              </div>
+              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ data.get('facebook','') }}"></div>
+              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ data.get('instagram','') }}"></div>
+              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ data.get('linkedin','') }}"></div>
+              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ data.get('tiktok','') }}"></div>
+              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ data.get('telegram','') }}"></div>
+              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ data.get('youtube','') }}"></div>
+              <div class="field"><label>Spotify</label><input type="text" name="spotify" value="{{ data.get('spotify','') }}"></div>
             </div>
           </div>
 
-          <!-- ===================== MEDIA ===================== -->
+          <!-- ===== MEDIA ===== -->
           <div class="section-box">
             <div class="h3">Media</div>
             <div class="hint">
-              Limiti:
-              <b>{{ limits.max_imgs }}</b> foto (max <b>{{ limits.img_mb }}MB</b> cad.),
-              <b>{{ limits.max_vids }}</b> video (max <b>{{ limits.vid_mb }}MB</b> cad.),
-              <b>{{ limits.max_pdfs }}</b> PDF (max <b>{{ limits.pdf_mb }}MB</b> cad.).
+              Limiti: {{ limits.max_imgs }} foto, {{ limits.max_vids }} video, {{ limits.max_pdfs }} PDF.
             </div>
 
-            <div class="media-preview">
-              <div class="media-title">Galleria foto</div>
+            <!-- Upload -->
+            <div class="form-grid">
+              <div class="field full">
+                <label>Carica foto galleria</label>
+                <input type="file" name="gallery" multiple accept="image/*">
+              </div>
+              <div class="field full">
+                <label>Carica video</label>
+                <input type="file" name="videos" multiple accept="video/*">
+              </div>
+            </div>
 
-              <div class="form-grid">
-                <div class="field full">
-                  <label>Carica foto in galleria</label>
-                  <input type="file" name="gallery" multiple accept="image/*">
-                  <div class="hint">Max {{ limits.max_imgs }} foto totali, {{ limits.img_mb }}MB ciascuna.</div>
+            <!-- Griglia: NIENTE X -->
+            <div class="media-grid" style="margin-top:10px">
+              {% for g in gallery %}
+                <div class="media-item">
+                  <img src="{{ g }}" alt="" onclick="openViewer('gallery','{{ g }}','{{ agent.slug }}',{{ loop.index0 }},'{{ profile }}')">
                 </div>
-              </div>
-
-              <div class="media-grid" style="margin-top:10px">
-                {% for g in gallery %}
-                  <div class="media-item">
-                    <img src="{{ g }}" alt=""
-                         onclick="openViewer('gallery','{{ g }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')">
-                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
-                          onsubmit="return confirm('Eliminare questa foto? Non sarà più ripristinabile.');">
-                      <input type="hidden" name="type" value="gallery">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="profile" value="{{ profile }}">
-                      <button class="media-del" type="submit" title="Elimina">✕</button>
-                    </form>
-                  </div>
-                {% endfor %}
-                {% if gallery|length == 0 %}
-                  <div class="dash-mini-empty" style="width:100%">Nessuna foto</div>
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="media-preview">
-              <div class="media-title">Video</div>
-
-              <div class="form-grid">
-                <div class="field full">
-                  <label>Carica video</label>
-                  <input type="file" name="videos" multiple accept="video/*">
-                  <div class="hint">Max {{ limits.max_vids }} video totali, {{ limits.vid_mb }}MB ciascuno.</div>
+              {% endfor %}
+              {% for v in videos %}
+                <div class="media-item">
+                  <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
+                         onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }},'{{ profile }}')"></video>
+                  <div class="media-play">▶</div>
                 </div>
-              </div>
-
-              <div class="media-grid" style="margin-top:10px">
-                {% for v in videos %}
-                  <div class="media-item">
-                    <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
-                           onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')"></video>
-                    <div class="media-play">▶</div>
-                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
-                          onsubmit="return confirm('Eliminare questo video? Non sarà più ripristinabile.');">
-                      <input type="hidden" name="type" value="video">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="profile" value="{{ profile }}">
-                      <button class="media-del" type="submit" title="Elimina">✕</button>
-                    </form>
-                  </div>
-                {% endfor %}
-                {% if videos|length == 0 %}
-                  <div class="dash-mini-empty" style="width:100%">Nessun video</div>
-                {% endif %}
-              </div>
+              {% endfor %}
+              {% if gallery|length == 0 and videos|length == 0 %}
+                <div class="dash-mini-empty" style="width:100%">Nessuna foto/video</div>
+              {% endif %}
             </div>
 
-            <div class="media-preview">
-              <div class="media-title">PDF</div>
-              <div class="hint">Massimo {{ limits.max_pdfs }} PDF. Oltre non viene caricato.</div>
-
-              <div class="form-grid">
-                {% for i in range(1, limits.max_pdfs + 1) %}
+            <!-- PDF -->
+            <div class="sep" style="margin:14px 0"></div>
+            <div class="h3">PDF (max {{ limits.max_pdfs }})</div>
+            <div class="form-grid">
+              {% for i in range(1, limits.max_pdfs + 1) %}
                 <div class="field">
                   <label>PDF {{ i }}</label>
                   <input type="file" name="pdf{{ i }}" accept="application/pdf">
                 </div>
-                {% endfor %}
-              </div>
-
-              <div class="pdf-preview" style="margin-top:10px">
-                {% for p in pdfs %}
-                  <div class="pdf-row">
-                    <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')">
-                      {{ p.name }}
-                    </div>
-                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
-                          onsubmit="return confirm('Eliminare questo PDF? Non sarà più ripristinabile.');">
-                      <input type="hidden" name="type" value="pdf">
-                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
-                      <input type="hidden" name="profile" value="{{ profile }}">
-                      <button class="pdf-del" type="submit" title="Elimina">✕</button>
-                    </form>
-                  </div>
-                {% endfor %}
-                {% if pdfs|length == 0 %}
-                  <div class="dash-mini-empty">Nessun PDF</div>
-                {% endif %}
-              </div>
-
+              {% endfor %}
             </div>
 
+            <div class="pdf-preview" style="margin-top:10px">
+              {% for p in pdfs %}
+                <div class="pdf-row" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug }}',{{ loop.index0 }},'{{ profile }}')">
+                  <div class="pdf-name">{{ p.name }}</div>
+                </div>
+              {% endfor %}
+              {% if pdfs|length == 0 %}
+                <div class="dash-mini-empty">Nessun PDF</div>
+              {% endif %}
+            </div>
           </div>
 
-          <!-- ===================== TRADUZIONI (IN FONDO) ===================== -->
+          <!-- ===== TRADUZIONI (come volevi) ===== -->
           <div class="section-box">
             <div class="h3">Traduzioni</div>
-            <div class="hint">Clicca la lingua per aprire e compilare (sono chiuse di default).</div>
-
-            <div class="sep"></div>
+            <div class="hint">4 righe: clicca la lingua e si apre la traduzione.</div>
 
             <details class="section-box" style="margin-top:10px; padding:12px 14px;">
               <summary style="cursor:pointer; font-weight:950;">🇬🇧 English</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
-                <div class="field">
-                  <label>Name (EN)</label>
-                  <input type="text" name="name_en" value="{{ (i18n_data.get('en',{}).get('name','')) }}">
-                </div>
-                <div class="field">
-                  <label>Company (EN)</label>
-                  <input type="text" name="company_en" value="{{ (i18n_data.get('en',{}).get('company','')) }}">
-                </div>
-                <div class="field">
-                  <label>Role (EN)</label>
-                  <input type="text" name="role_en" value="{{ (i18n_data.get('en',{}).get('role','')) }}">
-                </div>
-                <div class="field full">
-                  <label>Bio (EN)</label>
-                  <textarea name="bio_en">{{ (i18n_data.get('en',{}).get('bio','')) }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Addresses (EN)</label>
-                  <textarea name="addresses_en">{{ (i18n_data.get('en',{}).get('addresses','')) }}</textarea>
-                </div>
+                <div class="field"><label>Name</label><input type="text" name="name_en" value="{{ i18n_data.get('en',{}).get('name','') }}"></div>
+                <div class="field"><label>Company</label><input type="text" name="company_en" value="{{ i18n_data.get('en',{}).get('company','') }}"></div>
+                <div class="field"><label>Role</label><input type="text" name="role_en" value="{{ i18n_data.get('en',{}).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_en">{{ i18n_data.get('en',{}).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Addresses</label><textarea name="addresses_en">{{ i18n_data.get('en',{}).get('addresses','') }}</textarea></div>
               </div>
             </details>
 
@@ -399,26 +284,11 @@
               <summary style="cursor:pointer; font-weight:950;">🇫🇷 Français</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
-                <div class="field">
-                  <label>Nom (FR)</label>
-                  <input type="text" name="name_fr" value="{{ (i18n_data.get('fr',{}).get('name','')) }}">
-                </div>
-                <div class="field">
-                  <label>Société (FR)</label>
-                  <input type="text" name="company_fr" value="{{ (i18n_data.get('fr',{}).get('company','')) }}">
-                </div>
-                <div class="field">
-                  <label>Rôle (FR)</label>
-                  <input type="text" name="role_fr" value="{{ (i18n_data.get('fr',{}).get('role','')) }}">
-                </div>
-                <div class="field full">
-                  <label>Bio (FR)</label>
-                  <textarea name="bio_fr">{{ (i18n_data.get('fr',{}).get('bio','')) }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Adresses (FR)</label>
-                  <textarea name="addresses_fr">{{ (i18n_data.get('fr',{}).get('addresses','')) }}</textarea>
-                </div>
+                <div class="field"><label>Nom</label><input type="text" name="name_fr" value="{{ i18n_data.get('fr',{}).get('name','') }}"></div>
+                <div class="field"><label>Société</label><input type="text" name="company_fr" value="{{ i18n_data.get('fr',{}).get('company','') }}"></div>
+                <div class="field"><label>Rôle</label><input type="text" name="role_fr" value="{{ i18n_data.get('fr',{}).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_fr">{{ i18n_data.get('fr',{}).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Adresses</label><textarea name="addresses_fr">{{ i18n_data.get('fr',{}).get('addresses','') }}</textarea></div>
               </div>
             </details>
 
@@ -426,26 +296,11 @@
               <summary style="cursor:pointer; font-weight:950;">🇪🇸 Español</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
-                <div class="field">
-                  <label>Nombre (ES)</label>
-                  <input type="text" name="name_es" value="{{ (i18n_data.get('es',{}).get('name','')) }}">
-                </div>
-                <div class="field">
-                  <label>Empresa (ES)</label>
-                  <input type="text" name="company_es" value="{{ (i18n_data.get('es',{}).get('company','')) }}">
-                </div>
-                <div class="field">
-                  <label>Rol (ES)</label>
-                  <input type="text" name="role_es" value="{{ (i18n_data.get('es',{}).get('role','')) }}">
-                </div>
-                <div class="field full">
-                  <label>Bio (ES)</label>
-                  <textarea name="bio_es">{{ (i18n_data.get('es',{}).get('bio','')) }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Direcciones (ES)</label>
-                  <textarea name="addresses_es">{{ (i18n_data.get('es',{}).get('addresses','')) }}</textarea>
-                </div>
+                <div class="field"><label>Nombre</label><input type="text" name="name_es" value="{{ i18n_data.get('es',{}).get('name','') }}"></div>
+                <div class="field"><label>Empresa</label><input type="text" name="company_es" value="{{ i18n_data.get('es',{}).get('company','') }}"></div>
+                <div class="field"><label>Rol</label><input type="text" name="role_es" value="{{ i18n_data.get('es',{}).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_es">{{ i18n_data.get('es',{}).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Direcciones</label><textarea name="addresses_es">{{ i18n_data.get('es',{}).get('addresses','') }}</textarea></div>
               </div>
             </details>
 
@@ -453,29 +308,13 @@
               <summary style="cursor:pointer; font-weight:950;">🇩🇪 Deutsch</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
-                <div class="field">
-                  <label>Name (DE)</label>
-                  <input type="text" name="name_de" value="{{ (i18n_data.get('de',{}).get('name','')) }}">
-                </div>
-                <div class="field">
-                  <label>Firma (DE)</label>
-                  <input type="text" name="company_de" value="{{ (i18n_data.get('de',{}).get('company','')) }}">
-                </div>
-                <div class="field">
-                  <label>Rolle (DE)</label>
-                  <input type="text" name="role_de" value="{{ (i18n_data.get('de',{}).get('role','')) }}">
-                </div>
-                <div class="field full">
-                  <label>Bio (DE)</label>
-                  <textarea name="bio_de">{{ (i18n_data.get('de',{}).get('bio','')) }}</textarea>
-                </div>
-                <div class="field full">
-                  <label>Adressen (DE)</label>
-                  <textarea name="addresses_de">{{ (i18n_data.get('de',{}).get('addresses','')) }}</textarea>
-                </div>
+                <div class="field"><label>Name</label><input type="text" name="name_de" value="{{ i18n_data.get('de',{}).get('name','') }}"></div>
+                <div class="field"><label>Firma</label><input type="text" name="company_de" value="{{ i18n_data.get('de',{}).get('company','') }}"></div>
+                <div class="field"><label>Rolle</label><input type="text" name="role_de" value="{{ i18n_data.get('de',{}).get('role','') }}"></div>
+                <div class="field full"><label>Bio</label><textarea name="bio_de">{{ i18n_data.get('de',{}).get('bio','') }}</textarea></div>
+                <div class="field full"><label>Adressen</label><textarea name="addresses_de">{{ i18n_data.get('de',{}).get('addresses','') }}</textarea></div>
               </div>
             </details>
-
           </div>
 
           <div class="sticky-save">
@@ -486,21 +325,24 @@
         </form>
       </div>
     </div>
-
   </main>
-
 </div>
 
-<!-- VIEWER MODAL -->
+<!-- ===== VIEWER con ELIMINA DENTRO (come vuoi tu) ===== -->
 <div id="viewer" class="modal-overlay" style="display:none" onclick="overlayCloseViewer(event)">
   <div class="modal-box modal-big" onclick="event.stopPropagation()">
-    <div class="modal-title">Anteprima</div>
+    <div class="modal-title" id="viewerTitle">Anteprima</div>
 
     <img id="vImg" style="display:none" src="" alt="">
     <video id="vVideo" style="display:none" controls playsinline></video>
-    <iframe id="vPdf" style="display:none" src=""></iframe>
+
+    <!-- PDF: aggiungo parametri per stabilità (niente grafica che salta) -->
+    <iframe id="vPdf" style="display:none" src="" loading="lazy"></iframe>
+
+    <form id="deleteForm" method="post" style="display:none"></form>
 
     <div class="modal-actions" style="margin-top:12px">
+      <button class="btn danger" type="button" onclick="deleteCurrent()">Elimina</button>
       <button class="btn" type="button" onclick="shareViewer('whatsapp')">Invia WhatsApp</button>
       <button class="btn" type="button" onclick="shareViewer('email')">Invia Email</button>
       <button class="btn ghost" type="button" onclick="closeViewer()">Chiudi</button>
@@ -509,31 +351,7 @@
 </div>
 
 <script>
-  function absUrl(u){
-    if(!u) return '';
-    if(/^https?:\/\//i.test(u)) return u;
-    const base = window.location.origin;
-    if(u.startsWith('/')) return base + u;
-    return base + '/' + u;
-  }
-
-  function gmailCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${bd}`;
-  }
-  function outlookCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
-  }
-  function mailtoOpen(subject, body){
-    const s = encodeURIComponent(subject || "");
-    const b = encodeURIComponent(body || "");
-    window.location.href = `mailto:?subject=${s}&body=${b}`;
-  }
-
-  // ===== CROP FIX =====
+  // ===== CROP PREVIEW =====
   document.addEventListener('DOMContentLoaded', () => {
     const box = document.getElementById('cropCircleBg');
     if(!box) return;
@@ -563,24 +381,46 @@
       box.style.backgroundSize = `${parseFloat(z) * 100}% ${parseFloat(z) * 100}%`;
     }
 
-    const initUrl = box.getAttribute('data-url') || '';
-    if(!initUrl && empty) empty.style.display = 'flex';
     apply();
-
     if(posX){ posX.addEventListener('input', apply); posX.addEventListener('change', apply); }
     if(posY){ posY.addEventListener('input', apply); posY.addEventListener('change', apply); }
     if(zoom){ zoom.addEventListener('input', apply); zoom.addEventListener('change', apply); }
 
+    // se carichi una nuova foto, preview immediata (solo UI)
     if(photoInput){
       photoInput.addEventListener('change', () => {
         const f = photoInput.files && photoInput.files[0];
         if(!f) return;
-        const url = URL.createObjectURL(f);
-        box.setAttribute('data-url', url);
+        const u = URL.createObjectURL(f);
+        box.setAttribute('data-url', u);
         apply();
       });
     }
   });
+
+  function absUrl(u){
+    if(!u) return '';
+    if(/^https?:\/\//i.test(u)) return u;
+    const base = window.location.origin;
+    if(u.startsWith('/')) return base + u;
+    return base + '/' + u;
+  }
+
+  function gmailCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${bd}`;
+  }
+  function outlookCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
+  }
+  function mailtoCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `mailto:?subject=${su}&body=${bd}`;
+  }
 
   // ===== VIEWER =====
   let viewerState = { slug:'', type:'', idx:-1, url:'', profile:'p1' };
@@ -598,6 +438,9 @@
     vPdf.style.display = 'none';
     try{ vVideo.pause(); }catch(e){}
 
+    document.getElementById('viewerTitle').textContent =
+      `Anteprima • ${type.toUpperCase()} • ${viewerState.profile.toUpperCase()}`;
+
     if(type === 'gallery'){
       vImg.src = url;
       vImg.style.display = 'block';
@@ -605,7 +448,9 @@
       vVideo.src = url;
       vVideo.style.display = 'block';
     } else {
-      vPdf.src = url;
+      // ✅ PDF stabile: evita zoom strani/toolbar
+      const pdfUrl = url + (url.includes('#') ? '' : '#view=FitH&toolbar=0&navpanes=0');
+      vPdf.src = pdfUrl;
       vPdf.style.display = 'block';
     }
     modal.style.display = 'flex';
@@ -621,6 +466,29 @@
     if(e.target && e.target.id === 'viewer'){
       closeViewer();
     }
+  }
+
+  // ✅ elimina SOLO dal viewer
+  function deleteCurrent(){
+    const ok = confirm("Eliminare questo elemento? Non sarà più ripristinabile.");
+    if(!ok) return;
+
+    const form = document.getElementById('deleteForm');
+    form.innerHTML = '';
+    form.action = `/area/media/delete/${viewerState.slug}`;
+    form.method = 'post';
+
+    const a = (name, value) => {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = name; i.value = value;
+      form.appendChild(i);
+    };
+
+    a('type', viewerState.type === 'gallery' ? 'gallery' : (viewerState.type === 'video' ? 'video' : 'pdf'));
+    a('idx', String(viewerState.idx));
+    a('profile', viewerState.profile);
+
+    form.submit();
   }
 
   function shareViewer(channel){
@@ -640,21 +508,16 @@
       return;
     }
 
-    // ✅ Email senza CTRL+V: apre Gmail (prima scelta) con body compilato
+    // ✅ sì: aprire Gmail e precompilare va BENISSIMO.
+    // metto anche fallback (Outlook / mailto) se serve.
     const subject = `Pay4You Media ${kind} ${slug ? slug.toUpperCase() : ''} ${prof}`.trim();
     const g = gmailCompose(subject, msg);
-    const o = outlookCompose(subject, msg);
-
-    // prova Gmail in nuova tab; se l'utente non è loggato, può usare Outlook o Mailto
     const w = window.open(g, '_blank');
     if(!w){
-      // fallback se popup bloccato
-      window.location.href = g;
-      return;
+      // popup bloccato → fallback
+      window.location.href = outlookCompose(subject, msg);
+      setTimeout(()=>{ window.location.href = mailtoCompose(subject, msg); }, 700);
     }
-
-    // in più: per sicurezza, dopo 1 secondo metto in console i fallback (non disturba UI)
-    setTimeout(()=>{ /* fallback disponibili */ }, 1000);
   }
 </script>
 
