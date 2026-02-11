@@ -99,9 +99,29 @@
                 <label>Ruolo</label>
                 <input type="text" name="role" value="{{ agent.role if agent else '' }}">
               </div>
-              <div class="field">
+              <div class="field full">
                 <label>Bio</label>
                 <textarea name="bio" placeholder="Breve descrizione...">{{ agent.bio if agent else '' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Immagini (profilo / logo / sfondo)</div>
+            <div class="hint">Carica immagini opzionali. Se superi i limiti di peso, il file viene rifiutato.</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Foto profilo (max 5MB)</label>
+                <input id="photoInput" type="file" name="photo" accept="image/*">
+                <div class="hint">Aggiorna anche l’anteprima crop qui sotto.</div>
+              </div>
+              <div class="field">
+                <label>Logo (max 5MB)</label>
+                <input type="file" name="logo" accept="image/*">
+              </div>
+              <div class="field full">
+                <label>Immagine Sfondo (max 5MB)</label>
+                <input type="file" name="back_media" accept="image/*">
               </div>
             </div>
           </div>
@@ -139,8 +159,170 @@
             </div>
           </div>
 
-          <!-- resto del form invariato (come tua versione) -->
-          <!-- ... TI LASCIO IL RESTO IDENTICO, come hai già, incluso media ecc. ... -->
+          <div class="section-box">
+            <div class="h3">Contatti</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Cellulare</label>
+                <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Secondo cellulare</label>
+                <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Telefono ufficio</label>
+                <input type="text" name="phone_office" value="{{ agent.phone_office if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>WhatsApp (link o +39...)</label>
+                <input type="text" name="whatsapp" value="{{ agent.whatsapp if agent else '' }}">
+              </div>
+              <div class="field full">
+                <label>Email (separate da virgola)</label>
+                <input type="text" name="emails" value="{{ agent.emails if agent else '' }}">
+              </div>
+              <div class="field full">
+                <label>Siti web (separati da virgola)</label>
+                <input type="text" name="websites" value="{{ agent.websites if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>PEC</label>
+                <input type="text" name="pec" value="{{ agent.pec if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>Indirizzi (uno per riga)</label>
+                <textarea name="addresses" placeholder="Via..., Città...">{{ agent.addresses if agent else '' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Dati aziendali</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>P.IVA</label>
+                <input type="text" name="piva" value="{{ agent.piva if agent else '' }}">
+              </div>
+              <div class="field">
+                <label>SDI</label>
+                <input type="text" name="sdi" value="{{ agent.sdi if agent else '' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Social</div>
+            <div class="form-grid">
+              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ agent.facebook if agent else '' }}"></div>
+              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ agent.instagram if agent else '' }}"></div>
+              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ agent.linkedin if agent else '' }}"></div>
+              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ agent.tiktok if agent else '' }}"></div>
+              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ agent.telegram if agent else '' }}"></div>
+              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ agent.youtube if agent else '' }}"></div>
+              <div class="field full"><label>Spotify</label><input type="text" name="spotify" value="{{ agent.spotify if agent else '' }}"></div>
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Media (limiti)</div>
+            <div class="hint">
+              <b>Galleria:</b> max 15 foto (max 5MB ciascuna) — <b>Video:</b> max 8 (max 30MB) — <b>PDF:</b> max 10 (max 10MB).
+            </div>
+          </div>
+
+          <div class="section-box">
+            <div class="h3">Carica media</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label>Galleria (max 15 foto)</label>
+                <input type="file" name="gallery" accept="image/*" multiple>
+                <div class="hint">Se hai già foto, puoi aggiungerne solo fino al limite totale.</div>
+              </div>
+
+              <div class="field full">
+                <label>Video (max 8)</label>
+                <input type="file" name="videos" accept="video/*" multiple>
+              </div>
+
+              <div class="field full">
+                <label>PDF (max 10)</label>
+                <div class="hint">Carica nei campi qui sotto. Se un PDF supera il limite di peso, viene rifiutato.</div>
+              </div>
+
+              {% for i in range(1, 11) %}
+                <div class="field">
+                  <label>PDF {{ i }}</label>
+                  <input type="file" name="pdf{{ i }}" accept="application/pdf">
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="media-preview">
+              <div class="media-title">Anteprime (clicca per aprire)</div>
+
+              <div class="media-block">
+                <div class="media-sub">Foto</div>
+                <div class="media-grid">
+                  {% for u in gallery %}
+                    <div class="media-item">
+                      <img src="{{ u }}" alt="" onclick="openViewer('gallery','{{ u }}','{{ agent.slug if agent else '' }}', {{ loop.index0 }})">
+                      <form method="post" action="/area/media/delete/{{ agent.slug }}" style="margin:0">
+                        <input type="hidden" name="type" value="gallery">
+                        <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                        <button class="media-del" type="submit" title="Elimina" onclick="return confirm('Eliminare questa foto?')">✕</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                  {% if gallery|length == 0 %}
+                    <div class="hint">Nessuna foto caricata.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="media-block">
+                <div class="media-sub">Video</div>
+                <div class="media-grid">
+                  {% for u in videos %}
+                    <div class="media-item">
+                      <video muted playsinline preload="metadata" src="{{ u }}#t=0.1"
+                             onclick="openViewer('video','{{ u }}','{{ agent.slug if agent else '' }}', {{ loop.index0 }})"></video>
+                      <div class="media-play">▶</div>
+                      <form method="post" action="/area/media/delete/{{ agent.slug }}" style="margin:0">
+                        <input type="hidden" name="type" value="video">
+                        <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                        <button class="media-del" type="submit" title="Elimina" onclick="return confirm('Eliminare questo video?')">✕</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                  {% if videos|length == 0 %}
+                    <div class="hint">Nessun video caricato.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="media-block">
+                <div class="media-sub">PDF</div>
+                <div class="pdf-preview">
+                  {% for p in pdfs %}
+                    <div class="pdf-row">
+                      <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug if agent else '' }}', {{ loop.index0 }})"
+                           title="{{ p.name }}">{{ p.name }}</div>
+                      <form method="post" action="/area/media/delete/{{ agent.slug }}" style="margin:0">
+                        <input type="hidden" name="type" value="pdf">
+                        <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                        <button class="pdf-del" type="submit" title="Elimina" onclick="return confirm('Eliminare questo PDF?')">✕</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                  {% if pdfs|length == 0 %}
+                    <div class="hint">Nessun PDF caricato.</div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
 
           <div class="sticky-save">
             <button class="btn primary" type="submit">Salva</button>
@@ -155,7 +337,7 @@
 
 </div>
 
-<!-- VIEWER MODAL (se già lo hai, lascialo identico; qui fixo solo invio email robusto) -->
+<!-- VIEWER MODAL -->
 <div id="viewer" class="modal-overlay" style="display:none" onclick="overlayCloseViewer(event)">
   <div class="modal-box modal-big" onclick="event.stopPropagation()">
     <div class="modal-title">Anteprima</div>
@@ -196,7 +378,7 @@
     }
   }
 
-  // ===== CROP FIX (X non viene ignorato) =====
+  // ===== CROP FIX (X ora aggiorna davvero) =====
   document.addEventListener('DOMContentLoaded', () => {
     const cropImg = document.getElementById('cropImg');
     const cropEmpty = document.getElementById('cropEmpty');
@@ -214,7 +396,6 @@
       const y = posY ? posY.value : 35;
       const z = zoom ? zoom.value : 1.0;
 
-      // ✅ IMPORTANT: forza object-position anche se CSS lo sovrascrive
       cropImg.style.setProperty('object-position', `${x}% ${y}%`, 'important');
       cropImg.style.setProperty('transform', `scale(${z})`, 'important');
       cropImg.style.setProperty('object-fit', 'cover', 'important');
@@ -223,9 +404,21 @@
       cropImg.style.setProperty('display', 'block', 'important');
     }
 
-    if(posX){ posX.addEventListener('input', forceObjectPosition); posX.addEventListener('change', forceObjectPosition); }
-    if(posY){ posY.addEventListener('input', forceObjectPosition); posY.addEventListener('change', forceObjectPosition); }
-    if(zoom){ zoom.addEventListener('input', forceObjectPosition); zoom.addEventListener('change', forceObjectPosition); }
+    if(posX){
+      posX.addEventListener('input', forceObjectPosition);
+      posX.addEventListener('change', forceObjectPosition);
+      posX.addEventListener('pointermove', forceObjectPosition);
+    }
+    if(posY){
+      posY.addEventListener('input', forceObjectPosition);
+      posY.addEventListener('change', forceObjectPosition);
+      posY.addEventListener('pointermove', forceObjectPosition);
+    }
+    if(zoom){
+      zoom.addEventListener('input', forceObjectPosition);
+      zoom.addEventListener('change', forceObjectPosition);
+      zoom.addEventListener('pointermove', forceObjectPosition);
+    }
 
     if(photoInput){
       photoInput.addEventListener('change', () => {
@@ -242,7 +435,7 @@
     setTimeout(forceObjectPosition, 0);
   });
 
-  // ===== VIEWER SHARE (email body robusto) =====
+  // ===== VIEWER SHARE (email body completo) =====
   let viewerState = { slug:'', type:'', idx:-1, url:'' };
 
   function openViewer(type, url, slug, idx){
