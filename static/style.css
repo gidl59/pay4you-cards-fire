@@ -374,3 +374,18 @@ input:focus, textarea:focus{
 .form-grid.compact .field label{
   margin-bottom:6px;
 }
+/* ===== TRADUZIONI (4 righe apribili) ===== */
+.tr-block{
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.12);
+  border-radius:18px;
+  padding:10px 12px;
+}
+.tr-summary{
+  cursor:pointer;
+  font-weight:950;
+  list-style:none;
+  outline:none;
+}
+.tr-summary::-webkit-details-marker{display:none;}
