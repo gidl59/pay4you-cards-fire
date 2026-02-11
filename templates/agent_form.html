@@ -3,15 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>
-    {% if editing_profile == "p2" %}Modifica Profilo 2
-    {% elif editing_profile == "p3" %}Modifica Profilo 3
-    {% else %}Modifica Profilo 1{% endif %}
-    | Pay4You
-  </title>
+  <title>Modifica {{ profile|upper }} | Pay4You</title>
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
+
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -22,11 +18,7 @@
       <div class="logo-dot"></div>
       <div>
         <div class="brand-title">Pay4You Cards</div>
-        <div class="hint">
-          {% if editing_profile == "p2" %}Profilo 2
-          {% elif editing_profile == "p3" %}Profilo 3
-          {% else %}Profilo 1{% endif %}
-        </div>
+        <div class="hint">Profilo {{ profile|upper }}</div>
       </div>
     </a>
 
@@ -52,18 +44,12 @@
 
         <div class="panel-head">
           <div>
-            <h1 class="page-title">
-              {% if editing_profile == "p2" %}Modifica Profilo 2
-              {% elif editing_profile == "p3" %}Modifica Profilo 3
-              {% else %}Modifica Profilo 1{% endif %}
-            </h1>
+            <h1 class="page-title">Modifica Profilo {{ profile|upper }}</h1>
             <div class="hint">
-              {% if editing_profile == "p2" %}
-                Questo è il Profilo 2 (se attivo). È separato dal Profilo 1.
-              {% elif editing_profile == "p3" %}
-                Questo è il Profilo 3 (se attivo). È separato dal Profilo 1.
+              {% if profile != "p1" %}
+                Questo è {{ profile|upper }}: è una card separata e può essere completamente diversa da P1.
               {% else %}
-                Qui modifichi i dati principali della tua Pay4You Card.
+                Qui modifichi i dati principali della tua Pay4You Card (P1).
               {% endif %}
             </div>
           </div>
@@ -82,14 +68,6 @@
 
         <div class="sep"></div>
 
-        {% if editing_profile == "p2" %}
-          {% set d = p2_data %}
-        {% elif editing_profile == "p3" %}
-          {% set d = p3_data %}
-        {% else %}
-          {% set d = agent %}
-        {% endif %}
-
         <form method="post" enctype="multipart/form-data" class="card-form">
 
           {% if agent %}
@@ -101,6 +79,10 @@
                 <input type="text" value="{{ agent.slug }}" readonly>
                 <div class="hint">È il link pubblico della card.</div>
               </div>
+              <div class="field">
+                <label>Profilo</label>
+                <input type="text" value="{{ profile|upper }}" readonly>
+              </div>
             </div>
           </div>
           {% endif %}
@@ -111,25 +93,24 @@
             <div class="form-grid">
               <div class="field">
                 <label>Nome</label>
-                <input type="text" name="name" value="{{ d.name if editing_profile == 'p1' else d.get('name','') }}">
+                <input type="text" name="name" value="{{ data.get('name','') }}">
               </div>
               <div class="field">
                 <label>Azienda</label>
-                <input type="text" name="company" value="{{ d.company if editing_profile == 'p1' else d.get('company','') }}">
+                <input type="text" name="company" value="{{ data.get('company','') }}">
               </div>
               <div class="field">
                 <label>Ruolo</label>
-                <input type="text" name="role" value="{{ d.role if editing_profile == 'p1' else d.get('role','') }}">
+                <input type="text" name="role" value="{{ data.get('role','') }}">
               </div>
               <div class="field">
                 <label>Bio</label>
-                <textarea name="bio" placeholder="Breve descrizione...">{{ d.bio if editing_profile == 'p1' else d.get('bio','') }}</textarea>
+                <textarea name="bio" placeholder="Breve descrizione...">{{ data.get('bio','') }}</textarea>
               </div>
             </div>
           </div>
 
-          <!-- ===================== CROP + FOTO (solo P1) ===================== -->
-          {% if editing_profile == "p1" %}
+          <!-- ===================== CROP + FOTO ===================== -->
           <div class="section-box">
             <div class="h3">Foto profilo + Crop</div>
             <div class="hint">Carica una foto e regolala subito qui sotto (X/Y e Zoom).</div>
@@ -144,10 +125,10 @@
 
             <div class="crop-preview">
               <div class="crop-circle-bg" id="cropCircleBg"
-                   data-url="{{ agent.photo_url if agent and agent.photo_url else '' }}"
-                   data-x="{{ agent.photo_pos_x if agent else 50 }}"
-                   data-y="{{ agent.photo_pos_y if agent else 35 }}"
-                   data-z="{{ agent.photo_zoom if agent else '1.0' }}">
+                   data-url="{{ (ag_photo_url if ag_photo_url is defined else (agent.photo_url if agent else '')) }}"
+                   data-x="{{ (ag_photo_pos_x if ag_photo_pos_x is defined else (agent.photo_pos_x if agent else 50)) }}"
+                   data-y="{{ (ag_photo_pos_y if ag_photo_pos_y is defined else (agent.photo_pos_y if agent else 35)) }}"
+                   data-z="{{ (ag_photo_zoom if ag_photo_zoom is defined else (agent.photo_zoom if agent else '1.0')) }}">
                 <div class="crop-empty" id="cropEmptyBg" style="display:none">Carica una foto profilo</div>
               </div>
             </div>
@@ -155,19 +136,19 @@
             <div class="form-grid" style="margin-top:12px">
               <div class="field">
                 <label>X (0–100)</label>
-                <input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ agent.photo_pos_x if agent else 50 }}">
+                <input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ (ag_photo_pos_x if ag_photo_pos_x is defined else (agent.photo_pos_x if agent else 50)) }}">
               </div>
               <div class="field">
                 <label>Y (0–100)</label>
-                <input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ agent.photo_pos_y if agent else 35 }}">
+                <input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ (ag_photo_pos_y if ag_photo_pos_y is defined else (agent.photo_pos_y if agent else 35)) }}">
               </div>
               <div class="field full">
                 <label>Zoom (1.0 – 2.5)</label>
-                <input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom" value="{{ (agent.photo_zoom if agent else '1.0') or '1.0' }}">
+                <input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom"
+                       value="{{ (ag_photo_zoom if ag_photo_zoom is defined else ((agent.photo_zoom if agent else '1.0') or '1.0')) }}">
               </div>
             </div>
           </div>
-          {% endif %}
 
           <!-- ===================== CONTATTI ===================== -->
           <div class="section-box">
@@ -175,38 +156,38 @@
             <div class="form-grid">
               <div class="field">
                 <label>Telefono (mobile)</label>
-                <input type="text" name="phone_mobile" value="{{ agent.phone_mobile if editing_profile=='p1' else d.get('phone_mobile','') }}">
+                <input type="text" name="phone_mobile" value="{{ data.get('phone_mobile','') }}">
               </div>
               <div class="field">
                 <label>Telefono (mobile 2)</label>
-                <input type="text" name="phone_mobile2" value="{{ agent.phone_mobile2 if editing_profile=='p1' else d.get('phone_mobile2','') }}">
+                <input type="text" name="phone_mobile2" value="{{ data.get('phone_mobile2','') }}">
               </div>
               <div class="field">
                 <label>Telefono ufficio</label>
-                <input type="text" name="phone_office" value="{{ agent.phone_office if editing_profile=='p1' else d.get('phone_office','') }}">
+                <input type="text" name="phone_office" value="{{ data.get('phone_office','') }}">
               </div>
               <div class="field">
                 <label>WhatsApp</label>
-                <input type="text" name="whatsapp" value="{{ agent.whatsapp if editing_profile=='p1' else d.get('whatsapp','') }}">
+                <input type="text" name="whatsapp" value="{{ data.get('whatsapp','') }}">
                 <div class="hint">Esempio: +39350.... oppure link wa.me</div>
               </div>
               <div class="field full">
                 <label>Email (separate da virgola)</label>
-                <input type="text" name="emails" value="{{ agent.emails if editing_profile=='p1' else d.get('emails','') }}">
+                <input type="text" name="emails" value="{{ data.get('emails','') }}">
                 <div class="hint">Esempio: nome@dominio.it, info@dominio.it</div>
               </div>
               <div class="field full">
                 <label>Siti (separati da virgola)</label>
-                <input type="text" name="websites" value="{{ agent.websites if editing_profile=='p1' else d.get('websites','') }}">
+                <input type="text" name="websites" value="{{ data.get('websites','') }}">
                 <div class="hint">Esempio: https://www.pay4you.store</div>
               </div>
               <div class="field">
                 <label>PEC</label>
-                <input type="text" name="pec" value="{{ agent.pec if editing_profile=='p1' else d.get('pec','') }}">
+                <input type="text" name="pec" value="{{ data.get('pec','') }}">
               </div>
               <div class="field full">
                 <label>Indirizzi (uno per riga)</label>
-                <textarea name="addresses" placeholder="Via..., Città...">{{ agent.addresses if editing_profile=='p1' else d.get('addresses','') }}</textarea>
+                <textarea name="addresses" placeholder="Via..., Città...">{{ data.get('addresses','') }}</textarea>
               </div>
             </div>
           </div>
@@ -217,11 +198,11 @@
             <div class="form-grid">
               <div class="field">
                 <label>P.IVA</label>
-                <input type="text" name="piva" value="{{ agent.piva if editing_profile=='p1' else d.get('piva','') }}">
+                <input type="text" name="piva" value="{{ data.get('piva','') }}">
               </div>
               <div class="field">
                 <label>SDI</label>
-                <input type="text" name="sdi" value="{{ agent.sdi if editing_profile=='p1' else d.get('sdi','') }}">
+                <input type="text" name="sdi" value="{{ data.get('sdi','') }}">
               </div>
             </div>
           </div>
@@ -234,44 +215,43 @@
             <div class="form-grid">
               <div class="field">
                 <label>Facebook</label>
-                <input type="text" name="facebook" value="{{ agent.facebook if editing_profile=='p1' else d.get('facebook','') }}">
+                <input type="text" name="facebook" value="{{ data.get('facebook','') }}">
                 <div class="hint">Esempio: https://www.facebook.com/yourpage</div>
               </div>
               <div class="field">
                 <label>Instagram</label>
-                <input type="text" name="instagram" value="{{ agent.instagram if editing_profile=='p1' else d.get('instagram','') }}">
+                <input type="text" name="instagram" value="{{ data.get('instagram','') }}">
                 <div class="hint">Esempio: https://www.instagram.com/yourprofile</div>
               </div>
               <div class="field">
                 <label>LinkedIn</label>
-                <input type="text" name="linkedin" value="{{ agent.linkedin if editing_profile=='p1' else d.get('linkedin','') }}">
+                <input type="text" name="linkedin" value="{{ data.get('linkedin','') }}">
                 <div class="hint">Esempio: https://www.linkedin.com/in/yourprofile</div>
               </div>
               <div class="field">
                 <label>TikTok</label>
-                <input type="text" name="tiktok" value="{{ agent.tiktok if editing_profile=='p1' else d.get('tiktok','') }}">
+                <input type="text" name="tiktok" value="{{ data.get('tiktok','') }}">
                 <div class="hint">Esempio: https://www.tiktok.com/@yourprofile</div>
               </div>
               <div class="field">
                 <label>Telegram</label>
-                <input type="text" name="telegram" value="{{ agent.telegram if editing_profile=='p1' else d.get('telegram','') }}">
+                <input type="text" name="telegram" value="{{ data.get('telegram','') }}">
                 <div class="hint">Esempio: https://t.me/username</div>
               </div>
               <div class="field">
                 <label>YouTube</label>
-                <input type="text" name="youtube" value="{{ agent.youtube if editing_profile=='p1' else d.get('youtube','') }}">
+                <input type="text" name="youtube" value="{{ data.get('youtube','') }}">
                 <div class="hint">Esempio: https://www.youtube.com/@channel</div>
               </div>
               <div class="field">
                 <label>Spotify</label>
-                <input type="text" name="spotify" value="{{ agent.spotify if editing_profile=='p1' else d.get('spotify','') }}">
+                <input type="text" name="spotify" value="{{ data.get('spotify','') }}">
                 <div class="hint">Esempio: https://open.spotify.com/artist/...</div>
               </div>
             </div>
           </div>
 
-          <!-- ===================== MEDIA (solo P1) ===================== -->
-          {% if editing_profile == "p1" %}
+          <!-- ===================== MEDIA ===================== -->
           <div class="section-box">
             <div class="h3">Media</div>
             <div class="hint">
@@ -296,7 +276,14 @@
                 {% for g in gallery %}
                   <div class="media-item">
                     <img src="{{ g }}" alt=""
-                         onclick="openViewer('gallery','{{ g }}','{{ agent.slug }}',{{ loop.index0 }})">
+                         onclick="openViewer('gallery','{{ g }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')">
+                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
+                          onsubmit="return confirm('Eliminare questa foto? Non sarà più ripristinabile.');">
+                      <input type="hidden" name="type" value="gallery">
+                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                      <input type="hidden" name="profile" value="{{ profile }}">
+                      <button class="media-del" type="submit" title="Elimina">✕</button>
+                    </form>
                   </div>
                 {% endfor %}
                 {% if gallery|length == 0 %}
@@ -320,8 +307,15 @@
                 {% for v in videos %}
                   <div class="media-item">
                     <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
-                           onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }})"></video>
+                           onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')"></video>
                     <div class="media-play">▶</div>
+                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
+                          onsubmit="return confirm('Eliminare questo video? Non sarà più ripristinabile.');">
+                      <input type="hidden" name="type" value="video">
+                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                      <input type="hidden" name="profile" value="{{ profile }}">
+                      <button class="media-del" type="submit" title="Elimina">✕</button>
+                    </form>
                   </div>
                 {% endfor %}
                 {% if videos|length == 0 %}
@@ -332,7 +326,7 @@
 
             <div class="media-preview">
               <div class="media-title">PDF</div>
-              <div class="hint">Massimo {{ limits.max_pdfs }} PDF. Oltre non vengono salvati.</div>
+              <div class="hint">Massimo {{ limits.max_pdfs }} PDF. Oltre non viene caricato.</div>
 
               <div class="form-grid">
                 {% for i in range(1, limits.max_pdfs + 1) %}
@@ -346,9 +340,16 @@
               <div class="pdf-preview" style="margin-top:10px">
                 {% for p in pdfs %}
                   <div class="pdf-row">
-                    <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug }}',{{ loop.index0 }})">
+                    <div class="pdf-name" onclick="openViewer('pdf','{{ p.url }}','{{ agent.slug }}',{{ loop.index0 }}, '{{ profile }}')">
                       {{ p.name }}
                     </div>
+                    <form method="post" action="/area/media/delete/{{ agent.slug }}"
+                          onsubmit="return confirm('Eliminare questo PDF? Non sarà più ripristinabile.');">
+                      <input type="hidden" name="type" value="pdf">
+                      <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                      <input type="hidden" name="profile" value="{{ profile }}">
+                      <button class="pdf-del" type="submit" title="Elimina">✕</button>
+                    </form>
                   </div>
                 {% endfor %}
                 {% if pdfs|length == 0 %}
@@ -359,16 +360,16 @@
             </div>
 
           </div>
-          {% endif %}
 
-          <!-- ===================== TRADUZIONI (solo P1) — IN FONDO DOPO PDF ===================== -->
-          {% if editing_profile == "p1" %}
+          <!-- ===================== TRADUZIONI (IN FONDO) ===================== -->
           <div class="section-box">
-            <div class="h3">Traduzioni (EN/FR/ES/DE)</div>
-            <div class="hint">4 righe, apri solo la lingua che ti serve.</div>
+            <div class="h3">Traduzioni</div>
+            <div class="hint">Clicca la lingua per aprire e compilare (sono chiuse di default).</div>
 
-            <details class="tr-block">
-              <summary class="tr-summary">English</summary>
+            <div class="sep"></div>
+
+            <details class="section-box" style="margin-top:10px; padding:12px 14px;">
+              <summary style="cursor:pointer; font-weight:950;">🇬🇧 English</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
                 <div class="field">
@@ -394,8 +395,8 @@
               </div>
             </details>
 
-            <details class="tr-block">
-              <summary class="tr-summary">Français</summary>
+            <details class="section-box" style="margin-top:10px; padding:12px 14px;">
+              <summary style="cursor:pointer; font-weight:950;">🇫🇷 Français</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
                 <div class="field">
@@ -421,8 +422,8 @@
               </div>
             </details>
 
-            <details class="tr-block">
-              <summary class="tr-summary">Español</summary>
+            <details class="section-box" style="margin-top:10px; padding:12px 14px;">
+              <summary style="cursor:pointer; font-weight:950;">🇪🇸 Español</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
                 <div class="field">
@@ -448,8 +449,8 @@
               </div>
             </details>
 
-            <details class="tr-block">
-              <summary class="tr-summary">Deutsch</summary>
+            <details class="section-box" style="margin-top:10px; padding:12px 14px;">
+              <summary style="cursor:pointer; font-weight:950;">🇩🇪 Deutsch</summary>
               <div class="sep"></div>
               <div class="form-grid compact">
                 <div class="field">
@@ -476,7 +477,6 @@
             </details>
 
           </div>
-          {% endif %}
 
           <div class="sticky-save">
             <button class="btn primary" type="submit">Salva</button>
@@ -496,28 +496,15 @@
   <div class="modal-box modal-big" onclick="event.stopPropagation()">
     <div class="modal-title">Anteprima</div>
 
-    <!-- ✅ ELIMINA nel viewer (no X sulle miniature) -->
-    <div class="modal-actions" style="margin-top:6px; justify-content:space-between;">
-      <button class="btn danger" type="button" onclick="deleteCurrentMedia()">ELIMINA</button>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn" type="button" onclick="shareViewer('whatsapp')">Invia WhatsApp</button>
-        <button class="btn" type="button" onclick="shareViewer('email')">Invia Email</button>
-        <button class="btn ghost" type="button" onclick="closeViewer()">Chiudi</button>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-
     <img id="vImg" style="display:none" src="" alt="">
     <video id="vVideo" style="display:none" controls playsinline></video>
     <iframe id="vPdf" style="display:none" src=""></iframe>
 
-    <!-- form delete invisibile -->
-    <form id="delForm" method="post" style="display:none;">
-      <input type="hidden" name="type" id="delType" value="">
-      <input type="hidden" name="idx" id="delIdx" value="">
-    </form>
-
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn" type="button" onclick="shareViewer('whatsapp')">Invia WhatsApp</button>
+      <button class="btn" type="button" onclick="shareViewer('email')">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeViewer()">Chiudi</button>
+    </div>
   </div>
 </div>
 
@@ -530,18 +517,23 @@
     return base + '/' + u;
   }
 
-  async function copyToClipboard(text){
-    try{ await navigator.clipboard.writeText(text); return true; }
-    catch(e){ return false; }
+  function gmailCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${bd}`;
   }
-
+  function outlookCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
+  }
   function mailtoOpen(subject, body){
     const s = encodeURIComponent(subject || "");
     const b = encodeURIComponent(body || "");
     window.location.href = `mailto:?subject=${s}&body=${b}`;
   }
 
-  // ===== CROP FIX (X/Y affidabile con background-position) =====
+  // ===== CROP FIX =====
   document.addEventListener('DOMContentLoaded', () => {
     const box = document.getElementById('cropCircleBg');
     if(!box) return;
@@ -591,10 +583,10 @@
   });
 
   // ===== VIEWER =====
-  let viewerState = { slug:'', type:'', idx:-1, url:'' };
+  let viewerState = { slug:'', type:'', idx:-1, url:'', profile:'p1' };
 
-  function openViewer(type, url, slug, idx){
-    viewerState = { slug, type, idx, url: url };
+  function openViewer(type, url, slug, idx, profile){
+    viewerState = { slug, type, idx, url: url, profile: profile || 'p1' };
 
     const modal = document.getElementById('viewer');
     const vImg = document.getElementById('vImg');
@@ -631,29 +623,14 @@
     }
   }
 
-  function deleteCurrentMedia(){
-    if(!viewerState.slug || viewerState.idx < 0) return;
-
-    const t = viewerState.type === 'gallery' ? 'gallery' : (viewerState.type === 'video' ? 'video' : 'pdf');
-
-    // doppia conferma
-    if(!confirm("Eliminare questo file?")) return;
-    if(!confirm("CONFERMA: non sarà più ripristinabile. Eliminare definitivamente?")) return;
-
-    const form = document.getElementById('delForm');
-    document.getElementById('delType').value = t;
-    document.getElementById('delIdx').value = String(viewerState.idx);
-    form.action = `/area/media/delete/${viewerState.slug}`;
-    form.submit();
-  }
-
-  async function shareViewer(channel){
+  function shareViewer(channel){
     const kind = (viewerState.type || '').toUpperCase();
     const slug = viewerState.slug || '';
+    const prof = (viewerState.profile || 'p1').toUpperCase();
     const mediaUrl = absUrl(viewerState.url || '');
 
     const msg = [
-      `Pay4You Media ${kind}`,
+      `Pay4You Media ${kind} (${prof})`,
       `Slug: ${slug}`,
       `Link: ${mediaUrl}`
     ].join("\r\n");
@@ -663,14 +640,21 @@
       return;
     }
 
-    // ✅ EMAIL affidabile: copia + alert + poi mailto
-    const ok = await copyToClipboard(msg);
-    alert(
-      (ok ? "Testo copiato ✅\n\n" : "Copia manualmente questo testo:\n\n") +
-      msg +
-      "\n\nOra si aprirà l'email: se il testo non compare, incolla con CTRL+V."
-    );
-    mailtoOpen(`Pay4You Media ${kind} ${slug ? slug.toUpperCase() : ''}`.trim(), msg);
+    // ✅ Email senza CTRL+V: apre Gmail (prima scelta) con body compilato
+    const subject = `Pay4You Media ${kind} ${slug ? slug.toUpperCase() : ''} ${prof}`.trim();
+    const g = gmailCompose(subject, msg);
+    const o = outlookCompose(subject, msg);
+
+    // prova Gmail in nuova tab; se l'utente non è loggato, può usare Outlook o Mailto
+    const w = window.open(g, '_blank');
+    if(!w){
+      // fallback se popup bloccato
+      window.location.href = g;
+      return;
+    }
+
+    // in più: per sicurezza, dopo 1 secondo metto in console i fallback (non disturba UI)
+    setTimeout(()=>{ /* fallback disponibili */ }, 1000);
   }
 </script>
 
