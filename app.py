@@ -52,6 +52,15 @@ for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
     d.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
+@app.template_filter("loads")
+def loads_filter(s):
+    import json
+    try:
+        v = json.loads(s or "{}")
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
 app.secret_key = APP_SECRET
 
 # ✅ JINJA FILTER: loads (serve per dashboard.html)
