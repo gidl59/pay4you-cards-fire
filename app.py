@@ -33,9 +33,15 @@ BASE_URL = os.getenv("BASE_URL", "").strip().rstrip("/")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////var/data/pay4you.db").strip()
 PERSIST_UPLOADS_DIR = os.getenv("PERSIST_UPLOADS_DIR", "/var/data/uploads").strip()
 
-MAX_GALLERY_IMAGES = 30
-MAX_VIDEOS = 10
-MAX_PDFS = 12
+# ✅ LIMITI QUANTITÀ
+MAX_GALLERY_IMAGES = 15
+MAX_VIDEOS = 8
+MAX_PDFS = 10
+
+# ✅ LIMITI PESO (MB)
+MAX_IMAGE_MB = 5
+MAX_VIDEO_MB = 30
+MAX_PDF_MB = 10
 
 UPLOADS_DIR = Path(PERSIST_UPLOADS_DIR)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -222,9 +228,37 @@ def uploads_url(rel_path: str) -> str:
     rel_path = rel_path.lstrip("/")
     return f"/uploads/{rel_path}"
 
+def _file_size_bytes(file_storage) -> int:
+    """
+    Ritorna la dimensione in bytes senza consumare lo stream.
+    """
+    try:
+        st = file_storage.stream
+        pos = st.tell()
+        st.seek(0, os.SEEK_END)
+        size = st.tell()
+        st.seek(pos)
+        return int(size)
+    except Exception:
+        # fallback: se non leggibile, lasciamo passare
+        return 0
+
+def _limit_for_kind(kind: str):
+    if kind == "images":
+        return MAX_IMAGE_MB, "Foto"
+    if kind == "videos":
+        return MAX_VIDEO_MB, "Video"
+    return MAX_PDF_MB, "PDF"
+
 def save_upload(file_storage, kind: str):
     if not file_storage or not file_storage.filename:
         return ""
+
+    max_mb, label = _limit_for_kind(kind)
+    size = _file_size_bytes(file_storage)
+    if size and size > (max_mb * 1024 * 1024):
+        raise ValueError(f"{label} troppo grande: max {max_mb}MB")
+
     filename = secure_filename(file_storage.filename)
     ext = os.path.splitext(filename)[1].lower()
     uid = uuid.uuid4().hex[:12]
@@ -264,7 +298,7 @@ def _new_password(length=10):
 
 
 # ==========================
-# ✅ FAVICON ROOT (fix login + browser)
+# ✅ FAVICON ROOT
 # ==========================
 @app.route("/favicon.ico")
 def favicon():
@@ -499,38 +533,68 @@ def edit_agent(slug):
 
         photo = request.files.get("photo")
         if photo and photo.filename:
-            ag.photo_url = save_upload(photo, "images")
+            try:
+                ag.photo_url = save_upload(photo, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
         logo = request.files.get("logo")
         if logo and logo.filename:
-            ag.logo_url = save_upload(logo, "images")
+            try:
+                ag.logo_url = save_upload(logo, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
         back_media = request.files.get("back_media")
         if back_media and back_media.filename:
-            ag.back_media_url = save_upload(back_media, "images")
+            try:
+                ag.back_media_url = save_upload(back_media, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
+        # ✅ GALLERY: rispetto il totale (max 15)
+        existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        remaining = max(0, MAX_GALLERY_IMAGES - len(existing))
         gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
-        if gallery_files:
-            gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
-            urls = [save_upload(f, "images") for f in gallery_files]
-            urls = [u for u in urls if u]
-            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        if gallery_files and remaining > 0:
+            gallery_files = gallery_files[:remaining]
+            urls = []
+            for f in gallery_files:
+                try:
+                    u = save_upload(f, "images")
+                    if u:
+                        urls.append(u)
+                except ValueError as e:
+                    flash(str(e), "error")
             ag.gallery_urls = "|".join(existing + urls)
 
+        # ✅ VIDEOS: rispetto il totale (max 8)
+        existing_v = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+        remaining_v = max(0, MAX_VIDEOS - len(existing_v))
         video_files = [f for f in request.files.getlist("videos") if f and f.filename]
-        if video_files:
-            video_files = video_files[:MAX_VIDEOS]
-            urls = [save_upload(f, "videos") for f in video_files]
-            urls = [u for u in urls if u]
-            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-            ag.video_urls = "|".join(existing + urls)
+        if video_files and remaining_v > 0:
+            video_files = video_files[:remaining_v]
+            urls = []
+            for f in video_files:
+                try:
+                    u = save_upload(f, "videos")
+                    if u:
+                        urls.append(u)
+                except ValueError as e:
+                    flash(str(e), "error")
+            ag.video_urls = "|".join(existing_v + urls)
 
+        # ✅ PDF: max 10 (slot)
         existing_pdf = parse_pdf_items(ag.pdf1_url or "")
         out = existing_pdf[:] if existing_pdf else []
         for i in range(1, MAX_PDFS + 1):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
-                url = save_upload(f, "pdf")
+                try:
+                    url = save_upload(f, "pdf")
+                except ValueError as e:
+                    flash(str(e), "error")
+                    continue
                 name = secure_filename(f.filename) or f"PDF {i}"
                 idx = i - 1
                 while len(out) <= idx:
@@ -538,7 +602,7 @@ def edit_agent(slug):
                 out[idx] = {"name": name, "url": url}
 
         out2 = []
-        for item in out:
+        for item in out[:MAX_PDFS]:
             if item.get("url"):
                 out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
         ag.pdf1_url = "|".join(out2)
@@ -614,38 +678,65 @@ def me_edit():
 
         photo = request.files.get("photo")
         if photo and photo.filename:
-            ag.photo_url = save_upload(photo, "images")
+            try:
+                ag.photo_url = save_upload(photo, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
         logo = request.files.get("logo")
         if logo and logo.filename:
-            ag.logo_url = save_upload(logo, "images")
+            try:
+                ag.logo_url = save_upload(logo, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
         back_media = request.files.get("back_media")
         if back_media and back_media.filename:
-            ag.back_media_url = save_upload(back_media, "images")
+            try:
+                ag.back_media_url = save_upload(back_media, "images")
+            except ValueError as e:
+                flash(str(e), "error")
 
+        existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        remaining = max(0, MAX_GALLERY_IMAGES - len(existing))
         gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
-        if gallery_files:
-            gallery_files = gallery_files[:MAX_GALLERY_IMAGES]
-            urls = [save_upload(f, "images") for f in gallery_files]
-            urls = [u for u in urls if u]
-            existing = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
+        if gallery_files and remaining > 0:
+            gallery_files = gallery_files[:remaining]
+            urls = []
+            for f in gallery_files:
+                try:
+                    u = save_upload(f, "images")
+                    if u:
+                        urls.append(u)
+                except ValueError as e:
+                    flash(str(e), "error")
             ag.gallery_urls = "|".join(existing + urls)
 
+        existing_v = [x for x in (ag.video_urls or "").split("|") if x.strip()]
+        remaining_v = max(0, MAX_VIDEOS - len(existing_v))
         video_files = [f for f in request.files.getlist("videos") if f and f.filename]
-        if video_files:
-            video_files = video_files[:MAX_VIDEOS]
-            urls = [save_upload(f, "videos") for f in video_files]
-            urls = [u for u in urls if u]
-            existing = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-            ag.video_urls = "|".join(existing + urls)
+        if video_files and remaining_v > 0:
+            video_files = video_files[:remaining_v]
+            urls = []
+            for f in video_files:
+                try:
+                    u = save_upload(f, "videos")
+                    if u:
+                        urls.append(u)
+                except ValueError as e:
+                    flash(str(e), "error")
+            ag.video_urls = "|".join(existing_v + urls)
 
         existing_pdf = parse_pdf_items(ag.pdf1_url or "")
         out = existing_pdf[:] if existing_pdf else []
         for i in range(1, MAX_PDFS + 1):
             f = request.files.get(f"pdf{i}")
             if f and f.filename:
-                url = save_upload(f, "pdf")
+                try:
+                    url = save_upload(f, "pdf")
+                except ValueError as e:
+                    flash(str(e), "error")
+                    continue
                 name = secure_filename(f.filename) or f"PDF {i}"
                 idx = i - 1
                 while len(out) <= idx:
@@ -653,7 +744,7 @@ def me_edit():
                 out[idx] = {"name": name, "url": url}
 
         out2 = []
-        for item in out:
+        for item in out[:MAX_PDFS]:
             if item.get("url"):
                 out2.append(f"{item.get('name', 'Documento')}||{item.get('url')}")
         ag.pdf1_url = "|".join(out2)
