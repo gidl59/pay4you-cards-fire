@@ -25,11 +25,6 @@
     <div class="toolbar">
       {% if is_admin %}
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
-
-        <form class="inline" method="post" action="/area/admin/purge_pdfs"
-              onsubmit="return confirm('ATTENZIONE: elimina TUTTI i PDF (file + DB) per TUTTI gli agenti. Continuare?');">
-          <button class="btn danger" type="submit">PURGE PDF (totale)</button>
-        </form>
       {% endif %}
       <a class="btn danger" href="/area/logout">Logout</a>
     </div>
@@ -127,7 +122,7 @@
               </form>
             {% else %}
               <!-- CLIENTE -->
-              <a class="btn-mini warn" href="/area/me/p1">Modifica P1</a>
+              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
 
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
@@ -190,8 +185,8 @@
               {% endfor %}
 
               {% for v in vids2[:4] %}
-                <!-- ✅ VIDEO THUMB: lazy-load + seek a 0.1 per vedere frame -->
-                <video class="dash-mini vthumb" muted playsinline preload="none" data-src="{{ v }}"></video>
+                <!-- ✅ VIDEO THUMB: metadata (meno nero) + lazy -->
+                <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
               {% endfor %}
 
               {% if vids2|length == 0 %}
