@@ -449,3 +449,57 @@ input:focus, textarea:focus{
   .triptych{ grid-template-columns: 1fr; }
   .tri-block .tri-preview{ width: 150px; height: 150px; }
 }
+/* ===== UPLOAD + PREVIEW 3 BLOKKI (150) ===== */
+.upload-rect{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.10);
+}
+
+.upload-rect .upload-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.upload-rect .upload-item{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+  padding: 12px;
+}
+
+.upload-rect .upload-item label{
+  display:block;
+  font-weight: 950;
+  margin-bottom: 8px;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+}
+
+.upload-rect .upload-item input[type="file"]{
+  width:100%;
+}
+
+.upload-rect .preview150{
+  margin-top: 10px;
+  width: 150px;
+  height: 150px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+}
+
+.upload-rect .preview150 img{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+}
+
+@media (max-width: 860px){
+  .upload-rect .upload-grid{ grid-template-columns: 1fr; }
+}
