@@ -119,10 +119,9 @@ class Agent(Base):
     # ===== P2/P3 =====
     p2_enabled = Column(Integer, default=0)
     p3_enabled = Column(Integer, default=0)
-    p2_json = Column(Text, default="{}")      # dict full (data+media)
-    p3_json = Column(Text, default="{}")      # dict full (data+media)
+    p2_json = Column(Text, default="{}")
+    p3_json = Column(Text, default="{}")
 
-    # translations
     i18n_json = Column(Text, default="{}")
 
     created_at = Column(DateTime, default=lambda: dt.datetime.utcnow())
@@ -170,7 +169,6 @@ def ensure_db():
         conn.exec_driver_sql("UPDATE agents SET created_at = COALESCE(created_at, :now)", {"now": now})
         conn.exec_driver_sql("UPDATE agents SET updated_at = COALESCE(updated_at, :now)", {"now": now})
 
-        # defaults JSON + media strings
         conn.exec_driver_sql("UPDATE agents SET p2_json = COALESCE(p2_json, '{}')")
         conn.exec_driver_sql("UPDATE agents SET p3_json = COALESCE(p3_json, '{}')")
         conn.exec_driver_sql("UPDATE agents SET i18n_json = COALESCE(i18n_json, '{}')")
@@ -289,11 +287,36 @@ def join_pipe_list(items):
     return "|".join(items2)
 
 def canon_url(u: str) -> str:
+    """
+    Normalizza qualsiasi variante in una forma coerente /uploads/...
+    - "uploads/pdf/x.pdf"   -> "/uploads/pdf/x.pdf"
+    - "/uploads/pdf/x.pdf"  -> "/uploads/pdf/x.pdf"
+    - "pdf/x.pdf"           -> "/uploads/pdf/x.pdf"
+    - "images/x.jpg"        -> "/uploads/images/x.jpg"
+    - "videos/x.mp4"        -> "/uploads/videos/x.mp4"
+    """
     u = (u or "").strip()
     if not u:
         return ""
+
+    # già assoluta http(s)
+    if re.match(r"^https?://", u, re.I):
+        return u
+
+    if u.startswith("/uploads/"):
+        return u
+
     if u.startswith("uploads/"):
-        u = "/" + u
+        return "/" + u
+
+    # gestione legacy: "pdf/..", "images/..", "videos/.."
+    if u.startswith("pdf/") or u.startswith("images/") or u.startswith("videos/"):
+        return "/uploads/" + u
+
+    # se arriva "/pdf/.." ecc.
+    if u.startswith("/pdf/") or u.startswith("/images/") or u.startswith("/videos/"):
+        return "/uploads" + u
+
     return u
 
 def pdf_name_from_url(url: str) -> str:
@@ -310,9 +333,7 @@ def normalize_pdf_item(item: str):
     if "||" in item:
         nm, url = item.split("||", 1)
         return ((nm or "").strip(), (url or "").strip())
-    # legacy: item is url only
-    url = item
-    return ("", url)
+    return ("", item)
 
 def clean_pdf_pipe(raw: str) -> str:
     items = parse_pipe_list(raw or "")
@@ -378,7 +399,6 @@ def save_profile_json(agent: Agent, key: str, data: dict):
         agent.p3_json = json.dumps(data, ensure_ascii=False)
 
 def default_profile_dict():
-    # PROFILO vuoto ma completo (così non sparisce nulla in template)
     return {
         "name": "", "company": "", "role": "", "bio": "",
         "phone_mobile": "", "phone_mobile2": "", "phone_office": "", "whatsapp": "",
@@ -392,54 +412,6 @@ def default_profile_dict():
 
         "gallery_urls": "", "video_urls": "", "pdf_urls": ""
     }
-
-def get_profile_data(agent: Agent, profile: str) -> dict:
-    if profile == "p1":
-        return build_data_dict_p1(agent)
-    d = load_profile_json(agent, profile)
-    base = default_profile_dict()
-    base.update(d or {})
-    # pulizie
-    base["gallery_urls"] = clean_media_pipe(base.get("gallery_urls", ""))
-    base["video_urls"] = clean_media_pipe(base.get("video_urls", ""))
-    base["pdf_urls"] = clean_pdf_pipe(base.get("pdf_urls", ""))
-    return base
-
-def set_profile_from_form(existing: dict, form: dict) -> dict:
-    d = dict(existing or {})
-    # testi
-    for k in [
-        "name", "company", "role", "bio",
-        "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
-        "emails", "websites", "pec", "addresses",
-        "piva", "sdi",
-        "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"
-    ]:
-        d[k] = (form.get(k) or "").strip()
-
-    # crop
-    def safe_int(v, default):
-        try:
-            return int(v)
-        except Exception:
-            return default
-
-    d["photo_pos_x"] = safe_int(form.get("photo_pos_x"), int(d.get("photo_pos_x", 50) or 50))
-    d["photo_pos_y"] = safe_int(form.get("photo_pos_y"), int(d.get("photo_pos_y", 35) or 35))
-    z = (form.get("photo_zoom") or d.get("photo_zoom", "1.0") or "1.0").strip()
-    try:
-        float(z)
-        d["photo_zoom"] = z
-    except Exception:
-        d["photo_zoom"] = "1.0"
-
-    # effetti
-    d["orbit_spin"] = 1 if form.get("orbit_spin") == "on" else 0
-    d["avatar_spin"] = 1 if form.get("avatar_spin") == "on" else 0
-    d["logo_spin"] = 1 if form.get("logo_spin") == "on" else 0
-    d["allow_flip"] = 1 if form.get("allow_flip") == "on" else 0
-
-    return d
 
 def build_data_dict_p1(agent: Agent) -> dict:
     return {
@@ -468,9 +440,9 @@ def build_data_dict_p1(agent: Agent) -> dict:
         "youtube": agent.youtube or "",
         "spotify": agent.spotify or "",
 
-        "photo_url": agent.photo_url or "",
-        "logo_url": agent.logo_url or "",
-        "back_media_url": agent.back_media_url or "",
+        "photo_url": canon_url(agent.photo_url or ""),
+        "logo_url": canon_url(agent.logo_url or ""),
+        "back_media_url": canon_url(agent.back_media_url or ""),
 
         "photo_pos_x": int(agent.photo_pos_x or 50),
         "photo_pos_y": int(agent.photo_pos_y or 35),
@@ -533,8 +505,55 @@ def set_profile_data_p1(agent: Agent, form: dict):
 
     agent.updated_at = dt.datetime.utcnow()
 
+def get_profile_data(agent: Agent, profile: str) -> dict:
+    if profile == "p1":
+        return build_data_dict_p1(agent)
+    d = load_profile_json(agent, profile)
+    base = default_profile_dict()
+    base.update(d or {})
+    base["photo_url"] = canon_url(base.get("photo_url", ""))
+    base["logo_url"] = canon_url(base.get("logo_url", ""))
+    base["back_media_url"] = canon_url(base.get("back_media_url", ""))
+    base["gallery_urls"] = clean_media_pipe(base.get("gallery_urls", ""))
+    base["video_urls"] = clean_media_pipe(base.get("video_urls", ""))
+    base["pdf_urls"] = clean_pdf_pipe(base.get("pdf_urls", ""))
+    return base
+
+def set_profile_from_form(existing: dict, form: dict) -> dict:
+    d = dict(existing or {})
+    for k in [
+        "name", "company", "role", "bio",
+        "phone_mobile", "phone_mobile2", "phone_office", "whatsapp",
+        "emails", "websites", "pec", "addresses",
+        "piva", "sdi",
+        "facebook", "instagram", "linkedin", "tiktok", "telegram", "youtube", "spotify"
+    ]:
+        d[k] = (form.get(k) or "").strip()
+
+    def safe_int(v, default):
+        try:
+            return int(v)
+        except Exception:
+            return default
+
+    d["photo_pos_x"] = safe_int(form.get("photo_pos_x"), int(d.get("photo_pos_x", 50) or 50))
+    d["photo_pos_y"] = safe_int(form.get("photo_pos_y"), int(d.get("photo_pos_y", 35) or 35))
+
+    z = (form.get("photo_zoom") or d.get("photo_zoom", "1.0") or "1.0").strip()
+    try:
+        float(z)
+        d["photo_zoom"] = z
+    except Exception:
+        d["photo_zoom"] = "1.0"
+
+    d["orbit_spin"] = 1 if form.get("orbit_spin") == "on" else 0
+    d["avatar_spin"] = 1 if form.get("avatar_spin") == "on" else 0
+    d["logo_spin"] = 1 if form.get("logo_spin") == "on" else 0
+    d["allow_flip"] = 1 if form.get("allow_flip") == "on" else 0
+
+    return d
+
 def handle_media_uploads_common(data: dict):
-    # profile photos/logo/back stored inside dict for p2/p3
     photo = request.files.get("photo")
     if photo and photo.filename:
         data["photo_url"] = save_upload(photo, "images")
@@ -547,7 +566,6 @@ def handle_media_uploads_common(data: dict):
     if back_media and back_media.filename:
         data["back_media_url"] = save_upload(back_media, "images")
 
-    # gallery images
     imgs = request.files.getlist("gallery_images")
     if imgs:
         current = parse_pipe_list(clean_media_pipe(data.get("gallery_urls", "")))
@@ -557,7 +575,6 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_GALLERY_IMAGES]
         data["gallery_urls"] = clean_media_pipe(join_pipe_list(current))
 
-    # videos
     vids = request.files.getlist("gallery_videos")
     if vids:
         current = parse_pipe_list(clean_media_pipe(data.get("video_urls", "")))
@@ -567,7 +584,6 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_VIDEOS]
         data["video_urls"] = clean_media_pipe(join_pipe_list(current))
 
-    # pdfs
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
@@ -576,11 +592,9 @@ def handle_media_uploads_common(data: dict):
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
-        # pulizia forte anti-duplicati
         data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
 def handle_media_uploads_p1(agent: Agent):
-    # profile media
     photo = request.files.get("photo")
     if photo and photo.filename:
         agent.photo_url = save_upload(photo, "images")
@@ -593,7 +607,6 @@ def handle_media_uploads_p1(agent: Agent):
     if back_media and back_media.filename:
         agent.back_media_url = save_upload(back_media, "images")
 
-    # gallery images
     imgs = request.files.getlist("gallery_images")
     if imgs:
         current = parse_pipe_list(clean_media_pipe(agent.gallery_urls or ""))
@@ -603,7 +616,6 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_GALLERY_IMAGES]
         agent.gallery_urls = clean_media_pipe(join_pipe_list(current))
 
-    # videos
     vids = request.files.getlist("gallery_videos")
     if vids:
         current = parse_pipe_list(clean_media_pipe(agent.video_urls or ""))
@@ -613,7 +625,6 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_VIDEOS]
         agent.video_urls = clean_media_pipe(join_pipe_list(current))
 
-    # pdfs
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
@@ -775,9 +786,12 @@ def edit_agent_p1(slug):
             set_profile_data_p1(ag, request.form)
             handle_media_uploads_p1(ag)
             save_i18n(ag, request.form)
+
+            # pulizie forti
             ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
             ag.gallery_urls = clean_media_pipe(ag.gallery_urls or "")
             ag.video_urls = clean_media_pipe(ag.video_urls or "")
+
             s.commit()
             flash("Salvato!", "ok")
             return redirect(url_for("edit_agent_p1", slug=slug))
@@ -786,14 +800,11 @@ def edit_agent_p1(slug):
             flash(str(e), "error")
             return redirect(url_for("edit_agent_p1", slug=slug))
 
-    data = build_data_dict_p1(ag)
-    i18n = load_i18n(ag)
-
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
-        i18n=i18n,
+        data=build_data_dict_p1(ag),
+        i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 1",
         page_hint="Qui modifichi i dati principali della tua Pay4You Card.",
@@ -802,7 +813,7 @@ def edit_agent_p1(slug):
 
 
 # ==========================
-# ADMIN EDIT P2 / P3 (completi e separati)
+# ADMIN EDIT P2 / P3
 # ==========================
 @app.route("/area/edit/<slug>/p2", methods=["GET","POST"])
 def edit_agent_p2(slug):
@@ -821,9 +832,11 @@ def edit_agent_p2(slug):
         d = get_profile_data(ag, "p2")
         d = set_profile_from_form(d, request.form)
         handle_media_uploads_common(d)
+
         d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
         d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
         d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
         save_profile_json(ag, "p2", d)
         save_i18n(ag, request.form)
         ag.updated_at = dt.datetime.utcnow()
@@ -831,11 +844,10 @@ def edit_agent_p2(slug):
         flash("Profilo 2 salvato!", "ok")
         return redirect(url_for("edit_agent_p2", slug=slug))
 
-    data = get_profile_data(ag, "p2")
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
+        data=get_profile_data(ag, "p2"),
         i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 2",
@@ -860,9 +872,11 @@ def edit_agent_p3(slug):
         d = get_profile_data(ag, "p3")
         d = set_profile_from_form(d, request.form)
         handle_media_uploads_common(d)
+
         d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
         d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
         d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
         save_profile_json(ag, "p3", d)
         save_i18n(ag, request.form)
         ag.updated_at = dt.datetime.utcnow()
@@ -870,11 +884,10 @@ def edit_agent_p3(slug):
         flash("Profilo 3 salvato!", "ok")
         return redirect(url_for("edit_agent_p3", slug=slug))
 
-    data = get_profile_data(ag, "p3")
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
+        data=get_profile_data(ag, "p3"),
         i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 3",
@@ -884,7 +897,7 @@ def edit_agent_p3(slug):
 
 
 # ==========================
-# CLIENT EDIT P1 + P2 + P3
+# CLIENT EDIT
 # ==========================
 @app.route("/area/me/edit", methods=["GET","POST"])
 def me_edit_p1():
@@ -901,9 +914,11 @@ def me_edit_p1():
             set_profile_data_p1(ag, request.form)
             handle_media_uploads_p1(ag)
             save_i18n(ag, request.form)
+
             ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
             ag.gallery_urls = clean_media_pipe(ag.gallery_urls or "")
             ag.video_urls = clean_media_pipe(ag.video_urls or "")
+
             s.commit()
             flash("Salvato!", "ok")
             return redirect(url_for("me_edit_p1"))
@@ -940,9 +955,11 @@ def me_edit_p2():
         d = get_profile_data(ag, "p2")
         d = set_profile_from_form(d, request.form)
         handle_media_uploads_common(d)
+
         d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
         d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
         d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
         save_profile_json(ag, "p2", d)
         save_i18n(ag, request.form)
         ag.updated_at = dt.datetime.utcnow()
@@ -978,9 +995,11 @@ def me_edit_p3():
         d = get_profile_data(ag, "p3")
         d = set_profile_from_form(d, request.form)
         handle_media_uploads_common(d)
+
         d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
         d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
         d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
         save_profile_json(ag, "p3", d)
         save_i18n(ag, request.form)
         ag.updated_at = dt.datetime.utcnow()
@@ -1013,7 +1032,7 @@ def admin_activate_p2(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
     ag.p2_enabled = 1
-    ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)  # vuoto
+    ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
     flash("P2 attivato (vuoto).", "ok")
@@ -1069,7 +1088,7 @@ def admin_deactivate_p3(slug):
 
 
 # ==========================
-# DELETE MEDIA (img/vid/pdf) - con url query
+# DELETE MEDIA
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
@@ -1080,24 +1099,19 @@ def media_delete(slug, profile):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
 
-    # permessi: admin oppure proprietario
-    if not is_admin():
-        if session.get("slug") != ag.slug:
-            abort(403)
+    if not is_admin() and session.get("slug") != ag.slug:
+        abort(403)
 
     profile = (profile or "").strip().lower()
     if profile not in ["p1", "p2", "p3"]:
         abort(400)
 
-    kind = (request.args.get("kind") or "").strip().lower()  # img / vid / pdf
-    url = (request.args.get("url") or "").strip()
-    url = unquote(url)
-    url = canon_url(url)
+    kind = (request.args.get("kind") or "").strip().lower()
+    url = canon_url(unquote((request.args.get("url") or "").strip()))
 
     if not url or kind not in ["img", "vid", "pdf"]:
         abort(400)
 
-    # helper remove from pipe
     def remove_url_from_pipe(raw: str, target: str) -> str:
         items = parse_pipe_list(raw or "")
         out = []
@@ -1117,7 +1131,6 @@ def media_delete(slug, profile):
                 out.append(f"{nm}||{u}")
         return clean_pdf_pipe(join_pipe_list(out))
 
-    # delete file physically if under /uploads/*
     def try_delete_physical(upload_url: str):
         try:
             if not upload_url.startswith("/uploads/"):
@@ -1135,19 +1148,15 @@ def media_delete(slug, profile):
     if profile == "p1":
         if kind == "img":
             ag.gallery_urls = remove_url_from_pipe(ag.gallery_urls or "", url)
-            s.commit()
         elif kind == "vid":
             ag.video_urls = remove_url_from_pipe(ag.video_urls or "", url)
-            s.commit()
         else:
             ag.pdf1_url = remove_pdf_from_pipe(ag.pdf1_url or "", url)
-            s.commit()
-
+        s.commit()
         try_delete_physical(url)
         flash("Eliminato.", "ok")
         return redirect(request.referrer or url_for("dashboard"))
 
-    # p2/p3
     d = get_profile_data(ag, profile)
     if kind == "img":
         d["gallery_urls"] = remove_url_from_pipe(d.get("gallery_urls", ""), url)
@@ -1166,7 +1175,7 @@ def media_delete(slug, profile):
 
 
 # ==========================
-# ADMIN: PURGE PDF TOTALE (file + db)
+# PURGE PDF TOTALE (tutti gli agenti)
 # ==========================
 @app.route("/area/admin/purge_pdfs", methods=["POST"])
 def purge_pdfs_all():
@@ -1174,7 +1183,6 @@ def purge_pdfs_all():
     if r: return r
     if not is_admin(): abort(403)
 
-    # 1) delete physical pdf files
     try:
         for p in SUBDIR_PDF.glob("*"):
             if p.is_file():
@@ -1185,17 +1193,18 @@ def purge_pdfs_all():
     except Exception:
         pass
 
-    # 2) reset db
     s = db()
     agents = s.query(Agent).all()
     for ag in agents:
         ag.pdf1_url = ""
+
         b2 = get_profile_data(ag, "p2")
         b3 = get_profile_data(ag, "p3")
         b2["pdf_urls"] = ""
         b3["pdf_urls"] = ""
         save_profile_json(ag, "p2", b2)
         save_profile_json(ag, "p3", b3)
+
         ag.updated_at = dt.datetime.utcnow()
     s.commit()
 
@@ -1204,7 +1213,7 @@ def purge_pdfs_all():
 
 
 # ==========================
-# QR PNG
+# QR
 # ==========================
 @app.route("/qr/<slug>.png")
 def qr_png(slug):
