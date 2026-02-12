@@ -1143,48 +1143,62 @@ def delete_media(slug, profile):
     if r:
         return r
 
-    profile = (profile or "p1").lower().strip()
-    if profile not in ["p1", "p2", "p3"]:
-        abort(404)
+    try:
+        profile = (profile or "p1").lower().strip()
+        if profile not in ["p1", "p2", "p3"]:
+            abort(404)
 
-    t = (request.form.get("type") or "").strip()  # gallery | video | pdf
-    idx = int(request.form.get("idx") or -1)
+        t = (request.form.get("type") or "").strip()  # gallery | video | pdf
+        idx_raw = request.form.get("idx", "")
+        try:
+            idx = int(idx_raw)
+        except Exception:
+            idx = -1
 
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
+        s = db()
+        ag = s.query(Agent).filter(Agent.slug == slug).first()
+        if not ag:
+            abort(404)
 
-    if not is_admin() and ag.slug != session.get("slug"):
-        abort(403)
+        if not is_admin() and ag.slug != session.get("slug"):
+            abort(403)
 
-    blob = get_profile_blob(ag, profile)
+        blob = get_profile_blob(ag, profile)
 
-    if t == "gallery":
-        items = [x for x in (blob.get("gallery_urls") or "").split("|") if x.strip()]
-        if 0 <= idx < len(items):
-            items.pop(idx)
-        blob["gallery_urls"] = "|".join(items)
+        if t == "gallery":
+            items = [x for x in (blob.get("gallery_urls") or "").split("|") if x.strip()]
+            if 0 <= idx < len(items):
+                items.pop(idx)
+            blob["gallery_urls"] = "|".join(items)
 
-    elif t == "video":
-        items = [x for x in (blob.get("video_urls") or "").split("|") if x.strip()]
-        if 0 <= idx < len(items):
-            items.pop(idx)
-        blob["video_urls"] = "|".join(items)
+        elif t == "video":
+            items = [x for x in (blob.get("video_urls") or "").split("|") if x.strip()]
+            if 0 <= idx < len(items):
+                items.pop(idx)
+            blob["video_urls"] = "|".join(items)
 
-    elif t == "pdf":
-        items = parse_pdf_items(blob.get("pdf_urls") or "")
-        if 0 <= idx < len(items):
-            items.pop(idx)
-        blob["pdf_urls"] = build_pdf_string(items)  # pulizia + no neri + max 10
+        elif t == "pdf":
+            items = parse_pdf_items(blob.get("pdf_urls") or "")
+            if 0 <= idx < len(items):
+                items.pop(idx)
+            blob["pdf_urls"] = build_pdf_string(items)
 
-    else:
-        abort(400)
+        else:
+            abort(400)
 
-    set_profile_blob(ag, profile, blob)
-    s.commit()
-    flash("Eliminato.", "ok")
+        set_profile_blob(ag, profile, blob)
+        s.commit()
+        flash("Eliminato.", "ok")
 
+    except Exception as e:
+        try:
+            s.rollback()
+        except Exception:
+            pass
+        # NON stampo traceback in pagina, ma ti lascio un messaggio chiaro
+        flash(f"Errore eliminazione (server). Controlla logs Render. Dettaglio: {str(e)}", "error")
+
+    # redirect sempre, così non resta pagina rotta
     if is_admin():
         return redirect(url_for("edit_agent_profile", slug=slug, profile=profile))
     return redirect(url_for("me_edit_profile", profile=profile))
