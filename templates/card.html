@@ -52,7 +52,9 @@
       <div class="box">
         <h3>{{ t_func("actions") }}</h3>
         <div class="actions">
-          <a class="btn" href="{{ qr_url }}" target="_blank">{{ t_func("scan_qr") }}</a>
+          <!-- ✅ QR popup -->
+          <button class="btn" type="button" onclick="openQrModal('{{ qr_url }}','{{ ag.slug }}')">{{ t_func("scan_qr") }}</button>
+
           {% if wa_link %}
             <a class="btn" href="{{ wa_link }}" target="_blank">{{ t_func("whatsapp") }}</a>
           {% endif %}
@@ -154,7 +156,12 @@
           <h3>{{ t_func("documents") }}</h3>
           <ul class="docs">
             {% for p in pdfs %}
-              <li><a target="_blank" href="{{ p.url }}">{{ p.name }}</a></li>
+              <!-- ✅ PDF popup -->
+              <li>
+                <button type="button" class="doc-btn" onclick="openPdfModal('{{ p.url }}','{{ p.name|e }}')">
+                  {{ p.name }}
+                </button>
+              </li>
             {% endfor %}
           </ul>
         </div>
@@ -166,5 +173,131 @@
     </footer>
 
   </div>
+
+  <!-- ✅ MODAL (QR/PDF) - leggero e indipendente dal CSS admin -->
+  <div id="cardModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.65); padding:18px;" onclick="closeCardModalOverlay(event)">
+    <div style="max-width:920px; margin:0 auto; background:rgba(20,20,20,.96); color:#fff; border-radius:18px; border:1px solid rgba(255,255,255,.12); padding:14px;" onclick="event.stopPropagation()">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div id="cmTitle" style="font-weight:900; letter-spacing:.2px;">Media</div>
+        <button type="button" onclick="closeCardModal()" style="border:0; background:transparent; color:#fff; font-size:22px; cursor:pointer;">✕</button>
+      </div>
+
+      <div id="cmBody" style="margin-top:12px;"></div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+        <button type="button" onclick="shareCardModal('whatsapp')" style="padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">Invia WhatsApp</button>
+        <button type="button" onclick="shareCardModal('email')" style="padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">Invia Email</button>
+        <button type="button" onclick="closeCardModal()" style="padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:transparent; color:#fff; cursor:pointer;">Chiudi</button>
+      </div>
+
+      <input type="hidden" id="cmKind" value="">
+      <input type="hidden" id="cmUrl" value="">
+      <input type="hidden" id="cmName" value="">
+    </div>
+  </div>
+
+  <script>
+    function absUrl(u){
+      if(!u) return '';
+      u = (u + '').trim();
+      if(/^https?:\/\//i.test(u)) return u;
+      const base = window.location.origin;
+      if(u.startsWith('/')) return base + u;
+      return base + '/' + u;
+    }
+
+    function closeCardModalOverlay(e){
+      if(e.target && e.target.id === 'cardModal') closeCardModal();
+    }
+    function closeCardModal(){
+      const m = document.getElementById('cardModal');
+      if(m) m.style.display = 'none';
+      document.getElementById('cmBody').innerHTML = '';
+      document.getElementById('cmKind').value = '';
+      document.getElementById('cmUrl').value = '';
+      document.getElementById('cmName').value = '';
+    }
+
+    function openQrModal(qrUrl, slug){
+      const m = document.getElementById('cardModal');
+      const t = document.getElementById('cmTitle');
+      const body = document.getElementById('cmBody');
+
+      const absQr = absUrl(qrUrl);
+      const cardUrl = window.location.href.split('#')[0];
+
+      document.getElementById('cmKind').value = 'qr';
+      document.getElementById('cmUrl').value = cardUrl;
+      document.getElementById('cmName').value = slug || '';
+
+      t.textContent = 'QR';
+      body.innerHTML = `
+        <div style="display:flex; justify-content:center;">
+          <img src="${absQr}" alt="QR" style="width:280px; max-width:100%; border-radius:16px; background:#fff; padding:10px; border:1px solid rgba(255,255,255,.12);">
+        </div>
+        <div style="margin-top:10px; opacity:.9; font-size:14px; line-height:1.35;">
+          Link card: <span style="word-break:break-all;">${cardUrl}</span>
+        </div>
+      `;
+      m.style.display = 'block';
+    }
+
+    function openPdfModal(url, name){
+      const m = document.getElementById('cardModal');
+      const t = document.getElementById('cmTitle');
+      const body = document.getElementById('cmBody');
+
+      const abs = absUrl(url);
+
+      document.getElementById('cmKind').value = 'pdf';
+      document.getElementById('cmUrl').value = abs;
+      document.getElementById('cmName').value = name || 'PDF';
+
+      t.textContent = name || 'PDF';
+      body.innerHTML = `
+        <iframe src="${abs}" style="width:100%; height:70vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:#fff;"></iframe>
+      `;
+      m.style.display = 'block';
+    }
+
+    function shareCardModal(ch){
+      const kind = document.getElementById('cmKind').value;
+      const url = document.getElementById('cmUrl').value;
+      const name = document.getElementById('cmName').value || '';
+
+      const label = (kind === 'pdf') ? 'PDF' : 'Pay4You Card';
+      const msg = (kind === 'pdf')
+        ? `Pay4You ${label}: ${name}\nLink: ${url}`
+        : `Ecco la mia Pay4You Card:\n${url}`;
+
+      if(ch === 'whatsapp'){
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        return;
+      }
+
+      const subject = (kind === 'pdf') ? `Pay4You PDF: ${name}` : `Pay4You Card`;
+      const gmail = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
+      const w = window.open(gmail, '_blank');
+      if(!w){
+        window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`, '_blank');
+      }
+    }
+  </script>
+
+  <style>
+    /* piccolo fix per bottone pdf lista */
+    .docs .doc-btn{
+      width:100%;
+      text-align:left;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,.08);
+      background:rgba(0,0,0,.04);
+      cursor:pointer;
+      font:inherit;
+    }
+    .docs .doc-btn:hover{ background:rgba(0,0,0,.07); }
+  </style>
+
 </body>
 </html>
