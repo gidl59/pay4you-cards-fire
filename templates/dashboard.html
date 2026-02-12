@@ -25,6 +25,12 @@
       {% if is_admin %}
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
 
+        <!-- ✅ NUOVO: PULIZIA DB PDF (NON cancella file) -->
+        <form class="inline" method="post" action="/area/admin/clean_pdf_db"
+              onsubmit="return confirm('Pulire il DB dei PDF (rimuove duplicati e link sporchi) senza cancellare file?');">
+          <button class="btn" type="submit">PULISCI PDF (solo DB)</button>
+        </form>
+
         <form class="inline" method="post" action="/area/admin/purge_pdfs"
               onsubmit="return confirm('ATTENZIONE: elimina TUTTI i PDF (file + DB) per TUTTI gli agenti. Continuare?');">
           <button class="btn danger" type="submit">PURGE PDF (totale)</button>
@@ -234,6 +240,13 @@
 
     vids.forEach(v => io.observe(v));
   })();
+
+  // ✅ QR popup semplice (se non hai già una funzione openQr nel tuo style.js)
+  function openQr(slug, p){
+    let url = `/qr/${slug}.png`;
+    if(p && p !== 'p1') url += `?p=${p}`;
+    window.open(url, "_blank");
+  }
 </script>
 
 </body>
