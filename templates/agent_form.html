@@ -77,7 +77,6 @@
           </div>
           {% endif %}
 
-          <!-- ===================== DATI PRINCIPALI ===================== -->
           <div class="section-box">
             <div class="h3">Dati principali</div>
             <div class="form-grid">
@@ -100,7 +99,6 @@
             </div>
           </div>
 
-          <!-- ✅ COME PRIMA: CONTATTI / DATI AZIENDALI / SOCIAL SUBITO SOTTO BIO -->
           <div class="section-box">
             <div class="h3">Contatti</div>
             <div class="form-grid">
@@ -197,7 +195,6 @@
             </div>
           </div>
 
-          <!-- ===================== FOTO/LOGO/DIETRO + CROP + EFFETTI ===================== -->
           <div class="section-box">
             <div class="h3">Foto profilo + Logo + Foto dietro</div>
 
@@ -293,7 +290,6 @@
             </div>
           </div>
 
-          <!-- ===================== GALLERIE FOTO/VIDEO ===================== -->
           <div class="section-box">
             <div class="h3">Galleria Foto</div>
             <div class="form-grid">
@@ -345,7 +341,6 @@
             </div>
           </div>
 
-          <!-- ===================== PDF ===================== -->
           <div class="section-box">
             <div class="h3">PDF</div>
             <div class="form-grid">
@@ -368,7 +363,7 @@
                     {% set nm = p %}
                     {% set u = p %}
                   {% endif %}
-                  <button type="button" class="pdf-open-btn" data-url="{{ u }}"
+                  <button type="button" class="pdf-open-btn" data-url="{{ u }}" data-name="{{ nm|e }}"
                     style="text-align:left; width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.10); color:inherit; cursor:pointer;">
                     📄 {{ nm }}
                   </button>
@@ -406,7 +401,7 @@
                   <div class="field"><label>Société (FR)</label><input type="text" name="company_fr" value="{{ i18n.get('fr',{}).get('company','') }}"></div>
                   <div class="field"><label>Rôle (FR)</label><input type="text" name="role_fr" value="{{ i18n.get('fr',{}).get('role','') }}"></div>
                   <div class="field full"><label>Bio (FR)</label><textarea name="bio_fr">{{ i18n.get('fr',{}).get('bio','') }}</textarea></div>
-                  <div class="field full"><label>Adresses (FR)</label><textarea name="addresses_fr">{{ i18n.get('fr',{}).get('addresses','') }}</textarea></div>
+                  <div class="field full"><label>Adresses (FR)</label><textarea name="addresses_fr">{{ i18n.get('fr',{}).get('addresses','') }}"></textarea></div>
                 </div>
               </div>
             </details>
@@ -419,7 +414,7 @@
                   <div class="field"><label>Empresa (ES)</label><input type="text" name="company_es" value="{{ i18n.get('es',{}).get('company','') }}"></div>
                   <div class="field"><label>Rol (ES)</label><input type="text" name="role_es" value="{{ i18n.get('es',{}).get('role','') }}"></div>
                   <div class="field full"><label>Bio (ES)</label><textarea name="bio_es">{{ i18n.get('es',{}).get('bio','') }}</textarea></div>
-                  <div class="field full"><label>Direcciones (ES)</label><textarea name="addresses_es">{{ i18n.get('es',{}).get('addresses','') }}</textarea></div>
+                  <div class="field full"><label>Direcciones (ES)</label><textarea name="addresses_es">{{ i18n.get('es',{}).get('addresses','') }}"></textarea></div>
                 </div>
               </div>
             </details>
@@ -432,7 +427,7 @@
                   <div class="field"><label>Firma (DE)</label><input type="text" name="company_de" value="{{ i18n.get('de',{}).get('company','') }}"></div>
                   <div class="field"><label>Rolle (DE)</label><input type="text" name="role_de" value="{{ i18n.get('de',{}).get('role','') }}"></div>
                   <div class="field full"><label>Bio (DE)</label><textarea name="bio_de">{{ i18n.get('de',{}).get('bio','') }}</textarea></div>
-                  <div class="field full"><label>Adressen (DE)</label><textarea name="addresses_de">{{ i18n.get('de',{}).get('addresses','') }}</textarea></div>
+                  <div class="field full"><label>Adressen (DE)</label><textarea name="addresses_de">{{ i18n.get('de',{}).get('addresses','') }}"></textarea></div>
                 </div>
               </div>
             </details>
@@ -472,6 +467,7 @@
 
     <input type="hidden" id="mmKind" value="">
     <input type="hidden" id="mmUrl" value="">
+    <input type="hidden" id="mmName" value="">
     <input type="hidden" id="mmDeleteHref" value="">
   </div>
 </div>
@@ -490,15 +486,11 @@
     });
   }
 
-  // ✅ ABS URL ROBUSTO (fix PDF 404)
   function absUrl(u){
     if(!u) return '';
     u = (u + '').trim();
-
-    // già assoluto
     if(/^https?:\/\//i.test(u)) return u;
 
-    // normalizza varianti legacy
     if(u.startsWith('uploads/')) u = '/' + u;
     if(u.startsWith('/uploads/')) {
       // ok
@@ -577,8 +569,9 @@
       btn.addEventListener('click', () => openMediaModal(btn.dataset.kind, btn.dataset.url));
     });
 
+    // ✅ PDF: apri nel modal (non più window.open)
     document.querySelectorAll('.pdf-open-btn').forEach(b => {
-      b.addEventListener('click', () => openPdf(b.dataset.url));
+      b.addEventListener('click', () => openPdfModal(b.dataset.url, b.dataset.name || 'PDF'));
     });
   });
 
@@ -592,6 +585,9 @@
     if(m) m.style.display = 'none';
     const body = document.getElementById('mediaBody');
     if(body) body.innerHTML = '';
+    document.getElementById('mmKind').value = '';
+    document.getElementById('mmUrl').value = '';
+    document.getElementById('mmName').value = '';
   }
 
   function openMediaModal(kind, url){
@@ -601,6 +597,7 @@
 
     document.getElementById('mmKind').value = kind;
     document.getElementById('mmUrl').value = url;
+    document.getElementById('mmName').value = '';
 
     const abs = absUrl(url);
     t.textContent = (kind === 'img') ? 'Foto' : 'Video';
@@ -624,27 +621,57 @@
     m.style.display = 'flex';
   }
 
-  function openPdf(url){
+  // ✅ PDF modal
+  function openPdfModal(url, name){
+    const m = document.getElementById('mediaModal');
+    const t = document.getElementById('mediaTitle');
+    const body = document.getElementById('mediaBody');
+
+    document.getElementById('mmKind').value = 'pdf';
+    document.getElementById('mmUrl').value = url;
+    document.getElementById('mmName').value = name || 'PDF';
+
     const abs = absUrl(url);
-    window.open(abs, "_blank");
+    t.textContent = name || 'PDF';
+
+    body.innerHTML = `<iframe src="${abs}" style="width:100%; height:70vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:#fff;"></iframe>`;
+
+    {% if agent %}
+      const profile =
+        ("{{ profile_label }}" === "Profilo 1") ? "p1" :
+        ("{{ profile_label }}" === "Profilo 2") ? "p2" : "p3";
+
+      const del = `/area/media/delete/{{ agent.slug }}/${profile}?kind=pdf&url=` + encodeURIComponent(url);
+      document.getElementById('mmDeleteHref').value = del;
+    {% endif %}
+
+    m.style.display = 'flex';
   }
 
+  // ✅ share: img/vid/pdf
   function shareMedia(channel){
     const kind = document.getElementById('mmKind').value;
     const url = document.getElementById('mmUrl').value;
+    const name = document.getElementById('mmName').value || '';
     const media = absUrl(url);
 
-    const msg = [
-      `Pay4You ${kind === 'img' ? 'Foto' : 'Video'}`,
-      `Link: ${media}`
-    ].join("\r\n");
+    const title =
+      (kind === 'img') ? 'Foto' :
+      (kind === 'vid') ? 'Video' : 'PDF';
+
+    const msg = (kind === 'pdf')
+      ? `Pay4You PDF: ${name}\nLink: ${media}`
+      : `Pay4You ${title}\nLink: ${media}`;
 
     if(channel === 'whatsapp'){
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
 
-    const subject = `Pay4You ${kind === 'img' ? 'Foto' : 'Video'}`;
+    const subject = (kind === 'pdf')
+      ? `Pay4You PDF: ${name}`
+      : `Pay4You ${title}`;
+
     const g = gmailCompose(subject, msg);
     const w = window.open(g, '_blank');
     if(!w){
