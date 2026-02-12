@@ -2,6 +2,7 @@ import os
 import re
 import json
 import uuid
+import hashlib
 import datetime as dt
 from pathlib import Path
 
@@ -10,9 +11,7 @@ from flask import (
     url_for, session, abort, flash, send_from_directory, Response
 )
 
-from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, DateTime
-)
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -99,7 +98,6 @@ class Agent(Base):
     youtube = Column(String(255), default="")
     spotify = Column(String(255), default="")
 
-    # P1 media
     photo_url = Column(String(255), default="")
     logo_url = Column(String(255), default="")
     back_media_mode = Column(String(30), default="company")
@@ -114,11 +112,10 @@ class Agent(Base):
     logo_spin = Column(Integer, default=0)
     allow_flip = Column(Integer, default=0)
 
-    gallery_urls = Column(Text, default="")   # url|url|...
-    video_urls = Column(Text, default="")     # url|url|...
-    pdf1_url = Column(Text, default="")       # name||url|name||url...
+    gallery_urls = Column(Text, default="")
+    video_urls = Column(Text, default="")
+    pdf1_url = Column(Text, default="")
 
-    # P2/P3 data
     p2_enabled = Column(Integer, default=0)
     p2_json = Column(Text, default="{}")
 
@@ -249,6 +246,23 @@ def file_size_bytes(file_storage) -> int:
     except Exception:
         return 0
 
+def file_hash_sha1(file_storage) -> str:
+    """Hash stabile per dedupe (max 10MB pdf)."""
+    try:
+        stream = file_storage.stream
+        pos = stream.tell()
+        stream.seek(0)
+        h = hashlib.sha1()
+        while True:
+            chunk = stream.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+        stream.seek(pos)
+        return h.hexdigest()
+    except Exception:
+        return ""
+
 def enforce_size(kind: str, file_storage):
     size = file_size_bytes(file_storage)
     if size <= 0:
@@ -293,13 +307,19 @@ def parse_pdf_items(pdf1_url: str):
     if not pdf1_url:
         return items
     for chunk in (pdf1_url or "").split("|"):
-        if not chunk.strip():
+        chunk = (chunk or "").strip()
+        if not chunk:
             continue
         if "||" in chunk:
             name, url = chunk.split("||", 1)
-            items.append({"name": name.strip() or "Documento", "url": url.strip()})
+            name = (name or "").strip()
+            url = (url or "").strip()
+            if not url:
+                continue
+            items.append({"name": name or "Documento", "url": url})
         else:
-            items.append({"name": chunk.strip(), "url": chunk.strip()})
+            # formato legacy: url diretto
+            items.append({"name": chunk, "url": chunk})
     return items
 
 def pack_pdf_items(items):
@@ -323,7 +343,6 @@ def _dedupe_list_keep_order(lst):
     return out
 
 def normalize_pdf_string(s: str) -> str:
-    """Dedup forte + cap (per ripulire duplicati anche se succede qualcosa di strano)."""
     items = parse_pdf_items(s or "")
     seen = set()
     out = []
@@ -412,11 +431,6 @@ def save_i18n(agent: Agent, form: dict):
 def load_i18n(agent: Agent) -> dict:
     return load_json_field(agent.i18n_json or "{}")
 
-def _new_password(length=10):
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-    import random
-    return "".join(random.choice(alphabet) for _ in range(length))
-
 
 # ==========================
 # STATIC
@@ -498,6 +512,63 @@ def dashboard():
 
 
 # ==========================
+# RESET PDF (ADMIN)
+# ==========================
+@app.route("/area/admin/reset_pdfs")
+def reset_pdfs_all():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    agents = s.query(Agent).all()
+    for ag in agents:
+        ag.pdf1_url = ""
+        # P2/P3
+        b2 = get_profile_blob(ag, "p2")
+        b3 = get_profile_blob(ag, "p3")
+        b2["pdf_urls"] = ""
+        b3["pdf_urls"] = ""
+        set_profile_blob(ag, "p2", b2)
+        set_profile_blob(ag, "p3", b3)
+
+        ag.updated_at = dt.datetime.utcnow()
+
+    s.commit()
+    flash("RESET completato: PDF rimossi da tutti gli agenti (P1+P2+P3).", "ok")
+    return redirect(url_for("dashboard"))
+
+@app.route("/area/admin/reset_pdfs/<slug>")
+def reset_pdfs_one(slug):
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    ag.pdf1_url = ""
+    b2 = get_profile_blob(ag, "p2")
+    b3 = get_profile_blob(ag, "p3")
+    b2["pdf_urls"] = ""
+    b3["pdf_urls"] = ""
+    set_profile_blob(ag, "p2", b2)
+    set_profile_blob(ag, "p3", b3)
+
+    ag.updated_at = dt.datetime.utcnow()
+    s.commit()
+
+    flash(f"RESET completato: PDF rimossi per {slug} (P1+P2+P3).", "ok")
+    return redirect(url_for("edit_agent", slug=slug))
+
+
+# ==========================
 # ADMIN NEW
 # ==========================
 @app.route("/area/new", methods=["GET", "POST"])
@@ -539,10 +610,8 @@ def new_agent():
             name=name,
             created_at=dt.datetime.utcnow(),
             updated_at=dt.datetime.utcnow(),
-            p2_enabled=0,
-            p2_json="{}",
-            p3_enabled=0,
-            p3_json="{}",
+            p2_enabled=0, p2_json="{}",
+            p3_enabled=0, p3_json="{}",
             i18n_json="{}",
         )
         s.add(ag)
@@ -607,14 +676,23 @@ def set_profile_data_from_form(blob: dict, form: dict):
         blob["photo_zoom"] = "1.0"
 
 
+# ✅ dedupe robusto: filename+size+hash+kind
+def _sig(file_storage, kind: str):
+    return (
+        secure_filename(file_storage.filename or ""),
+        file_size_bytes(file_storage),
+        file_hash_sha1(file_storage),
+        kind
+    )
+
 def handle_media_uploads_into_blob(blob: dict):
     warnings = []
-    seen_req = set()  # (filename,size,kind)
+    seen_req = set()
 
     def try_save_single(field, kind, target_key):
         f = request.files.get(field)
         if f and f.filename:
-            sig = (secure_filename(f.filename), file_size_bytes(f), kind)
+            sig = _sig(f, kind)
             if sig in seen_req:
                 return
             seen_req.add(sig)
@@ -628,13 +706,14 @@ def handle_media_uploads_into_blob(blob: dict):
     try_save_single("logo", "images", "logo_url")
     try_save_single("back_media", "images", "back_media_url")
 
+    # gallery
     gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
     if gallery_files:
         existing = [x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()]
         for f in gallery_files:
             if len(existing) >= MAX_GALLERY_IMAGES:
                 break
-            sig = (secure_filename(f.filename), file_size_bytes(f), "images")
+            sig = _sig(f, "images")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -644,13 +723,14 @@ def handle_media_uploads_into_blob(blob: dict):
                 warnings.append(str(e))
         blob["gallery_urls"] = "|".join(existing)
 
+    # videos
     video_files = [f for f in request.files.getlist("videos") if f and f.filename]
     if video_files:
         existing = [x for x in (blob.get("video_urls","") or "").split("|") if x.strip()]
         for f in video_files:
             if len(existing) >= MAX_VIDEOS:
                 break
-            sig = (secure_filename(f.filename), file_size_bytes(f), "videos")
+            sig = _sig(f, "videos")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -660,13 +740,14 @@ def handle_media_uploads_into_blob(blob: dict):
                 warnings.append(str(e))
         blob["video_urls"] = "|".join(existing)
 
+    # pdf slots
     items = parse_pdf_items(blob.get("pdf_urls","") or "")
     items = items[:MAX_PDFS]
 
     for i in range(1, MAX_PDFS + 1):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            sig = (secure_filename(f.filename), file_size_bytes(f), "pdf")
+            sig = _sig(f, "pdf")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -686,12 +767,12 @@ def handle_media_uploads_into_blob(blob: dict):
 
 def handle_media_uploads_p1(ag: Agent):
     warnings = []
-    seen_req = set()  # (filename,size,kind)
+    seen_req = set()
 
     def try_save(field, kind, setter):
         f = request.files.get(field)
         if f and f.filename:
-            sig = (secure_filename(f.filename), file_size_bytes(f), kind)
+            sig = _sig(f, kind)
             if sig in seen_req:
                 return
             seen_req.add(sig)
@@ -711,7 +792,7 @@ def handle_media_uploads_p1(ag: Agent):
         for f in gallery_files:
             if len(existing) >= MAX_GALLERY_IMAGES:
                 break
-            sig = (secure_filename(f.filename), file_size_bytes(f), "images")
+            sig = _sig(f, "images")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -727,7 +808,7 @@ def handle_media_uploads_p1(ag: Agent):
         for f in video_files:
             if len(existing) >= MAX_VIDEOS:
                 break
-            sig = (secure_filename(f.filename), file_size_bytes(f), "videos")
+            sig = _sig(f, "videos")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -743,7 +824,7 @@ def handle_media_uploads_p1(ag: Agent):
     for i in range(1, MAX_PDFS + 1):
         f = request.files.get(f"pdf{i}")
         if f and f.filename:
-            sig = (secure_filename(f.filename), file_size_bytes(f), "pdf")
+            sig = _sig(f, "pdf")
             if sig in seen_req:
                 continue
             seen_req.add(sig)
@@ -763,7 +844,7 @@ def handle_media_uploads_p1(ag: Agent):
 
 
 # ==========================
-# ADMIN EDIT P1 / P2 / P3
+# ADMIN EDIT P1/P2/P3 (come già avevi)
 # ==========================
 @app.route("/area/edit/<slug>/p1", methods=["GET", "POST"])
 def edit_agent_p1(slug):
@@ -869,7 +950,6 @@ def edit_agent(slug):
                 "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB}
     )
 
-
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
 def admin_profile2(slug):
     r = require_login()
@@ -892,8 +972,6 @@ def admin_profile2(slug):
         set_profile_data_from_form(blob, request.form)
         warnings = handle_media_uploads_into_blob(blob)
         set_profile_blob(ag, "p2", blob)
-
-        # ✅ traduzioni anche su P2
         save_i18n(ag, request.form)
 
         ag.updated_at = dt.datetime.utcnow()
@@ -922,7 +1000,6 @@ def admin_profile2(slug):
                 "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB}
     )
 
-
 @app.route("/area/edit/<slug>/p3", methods=["GET", "POST"])
 def admin_profile3(slug):
     r = require_login()
@@ -945,8 +1022,6 @@ def admin_profile3(slug):
         set_profile_data_from_form(blob, request.form)
         warnings = handle_media_uploads_into_blob(blob)
         set_profile_blob(ag, "p3", blob)
-
-        # ✅ traduzioni anche su P3
         save_i18n(ag, request.form)
 
         ag.updated_at = dt.datetime.utcnow()
@@ -1039,7 +1114,7 @@ def admin_deactivate_profile(slug, which):
 
 
 # ==========================
-# MEDIA DELETE (P1/P2/P3) - ✅ token anti doppia richiesta
+# MEDIA DELETE (token anti doppio)
 # ==========================
 @app.route("/area/media/delete/<slug>", methods=["POST"])
 def delete_media(slug):
@@ -1050,14 +1125,13 @@ def delete_media(slug):
     token = (request.form.get("token") or "").strip()
     if token:
         if session.get("last_delete_token") == token:
-            # seconda richiesta identica => ignora
             flash("Operazione già eseguita.", "warning")
             return redirect(url_for("dashboard"))
         session["last_delete_token"] = token
 
     t = (request.form.get("type") or "").strip()      # gallery | video | pdf
     idx = int(request.form.get("idx") or -1)
-    profile = (request.form.get("profile") or "p1").strip().lower()  # p1|p2|p3
+    profile = (request.form.get("profile") or "p1").strip().lower()
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
@@ -1129,7 +1203,7 @@ def delete_media(slug):
 
 
 # ==========================
-# QR PNG + VCF + CARD (resto invariato)
+# QR + VCF + CARD (come prima)
 # ==========================
 @app.route("/qr/<slug>.png")
 def qr_png(slug):
@@ -1162,7 +1236,6 @@ def qr_png(slug):
         mimetype="image/png",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
-
 
 @app.route("/vcf/<slug>")
 def vcf(slug):
@@ -1198,168 +1271,6 @@ def vcf(slug):
         vcf_text,
         mimetype="text/vcard; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-    )
-
-
-@app.route("/<slug>")
-def card(slug):
-    # invariato (qui non tocco grafica/template)
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    normalize_media_p1(ag)
-    set_profile_blob(ag, "p2", get_profile_blob(ag, "p2"))
-    set_profile_blob(ag, "p3", get_profile_blob(ag, "p3"))
-    s.commit()
-
-    p_key = (request.args.get("p") or "").strip().lower()
-    use_p2 = (p_key == "p2" and int(ag.p2_enabled or 0) == 1)
-    use_p3 = (p_key == "p3" and int(ag.p3_enabled or 0) == 1)
-
-    blob = None
-    if use_p2:
-        blob = get_profile_blob(ag, "p2")
-    if use_p3:
-        blob = get_profile_blob(ag, "p3")
-
-    if blob:
-        photo_url = blob.get("photo_url","")
-        logo_url = blob.get("logo_url","")
-        back_media_url = blob.get("back_media_url","")
-        photo_pos_x = int(blob.get("photo_pos_x",50))
-        photo_pos_y = int(blob.get("photo_pos_y",35))
-        try:
-            photo_zoom = float(blob.get("photo_zoom","1.0") or "1.0")
-        except Exception:
-            photo_zoom = 1.0
-
-        orbit_spin = int(blob.get("orbit_spin",0))
-        avatar_spin = int(blob.get("avatar_spin",0))
-        logo_spin = int(blob.get("logo_spin",0))
-        allow_flip = int(blob.get("allow_flip",0))
-
-        gallery = [x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()]
-        videos = [x for x in (blob.get("video_urls","") or "").split("|") if x.strip()]
-        pdfs = parse_pdf_items(blob.get("pdf_urls","") or "")
-
-        override = blob
-    else:
-        photo_url = ag.photo_url
-        logo_url = ag.logo_url
-        back_media_url = ag.back_media_url
-        photo_pos_x = ag.photo_pos_x
-        photo_pos_y = ag.photo_pos_y
-        try:
-            photo_zoom = float(ag.photo_zoom or "1.0")
-        except Exception:
-            photo_zoom = 1.0
-        orbit_spin = ag.orbit_spin
-        avatar_spin = ag.avatar_spin
-        logo_spin = ag.logo_spin
-        allow_flip = ag.allow_flip
-
-        gallery = [x for x in (ag.gallery_urls or "").split("|") if x.strip()]
-        videos = [x for x in (ag.video_urls or "").split("|") if x.strip()]
-        pdfs = parse_pdf_items(ag.pdf1_url or "")
-
-        override = None
-
-    class Obj(dict):
-        __getattr__ = dict.get
-
-    def getv(key, fallback):
-        if override is None:
-            return fallback
-        return (override.get(key) or "").strip()
-
-    ag_view = Obj({
-        "slug": ag.slug,
-        "logo_url": logo_url,
-        "photo_url": photo_url,
-        "back_media_mode": ag.back_media_mode,
-        "back_media_url": back_media_url,
-
-        "photo_pos_x": photo_pos_x,
-        "photo_pos_y": photo_pos_y,
-        "photo_zoom": photo_zoom,
-
-        "orbit_spin": orbit_spin,
-        "avatar_spin": avatar_spin,
-        "logo_spin": logo_spin,
-        "allow_flip": allow_flip,
-
-        "name": getv("name", ag.name),
-        "company": getv("company", ag.company),
-        "role": getv("role", ag.role),
-        "bio": getv("bio", ag.bio),
-        "piva": getv("piva", ag.piva),
-        "sdi": getv("sdi", ag.sdi),
-
-        "phone_mobile": getv("phone_mobile", ag.phone_mobile),
-        "phone_mobile2": getv("phone_mobile2", ag.phone_mobile2),
-        "phone_office": getv("phone_office", ag.phone_office),
-        "whatsapp": getv("whatsapp", ag.whatsapp),
-        "emails": getv("emails", ag.emails),
-        "websites": getv("websites", ag.websites),
-        "pec": getv("pec", ag.pec),
-        "addresses": getv("addresses", ag.addresses),
-
-        "facebook": getv("facebook", ag.facebook),
-        "instagram": getv("instagram", ag.instagram),
-        "linkedin": getv("linkedin", ag.linkedin),
-        "tiktok": getv("tiktok", ag.tiktok),
-        "telegram": getv("telegram", ag.telegram),
-        "youtube": getv("youtube", ag.youtube),
-        "spotify": getv("spotify", ag.spotify),
-    })
-
-    emails = split_csv(ag_view.emails or "")
-    websites = split_csv(ag_view.websites or "")
-    addresses = split_lines(ag_view.addresses or "")
-
-    addr_objs = []
-    for a in addresses:
-        q = a.replace(" ", "+")
-        addr_objs.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
-
-    mobiles = []
-    if (ag_view.phone_mobile or "").strip(): mobiles.append((ag_view.phone_mobile or "").strip())
-    if (ag_view.phone_mobile2 or "").strip(): mobiles.append((ag_view.phone_mobile2 or "").strip())
-    office_value = (ag_view.phone_office or "").strip()
-
-    wa_link = (ag_view.whatsapp or "").strip()
-    if wa_link and wa_link.startswith("+"):
-        wa_link = "https://wa.me/" + re.sub(r"\D+", "", wa_link)
-
-    base_url = public_base_url()
-    qr_url = f"{base_url}/{ag.slug}" + ("?p=p2" if use_p2 else ("?p=p3" if use_p3 else ""))
-
-    def t_func(k):
-        it = {
-            "actions":"Azioni","scan_qr":"QR","whatsapp":"WhatsApp","contacts":"Contatti",
-            "mobile_phone":"Cellulare","office_phone":"Ufficio","open_website":"Sito",
-            "open_maps":"Apri Maps","data":"Dati","vat":"P.IVA","sdi":"SDI",
-            "gallery":"Foto","videos":"Video","documents":"Documenti"
-        }
-        return it.get(k, k)
-
-    return render_template(
-        "card.html",
-        ag=ag_view,
-        lang=(request.args.get("lang") or "it").strip().lower(),
-        wa_link=wa_link,
-        qr_url=qr_url,
-        emails=emails,
-        websites=websites,
-        addresses=addr_objs,
-        mobiles=mobiles,
-        office_value=office_value,
-        gallery=gallery,
-        videos=videos,
-        pdfs=pdfs,
-        t_func=t_func
     )
 
 @app.route("/")
