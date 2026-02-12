@@ -4,7 +4,7 @@ import json
 import uuid
 import datetime as dt
 from pathlib import Path
-from urllib.parse import quote, unquote
+from urllib.parse import unquote
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -43,10 +43,9 @@ SUBDIR_PDF = UPLOADS_DIR / "pdf"
 for d in (SUBDIR_IMG, SUBDIR_VID, SUBDIR_PDF):
     d.mkdir(parents=True, exist_ok=True)
 
-# limiti base
 MAX_IMAGE_MB = 7
-MAX_VIDEO_MB = 60
-MAX_PDF_MB = 15
+MAX_VIDEO_MB = 80
+MAX_PDF_MB = 20
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
@@ -55,7 +54,6 @@ MAX_PDFS = 10
 ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_VIDEO_EXT = {".mp4", ".webm", ".mov"}
 ALLOWED_PDF_EXT = {".pdf"}
-
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -81,7 +79,7 @@ class Agent(Base):
     username = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
 
-    # P1 in colonne
+    # P1 (colonne)
     name = Column(String(200), default="")
     company = Column(String(200), default="")
     role = Column(String(200), default="")
@@ -107,7 +105,6 @@ class Agent(Base):
     youtube = Column(String(255), default="")
     spotify = Column(String(255), default="")
 
-    # media base
     photo_url = Column(String(255), default="")
     logo_url = Column(String(255), default="")
     back_media_url = Column(String(255), default="")
@@ -121,10 +118,10 @@ class Agent(Base):
     logo_spin = Column(Integer, default=0)
     allow_flip = Column(Integer, default=0)
 
-    # ✅ gallerie P1 (compatibili dashboard.html)
-    gallery_urls = Column(Text, default="")   # images
-    video_urls = Column(Text, default="")     # videos
-    pdf1_url = Column(Text, default="")       # pdf list
+    # ✅ gallerie P1 (usate in dashboard)
+    gallery_urls = Column(Text, default="")
+    video_urls = Column(Text, default="")
+    pdf1_url = Column(Text, default="")
 
     # P2/P3
     p2_enabled = Column(Integer, default=0)
@@ -191,7 +188,6 @@ def ensure_db():
             conn.exec_driver_sql(f"UPDATE agents SET {f} = COALESCE({f}, 0)")
         conn.commit()
 
-
 ensure_db()
 
 
@@ -241,7 +237,6 @@ def enforce_size(kind: str, file_storage):
     if size <= 0:
         return True, ""
     mb = size / (1024 * 1024)
-
     if kind == "images" and mb > MAX_IMAGE_MB:
         return False, f"Immagine troppo grande ({mb:.1f} MB). Max {MAX_IMAGE_MB} MB."
     if kind == "videos" and mb > MAX_VIDEO_MB:
@@ -249,6 +244,54 @@ def enforce_size(kind: str, file_storage):
     if kind == "pdf" and mb > MAX_PDF_MB:
         return False, f"PDF troppo grande ({mb:.1f} MB). Max {MAX_PDF_MB} MB."
     return True, ""
+
+def parse_pipe_list(s: str) -> list:
+    if not s:
+        return []
+    parts = [x.strip() for x in s.split("|")]
+    return [x for x in parts if x]
+
+def join_pipe_list(items: list) -> str:
+    out, seen = [], set()
+    for x in items:
+        x = (x or "").strip()
+        if not x:
+            continue
+        if x in seen:
+            continue
+        seen.add(x)
+        out.append(x)
+    return "|".join(out)
+
+def normalize_pdf_item(item: str) -> tuple:
+    item = (item or "").strip()
+    if not item:
+        return ("", "")
+    if "||" in item:
+        nm, url = item.split("||", 1)
+        return (nm.strip(), url.strip())
+    return ("", item)
+
+def pdf_name_from_url(url: str) -> str:
+    try:
+        return Path(url).name or "documento.pdf"
+    except Exception:
+        return "documento.pdf"
+
+def safe_local_upload_path(url: str) -> Path | None:
+    if not url:
+        return None
+    url = url.strip()
+    if not url.startswith("/uploads/"):
+        return None
+    rel = url[len("/uploads/"):]
+    rel = rel.lstrip("/").replace("..", "")
+    p = UPLOADS_DIR / rel
+    try:
+        p.resolve()
+    except Exception:
+        return None
+    return p
 
 def _ext_ok(ext: str, kind: str) -> bool:
     ext = (ext or "").lower()
@@ -270,7 +313,6 @@ def save_upload(file_storage, kind: str) -> str:
 
     filename = secure_filename(file_storage.filename)
     ext = os.path.splitext(filename)[1].lower()
-
     if not _ext_ok(ext, kind):
         raise ValueError("Formato file non supportato.")
 
@@ -289,56 +331,6 @@ def save_upload(file_storage, kind: str) -> str:
 
     file_storage.save(str(outpath))
     return uploads_url(rel)
-
-def parse_pipe_list(s: str) -> list:
-    if not s:
-        return []
-    parts = [x.strip() for x in s.split("|")]
-    return [x for x in parts if x]
-
-def join_pipe_list(items: list) -> str:
-    items2 = []
-    for x in items:
-        if not x:
-            continue
-        x = str(x).strip()
-        if x and x not in items2:
-            items2.append(x)
-    return "|".join(items2)
-
-def normalize_pdf_item(item: str) -> tuple:
-    """
-    supporta:
-      - "Nome.pdf||/uploads/pdf/xxx.pdf"
-      - "/uploads/pdf/xxx.pdf"
-    ritorna (name, url)
-    """
-    item = (item or "").strip()
-    if not item:
-        return ("", "")
-    if "||" in item:
-        nm, url = item.split("||", 1)
-        return (nm.strip(), url.strip())
-    return ("", item)
-
-def safe_local_upload_path(url: str) -> Path | None:
-    """
-    Se url è del tipo /uploads/pdf/xxx.pdf o /uploads/images/... o /uploads/videos/...
-    ritorna Path assoluto nella cartella UPLOADS_DIR, altrimenti None
-    """
-    if not url:
-        return None
-    url = url.strip()
-    if not url.startswith("/uploads/"):
-        return None
-    rel = url[len("/uploads/"):]
-    rel = rel.lstrip("/").replace("..", "")
-    p = UPLOADS_DIR / rel
-    try:
-        p.resolve()
-    except Exception:
-        return None
-    return p
 
 def load_i18n(agent: Agent) -> dict:
     try:
@@ -367,8 +359,28 @@ def load_profile_json(agent: Agent, key: str) -> dict:
     except Exception:
         return {}
 
+def ensure_profile_defaults(d: dict) -> dict:
+    d = d or {}
+    for k in [
+        "name","company","role","bio",
+        "phone_mobile","phone_mobile2","phone_office","whatsapp",
+        "emails","websites","pec","addresses",
+        "piva","sdi",
+        "facebook","instagram","linkedin","tiktok","telegram","youtube","spotify",
+        "photo_url","logo_url","back_media_url",
+        "gallery_urls","video_urls","pdf_urls"
+    ]:
+        d.setdefault(k, "")
+    d.setdefault("photo_pos_x", 50)
+    d.setdefault("photo_pos_y", 35)
+    d.setdefault("photo_zoom", "1.0")
+    d.setdefault("orbit_spin", 0)
+    d.setdefault("avatar_spin", 0)
+    d.setdefault("logo_spin", 0)
+    d.setdefault("allow_flip", 0)
+    return d
+
 def save_profile_json(agent: Agent, key: str, form: dict):
-    # campi base
     data = {}
     for k in [
         "name","company","role","bio",
@@ -379,11 +391,6 @@ def save_profile_json(agent: Agent, key: str, form: dict):
     ]:
         data[k] = (form.get(k) or "").strip()
 
-    # media/crop/effects (solo se il template li manda)
-    for k in ["photo_url","logo_url","back_media_url"]:
-        data[k] = (form.get(k) or data.get(k) or "").strip()
-
-    # crop/effects (se presenti)
     def safe_int(v, d):
         try:
             return int(v)
@@ -392,6 +399,7 @@ def save_profile_json(agent: Agent, key: str, form: dict):
 
     data["photo_pos_x"] = safe_int(form.get("photo_pos_x"), 50)
     data["photo_pos_y"] = safe_int(form.get("photo_pos_y"), 35)
+
     z = (form.get("photo_zoom") or "1.0").strip()
     try:
         float(z)
@@ -404,10 +412,12 @@ def save_profile_json(agent: Agent, key: str, form: dict):
     data["logo_spin"] = 1 if form.get("logo_spin") == "on" else 0
     data["allow_flip"] = 1 if form.get("allow_flip") == "on" else 0
 
-    # ✅ gallerie separate in json
+    # ✅ gallerie (hidden)
     data["gallery_urls"] = (form.get("gallery_urls") or "").strip()
     data["video_urls"] = (form.get("video_urls") or "").strip()
     data["pdf_urls"] = (form.get("pdf_urls") or "").strip()
+
+    data = ensure_profile_defaults(data)
 
     if key == "p2":
         agent.p2_json = json.dumps(data, ensure_ascii=False)
@@ -454,11 +464,10 @@ def build_data_dict_p1(agent: Agent) -> dict:
         "logo_spin": int(agent.logo_spin or 0),
         "allow_flip": int(agent.allow_flip or 0),
 
-        # ✅ compat template hidden
+        # ✅ gallerie/pdfs per form
         "gallery_urls": agent.gallery_urls or "",
         "video_urls": agent.video_urls or "",
         "pdf_urls": agent.pdf1_url or "",
-        "pdf1_url": agent.pdf1_url or "",
     }
 
 def set_profile_data_p1(agent: Agent, form: dict):
@@ -508,7 +517,7 @@ def set_profile_data_p1(agent: Agent, form: dict):
     agent.logo_spin = 1 if form.get("logo_spin") == "on" else 0
     agent.allow_flip = 1 if form.get("allow_flip") == "on" else 0
 
-    # ✅ hidden (source of truth)
+    # ✅ hidden
     agent.gallery_urls = (form.get("gallery_urls") or agent.gallery_urls or "").strip()
     agent.video_urls = (form.get("video_urls") or agent.video_urls or "").strip()
     agent.pdf1_url = (form.get("pdf_urls") or agent.pdf1_url or "").strip()
@@ -516,7 +525,6 @@ def set_profile_data_p1(agent: Agent, form: dict):
     agent.updated_at = dt.datetime.utcnow()
 
 def handle_media_uploads_p1(agent: Agent):
-    # foto/logo/back
     photo = request.files.get("photo")
     if photo and photo.filename:
         agent.photo_url = save_upload(photo, "images")
@@ -529,18 +537,51 @@ def handle_media_uploads_p1(agent: Agent):
     if back_media and back_media.filename:
         agent.back_media_url = save_upload(back_media, "images")
 
+def _append_uploads_to_list(existing: str, new_urls: list, limit: int) -> str:
+    cur = parse_pipe_list(existing or "")
+    for u in new_urls:
+        if u and u not in cur:
+            cur.append(u)
+    cur = cur[:limit]
+    return join_pipe_list(cur)
+
+def handle_gallery_uploads(profile: str, agent: Agent, blob: dict | None = None):
+    files = request.files.getlist("gallery_files")
+    if not files:
+        return
+
+    new_urls = []
+    for fs in files:
+        if not fs or not fs.filename:
+            continue
+        new_urls.append(save_upload(fs, "images"))
+
+    if profile == "p1":
+        agent.gallery_urls = _append_uploads_to_list(agent.gallery_urls, new_urls, MAX_GALLERY_IMAGES)
+    else:
+        blob["gallery_urls"] = _append_uploads_to_list(blob.get("gallery_urls",""), new_urls, MAX_GALLERY_IMAGES)
+
+def handle_video_uploads(profile: str, agent: Agent, blob: dict | None = None):
+    files = request.files.getlist("video_files")
+    if not files:
+        return
+
+    new_urls = []
+    for fs in files:
+        if not fs or not fs.filename:
+            continue
+        new_urls.append(save_upload(fs, "videos"))
+
+    if profile == "p1":
+        agent.video_urls = _append_uploads_to_list(agent.video_urls, new_urls, MAX_VIDEOS)
+    else:
+        blob["video_urls"] = _append_uploads_to_list(blob.get("video_urls",""), new_urls, MAX_VIDEOS)
+
 def handle_pdf_uploads(profile: str, agent: Agent, blob: dict | None = None):
-    """
-    profile:
-      - "p1": usa agent.pdf1_url
-      - "p2"/"p3": usa blob["pdf_urls"]
-    """
     files = request.files.getlist("pdf_files")
     if not files:
         return
 
-    # carica massimo tot
-    current = ""
     if profile == "p1":
         current = agent.pdf1_url or ""
     else:
@@ -548,43 +589,35 @@ def handle_pdf_uploads(profile: str, agent: Agent, blob: dict | None = None):
 
     items = parse_pipe_list(current)
 
-    # normalizza/de-dup esistente per url
-    seen = set()
+    # ✅ normalizza TUTTO: se era "solo url" lo converto in "name||url"
     norm = []
+    seen = set()
     for it in items:
         nm, url = normalize_pdf_item(it)
         if not url:
             continue
+        url = url.strip()
         if url in seen:
             continue
         seen.add(url)
+        nm = nm.strip() if nm else pdf_name_from_url(url)
         norm.append((nm, url))
 
     for fs in files:
         if not fs or not fs.filename:
             continue
-
-        # stop se raggiunto limite
         if len(norm) >= MAX_PDFS:
             break
 
         url = save_upload(fs, "pdf")
-        # nome originale come label
         nm = secure_filename(fs.filename) or "documento.pdf"
 
-        # de-dup per url
         if url in seen:
             continue
         seen.add(url)
         norm.append((nm, url))
 
-    out_list = []
-    for nm, url in norm:
-        if nm:
-            out_list.append(f"{nm}||{url}")
-        else:
-            out_list.append(url)
-
+    out_list = [f"{nm}||{url}" for (nm, url) in norm]
     out = join_pipe_list(out_list)
 
     if profile == "p1":
@@ -631,7 +664,6 @@ def login():
 
     return render_template("login.html")
 
-
 @app.route("/area/logout")
 def logout():
     session.clear()
@@ -661,7 +693,7 @@ def dashboard():
 
 
 # ==========================
-# ADMIN: NEW
+# ADMIN NEW
 # ==========================
 @app.route("/area/new", methods=["GET", "POST"])
 def new_agent():
@@ -747,7 +779,12 @@ def edit_agent_p1(slug):
         try:
             set_profile_data_p1(ag, request.form)
             handle_media_uploads_p1(ag)
+
+            # ✅ gallerie + video + pdf
+            handle_gallery_uploads("p1", ag)
+            handle_video_uploads("p1", ag)
             handle_pdf_uploads("p1", ag)
+
             save_i18n(ag, request.form)
             ag.updated_at = dt.datetime.utcnow()
             s.commit()
@@ -758,14 +795,11 @@ def edit_agent_p1(slug):
             flash(str(e), "error")
             return redirect(url_for("edit_agent_p1", slug=slug))
 
-    data = build_data_dict_p1(ag)
-    i18n = load_i18n(ag)
-
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
-        i18n=i18n,
+        data=build_data_dict_p1(ag),
+        i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 1",
         page_hint="Qui modifichi i dati principali della tua Pay4You Card.",
@@ -774,49 +808,8 @@ def edit_agent_p1(slug):
 
 
 # ==========================
-# ADMIN EDIT P2 / P3
+# ADMIN EDIT P2/P3
 # ==========================
-def ensure_profile_defaults(d: dict) -> dict:
-    d = d or {}
-    # questi default evitano "sparizioni" nel template
-    d.setdefault("name", "")
-    d.setdefault("company", "")
-    d.setdefault("role", "")
-    d.setdefault("bio", "")
-    d.setdefault("phone_mobile", "")
-    d.setdefault("phone_mobile2", "")
-    d.setdefault("phone_office", "")
-    d.setdefault("whatsapp", "")
-    d.setdefault("emails", "")
-    d.setdefault("websites", "")
-    d.setdefault("pec", "")
-    d.setdefault("addresses", "")
-    d.setdefault("piva", "")
-    d.setdefault("sdi", "")
-    d.setdefault("facebook", "")
-    d.setdefault("instagram", "")
-    d.setdefault("linkedin", "")
-    d.setdefault("tiktok", "")
-    d.setdefault("telegram", "")
-    d.setdefault("youtube", "")
-    d.setdefault("spotify", "")
-
-    d.setdefault("photo_url", "")
-    d.setdefault("logo_url", "")
-    d.setdefault("back_media_url", "")
-    d.setdefault("photo_pos_x", 50)
-    d.setdefault("photo_pos_y", 35)
-    d.setdefault("photo_zoom", "1.0")
-    d.setdefault("orbit_spin", 0)
-    d.setdefault("avatar_spin", 0)
-    d.setdefault("logo_spin", 0)
-    d.setdefault("allow_flip", 0)
-
-    d.setdefault("gallery_urls", "")
-    d.setdefault("video_urls", "")
-    d.setdefault("pdf_urls", "")
-    return d
-
 @app.route("/area/edit/<slug>/p2", methods=["GET","POST"])
 def edit_agent_p2(slug):
     r = require_login()
@@ -833,17 +826,18 @@ def edit_agent_p2(slug):
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("dashboard"))
 
-    data = ensure_profile_defaults(load_profile_json(ag, "p2"))
+    blob = ensure_profile_defaults(load_profile_json(ag, "p2"))
 
     if request.method == "POST":
         try:
             save_profile_json(ag, "p2", request.form)
-            # pdf upload su blob
-            blob = load_profile_json(ag, "p2")
-            blob = ensure_profile_defaults(blob)
-            handle_pdf_uploads("p2", ag, blob)
-            ag.p2_json = json.dumps(blob, ensure_ascii=False)
+            blob = ensure_profile_defaults(load_profile_json(ag, "p2"))
 
+            handle_gallery_uploads("p2", ag, blob)
+            handle_video_uploads("p2", ag, blob)
+            handle_pdf_uploads("p2", ag, blob)
+
+            ag.p2_json = json.dumps(blob, ensure_ascii=False)
             ag.updated_at = dt.datetime.utcnow()
             s.commit()
             flash("Profilo 2 salvato!", "ok")
@@ -856,7 +850,7 @@ def edit_agent_p2(slug):
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
+        data=blob,
         i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 2",
@@ -880,16 +874,18 @@ def edit_agent_p3(slug):
         flash("Profilo 3 non attivo", "error")
         return redirect(url_for("dashboard"))
 
-    data = ensure_profile_defaults(load_profile_json(ag, "p3"))
+    blob = ensure_profile_defaults(load_profile_json(ag, "p3"))
 
     if request.method == "POST":
         try:
             save_profile_json(ag, "p3", request.form)
-            blob = load_profile_json(ag, "p3")
-            blob = ensure_profile_defaults(blob)
-            handle_pdf_uploads("p3", ag, blob)
-            ag.p3_json = json.dumps(blob, ensure_ascii=False)
+            blob = ensure_profile_defaults(load_profile_json(ag, "p3"))
 
+            handle_gallery_uploads("p3", ag, blob)
+            handle_video_uploads("p3", ag, blob)
+            handle_pdf_uploads("p3", ag, blob)
+
+            ag.p3_json = json.dumps(blob, ensure_ascii=False)
             ag.updated_at = dt.datetime.utcnow()
             s.commit()
             flash("Profilo 3 salvato!", "ok")
@@ -902,7 +898,7 @@ def edit_agent_p3(slug):
     return render_template(
         "agent_form.html",
         agent=ag,
-        data=data,
+        data=blob,
         i18n=load_i18n(ag),
         show_i18n=True,
         page_title="Modifica Profilo 3",
@@ -912,14 +908,11 @@ def edit_agent_p3(slug):
 
 
 # ==========================
-# CLIENT EDIT (P1/P2/P3)
+# CLIENT EDIT (alias compatibile)
 # ==========================
-def require_agent_session():
-    if session.get("role") != "agent":
-        return None
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    return ag
+@app.route("/area/me/edit", methods=["GET","POST"])  # ✅ alias usato in dashboard
+def me_edit_alias():
+    return me_edit_p1()
 
 @app.route("/area/me/p1", methods=["GET","POST"])
 def me_edit_p1():
@@ -938,9 +931,12 @@ def me_edit_p1():
         try:
             set_profile_data_p1(ag, request.form)
             handle_media_uploads_p1(ag)
-            handle_pdf_uploads("p1", ag)
-            save_i18n(ag, request.form)
 
+            handle_gallery_uploads("p1", ag)
+            handle_video_uploads("p1", ag)
+            handle_pdf_uploads("p1", ag)
+
+            save_i18n(ag, request.form)
             ag.updated_at = dt.datetime.utcnow()
             s.commit()
             flash("Salvato!", "ok")
@@ -961,99 +957,9 @@ def me_edit_p1():
         profile_label="Profilo 1"
     )
 
-@app.route("/area/me/p2", methods=["GET","POST"])
-def me_edit_p2():
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-    if int(ag.p2_enabled or 0) != 1:
-        flash("Profilo 2 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    data = ensure_profile_defaults(load_profile_json(ag, "p2"))
-
-    if request.method == "POST":
-        try:
-            save_profile_json(ag, "p2", request.form)
-            blob = load_profile_json(ag, "p2")
-            blob = ensure_profile_defaults(blob)
-            handle_pdf_uploads("p2", ag, blob)
-            ag.p2_json = json.dumps(blob, ensure_ascii=False)
-            ag.updated_at = dt.datetime.utcnow()
-            s.commit()
-            flash("Profilo 2 salvato!", "ok")
-            return redirect(url_for("me_edit_p2"))
-        except ValueError as e:
-            s.rollback()
-            flash(str(e), "error")
-            return redirect(url_for("me_edit_p2"))
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        data=data,
-        i18n=load_i18n(ag),
-        show_i18n=True,
-        page_title="Modifica Profilo 2",
-        page_hint="Profilo 2 (vuoto e separato da P1).",
-        profile_label="Profilo 2"
-    )
-
-@app.route("/area/me/p3", methods=["GET","POST"])
-def me_edit_p3():
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-    if int(ag.p3_enabled or 0) != 1:
-        flash("Profilo 3 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    data = ensure_profile_defaults(load_profile_json(ag, "p3"))
-
-    if request.method == "POST":
-        try:
-            save_profile_json(ag, "p3", request.form)
-            blob = load_profile_json(ag, "p3")
-            blob = ensure_profile_defaults(blob)
-            handle_pdf_uploads("p3", ag, blob)
-            ag.p3_json = json.dumps(blob, ensure_ascii=False)
-            ag.updated_at = dt.datetime.utcnow()
-            s.commit()
-            flash("Profilo 3 salvato!", "ok")
-            return redirect(url_for("me_edit_p3"))
-        except ValueError as e:
-            s.rollback()
-            flash(str(e), "error")
-            return redirect(url_for("me_edit_p3"))
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        data=data,
-        i18n=load_i18n(ag),
-        show_i18n=True,
-        page_title="Modifica Profilo 3",
-        page_hint="Profilo 3 (vuoto e separato da P1).",
-        profile_label="Profilo 3"
-    )
-
 
 # ==========================
-# ACTIVATE/DEACTIVATE P2/P3
+# ACTIVATE/DEACTIVATE (admin)
 # ==========================
 @app.route("/area/admin/activate/<slug>/p2", methods=["POST"])
 def admin_activate_p2(slug):
@@ -1067,7 +973,6 @@ def admin_activate_p2(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p2_enabled = 1
     ag.p2_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
@@ -1087,7 +992,6 @@ def admin_deactivate_p2(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p2_enabled = 0
     ag.p2_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
@@ -1107,7 +1011,6 @@ def admin_activate_p3(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p3_enabled = 1
     ag.p3_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
@@ -1127,7 +1030,6 @@ def admin_deactivate_p3(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p3_enabled = 0
     ag.p3_json = "{}"
     ag.updated_at = dt.datetime.utcnow()
@@ -1137,22 +1039,16 @@ def admin_deactivate_p3(slug):
 
 
 # ==========================
-# MEDIA DELETE (PDF/IMG/VID)
+# MEDIA DELETE (img/vid/pdf)
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>", methods=["GET"])
 def media_delete(slug, profile):
-    """
-    Usa querystring:
-      kind=pdf|img|vid
-      url=...
-    """
     r = require_login()
     if r:
         return r
 
     kind = (request.args.get("kind") or "").strip().lower()
-    url = (request.args.get("url") or "").strip()
-    url = unquote(url)
+    url = unquote((request.args.get("url") or "").strip())
 
     if kind not in ("pdf", "img", "vid"):
         abort(400)
@@ -1171,54 +1067,42 @@ def media_delete(slug, profile):
     if profile not in ("p1", "p2", "p3"):
         profile = "p1"
 
-    # scegli lista corretta
     if profile == "p1":
-        if kind == "pdf":
+        if kind == "img":
+            ag.gallery_urls = join_pipe_list([x for x in parse_pipe_list(ag.gallery_urls) if x != url])
+        elif kind == "vid":
+            ag.video_urls = join_pipe_list([x for x in parse_pipe_list(ag.video_urls) if x != url])
+        else:
             items = parse_pipe_list(ag.pdf1_url or "")
-            kept = []
+            keep = []
             for it in items:
                 nm, u = normalize_pdf_item(it)
-                if u and u.strip() == url:
+                if u.strip() == url:
                     continue
-                kept.append(it)
-            ag.pdf1_url = join_pipe_list(kept)
-
-        elif kind == "img":
-            items = parse_pipe_list(ag.gallery_urls or "")
-            ag.gallery_urls = join_pipe_list([x for x in items if x != url])
-
-        elif kind == "vid":
-            items = parse_pipe_list(ag.video_urls or "")
-            ag.video_urls = join_pipe_list([x for x in items if x != url])
-
+                keep.append(it)
+            ag.pdf1_url = join_pipe_list(keep)
     else:
-        blob = load_profile_json(ag, profile)
-        blob = ensure_profile_defaults(blob)
-
-        if kind == "pdf":
-            items = parse_pipe_list(blob.get("pdf_urls") or "")
-            kept = []
+        blob = ensure_profile_defaults(load_profile_json(ag, profile))
+        if kind == "img":
+            blob["gallery_urls"] = join_pipe_list([x for x in parse_pipe_list(blob.get("gallery_urls","")) if x != url])
+        elif kind == "vid":
+            blob["video_urls"] = join_pipe_list([x for x in parse_pipe_list(blob.get("video_urls","")) if x != url])
+        else:
+            items = parse_pipe_list(blob.get("pdf_urls",""))
+            keep = []
             for it in items:
                 nm, u = normalize_pdf_item(it)
-                if u and u.strip() == url:
+                if u.strip() == url:
                     continue
-                kept.append(it)
-            blob["pdf_urls"] = join_pipe_list(kept)
-
-        elif kind == "img":
-            items = parse_pipe_list(blob.get("gallery_urls") or "")
-            blob["gallery_urls"] = join_pipe_list([x for x in items if x != url])
-
-        elif kind == "vid":
-            items = parse_pipe_list(blob.get("video_urls") or "")
-            blob["video_urls"] = join_pipe_list([x for x in items if x != url])
+                keep.append(it)
+            blob["pdf_urls"] = join_pipe_list(keep)
 
         if profile == "p2":
             ag.p2_json = json.dumps(blob, ensure_ascii=False)
         else:
             ag.p3_json = json.dumps(blob, ensure_ascii=False)
 
-    # elimina file fisico se locale uploads
+    # elimina file fisico se è uploads
     p = safe_local_upload_path(url)
     if p and p.is_file():
         try:
@@ -1230,7 +1114,6 @@ def media_delete(slug, profile):
     s.commit()
     flash("Eliminato.", "ok")
 
-    # redirect coerente
     if is_admin():
         if profile == "p1":
             return redirect(url_for("edit_agent_p1", slug=ag.slug))
@@ -1238,53 +1121,7 @@ def media_delete(slug, profile):
             return redirect(url_for("edit_agent_p2", slug=ag.slug))
         return redirect(url_for("edit_agent_p3", slug=ag.slug))
     else:
-        if profile == "p1":
-            return redirect(url_for("me_edit_p1"))
-        if profile == "p2":
-            return redirect(url_for("me_edit_p2"))
-        return redirect(url_for("me_edit_p3"))
-
-
-# ==========================
-# PURGE PDF (TOTALE)
-# ==========================
-@app.route("/area/admin/purge_pdfs", methods=["POST"])
-def purge_pdfs_all():
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    # 1) cancella file fisici in /pdf
-    try:
-        for p in SUBDIR_PDF.glob("*"):
-            if p.is_file():
-                try:
-                    p.unlink()
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    # 2) reset DB: P1 + P2 + P3
-    s = db()
-    agents = s.query(Agent).all()
-    for ag in agents:
-        ag.pdf1_url = ""
-
-        b2 = ensure_profile_defaults(load_profile_json(ag, "p2"))
-        b3 = ensure_profile_defaults(load_profile_json(ag, "p3"))
-        b2["pdf_urls"] = ""
-        b3["pdf_urls"] = ""
-        ag.p2_json = json.dumps(b2, ensure_ascii=False)
-        ag.p3_json = json.dumps(b3, ensure_ascii=False)
-
-        ag.updated_at = dt.datetime.utcnow()
-
-    s.commit()
-    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
-    return redirect(url_for("dashboard"))
+        return redirect(url_for("me_edit_p1"))
 
 
 # ==========================
@@ -1295,7 +1132,7 @@ def qr_png(slug):
     if qrcode is None:
         abort(500)
 
-    p = (request.args.get("p") or "").strip().lower()  # p2/p3
+    p = (request.args.get("p") or "").strip().lower()
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
@@ -1316,13 +1153,9 @@ def qr_png(slug):
     return Response(buf.getvalue(), mimetype="image/png")
 
 
-# ==========================
-# HOME
-# ==========================
 @app.route("/")
 def home():
     return redirect(url_for("login"))
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
