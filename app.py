@@ -589,6 +589,36 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_VIDEOS]
         data["video_urls"] = clean_media_pipe(join_pipe_list(current))
 
+    # ✅ PDF OVERWRITE (non append): se carichi pdf, sostituisci la lista
+    pdfs = request.files.getlist("pdf_files")
+    if pdfs and any((f and f.filename) for f in pdfs):
+        current = []
+        for f in pdfs:
+            if f and f.filename:
+                url = save_upload(f, "pdf")
+                nm = secure_filename(f.filename) or pdf_name_from_url(url)
+                current.append(f"{nm}||{url}")
+        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
+
+
+    imgs = request.files.getlist("gallery_images")
+    if imgs:
+        current = parse_pipe_list(clean_media_pipe(data.get("gallery_urls", "")))
+        for f in imgs:
+            if f and f.filename:
+                current.append(save_upload(f, "images"))
+        current = current[:MAX_GALLERY_IMAGES]
+        data["gallery_urls"] = clean_media_pipe(join_pipe_list(current))
+
+    vids = request.files.getlist("gallery_videos")
+    if vids:
+        current = parse_pipe_list(clean_media_pipe(data.get("video_urls", "")))
+        for f in vids:
+            if f and f.filename:
+                current.append(save_upload(f, "videos"))
+        current = current[:MAX_VIDEOS]
+        data["video_urls"] = clean_media_pipe(join_pipe_list(current))
+
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
@@ -630,15 +660,17 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_VIDEOS]
         agent.video_urls = clean_media_pipe(join_pipe_list(current))
 
+    # ✅ PDF OVERWRITE (non append): se carichi pdf, sostituisci la lista
     pdfs = request.files.getlist("pdf_files")
-    if pdfs:
-        current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
+    if pdfs and any((f and f.filename) for f in pdfs):
+        current = []
         for f in pdfs:
             if f and f.filename:
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
+
 
 
 # ==========================
