@@ -326,6 +326,14 @@ def _is_valid_pdf_url(u: str) -> bool:
         return u.lower().endswith(".pdf")
     return u.startswith("/uploads/pdf/") and u.lower().endswith(".pdf")
 
+def _norm_pdf_name(n: str) -> str:
+    # ✅ normalizzazione robusta per confronto nomi (evita 404)
+    n = (n or "").strip()
+    if not n:
+        return ""
+    n = secure_filename(n)  # spazi -> underscore, ecc
+    return n.lower()
+
 def clean_pdf_pipe(raw: str) -> str:
     items = parse_pipe_list(raw or "")
     out = []
@@ -480,8 +488,10 @@ def set_profile_data_p1(agent: Agent, form: dict):
     agent.spotify = (form.get("spotify") or "").strip()
 
     def safe_int(v, d):
-        try: return int(v)
-        except Exception: return d
+        try:
+            return int(v)
+        except Exception:
+            return d
 
     agent.photo_pos_x = safe_int(form.get("photo_pos_x"), 50)
     agent.photo_pos_y = safe_int(form.get("photo_pos_y"), 35)
@@ -581,7 +591,6 @@ def handle_media_uploads_common(data: dict):
 
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
-        # riparti da pulito (se c'è sporcizia vecchia la buttiamo via)
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
         for f in pdfs:
             if f and f.filename:
@@ -682,7 +691,8 @@ def logout():
 @app.route("/area", methods=["GET"])
 def dashboard():
     r = require_login()
-    if r: return r
+    if r:
+        return r
 
     s = db()
     if is_admin():
@@ -703,8 +713,10 @@ def dashboard():
 @app.route("/area/new", methods=["GET", "POST"])
 def new_agent():
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
     if request.method == "POST":
         first = (request.form.get("first_name") or "").strip()
@@ -764,17 +776,20 @@ def new_agent():
 
 
 # ==========================
-# EDIT P1/P2/P3 + ME + ACTIVATE (uguali ai tuoi)
+# ADMIN EDIT P1
 # ==========================
 @app.route("/area/edit/<slug>/p1", methods=["GET", "POST"])
 def edit_agent_p1(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
 
     if request.method == "POST":
         try:
@@ -805,15 +820,22 @@ def edit_agent_p1(slug):
         profile_label="Profilo 1"
     )
 
-@app.route("/area/edit/<slug>/p2", methods=["GET","POST"])
+
+# ==========================
+# ADMIN EDIT P2 / P3
+# ==========================
+@app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
 def edit_agent_p2(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     if int(ag.p2_enabled or 0) != 1:
         flash("Profilo 2 non attivo", "error")
         return redirect(url_for("dashboard"))
@@ -845,15 +867,18 @@ def edit_agent_p2(slug):
         profile_label="Profilo 2"
     )
 
-@app.route("/area/edit/<slug>/p3", methods=["GET","POST"])
+@app.route("/area/edit/<slug>/p3", methods=["GET", "POST"])
 def edit_agent_p3(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     if int(ag.p3_enabled or 0) != 1:
         flash("Profilo 3 non attivo", "error")
         return redirect(url_for("dashboard"))
@@ -885,15 +910,22 @@ def edit_agent_p3(slug):
         profile_label="Profilo 3"
     )
 
-@app.route("/area/me/edit", methods=["GET","POST"])
+
+# ==========================
+# CLIENT EDIT (ME) P1/P2/P3  ✅ (mancavano nel tuo incolla)
+# ==========================
+@app.route("/area/me/edit", methods=["GET", "POST"])
 def me_edit_p1():
     r = require_login()
-    if r: return r
-    if is_admin(): return redirect(url_for("dashboard"))
+    if r:
+        return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
 
     if request.method == "POST":
         try:
@@ -924,18 +956,108 @@ def me_edit_p1():
         profile_label="Profilo 1"
     )
 
+@app.route("/area/me/p2", methods=["GET", "POST"])
+def me_edit_p2():
+    r = require_login()
+    if r:
+        return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    if not ag:
+        abort(404)
+    if int(ag.p2_enabled or 0) != 1:
+        flash("Profilo 2 non attivo", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        d = get_profile_data(ag, "p2")
+        d = set_profile_from_form(d, request.form)
+        handle_media_uploads_common(d)
+
+        d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
+        d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
+        d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
+        save_profile_json(ag, "p2", d)
+        save_i18n(ag, request.form)
+        ag.updated_at = dt.datetime.utcnow()
+        s.commit()
+        flash("Profilo 2 salvato!", "ok")
+        return redirect(url_for("me_edit_p2"))
+
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        data=get_profile_data(ag, "p2"),
+        i18n=load_i18n(ag),
+        show_i18n=True,
+        page_title="Modifica Profilo 2",
+        page_hint="Profilo 2 (separato da P1).",
+        profile_label="Profilo 2"
+    )
+
+@app.route("/area/me/p3", methods=["GET", "POST"])
+def me_edit_p3():
+    r = require_login()
+    if r:
+        return r
+    if is_admin():
+        return redirect(url_for("dashboard"))
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
+    if not ag:
+        abort(404)
+    if int(ag.p3_enabled or 0) != 1:
+        flash("Profilo 3 non attivo", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        d = get_profile_data(ag, "p3")
+        d = set_profile_from_form(d, request.form)
+        handle_media_uploads_common(d)
+
+        d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
+        d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
+        d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
+
+        save_profile_json(ag, "p3", d)
+        save_i18n(ag, request.form)
+        ag.updated_at = dt.datetime.utcnow()
+        s.commit()
+        flash("Profilo 3 salvato!", "ok")
+        return redirect(url_for("me_edit_p3"))
+
+    return render_template(
+        "agent_form.html",
+        agent=ag,
+        data=get_profile_data(ag, "p3"),
+        i18n=load_i18n(ag),
+        show_i18n=True,
+        page_title="Modifica Profilo 3",
+        page_hint="Profilo 3 (separato da P1).",
+        profile_label="Profilo 3"
+    )
+
 
 # ==========================
-# ACTIVATE/DEACTIVATE (uguale)
+# ACTIVATE/DEACTIVATE P2/P3
 # ==========================
 @app.route("/area/admin/activate/<slug>/p2", methods=["POST"])
 def admin_activate_p2(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     ag.p2_enabled = 1
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
@@ -946,11 +1068,15 @@ def admin_activate_p2(slug):
 @app.route("/area/admin/deactivate/<slug>/p2", methods=["POST"])
 def admin_deactivate_p2(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     ag.p2_enabled = 0
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
@@ -961,11 +1087,15 @@ def admin_deactivate_p2(slug):
 @app.route("/area/admin/activate/<slug>/p3", methods=["POST"])
 def admin_activate_p3(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     ag.p3_enabled = 1
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
@@ -976,11 +1106,15 @@ def admin_activate_p3(slug):
 @app.route("/area/admin/deactivate/<slug>/p3", methods=["POST"])
 def admin_deactivate_p3(slug):
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
     ag.p3_enabled = 0
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
@@ -990,16 +1124,18 @@ def admin_deactivate_p3(slug):
 
 
 # ==========================
-# DELETE MEDIA (uguale al tuo)
+# DELETE MEDIA
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
     r = require_login()
-    if r: return r
+    if r:
+        return r
 
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
 
     if not is_admin() and session.get("slug") != ag.slug:
         abort(403)
@@ -1077,13 +1213,57 @@ def media_delete(slug, profile):
 
 
 # ==========================
-# ✅ CLEAN PDF DB (NON cancella file) — risolve storico "ne vedo 6"
+# PURGE PDF TOTALE (file + DB) ✅ (mancava nel tuo incolla)
+# ==========================
+@app.route("/area/admin/purge_pdfs", methods=["POST"])
+def purge_pdfs_all():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    # cancella file
+    try:
+        for p in SUBDIR_PDF.glob("*"):
+            if p.is_file():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # pulisci DB
+    s = db()
+    agents = s.query(Agent).all()
+    for ag in agents:
+        ag.pdf1_url = ""
+
+        b2 = get_profile_data(ag, "p2")
+        b3 = get_profile_data(ag, "p3")
+        b2["pdf_urls"] = ""
+        b3["pdf_urls"] = ""
+        save_profile_json(ag, "p2", b2)
+        save_profile_json(ag, "p3", b3)
+
+        ag.updated_at = dt.datetime.utcnow()
+
+    s.commit()
+    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
+    return redirect(url_for("dashboard"))
+
+
+# ==========================
+# CLEAN PDF DB (NON cancella file)
 # ==========================
 @app.route("/area/admin/clean_pdf_db", methods=["POST"])
 def clean_pdf_db_all():
     r = require_login()
-    if r: return r
-    if not is_admin(): abort(403)
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
 
     s = db()
     agents = s.query(Agent).all()
@@ -1134,7 +1314,7 @@ def qr_png(slug):
 
 
 # ==========================
-# ✅ VCF (nel dashboard hai il link ma qui prima mancava -> 404)
+# VCF
 # ==========================
 @app.route("/vcf/<slug>")
 def vcf(slug):
@@ -1186,17 +1366,18 @@ def vcf(slug):
 
 
 # ==========================
-# ✅ PDF ALIAS: apre anche /Brochure_Qualcosa.pdf (redirect al vero /uploads/pdf/uuid.pdf)
+# ROUTE UNIVERSALE: PDF alias + CARD
 # ==========================
 @app.route("/<path:filename>")
 def pdf_alias_or_card(filename):
-    # se è pdf, prova a risolvere dal DB
+    # ---- PDF alias ----
     if filename.lower().endswith(".pdf"):
-        wanted = filename.rsplit("/", 1)[-1]  # solo basename
+        wanted = filename.rsplit("/", 1)[-1]  # basename
+        wanted_norm = _norm_pdf_name(wanted)
+
         s = db()
         agents = s.query(Agent).all()
 
-        # cerca in P1 e nei profili json
         for ag in agents:
             # P1
             items = parse_pipe_list(clean_pdf_pipe(ag.pdf1_url or ""))
@@ -1204,7 +1385,12 @@ def pdf_alias_or_card(filename):
                 nm, url = normalize_pdf_item(it)
                 nm = (nm or "").strip()
                 url = canon_url(url)
-                if nm == wanted and _is_valid_pdf_url(url):
+
+                if not _is_valid_pdf_url(url):
+                    continue
+
+                # ✅ match robusto: nome caricato / nome normalizzato / basename url (uuid.pdf)
+                if _norm_pdf_name(nm) == wanted_norm or _norm_pdf_name(pdf_name_from_url(url)) == wanted_norm:
                     return redirect(url, code=302)
 
             # P2/P3
@@ -1215,12 +1401,16 @@ def pdf_alias_or_card(filename):
                     nm, url = normalize_pdf_item(it)
                     nm = (nm or "").strip()
                     url = canon_url(url)
-                    if nm == wanted and _is_valid_pdf_url(url):
+
+                    if not _is_valid_pdf_url(url):
+                        continue
+
+                    if _norm_pdf_name(nm) == wanted_norm or _norm_pdf_name(pdf_name_from_url(url)) == wanted_norm:
                         return redirect(url, code=302)
 
         abort(404)
 
-    # altrimenti trattalo come slug card
+    # ---- CARD by slug ----
     slug = filename.strip("/").split("/", 1)[0]
     if not slug:
         return redirect(url_for("login"))
@@ -1241,8 +1431,9 @@ def pdf_alias_or_card(filename):
 
     data = get_profile_data(ag, profile)
 
-    # prepara oggetto "ag" per card.html
-    class Obj: pass
+    class Obj:
+        pass
+
     ag_view = Obj()
     ag_view.slug = ag.slug
     ag_view.name = data.get("name", "") or ag.name or ""
@@ -1265,7 +1456,6 @@ def pdf_alias_or_card(filename):
     ag_view.logo_spin = int(data.get("logo_spin", 0) or 0)
     ag_view.allow_flip = int(data.get("allow_flip", 0) or 0)
 
-    # contatti
     mobiles = []
     if (data.get("phone_mobile") or "").strip():
         mobiles.append((data.get("phone_mobile") or "").strip())
@@ -1287,7 +1477,6 @@ def pdf_alias_or_card(filename):
             if num2:
                 wa_link = f"https://wa.me/{num2}"
 
-    # indirizzi
     addresses = []
     for ln in (data.get("addresses") or "").splitlines():
         a = (ln or "").strip()
@@ -1307,7 +1496,6 @@ def pdf_alias_or_card(filename):
         if _is_valid_pdf_url(url):
             pdfs.append({"name": (nm or "").strip() or pdf_name_from_url(url), "url": url})
 
-    # traduzioni: card.html usa t_func, manteniamo IT
     def t_func(k):
         it = {
             "actions": "Azioni",
