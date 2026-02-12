@@ -7,6 +7,7 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
+
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -24,48 +25,15 @@
     <div class="toolbar">
       {% if is_admin %}
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
-        <a class="btn danger" href="/area/admin/reset_pdfs" onclick="return confirm('RESET PDF DI TUTTI GLI AGENTI? (P1+P2+P3)')">Reset PDF (tutti)</a>
+
+        <form class="inline" method="post" action="/area/admin/purge_pdfs"
+              onsubmit="return confirm('ATTENZIONE: elimina TUTTI i PDF (file + DB) per TUTTI gli agenti. Continuare?');">
+          <button class="btn danger" type="submit">PURGE PDF (totale)</button>
+        </form>
       {% endif %}
       <a class="btn danger" href="/area/logout">Logout</a>
     </div>
   </header>
-@app.route("/area/admin/purge_pdfs")
-def purge_pdfs_all():
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    # 1) cancella TUTTI i file fisici nella cartella /pdf
-    try:
-        for p in SUBDIR_PDF.glob("*"):
-            if p.is_file():
-                try:
-                    p.unlink()
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    # 2) reset DB: P1 + P2 + P3
-    s = db()
-    agents = s.query(Agent).all()
-    for ag in agents:
-        ag.pdf1_url = ""
-
-        b2 = get_profile_blob(ag, "p2")
-        b3 = get_profile_blob(ag, "p3")
-        b2["pdf_urls"] = ""
-        b3["pdf_urls"] = ""
-        set_profile_blob(ag, "p2", b2)
-        set_profile_blob(ag, "p3", b3)
-
-        ag.updated_at = dt.datetime.utcnow()
-
-    s.commit()
-    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
-    return redirect(url_for("dashboard"))
 
   <main class="app-main">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -85,7 +53,7 @@ def purge_pdfs_all():
           <div class="dash-left">
             <div class="dash-avatar">
               {% if a.photo_url %}
-                <img src="{{ a.photo_url }}" alt="foto" loading="lazy" decoding="async">
+                <img src="{{ a.photo_url }}" alt="foto">
               {% else %}
                 <div class="dash-ph">👤</div>
               {% endif %}
@@ -98,6 +66,7 @@ def purge_pdfs_all():
           </div>
 
           <div class="dash-actions">
+            <!-- APRI -->
             <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
             {% if a.p2_enabled == 1 %}
               <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
@@ -108,6 +77,7 @@ def purge_pdfs_all():
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
+            <!-- QR -->
             <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
               <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
@@ -117,6 +87,7 @@ def purge_pdfs_all():
             {% endif %}
 
             {% if is_admin %}
+              <!-- MODIFICA -->
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
@@ -125,6 +96,7 @@ def purge_pdfs_all():
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>
               {% endif %}
 
+              <!-- ATTIVA/DISATTIVA -->
               {% if a.p2_enabled == 1 %}
                 <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"
                       onsubmit="return confirm('Disattivare P2? Verrà svuotato.');">
@@ -149,8 +121,13 @@ def purge_pdfs_all():
                 </form>
               {% endif %}
 
+              <form class="inline" method="post" action="/area/admin/credentials/{{ a.slug }}"
+                    onsubmit="return confirm('Generare una nuova password per questo cliente?');">
+                <button class="btn-mini" type="submit">Invia credenziali</button>
+              </form>
             {% else %}
-              <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
+              <!-- CLIENTE -->
+              <a class="btn-mini warn" href="/area/me/p1">Modifica P1</a>
 
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
@@ -193,7 +170,7 @@ def purge_pdfs_all():
                 {% endif %}
               {% endfor %}
               {% for g in imgs2[:6] %}
-                <img class="dash-mini" src="{{ g }}" alt="" loading="lazy" decoding="async">
+                <img class="dash-mini" src="{{ g }}" alt="">
               {% endfor %}
               {% if imgs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
@@ -211,9 +188,12 @@ def purge_pdfs_all():
                   {% set _ = vids2.append(x) %}
                 {% endif %}
               {% endfor %}
+
               {% for v in vids2[:4] %}
-                <video class="dash-mini" muted playsinline preload="none" src="{{ v }}#t=0.1"></video>
+                <!-- ✅ VIDEO THUMB: lazy-load + seek a 0.1 per vedere frame -->
+                <video class="dash-mini vthumb" muted playsinline preload="none" data-src="{{ v }}"></video>
               {% endfor %}
+
               {% if vids2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -300,6 +280,12 @@ def purge_pdfs_all():
     return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
   }
 
+  function outlookCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
+  }
+
   function openQr(slug, profile){
     const modal = document.getElementById('qrModal');
     const img = document.getElementById('qrImg');
@@ -308,7 +294,7 @@ def purge_pdfs_all():
     document.getElementById('qrSlug').value = slug;
     document.getElementById('qrProfile').value = profile;
 
-    const url = (profile === 'p2' || profile === 'p3') ? `/qr/${slug}.png?p=${profile}` : `/qr/${slug}.png`;
+    const url = (profile === 'p1') ? `/qr/${slug}.png` : `/qr/${slug}.png?p=${profile}`;
     title.textContent = `QR ${slug.toUpperCase()} • ${profile.toUpperCase()}`;
     img.src = url;
 
@@ -334,8 +320,47 @@ def purge_pdfs_all():
     }
 
     const subject = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`.trim();
-    window.open(gmailCompose(subject, msg), '_blank');
+    const g = gmailCompose(subject, msg);
+    const w = window.open(g, '_blank');
+    if(!w){
+      window.open(outlookCompose(subject, msg), '_blank');
+    }
   }
+
+  // ✅ VIDEO THUMB FIX: carica solo quando visibile e fa seek a 0.1
+  (function(){
+    const vids = Array.from(document.querySelectorAll('video.vthumb[data-src]'));
+    if(!vids.length) return;
+
+    function loadThumb(v){
+      if(v.dataset.loaded === "1") return;
+      v.dataset.loaded = "1";
+      const src = v.getAttribute('data-src');
+      if(!src) return;
+      v.src = src + "#t=0.1";
+      v.load();
+
+      const onLoaded = () => {
+        try {
+          v.currentTime = 0.1;
+          v.pause();
+        } catch(e){}
+        v.removeEventListener('loadeddata', onLoaded);
+      };
+      v.addEventListener('loadeddata', onLoaded);
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(en => {
+        if(en.isIntersecting){
+          loadThumb(en.target);
+          io.unobserve(en.target);
+        }
+      });
+    }, { rootMargin: "150px" });
+
+    vids.forEach(v => io.observe(v));
+  })();
 </script>
 
 </body>
