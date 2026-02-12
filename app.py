@@ -118,7 +118,7 @@ class Agent(Base):
     video_urls = Column(Text, default="")     # url|url|...
     pdf1_url = Column(Text, default="")       # name||url|name||url...
 
-    # P2/P3 data (INCLUDE anche media/effects)
+    # P2/P3 data
     p2_enabled = Column(Integer, default=0)
     p2_json = Column(Text, default="{}")
 
@@ -322,6 +322,21 @@ def _dedupe_list_keep_order(lst):
         out.append(x)
     return out
 
+def normalize_pdf_string(s: str) -> str:
+    """Dedup forte + cap (per ripulire duplicati anche se succede qualcosa di strano)."""
+    items = parse_pdf_items(s or "")
+    seen = set()
+    out = []
+    for it in items:
+        url = (it.get("url","") or "").strip()
+        if not url:
+            continue
+        if url in seen:
+            continue
+        seen.add(url)
+        out.append({"name": (it.get("name","Documento") or "Documento").strip(), "url": url})
+    return pack_pdf_items(out[:MAX_PDFS])
+
 def normalize_media_p1(ag: Agent):
     g = [x.strip() for x in (ag.gallery_urls or "").split("|") if x.strip()]
     ag.gallery_urls = "|".join(_dedupe_list_keep_order(g)[:MAX_GALLERY_IMAGES])
@@ -329,19 +344,7 @@ def normalize_media_p1(ag: Agent):
     v = [x.strip() for x in (ag.video_urls or "").split("|") if x.strip()]
     ag.video_urls = "|".join(_dedupe_list_keep_order(v)[:MAX_VIDEOS])
 
-    items = parse_pdf_items(ag.pdf1_url or "")
-    # dedupe per URL (se ha duplicati veri) + cap
-    seen_url = set()
-    out = []
-    for it in items:
-        url = (it.get("url","") or "").strip()
-        if not url:
-            continue
-        if url in seen_url:
-            continue
-        seen_url.add(url)
-        out.append({"name": (it.get("name","Documento") or "Documento").strip(), "url": url})
-    ag.pdf1_url = pack_pdf_items(out[:MAX_PDFS])
+    ag.pdf1_url = normalize_pdf_string(ag.pdf1_url or "")
 
 def load_json_field(txt: str) -> dict:
     try:
@@ -361,7 +364,6 @@ def profile_defaults():
         "piva":"", "sdi":"",
         "facebook":"", "instagram":"", "linkedin":"", "tiktok":"", "telegram":"", "youtube":"", "spotify":"",
 
-        # media/effects del profilo (P2/P3)
         "photo_url":"", "logo_url":"", "back_media_url":"",
         "photo_pos_x":50, "photo_pos_y":35, "photo_zoom":"1.0",
         "orbit_spin":0, "avatar_spin":0, "logo_spin":0, "allow_flip":0,
@@ -381,25 +383,14 @@ def get_profile_blob(agent: Agent, which: str) -> dict:
 
 def set_profile_blob(agent: Agent, which: str, blob: dict):
     blob = blob or {}
-    # normalizza liste + cap
+
     g = [x.strip() for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()]
     blob["gallery_urls"] = "|".join(_dedupe_list_keep_order(g)[:MAX_GALLERY_IMAGES])
 
     v = [x.strip() for x in (blob.get("video_urls","") or "").split("|") if x.strip()]
     blob["video_urls"] = "|".join(_dedupe_list_keep_order(v)[:MAX_VIDEOS])
 
-    items = parse_pdf_items(blob.get("pdf_urls","") or "")
-    seen_url = set()
-    out = []
-    for it in items:
-        url = (it.get("url","") or "").strip()
-        if not url:
-            continue
-        if url in seen_url:
-            continue
-        seen_url.add(url)
-        out.append({"name": (it.get("name","Documento") or "Documento").strip(), "url": url})
-    blob["pdf_urls"] = pack_pdf_items(out[:MAX_PDFS])
+    blob["pdf_urls"] = normalize_pdf_string(blob.get("pdf_urls","") or "")
 
     if which == "p2":
         agent.p2_json = save_json_field(blob)
@@ -486,7 +477,6 @@ def dashboard():
         agents = s.query(Agent).all()
         for a in agents:
             normalize_media_p1(a)
-            # normalizza anche P2/P3 (per togliere duplicati “vecchi”)
             set_profile_blob(a, "p2", get_profile_blob(a, "p2"))
             set_profile_blob(a, "p3", get_profile_blob(a, "p3"))
         s.commit()
@@ -579,7 +569,6 @@ def new_agent():
 
 
 def set_profile_data_from_form(blob: dict, form: dict):
-    # Ruota vs Flip esclusione
     avatar_spin = 1 if form.get("avatar_spin") == "on" else 0
     allow_flip = 1 if form.get("allow_flip") == "on" else 0
     if avatar_spin == 1:
@@ -618,11 +607,7 @@ def set_profile_data_from_form(blob: dict, form: dict):
         blob["photo_zoom"] = "1.0"
 
 
-def handle_media_uploads_into_blob(blob: dict, profile_key: str):
-    """
-    Salva media nel blob (P2/P3) senza toccare grafica.
-    Fix PDF capricciosi: blocco doppio upload identico nella stessa richiesta (filename,size).
-    """
+def handle_media_uploads_into_blob(blob: dict):
     warnings = []
     seen_req = set()  # (filename,size,kind)
 
@@ -643,7 +628,6 @@ def handle_media_uploads_into_blob(blob: dict, profile_key: str):
     try_save_single("logo", "images", "logo_url")
     try_save_single("back_media", "images", "back_media_url")
 
-    # galleria foto
     gallery_files = [f for f in request.files.getlist("gallery") if f and f.filename]
     if gallery_files:
         existing = [x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()]
@@ -660,7 +644,6 @@ def handle_media_uploads_into_blob(blob: dict, profile_key: str):
                 warnings.append(str(e))
         blob["gallery_urls"] = "|".join(existing)
 
-    # video
     video_files = [f for f in request.files.getlist("videos") if f and f.filename]
     if video_files:
         existing = [x for x in (blob.get("video_urls","") or "").split("|") if x.strip()]
@@ -677,7 +660,6 @@ def handle_media_uploads_into_blob(blob: dict, profile_key: str):
                 warnings.append(str(e))
         blob["video_urls"] = "|".join(existing)
 
-    # pdf slots (max 10)
     items = parse_pdf_items(blob.get("pdf_urls","") or "")
     items = items[:MAX_PDFS]
 
@@ -686,7 +668,6 @@ def handle_media_uploads_into_blob(blob: dict, profile_key: str):
         if f and f.filename:
             sig = (secure_filename(f.filename), file_size_bytes(f), "pdf")
             if sig in seen_req:
-                # blocca doppio inserimento “fantasma”
                 continue
             seen_req.add(sig)
             try:
@@ -699,15 +680,11 @@ def handle_media_uploads_into_blob(blob: dict, profile_key: str):
             except ValueError as e:
                 warnings.append(str(e))
 
-    blob["pdf_urls"] = pack_pdf_items(items)
+    blob["pdf_urls"] = normalize_pdf_string(pack_pdf_items(items))
     return warnings
 
 
 def handle_media_uploads_p1(ag: Agent):
-    """
-    Salva media su colonne P1.
-    Fix PDF capricciosi: blocco doppio upload identico nella stessa richiesta (filename,size).
-    """
     warnings = []
     seen_req = set()  # (filename,size,kind)
 
@@ -780,7 +757,7 @@ def handle_media_uploads_p1(ag: Agent):
             except ValueError as e:
                 warnings.append(str(e))
 
-    ag.pdf1_url = pack_pdf_items(items)
+    ag.pdf1_url = normalize_pdf_string(pack_pdf_items(items))
     normalize_media_p1(ag)
     return warnings
 
@@ -806,8 +783,6 @@ def edit_agent(slug):
         abort(404)
 
     if request.method == "POST":
-        # P1: scriviamo su colonne
-        # esclusione ruota/flip + dati
         avatar_spin = 1 if request.form.get("avatar_spin") == "on" else 0
         allow_flip = 1 if request.form.get("allow_flip") == "on" else 0
         if avatar_spin == 1:
@@ -915,8 +890,12 @@ def admin_profile2(slug):
 
     if request.method == "POST":
         set_profile_data_from_form(blob, request.form)
-        warnings = handle_media_uploads_into_blob(blob, "p2")
+        warnings = handle_media_uploads_into_blob(blob)
         set_profile_blob(ag, "p2", blob)
+
+        # ✅ traduzioni anche su P2
+        save_i18n(ag, request.form)
+
         ag.updated_at = dt.datetime.utcnow()
         s.commit()
         flash("Profilo 2 salvato!", "ok")
@@ -935,7 +914,7 @@ def admin_profile2(slug):
         is_admin=True,
         p2_data=blob,
         p3_data={},
-        i18n_data={},
+        i18n_data=load_i18n(ag),
         gallery=[x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()],
         videos=[x for x in (blob.get("video_urls","") or "").split("|") if x.strip()],
         pdfs=parse_pdf_items(blob.get("pdf_urls","") or ""),
@@ -964,8 +943,12 @@ def admin_profile3(slug):
 
     if request.method == "POST":
         set_profile_data_from_form(blob, request.form)
-        warnings = handle_media_uploads_into_blob(blob, "p3")
+        warnings = handle_media_uploads_into_blob(blob)
         set_profile_blob(ag, "p3", blob)
+
+        # ✅ traduzioni anche su P3
+        save_i18n(ag, request.form)
+
         ag.updated_at = dt.datetime.utcnow()
         s.commit()
         flash("Profilo 3 salvato!", "ok")
@@ -984,150 +967,7 @@ def admin_profile3(slug):
         is_admin=True,
         p2_data={},
         p3_data=blob,
-        i18n_data={},
-        gallery=[x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()],
-        videos=[x for x in (blob.get("video_urls","") or "").split("|") if x.strip()],
-        pdfs=parse_pdf_items(blob.get("pdf_urls","") or ""),
-        limits={"max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
-                "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB}
-    )
-
-
-# ==========================
-# AGENT SELF EDIT
-# ==========================
-@app.route("/area/me/edit", methods=["GET", "POST"])
-def me_edit():
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        return redirect(url_for("dashboard"))
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-
-    if request.method == "POST":
-        # P1 self edit
-        # stessa logica di admin P1 per coerenza
-        return redirect(url_for("edit_agent", slug=ag.slug))
-
-    normalize_media_p1(ag)
-    set_profile_blob(ag, "p2", get_profile_blob(ag, "p2"))
-    set_profile_blob(ag, "p3", get_profile_blob(ag, "p3"))
-    s.commit()
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=False,
-        editing_profile3=False,
-        is_admin=False,
-        p2_data=get_profile_blob(ag, "p2"),
-        p3_data=get_profile_blob(ag, "p3"),
         i18n_data=load_i18n(ag),
-        gallery=[x for x in (ag.gallery_urls or "").split("|") if x.strip()],
-        videos=[x for x in (ag.video_urls or "").split("|") if x.strip()],
-        pdfs=parse_pdf_items(ag.pdf1_url or ""),
-        limits={"max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
-                "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB}
-    )
-
-
-@app.route("/area/me/p2", methods=["GET", "POST"])
-def me_profile2():
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-
-    if int(ag.p2_enabled or 0) != 1:
-        flash("Profilo 2 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    blob = get_profile_blob(ag, "p2")
-
-    if request.method == "POST":
-        set_profile_data_from_form(blob, request.form)
-        warnings = handle_media_uploads_into_blob(blob, "p2")
-        set_profile_blob(ag, "p2", blob)
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("Profilo 2 salvato!", "ok")
-        for w in warnings:
-            flash(w, "warning")
-        return redirect(url_for("me_profile2"))
-
-    set_profile_blob(ag, "p2", blob)
-    s.commit()
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=True,
-        editing_profile3=False,
-        is_admin=False,
-        p2_data=blob,
-        p3_data={},
-        i18n_data={},
-        gallery=[x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()],
-        videos=[x for x in (blob.get("video_urls","") or "").split("|") if x.strip()],
-        pdfs=parse_pdf_items(blob.get("pdf_urls","") or ""),
-        limits={"max_imgs": MAX_GALLERY_IMAGES, "max_vids": MAX_VIDEOS, "max_pdfs": MAX_PDFS,
-                "img_mb": MAX_IMAGE_MB, "vid_mb": MAX_VIDEO_MB, "pdf_mb": MAX_PDF_MB}
-    )
-
-
-@app.route("/area/me/p3", methods=["GET", "POST"])
-def me_profile3():
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-
-    if int(ag.p3_enabled or 0) != 1:
-        flash("Profilo 3 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    blob = get_profile_blob(ag, "p3")
-
-    if request.method == "POST":
-        set_profile_data_from_form(blob, request.form)
-        warnings = handle_media_uploads_into_blob(blob, "p3")
-        set_profile_blob(ag, "p3", blob)
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("Profilo 3 salvato!", "ok")
-        for w in warnings:
-            flash(w, "warning")
-        return redirect(url_for("me_profile3"))
-
-    set_profile_blob(ag, "p3", blob)
-    s.commit()
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        editing_profile2=False,
-        editing_profile3=True,
-        is_admin=False,
-        p2_data={},
-        p3_data=blob,
-        i18n_data={},
         gallery=[x for x in (blob.get("gallery_urls","") or "").split("|") if x.strip()],
         videos=[x for x in (blob.get("video_urls","") or "").split("|") if x.strip()],
         pdfs=parse_pdf_items(blob.get("pdf_urls","") or ""),
@@ -1142,10 +982,10 @@ def me_profile3():
 def _activate_profile(ag: Agent, which: str):
     if which == "p2":
         ag.p2_enabled = 1
-        ag.p2_json = "{}"  # vuoto vero
+        ag.p2_json = "{}"
     elif which == "p3":
         ag.p3_enabled = 1
-        ag.p3_json = "{}"  # vuoto vero
+        ag.p3_json = "{}"
     else:
         abort(400)
     ag.updated_at = dt.datetime.utcnow()
@@ -1197,91 +1037,23 @@ def admin_deactivate_profile(slug, which):
     flash(f"{which.upper()} disattivato (svuotato).", "ok")
     return redirect(url_for("dashboard"))
 
-@app.route("/area/me/activate/<which>", methods=["POST"])
-def me_activate_profile(which):
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-
-    _activate_profile(ag, which)
-    s.commit()
-    flash(f"{which.upper()} attivato (vuoto).", "ok")
-    return redirect(url_for("dashboard"))
-
-@app.route("/area/me/deactivate/<which>", methods=["POST"])
-def me_deactivate_profile(which):
-    r = require_login()
-    if r:
-        return r
-    if is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag:
-        abort(404)
-
-    _deactivate_profile(ag, which)
-    s.commit()
-    flash(f"{which.upper()} disattivato (svuotato).", "ok")
-    return redirect(url_for("dashboard"))
-
 
 # ==========================
-# ADMIN: CREDENTIALS
-# ==========================
-@app.route("/area/admin/credentials/<slug>", methods=["POST"])
-def admin_generate_credentials(slug):
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag:
-        abort(404)
-
-    newp = _new_password(10)
-    ag.password_hash = generate_password_hash(newp)
-    ag.updated_at = dt.datetime.utcnow()
-    s.commit()
-
-    session["last_credentials"] = {
-        "slug": ag.slug,
-        "username": ag.username,
-        "password": newp,
-        "ts": dt.datetime.utcnow().isoformat()
-    }
-    return redirect(url_for("dashboard"))
-
-@app.route("/area/admin/send_credentials", methods=["POST"])
-def admin_send_credentials_placeholder():
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-    flash("Invio credenziali via Email/WhatsApp: lo attiviamo dopo con SMTP + WhatsApp.", "warning")
-    return redirect(url_for("dashboard"))
-
-
-# ==========================
-# MEDIA DELETE (P1/P2/P3) - FIX PDF
+# MEDIA DELETE (P1/P2/P3) - ✅ token anti doppia richiesta
 # ==========================
 @app.route("/area/media/delete/<slug>", methods=["POST"])
 def delete_media(slug):
     r = require_login()
     if r:
         return r
+
+    token = (request.form.get("token") or "").strip()
+    if token:
+        if session.get("last_delete_token") == token:
+            # seconda richiesta identica => ignora
+            flash("Operazione già eseguita.", "warning")
+            return redirect(url_for("dashboard"))
+        session["last_delete_token"] = token
 
     t = (request.form.get("type") or "").strip()      # gallery | video | pdf
     idx = int(request.form.get("idx") or -1)
@@ -1312,18 +1084,16 @@ def delete_media(slug):
             items = parse_pdf_items(ag.pdf1_url or "")
             if 0 <= idx < len(items):
                 items.pop(idx)
-            ag.pdf1_url = pack_pdf_items(items)
+            ag.pdf1_url = normalize_pdf_string(pack_pdf_items(items))
         else:
             abort(400)
 
         normalize_media_p1(ag)
-
         ag.updated_at = dt.datetime.utcnow()
         s.commit()
         flash("Eliminato.", "ok")
-        return redirect(url_for("edit_agent", slug=slug) if is_admin() else url_for("me_edit"))
+        return redirect(url_for("edit_agent", slug=slug))
 
-    # P2/P3
     which = "p2" if profile == "p2" else "p3"
     if which == "p2" and int(ag.p2_enabled or 0) != 1:
         abort(400)
@@ -1346,7 +1116,7 @@ def delete_media(slug):
         items = parse_pdf_items(blob.get("pdf_urls","") or "")
         if 0 <= idx < len(items):
             items.pop(idx)
-        blob["pdf_urls"] = pack_pdf_items(items)
+        blob["pdf_urls"] = normalize_pdf_string(pack_pdf_items(items))
     else:
         abort(400)
 
@@ -1355,13 +1125,11 @@ def delete_media(slug):
     s.commit()
     flash("Eliminato.", "ok")
 
-    if is_admin():
-        return redirect(url_for("admin_profile2", slug=slug) if which == "p2" else url_for("admin_profile3", slug=slug))
-    return redirect(url_for("me_profile2") if which == "p2" else url_for("me_profile3"))
+    return redirect(url_for("admin_profile2", slug=slug) if which == "p2" else url_for("admin_profile3", slug=slug))
 
 
 # ==========================
-# QR PNG + VCF (come prima)
+# QR PNG + VCF + CARD (resto invariato)
 # ==========================
 @app.route("/qr/<slug>.png")
 def qr_png(slug):
@@ -1433,11 +1201,9 @@ def vcf(slug):
     )
 
 
-# ==========================
-# CARD PUBLIC
-# ==========================
 @app.route("/<slug>")
 def card(slug):
+    # invariato (qui non tocco grafica/template)
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
@@ -1458,8 +1224,6 @@ def card(slug):
     if use_p3:
         blob = get_profile_blob(ag, "p3")
 
-    # NB: qui NON cambio grafica del template card.html.
-    # Passo solo i dati corretti, inclusi media/effects separati per P2/P3.
     if blob:
         photo_url = blob.get("photo_url","")
         logo_url = blob.get("logo_url","")
@@ -1480,7 +1244,6 @@ def card(slug):
         videos = [x for x in (blob.get("video_urls","") or "").split("|") if x.strip()]
         pdfs = parse_pdf_items(blob.get("pdf_urls","") or "")
 
-        # testi/contatti dal blob
         override = blob
     else:
         photo_url = ag.photo_url
@@ -1503,7 +1266,6 @@ def card(slug):
 
         override = None
 
-    # Per compatibilità con card.html esistente
     class Obj(dict):
         __getattr__ = dict.get
 
