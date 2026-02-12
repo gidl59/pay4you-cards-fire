@@ -127,7 +127,7 @@
 
             <!-- ✅ unico riquadro con 3 quadrati -->
             <div style="margin-top:10px; padding:10px; border-radius:16px; background:rgba(0,0,0,.04);">
-              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+              <div style="display:grid; grid-template-columns:repeat(3, 92px); gap:10px; justify-content:start;">
                 <!-- FOTO -->
                 <div style="display:flex; flex-direction:column; gap:6px;">
                   <div class="hint" style="margin:0; font-weight:600;">Foto profilo</div>
@@ -360,7 +360,7 @@
               <div class="media-grid" style="margin-top:10px">
                 {% for v in videos %}
                   <div class="media-item">
-                    <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
+                   <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
                            onclick="openViewer('video','{{ v }}','{{ agent.slug }}',{{ loop.index0 }})"></video>
                     <div class="media-play">▶</div>
                   </div>
