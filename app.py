@@ -514,6 +514,44 @@ def dashboard():
 # ==========================
 # RESET PDF (ADMIN)
 # ==========================
+@app.route("/area/admin/purge_pdfs")
+def purge_pdfs_all():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    # 1) cancella TUTTI i file fisici nella cartella /pdf
+    try:
+        for p in SUBDIR_PDF.glob("*"):
+            if p.is_file():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 2) reset DB: P1 + P2 + P3
+    s = db()
+    agents = s.query(Agent).all()
+    for ag in agents:
+        ag.pdf1_url = ""
+
+        b2 = get_profile_blob(ag, "p2")
+        b3 = get_profile_blob(ag, "p3")
+        b2["pdf_urls"] = ""
+        b3["pdf_urls"] = ""
+        set_profile_blob(ag, "p2", b2)
+        set_profile_blob(ag, "p3", b3)
+
+        ag.updated_at = dt.datetime.utcnow()
+
+    s.commit()
+    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
+    return redirect(url_for("dashboard"))
+
 @app.route("/area/admin/reset_pdfs")
 def reset_pdfs_all():
     r = require_login()
