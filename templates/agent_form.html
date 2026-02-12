@@ -78,7 +78,7 @@
         {% set d = p2_data if editing_profile2 else (p3_data if editing_profile3 else agent) %}
         {% set isP = (editing_profile2 or editing_profile3) %}
 
-        <form method="post" enctype="multipart/form-data" class="card-form">
+        <form method="post" enctype="multipart/form-data" class="card-form" id="mainForm">
 
           {% if agent %}
           <div class="section-box">
@@ -139,11 +139,15 @@
                     —
                   {% endif %}
                 </div>
-                <div class="dash-mini-grid" style="margin-top:8px">
-                  <img id="photoPreview" class="dash-mini"
-                       src="{{ (d.photo_url if not isP else d.get('photo_url','')) }}"
-                       alt=""
-                       style="{% if not (d.photo_url if not isP else d.get('photo_url','')) %}display:none{% endif %}">
+
+                <!-- ✅ preview quadrata con tutta la foto -->
+                <div style="margin-top:8px">
+                  <div style="width:110px;height:110px;border-radius:14px;overflow:hidden;background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;">
+                    <img id="photoPreview"
+                         src="{{ (d.photo_url if not isP else d.get('photo_url','')) }}"
+                         alt=""
+                         style="width:100%;height:100%;object-fit:contain;{% if not (d.photo_url if not isP else d.get('photo_url','')) %}display:none{% endif %}">
+                  </div>
                 </div>
               </div>
 
@@ -158,11 +162,15 @@
                     —
                   {% endif %}
                 </div>
-                <div class="dash-mini-grid" style="margin-top:8px">
-                  <img id="logoPreview" class="dash-mini"
-                       src="{{ (d.logo_url if not isP else d.get('logo_url','')) }}"
-                       alt=""
-                       style="{% if not (d.logo_url if not isP else d.get('logo_url','')) %}display:none{% endif %}">
+
+                <!-- ✅ preview quadrata con tutta la foto -->
+                <div style="margin-top:8px">
+                  <div style="width:110px;height:110px;border-radius:14px;overflow:hidden;background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;">
+                    <img id="logoPreview"
+                         src="{{ (d.logo_url if not isP else d.get('logo_url','')) }}"
+                         alt=""
+                         style="width:100%;height:100%;object-fit:contain;{% if not (d.logo_url if not isP else d.get('logo_url','')) %}display:none{% endif %}">
+                  </div>
                 </div>
               </div>
 
@@ -177,11 +185,15 @@
                     —
                   {% endif %}
                 </div>
-                <div class="dash-mini-grid" style="margin-top:8px">
-                  <img id="backPreview" class="dash-mini"
-                       src="{{ (d.back_media_url if not isP else d.get('back_media_url','')) }}"
-                       alt=""
-                       style="{% if not (d.back_media_url if not isP else d.get('back_media_url','')) %}display:none{% endif %}">
+
+                <!-- ✅ preview quadrata con tutta la foto -->
+                <div style="margin-top:8px">
+                  <div style="width:110px;height:110px;border-radius:14px;overflow:hidden;background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;">
+                    <img id="backPreview"
+                         src="{{ (d.back_media_url if not isP else d.get('back_media_url','')) }}"
+                         alt=""
+                         style="width:100%;height:100%;object-fit:contain;{% if not (d.back_media_url if not isP else d.get('back_media_url','')) %}display:none{% endif %}">
+                  </div>
                 </div>
               </div>
             </div>
@@ -287,7 +299,7 @@
             </div>
           </div>
 
-          <!-- ===================== SOCIAL (ISTRUZIONI) ===================== -->
+          <!-- ===================== SOCIAL ===================== -->
           <div class="section-box">
             <div class="h3">Social</div>
             <div class="hint">Inserisci URL completi. Se non è un URL valido, non verrà mostrato sulla card.</div>
@@ -331,7 +343,7 @@
             </div>
           </div>
 
-          <!-- ===================== MEDIA (ORA ANCHE IN P2/P3) ===================== -->
+          <!-- ===================== MEDIA ===================== -->
           <div class="section-box">
             <div class="h3">Media</div>
             <div class="hint">
@@ -416,8 +428,7 @@
             </div>
           </div>
 
-          <!-- ===================== TRADUZIONI (solo P1) ===================== -->
-          {% if not isP %}
+          <!-- ===================== TRADUZIONI (✅ ORA ANCHE P2/P3) ===================== -->
           <div class="section-box">
             <div class="h3">Traduzioni</div>
             <div class="hint">Clicca per aprire i campi completi.</div>
@@ -479,10 +490,9 @@
             </details>
 
           </div>
-          {% endif %}
 
           <div class="sticky-save">
-            <button class="btn primary" type="submit">Salva</button>
+            <button class="btn primary" type="submit" id="saveBtn">Salva</button>
             <a class="btn" href="/area">Annulla</a>
           </div>
 
@@ -526,7 +536,18 @@
     return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
   }
 
-  // ===== ANTEPRIMA FILE INPUT (logo/foto/back) =====
+  // ===== BLOCCO DOPPIO SUBMIT (aiuta PDF duplicati in upload) =====
+  (function(){
+    const form = document.getElementById('mainForm');
+    const btn  = document.getElementById('saveBtn');
+    if(!form || !btn) return;
+    form.addEventListener('submit', () => {
+      btn.disabled = true;
+      btn.textContent = "Salvataggio...";
+    });
+  })();
+
+  // ===== ANTEPRIMA FILE INPUT =====
   function bindPreview(inputId, imgId){
     const inp = document.getElementById(inputId);
     const img = document.getElementById(imgId);
@@ -540,7 +561,7 @@
     });
   }
 
-  // ===== CROP (background-position) =====
+  // ===== CROP =====
   function setupCrop(){
     const box = document.getElementById('cropCircleBg');
     if(!box) return;
@@ -693,16 +714,23 @@
 
     const i1 = document.createElement('input');
     i1.type = 'hidden'; i1.name = 'type'; i1.value = type;
+
     const i2 = document.createElement('input');
     i2.type = 'hidden'; i2.name = 'idx'; i2.value = String(idx);
 
-    // profilo corrente (p1/p2/p3)
     const prof = document.createElement('input');
-    prof.type = 'hidden'; prof.name = 'profile'; prof.value = '{{ "p2" if editing_profile2 else ("p3" if editing_profile3 else "p1") }}';
+    prof.type = 'hidden'; prof.name = 'profile';
+    prof.value = '{{ "p2" if editing_profile2 else ("p3" if editing_profile3 else "p1") }}';
+
+    // ✅ token anti-doppio click (per evita duplicazioni su delete)
+    const tok = document.createElement('input');
+    tok.type = 'hidden'; tok.name = 'token';
+    tok.value = String(Date.now()) + "-" + Math.random().toString(16).slice(2);
 
     form.appendChild(i1);
     form.appendChild(i2);
     form.appendChild(prof);
+    form.appendChild(tok);
     document.body.appendChild(form);
     form.submit();
   }
