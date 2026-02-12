@@ -289,17 +289,11 @@ def join_pipe_list(items):
 def canon_url(u: str) -> str:
     """
     Normalizza qualsiasi variante in una forma coerente /uploads/...
-    - "uploads/pdf/x.pdf"   -> "/uploads/pdf/x.pdf"
-    - "/uploads/pdf/x.pdf"  -> "/uploads/pdf/x.pdf"
-    - "pdf/x.pdf"           -> "/uploads/pdf/x.pdf"
-    - "images/x.jpg"        -> "/uploads/images/x.jpg"
-    - "videos/x.mp4"        -> "/uploads/videos/x.mp4"
     """
     u = (u or "").strip()
     if not u:
         return ""
 
-    # già assoluta http(s)
     if re.match(r"^https?://", u, re.I):
         return u
 
@@ -309,11 +303,9 @@ def canon_url(u: str) -> str:
     if u.startswith("uploads/"):
         return "/" + u
 
-    # gestione legacy: "pdf/..", "images/..", "videos/.."
     if u.startswith("pdf/") or u.startswith("images/") or u.startswith("videos/"):
         return "/uploads/" + u
 
-    # se arriva "/pdf/.." ecc.
     if u.startswith("/pdf/") or u.startswith("/images/") or u.startswith("/videos/"):
         return "/uploads" + u
 
@@ -335,6 +327,15 @@ def normalize_pdf_item(item: str):
         return ((nm or "").strip(), (url or "").strip())
     return ("", item)
 
+# ✅ FIX MIRATO: accetta SOLO pdf veri (evita "uploads" junk e duplicazioni strane)
+def _is_valid_pdf_url(u: str) -> bool:
+    u = (u or "").strip()
+    if not u:
+        return False
+    if re.match(r"^https?://", u, re.I):
+        return u.lower().endswith(".pdf")
+    return u.startswith("/uploads/pdf/") and u.lower().endswith(".pdf")
+
 def clean_pdf_pipe(raw: str) -> str:
     items = parse_pipe_list(raw or "")
     out = []
@@ -342,13 +343,20 @@ def clean_pdf_pipe(raw: str) -> str:
     for it in items:
         nm, url = normalize_pdf_item(it)
         url = canon_url(url)
-        if not url:
+
+        # ✅ SOLO pdf veri
+        if not _is_valid_pdf_url(url):
             continue
+
         if url in seen:
             continue
         seen.add(url)
+
         nm = (nm or "").strip() or pdf_name_from_url(url)
         out.append(f"{nm}||{url}")
+
+    # ✅ limite massimo
+    out = out[:MAX_PDFS]
     return join_pipe_list(out)
 
 def clean_media_pipe(raw: str) -> str:
@@ -592,6 +600,7 @@ def handle_media_uploads_common(data: dict):
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
+        # ✅ pulizia + limite + dedupe
         data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
 def handle_media_uploads_p1(agent: Agent):
@@ -633,6 +642,7 @@ def handle_media_uploads_p1(agent: Agent):
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
+        # ✅ pulizia + limite + dedupe
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
 
@@ -1238,6 +1248,174 @@ def qr_png(slug):
     img.save(buf, format="PNG")
     buf.seek(0)
     return Response(buf.getvalue(), mimetype="image/png")
+
+
+# ==========================
+# ✅ FIX MIRATO: PAGINA PUBBLICA CARD /<slug> (Apri P1/P2/P3 NO 404)
+# ==========================
+def _t_func_factory(lang: str = "it"):
+    it = {
+        "actions": "Azioni",
+        "scan_qr": "Apri QR",
+        "whatsapp": "WhatsApp",
+        "contacts": "Contatti",
+        "mobile_phone": "Telefono",
+        "office_phone": "Telefono ufficio",
+        "open_website": "Sito",
+        "open_maps": "Apri Maps",
+        "data": "Dati aziendali",
+        "vat": "P.IVA",
+        "sdi": "SDI",
+        "gallery": "Galleria",
+        "videos": "Video",
+        "documents": "Documenti",
+    }
+    def t(k):
+        return it.get(k, k)
+    return t
+
+def _split_lines(s: str):
+    out = []
+    for ln in (s or "").splitlines():
+        ln = (ln or "").strip()
+        if ln:
+            out.append(ln)
+    return out
+
+def _split_commas(s: str):
+    out = []
+    for x in (s or "").split(","):
+        x = (x or "").strip()
+        if x:
+            out.append(x)
+    return out
+
+def _make_wa_link(v: str):
+    v = (v or "").strip()
+    if not v:
+        return ""
+    if v.startswith("http://") or v.startswith("https://") or v.startswith("wa.me"):
+        if v.startswith("wa.me"):
+            return "https://" + v
+        return v
+    # numero: +39...
+    num = re.sub(r"[^\d+]", "", v)
+    if num.startswith("+"):
+        num2 = num[1:]
+    else:
+        num2 = num
+    if not num2:
+        return ""
+    return f"https://wa.me/{num2}"
+
+def _parse_pdfs(raw_pdf_pipe: str):
+    items = parse_pipe_list(clean_pdf_pipe(raw_pdf_pipe or ""))
+    out = []
+    for it in items:
+        nm, url = normalize_pdf_item(it)
+        url = canon_url(url)
+        if not _is_valid_pdf_url(url):
+            continue
+        nm = (nm or "").strip() or pdf_name_from_url(url)
+        out.append({"name": nm, "url": url})
+    return out
+
+@app.route("/<slug>", methods=["GET"])
+def public_card(slug):
+    profile = (request.args.get("p") or "p1").strip().lower()
+    if profile not in ["p1", "p2", "p3"]:
+        profile = "p1"
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    # blocco accesso P2/P3 se non attivi
+    if profile == "p2" and int(ag.p2_enabled or 0) != 1:
+        abort(404)
+    if profile == "p3" and int(ag.p3_enabled or 0) != 1:
+        abort(404)
+
+    data = get_profile_data(ag, profile)
+
+    # usa il template CARD che mi hai dato (card.html), ma lui usa "ag"
+    # quindi costruiamo "ag" con i campi della card (senza cambiare il template)
+    class Obj: pass
+    ag_view = Obj()
+    # campi testuali
+    ag_view.slug = ag.slug
+    ag_view.name = data.get("name", "") or ag.name or ""
+    ag_view.company = data.get("company", "") or ""
+    ag_view.role = data.get("role", "") or ""
+    ag_view.bio = data.get("bio", "") or ""
+    ag_view.piva = data.get("piva", "") or ""
+    ag_view.sdi = data.get("sdi", "") or ""
+
+    # media / effetti
+    ag_view.photo_url = canon_url(data.get("photo_url", "") or "")
+    ag_view.logo_url = canon_url(data.get("logo_url", "") or "")
+    ag_view.back_media_url = canon_url(data.get("back_media_url", "") or "")
+
+    ag_view.photo_pos_x = int(data.get("photo_pos_x", 50) or 50)
+    ag_view.photo_pos_y = int(data.get("photo_pos_y", 35) or 35)
+    ag_view.photo_zoom = (data.get("photo_zoom", "1.0") or "1.0")
+
+    ag_view.orbit_spin = int(data.get("orbit_spin", 0) or 0)
+    ag_view.avatar_spin = int(data.get("avatar_spin", 0) or 0)
+    ag_view.logo_spin = int(data.get("logo_spin", 0) or 0)
+    ag_view.allow_flip = int(data.get("allow_flip", 0) or 0)
+
+    # contatti
+    mobiles = []
+    if (data.get("phone_mobile") or "").strip():
+        mobiles.append((data.get("phone_mobile") or "").strip())
+    if (data.get("phone_mobile2") or "").strip():
+        mobiles.append((data.get("phone_mobile2") or "").strip())
+    office_value = (data.get("phone_office") or "").strip()
+
+    emails = _split_commas(data.get("emails") or "")
+    websites = _split_commas(data.get("websites") or "")
+    wa_link = _make_wa_link(data.get("whatsapp") or "")
+
+    # indirizzi
+    addresses = []
+    for a in _split_lines(data.get("addresses") or ""):
+        q = re.sub(r"\s+", "+", a.strip())
+        addresses.append({
+            "text": a,
+            "maps": f"https://www.google.com/maps/search/?api=1&query={q}"
+        })
+
+    # gallery / videos / pdfs
+    gallery = [canon_url(x) for x in parse_pipe_list(clean_media_pipe(data.get("gallery_urls") or ""))]
+    videos = [canon_url(x) for x in parse_pipe_list(clean_media_pipe(data.get("video_urls") or ""))]
+    pdfs = _parse_pdfs(data.get("pdf_urls") or "")
+
+    lang = "it"
+    t_func = _t_func_factory(lang)
+
+    base = public_base_url()
+    qr_url = f"{base}/qr/{ag.slug}.png"
+    if profile in ["p2", "p3"]:
+        qr_url = f"{base}/qr/{ag.slug}.png?p={profile}"
+
+    return render_template(
+        "card.html",
+        ag=ag_view,
+        lang=lang,
+        t_func=t_func,
+        qr_url=qr_url,
+        wa_link=wa_link,
+        mobiles=mobiles,
+        office_value=office_value,
+        emails=emails,
+        websites=websites,
+        addresses=addresses,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+    )
 
 
 @app.route("/")
