@@ -110,20 +110,51 @@
           <div class="section-box">
             <div class="h3">Foto profilo + Logo + Foto dietro</div>
 
-            <div class="form-grid">
-              <div class="field">
-                <label>Carica foto profilo</label>
-                <input id="photoInput" type="file" name="photo" accept="image/*">
-              </div>
-              <div class="field">
-                <label>Carica logo</label>
-                <input id="logoInput" type="file" name="logo" accept="image/*">
-              </div>
-              <div class="field">
-                <label>Carica foto dietro</label>
-                <input id="backInput" type="file" name="back_media" accept="image/*">
-              </div>
-            </div>
+            <div class="upload-rect">
+  <div class="upload-grid">
+
+    <div class="upload-item">
+      <label>Foto profilo</label>
+      <input id="photoInput" type="file" name="photo" accept="image/*">
+
+      <div class="preview150">
+        {% if data.get("photo_url") %}
+          <img id="prevPhoto" src="{{ data.get('photo_url') }}" alt="">
+        {% else %}
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.7;font-weight:900;">Foto</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="upload-item">
+      <label>Logo</label>
+      <input id="logoInput" type="file" name="logo" accept="image/*">
+
+      <div class="preview150">
+        {% if data.get("logo_url") %}
+          <img id="prevLogo" src="{{ data.get('logo_url') }}" alt="">
+        {% else %}
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.7;font-weight:900;">Logo</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="upload-item">
+      <label>Foto dietro</label>
+      <input id="backInput" type="file" name="back_media" accept="image/*">
+
+      <div class="preview150">
+        {% if data.get("back_media_url") %}
+          <img id="prevBack" src="{{ data.get('back_media_url') }}" alt="">
+        {% else %}
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.7;font-weight:900;">Dietro</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
             <!-- anteprime -->
             <div style="margin-top:10px; padding:10px; border-radius:16px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.10);">
