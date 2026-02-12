@@ -64,11 +64,6 @@
 
         <form method="post" enctype="multipart/form-data" class="card-form">
 
-          <!-- ✅ hidden sempre presenti: così non spariscono gallerie/pdf al Salva -->
-          <input type="hidden" id="gallery_urls" name="gallery_urls" value="{{ data.get('gallery_urls','') }}">
-          <input type="hidden" id="video_urls" name="video_urls" value="{{ data.get('video_urls','') }}">
-          <input type="hidden" id="pdf_urls" name="pdf_urls" value="{{ data.get('pdf_urls','') }}">
-
           {% if agent %}
           <div class="section-box">
             <div class="h3">Identificativo</div>
@@ -125,7 +120,7 @@
             </div>
 
             <div style="margin-top:10px; padding:10px; border-radius:16px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.10);">
-              <div class="hint" style="margin-bottom:8px">Anteprime attuali (si aggiornano anche quando scegli un nuovo file)</div>
+              <div class="hint" style="margin-bottom:8px">Anteprime attuali</div>
 
               <div style="display:grid; grid-template-columns:repeat(3, 150px); gap:10px; justify-content:start;">
                 <div style="width:150px; height:150px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18);">
@@ -190,122 +185,95 @@
                 <label><input type="checkbox" name="orbit_spin" {% if data.get('orbit_spin',0) == 1 %}checked{% endif %}> Ruota orbita</label>
               </div>
               <div class="field">
-                <label><input id="ckAvatar" type="checkbox" name="avatar_spin" {% if data.get('avatar_spin',0) == 1 %}checked{% endif %}> Ruota foto</label>
+                <label><input type="checkbox" name="avatar_spin" {% if data.get('avatar_spin',0) == 1 %}checked{% endif %}> Ruota foto</label>
               </div>
               <div class="field">
                 <label><input type="checkbox" name="logo_spin" {% if data.get('logo_spin',0) == 1 %}checked{% endif %}> Ruota logo</label>
               </div>
               <div class="field">
-                <label><input id="ckFlip" type="checkbox" name="allow_flip" {% if data.get('allow_flip',0) == 1 %}checked{% endif %}> Flip card</label>
+                <label><input type="checkbox" name="allow_flip" {% if data.get('allow_flip',0) == 1 %}checked{% endif %}> Flip card</label>
               </div>
             </div>
           </div>
 
-          <!-- ===================== GALLERIA FOTO ===================== -->
+          <!-- ===================== GALLERIE FOTO/VIDEO ===================== -->
           <div class="section-box">
             <div class="h3">Galleria Foto</div>
-            <div class="hint">Carica più immagini. Verranno aggiunte alle foto già presenti.</div>
 
             <div class="form-grid">
               <div class="field full">
-                <label>Aggiungi foto</label>
-                <input type="file" name="gallery_files" accept="image/*" multiple>
+                <label>Aggiungi foto (multiple)</label>
+                <input type="file" name="gallery_images" accept="image/*" multiple>
+                <div class="hint">Le foto si aprono cliccando sull’anteprima (come prima).</div>
               </div>
             </div>
 
-            <div style="margin-top:10px;">
-              {% set imgs = (data.get('gallery_urls','') or '').split('|') %}
-              {% set imgs2 = [] %}
-              {% for x in imgs %}
-                {% if x and x.strip() %}
-                  {% set _ = imgs2.append(x) %}
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+              {% set imgs = (data.get("gallery_urls","") or "").split("|") %}
+              {% for g in imgs %}
+                {% if g and g.strip() %}
+                  <button type="button"
+                    class="media-thumb-btn"
+                    data-kind="img"
+                    data-url="{{ g }}"
+                    style="all:unset; cursor:pointer; width:110px; height:110px; display:block;">
+                    <img src="{{ g }}" style="width:110px; height:110px; object-fit:cover; border-radius:14px; border:1px solid rgba(255,255,255,.10);" alt="">
+                  </button>
                 {% endif %}
               {% endfor %}
-
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                {% for g in imgs2 %}
-                  <div style="width:110px;">
-                    <div style="width:110px; height:110px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18);">
-                      <img src="{{ g }}" style="width:100%; height:100%; object-fit:cover;" alt="">
-                    </div>
-                    {% if agent %}
-                      <a class="btn-mini danger" style="margin-top:6px; display:inline-block;"
-                         href="/area/media/delete/{{ agent.slug }}/{{ 'p1' if profile_label=='Profilo 1' else ('p2' if profile_label=='Profilo 2' else 'p3') }}?kind=img&url={{ g|urlencode }}">
-                        Elimina
-                      </a>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-                {% if imgs2|length == 0 %}
-                  <div class="hint">Nessuna foto in galleria.</div>
-                {% endif %}
-              </div>
+              {% if imgs|length == 0 %}
+                <div class="hint">—</div>
+              {% endif %}
             </div>
           </div>
 
-          <!-- ===================== GALLERIA VIDEO ===================== -->
           <div class="section-box">
             <div class="h3">Galleria Video</div>
-            <div class="hint">Carica video MP4/WEBM/MOV. Verranno aggiunti ai video già presenti.</div>
 
             <div class="form-grid">
               <div class="field full">
-                <label>Aggiungi video</label>
-                <input type="file" name="video_files" accept="video/*" multiple>
+                <label>Aggiungi video (multiple)</label>
+                <input type="file" name="gallery_videos" accept="video/*" multiple>
               </div>
             </div>
 
-            <div style="margin-top:10px;">
-              {% set vids = (data.get('video_urls','') or '').split('|') %}
-              {% set vids2 = [] %}
-              {% for x in vids %}
-                {% if x and x.strip() %}
-                  {% set _ = vids2.append(x) %}
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+              {% set vids = (data.get("video_urls","") or "").split("|") %}
+              {% for v in vids %}
+                {% if v and v.strip() %}
+                  <button type="button"
+                    class="media-thumb-btn"
+                    data-kind="vid"
+                    data-url="{{ v }}"
+                    style="all:unset; cursor:pointer; display:block;">
+                    <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"
+                      style="width:180px; border-radius:14px; border:1px solid rgba(255,255,255,.10); background:black;"></video>
+                  </button>
                 {% endif %}
               {% endfor %}
-
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                {% for v in vids2 %}
-                  <div style="width:180px;">
-                    <video src="{{ v }}#t=0.1" controls playsinline style="width:180px; border-radius:14px; border:1px solid rgba(255,255,255,.10);"></video>
-                    {% if agent %}
-                      <a class="btn-mini danger" style="margin-top:6px; display:inline-block;"
-                         href="/area/media/delete/{{ agent.slug }}/{{ 'p1' if profile_label=='Profilo 1' else ('p2' if profile_label=='Profilo 2' else 'p3') }}?kind=vid&url={{ v|urlencode }}">
-                        Elimina
-                      </a>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-                {% if vids2|length == 0 %}
-                  <div class="hint">Nessun video in galleria.</div>
-                {% endif %}
-              </div>
+              {% if vids|length == 0 %}
+                <div class="hint">—</div>
+              {% endif %}
             </div>
           </div>
 
           <!-- ===================== PDF ===================== -->
           <div class="section-box">
-            <div class="h3">Documenti PDF</div>
-            <div class="hint">Carica uno o più PDF. Saranno cliccabili e apribili.</div>
+            <div class="h3">PDF</div>
 
             <div class="form-grid">
               <div class="field full">
-                <label>Aggiungi PDF</label>
+                <label>Aggiungi PDF (multiple)</label>
                 <input type="file" name="pdf_files" accept="application/pdf" multiple>
               </div>
             </div>
 
-            <div style="margin-top:10px;">
-              {% set pdfs = (data.get('pdf_urls','') or '').split('|') %}
-              {% set pdfs2 = [] %}
-              {% for x in pdfs %}
-                {% if x and x.strip() %}
-                  {% set _ = pdfs2.append(x) %}
-                {% endif %}
-              {% endfor %}
-
-              <div style="display:flex; flex-direction:column; gap:8px;">
-                {% for p in pdfs2 %}
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+              {% set pdfs = (data.get("pdf_urls","") or "").split("|") %}
+              {% set any_pdf = false %}
+              {% for p in pdfs %}
+                {% if p and p.strip() %}
+                  {% set any_pdf = true %}
                   {% if "||" in p %}
                     {% set nm = p.split("||")[0] %}
                     {% set u = p.split("||")[1] %}
@@ -313,22 +281,17 @@
                     {% set nm = p %}
                     {% set u = p %}
                   {% endif %}
-
-                  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <a class="btn-mini ghost" target="_blank" href="{{ u }}">{{ nm }}</a>
-                    {% if agent %}
-                      <a class="btn-mini danger"
-                         href="/area/media/delete/{{ agent.slug }}/{{ 'p1' if profile_label=='Profilo 1' else ('p2' if profile_label=='Profilo 2' else 'p3') }}?kind=pdf&url={{ u|urlencode }}">
-                        Elimina
-                      </a>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-
-                {% if pdfs2|length == 0 %}
-                  <div class="hint">Nessun PDF caricato.</div>
+                  <button type="button"
+                    class="pdf-open-btn"
+                    data-url="{{ u }}"
+                    style="text-align:left; width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.10); color:inherit; cursor:pointer;">
+                    📄 {{ nm }}
+                  </button>
                 {% endif %}
-              </div>
+              {% endfor %}
+              {% if not any_pdf %}
+                <div class="hint">—</div>
+              {% endif %}
             </div>
           </div>
 
@@ -372,7 +335,6 @@
             </div>
           </div>
 
-          <!-- ===================== DATI AZIENDALI ===================== -->
           <div class="section-box">
             <div class="h3">Dati aziendali</div>
             <div class="form-grid">
@@ -387,23 +349,49 @@
             </div>
           </div>
 
-          <!-- ===================== SOCIAL ===================== -->
           <div class="section-box">
             <div class="h3">Social</div>
             <div class="hint">Inserisci URL completi (se non valido non verrà mostrato).</div>
 
             <div class="form-grid">
-              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ data.get('facebook','') }}"></div>
-              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ data.get('instagram','') }}"></div>
-              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ data.get('linkedin','') }}"></div>
-              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ data.get('tiktok','') }}"></div>
-              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ data.get('telegram','') }}"></div>
-              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ data.get('youtube','') }}"></div>
-              <div class="field"><label>Spotify</label><input type="text" name="spotify" value="{{ data.get('spotify','') }}"></div>
+              <div class="field">
+                <label>Facebook</label>
+                <input type="text" name="facebook" value="{{ data.get('facebook','') }}">
+                <div class="hint">Esempio: https://www.facebook.com/yourpage</div>
+              </div>
+              <div class="field">
+                <label>Instagram</label>
+                <input type="text" name="instagram" value="{{ data.get('instagram','') }}">
+                <div class="hint">Esempio: https://www.instagram.com/yourprofile</div>
+              </div>
+              <div class="field">
+                <label>LinkedIn</label>
+                <input type="text" name="linkedin" value="{{ data.get('linkedin','') }}">
+                <div class="hint">Esempio: https://www.linkedin.com/in/yourprofile</div>
+              </div>
+              <div class="field">
+                <label>TikTok</label>
+                <input type="text" name="tiktok" value="{{ data.get('tiktok','') }}">
+                <div class="hint">Esempio: https://www.tiktok.com/@yourprofile</div>
+              </div>
+              <div class="field">
+                <label>Telegram</label>
+                <input type="text" name="telegram" value="{{ data.get('telegram','') }}">
+                <div class="hint">Esempio: https://t.me/username</div>
+              </div>
+              <div class="field">
+                <label>YouTube</label>
+                <input type="text" name="youtube" value="{{ data.get('youtube','') }}">
+                <div class="hint">Esempio: https://www.youtube.com/@channel</div>
+              </div>
+              <div class="field">
+                <label>Spotify</label>
+                <input type="text" name="spotify" value="{{ data.get('spotify','') }}">
+                <div class="hint">Esempio: https://open.spotify.com/artist/...</div>
+              </div>
             </div>
           </div>
 
-          <!-- ===================== TRADUZIONI ===================== -->
           {% if show_i18n %}
           <div class="section-box">
             <div class="h3">Traduzioni</div>
@@ -475,11 +463,38 @@
   </main>
 </div>
 
+<!-- MEDIA MODAL -->
+<div id="mediaModal" class="modal-overlay" style="display:none" onclick="overlayCloseMedia(event)">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:920px;">
+    <button class="modal-x" type="button" onclick="closeMediaModal()">✕</button>
+    <div class="modal-title" id="mediaTitle">Media</div>
+
+    <div id="mediaBody" style="margin-top:12px;"></div>
+
+    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn" type="button" onclick="shareMedia('whatsapp')">Invia WhatsApp</button>
+      <button class="btn" type="button" onclick="shareMedia('email')">Invia Email</button>
+
+      {% if agent %}
+        <button class="btn danger" type="button" onclick="deleteMedia()">Elimina</button>
+        <a class="btn ghost" target="_blank" href="/{{ agent.slug }}">Torna alla Card</a>
+      {% endif %}
+
+      <button class="btn ghost" type="button" onclick="closeMediaModal()">Chiudi</button>
+    </div>
+
+    <input type="hidden" id="mmKind" value="">
+    <input type="hidden" id="mmUrl" value="">
+    <input type="hidden" id="mmDeleteHref" value="">
+  </div>
+</div>
+
 <script>
   function bindPreview(inputId, imgId){
     const inp = document.getElementById(inputId);
     const img = document.getElementById(imgId);
     if(!inp || !img) return;
+
     inp.addEventListener('change', () => {
       const f = inp.files && inp.files[0];
       if(!f) return;
@@ -488,6 +503,26 @@
     });
   }
 
+  function absUrl(u){
+    if(!u) return '';
+    if(/^https?:\/\//i.test(u)) return u;
+    const base = window.location.origin;
+    if(u.startsWith('/')) return base + u;
+    return base + '/' + u;
+  }
+
+  function gmailCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
+  }
+  function outlookCompose(subject, body){
+    const su = encodeURIComponent(subject || "");
+    const bd = encodeURIComponent(body || "");
+    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
+  }
+
+  // crop apply
   document.addEventListener('DOMContentLoaded', () => {
     bindPreview('photoInput','prevPhoto');
     bindPreview('logoInput','prevLogo');
@@ -536,7 +571,100 @@
         apply();
       });
     }
+
+    // bind media thumbs
+    document.querySelectorAll('.media-thumb-btn').forEach(btn => {
+      btn.addEventListener('click', () => openMediaModal(btn.dataset.kind, btn.dataset.url));
+    });
+
+    // bind pdf
+    document.querySelectorAll('.pdf-open-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        openPdfModal(b.dataset.url);
+      });
+    });
   });
+
+  function overlayCloseMedia(e){
+    if(e.target && e.target.id === "mediaModal"){
+      closeMediaModal();
+    }
+  }
+  function closeMediaModal(){
+    const m = document.getElementById('mediaModal');
+    if(m) m.style.display = 'none';
+    const body = document.getElementById('mediaBody');
+    if(body) body.innerHTML = '';
+  }
+
+  function openMediaModal(kind, url){
+    const m = document.getElementById('mediaModal');
+    const t = document.getElementById('mediaTitle');
+    const body = document.getElementById('mediaBody');
+
+    document.getElementById('mmKind').value = kind;
+    document.getElementById('mmUrl').value = url;
+
+    const abs = absUrl(url);
+    t.textContent = (kind === 'img') ? 'Foto' : 'Video';
+
+    if(kind === 'img'){
+      body.innerHTML = `<img src="${abs}" alt="" style="width:100%; max-height:65vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.12);">`;
+    } else {
+      body.innerHTML = `<video src="${abs}" controls playsinline style="width:100%; max-height:65vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:black;"></video>`;
+    }
+
+    {% if agent %}
+      const profile =
+        ("{{ profile_label }}" === "Profilo 1") ? "p1" :
+        ("{{ profile_label }}" === "Profilo 2") ? "p2" : "p3";
+
+      const kindParam = (kind === 'img') ? 'img' : 'vid';
+      const del = `/area/media/delete/{{ agent.slug }}/${profile}?kind=${kindParam}&url=` + encodeURIComponent(url);
+      document.getElementById('mmDeleteHref').value = del;
+    {% endif %}
+
+    m.style.display = 'flex';
+  }
+
+  function openPdfModal(url){
+    // PDF apre in nuova tab (come prima)
+    const abs = absUrl(url);
+    window.open(abs, "_blank");
+  }
+
+  function shareMedia(channel){
+    const kind = document.getElementById('mmKind').value;
+    const url = document.getElementById('mmUrl').value;
+    const media = absUrl(url);
+
+    const msg = [
+      `Pay4You ${kind === 'img' ? 'Foto' : 'Video'}`,
+      `Link: ${media}`
+    ].join("\r\n");
+
+    if(channel === 'whatsapp'){
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+      return;
+    }
+
+    const subject = `Pay4You ${kind === 'img' ? 'Foto' : 'Video'}`;
+    const g = gmailCompose(subject, msg);
+    const w = window.open(g, '_blank');
+    if(!w){
+      window.open(outlookCompose(subject, msg), '_blank');
+    }
+  }
+
+  function deleteMedia(){
+    const href = document.getElementById('mmDeleteHref').value;
+    if(!href) return;
+
+    if(!confirm("Sei sicuro di eliminare questo file?")) return;
+    if(!confirm("Conferma eliminazione DEFINITIVA.")) return;
+
+    window.location.href = href;
+  }
 </script>
 
 </body>
