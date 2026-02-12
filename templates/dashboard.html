@@ -25,7 +25,6 @@
       {% if is_admin %}
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
 
-        <!-- ✅ NUOVO: PULIZIA DB PDF (NON cancella file) -->
         <form class="inline" method="post" action="/area/admin/clean_pdf_db"
               onsubmit="return confirm('Pulire il DB dei PDF (rimuove duplicati e link sporchi) senza cancellare file?');">
           <button class="btn" type="submit">PULISCI PDF (solo DB)</button>
@@ -81,6 +80,7 @@
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
+            <!-- ✅ QR con popup -->
             <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
               <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
@@ -209,6 +209,26 @@
 
 </div>
 
+<!-- ✅ QR MODAL -->
+<div id="qrModal" class="modal-overlay" style="display:none" onclick="overlayCloseQr(event)">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:520px;">
+    <button class="modal-x" type="button" onclick="closeQrModal()">✕</button>
+    <div class="modal-title" id="qrTitle">QR</div>
+
+    <div style="margin-top:12px; display:flex; justify-content:center;">
+      <img id="qrImg" src="" alt="QR" style="width:280px; max-width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:#fff; padding:10px;">
+    </div>
+
+    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn" type="button" onclick="shareQr('whatsapp')">Invia WhatsApp</button>
+      <button class="btn" type="button" onclick="shareQr('email')">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeQrModal()">Chiudi</button>
+    </div>
+
+    <input type="hidden" id="qrCardUrl" value="">
+  </div>
+</div>
+
 <script>
   // video thumb: lazy load + seek 0.1
   (function(){
@@ -241,11 +261,54 @@
     vids.forEach(v => io.observe(v));
   })();
 
-  // ✅ QR popup semplice (se non hai già una funzione openQr nel tuo style.js)
+  function overlayCloseQr(e){
+    if(e.target && e.target.id === "qrModal"){
+      closeQrModal();
+    }
+  }
+  function closeQrModal(){
+    const m = document.getElementById('qrModal');
+    if(m) m.style.display = 'none';
+    document.getElementById('qrImg').src = '';
+    document.getElementById('qrCardUrl').value = '';
+  }
+
   function openQr(slug, p){
-    let url = `/qr/${slug}.png`;
-    if(p && p !== 'p1') url += `?p=${p}`;
-    window.open(url, "_blank");
+    p = (p || 'p1').toLowerCase();
+
+    // QR image
+    let qr = `/qr/${slug}.png`;
+    if(p !== 'p1') qr += `?p=${p}`;
+
+    // Card URL assoluto
+    const base = window.location.origin;
+    let card = `${base}/${slug}`;
+    if(p !== 'p1') card += `?p=${p}`;
+
+    document.getElementById('qrImg').src = qr;
+    document.getElementById('qrCardUrl').value = card;
+    document.getElementById('qrTitle').textContent = `QR ${p.toUpperCase()} — ${slug}`;
+
+    document.getElementById('qrModal').style.display = 'flex';
+  }
+
+  function shareQr(ch){
+    const card = document.getElementById('qrCardUrl').value;
+    if(!card) return;
+
+    const msg = `Ecco la mia Pay4You Card:\n${card}`;
+
+    if(ch === 'whatsapp'){
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+      return;
+    }
+
+    const subject = `Pay4You Card`;
+    const gmail = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
+    const w = window.open(gmail, '_blank');
+    if(!w){
+      window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`, '_blank');
+    }
   }
 </script>
 
