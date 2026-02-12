@@ -287,28 +287,19 @@ def join_pipe_list(items):
     return "|".join(items2)
 
 def canon_url(u: str) -> str:
-    """
-    Normalizza qualsiasi variante in una forma coerente /uploads/...
-    """
     u = (u or "").strip()
     if not u:
         return ""
-
     if re.match(r"^https?://", u, re.I):
         return u
-
     if u.startswith("/uploads/"):
         return u
-
     if u.startswith("uploads/"):
         return "/" + u
-
     if u.startswith("pdf/") or u.startswith("images/") or u.startswith("videos/"):
         return "/uploads/" + u
-
     if u.startswith("/pdf/") or u.startswith("/images/") or u.startswith("/videos/"):
         return "/uploads" + u
-
     return u
 
 def pdf_name_from_url(url: str) -> str:
@@ -327,7 +318,6 @@ def normalize_pdf_item(item: str):
         return ((nm or "").strip(), (url or "").strip())
     return ("", item)
 
-# ✅ FIX MIRATO: accetta SOLO pdf veri (evita "uploads" junk e duplicazioni strane)
 def _is_valid_pdf_url(u: str) -> bool:
     u = (u or "").strip()
     if not u:
@@ -344,10 +334,8 @@ def clean_pdf_pipe(raw: str) -> str:
         nm, url = normalize_pdf_item(it)
         url = canon_url(url)
 
-        # ✅ SOLO pdf veri
         if not _is_valid_pdf_url(url):
             continue
-
         if url in seen:
             continue
         seen.add(url)
@@ -355,7 +343,6 @@ def clean_pdf_pipe(raw: str) -> str:
         nm = (nm or "").strip() or pdf_name_from_url(url)
         out.append(f"{nm}||{url}")
 
-    # ✅ limite massimo
     out = out[:MAX_PDFS]
     return join_pipe_list(out)
 
@@ -594,13 +581,13 @@ def handle_media_uploads_common(data: dict):
 
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
+        # riparti da pulito (se c'è sporcizia vecchia la buttiamo via)
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
         for f in pdfs:
             if f and f.filename:
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
-        # ✅ pulizia + limite + dedupe
         data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
 def handle_media_uploads_p1(agent: Agent):
@@ -642,7 +629,6 @@ def handle_media_uploads_p1(agent: Agent):
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
-        # ✅ pulizia + limite + dedupe
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
 
@@ -683,7 +669,6 @@ def login():
         return redirect(url_for("login"))
 
     return render_template("login.html")
-
 
 @app.route("/area/logout")
 def logout():
@@ -779,7 +764,7 @@ def new_agent():
 
 
 # ==========================
-# ADMIN EDIT P1
+# EDIT P1/P2/P3 + ME + ACTIVATE (uguali ai tuoi)
 # ==========================
 @app.route("/area/edit/<slug>/p1", methods=["GET", "POST"])
 def edit_agent_p1(slug):
@@ -797,7 +782,6 @@ def edit_agent_p1(slug):
             handle_media_uploads_p1(ag)
             save_i18n(ag, request.form)
 
-            # pulizie forti
             ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
             ag.gallery_urls = clean_media_pipe(ag.gallery_urls or "")
             ag.video_urls = clean_media_pipe(ag.video_urls or "")
@@ -821,10 +805,6 @@ def edit_agent_p1(slug):
         profile_label="Profilo 1"
     )
 
-
-# ==========================
-# ADMIN EDIT P2 / P3
-# ==========================
 @app.route("/area/edit/<slug>/p2", methods=["GET","POST"])
 def edit_agent_p2(slug):
     r = require_login()
@@ -905,10 +885,6 @@ def edit_agent_p3(slug):
         profile_label="Profilo 3"
     )
 
-
-# ==========================
-# CLIENT EDIT
-# ==========================
 @app.route("/area/me/edit", methods=["GET","POST"])
 def me_edit_p1():
     r = require_login()
@@ -948,96 +924,15 @@ def me_edit_p1():
         profile_label="Profilo 1"
     )
 
-@app.route("/area/me/p2", methods=["GET","POST"])
-def me_edit_p2():
-    r = require_login()
-    if r: return r
-    if is_admin(): return redirect(url_for("dashboard"))
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag: abort(404)
-    if int(ag.p2_enabled or 0) != 1:
-        flash("Profilo 2 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        d = get_profile_data(ag, "p2")
-        d = set_profile_from_form(d, request.form)
-        handle_media_uploads_common(d)
-
-        d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
-        d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
-        d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
-
-        save_profile_json(ag, "p2", d)
-        save_i18n(ag, request.form)
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("Salvato!", "ok")
-        return redirect(url_for("me_edit_p2"))
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        data=get_profile_data(ag, "p2"),
-        i18n=load_i18n(ag),
-        show_i18n=True,
-        page_title="Modifica Profilo 2",
-        page_hint="Profilo 2 (separato da P1).",
-        profile_label="Profilo 2"
-    )
-
-@app.route("/area/me/p3", methods=["GET","POST"])
-def me_edit_p3():
-    r = require_login()
-    if r: return r
-    if is_admin(): return redirect(url_for("dashboard"))
-
-    s = db()
-    ag = s.query(Agent).filter(Agent.slug == session.get("slug")).first()
-    if not ag: abort(404)
-    if int(ag.p3_enabled or 0) != 1:
-        flash("Profilo 3 non attivo", "error")
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        d = get_profile_data(ag, "p3")
-        d = set_profile_from_form(d, request.form)
-        handle_media_uploads_common(d)
-
-        d["gallery_urls"] = clean_media_pipe(d.get("gallery_urls", ""))
-        d["video_urls"] = clean_media_pipe(d.get("video_urls", ""))
-        d["pdf_urls"] = clean_pdf_pipe(d.get("pdf_urls", ""))
-
-        save_profile_json(ag, "p3", d)
-        save_i18n(ag, request.form)
-        ag.updated_at = dt.datetime.utcnow()
-        s.commit()
-        flash("Salvato!", "ok")
-        return redirect(url_for("me_edit_p3"))
-
-    return render_template(
-        "agent_form.html",
-        agent=ag,
-        data=get_profile_data(ag, "p3"),
-        i18n=load_i18n(ag),
-        show_i18n=True,
-        page_title="Modifica Profilo 3",
-        page_hint="Profilo 3 (separato da P1).",
-        profile_label="Profilo 3"
-    )
-
 
 # ==========================
-# ACTIVATE/DEACTIVATE P2/P3
+# ACTIVATE/DEACTIVATE (uguale)
 # ==========================
 @app.route("/area/admin/activate/<slug>/p2", methods=["POST"])
 def admin_activate_p2(slug):
     r = require_login()
     if r: return r
     if not is_admin(): abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
@@ -1053,7 +948,6 @@ def admin_deactivate_p2(slug):
     r = require_login()
     if r: return r
     if not is_admin(): abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
@@ -1069,7 +963,6 @@ def admin_activate_p3(slug):
     r = require_login()
     if r: return r
     if not is_admin(): abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
@@ -1085,7 +978,6 @@ def admin_deactivate_p3(slug):
     r = require_login()
     if r: return r
     if not is_admin(): abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag: abort(404)
@@ -1098,7 +990,7 @@ def admin_deactivate_p3(slug):
 
 
 # ==========================
-# DELETE MEDIA
+# DELETE MEDIA (uguale al tuo)
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
@@ -1185,40 +1077,30 @@ def media_delete(slug, profile):
 
 
 # ==========================
-# PURGE PDF TOTALE (tutti gli agenti)
+# ✅ CLEAN PDF DB (NON cancella file) — risolve storico "ne vedo 6"
 # ==========================
-@app.route("/area/admin/purge_pdfs", methods=["POST"])
-def purge_pdfs_all():
+@app.route("/area/admin/clean_pdf_db", methods=["POST"])
+def clean_pdf_db_all():
     r = require_login()
     if r: return r
     if not is_admin(): abort(403)
 
-    try:
-        for p in SUBDIR_PDF.glob("*"):
-            if p.is_file():
-                try:
-                    p.unlink()
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
     s = db()
     agents = s.query(Agent).all()
     for ag in agents:
-        ag.pdf1_url = ""
+        ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
 
         b2 = get_profile_data(ag, "p2")
         b3 = get_profile_data(ag, "p3")
-        b2["pdf_urls"] = ""
-        b3["pdf_urls"] = ""
+        b2["pdf_urls"] = clean_pdf_pipe(b2.get("pdf_urls", ""))
+        b3["pdf_urls"] = clean_pdf_pipe(b3.get("pdf_urls", ""))
         save_profile_json(ag, "p2", b2)
         save_profile_json(ag, "p3", b3)
 
         ag.updated_at = dt.datetime.utcnow()
-    s.commit()
 
-    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
+    s.commit()
+    flash("Pulizia PDF DB completata (rimossi duplicati/spazzatura).", "ok")
     return redirect(url_for("dashboard"))
 
 
@@ -1233,7 +1115,8 @@ def qr_png(slug):
     p = (request.args.get("p") or "").strip().lower()
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
-    if not ag: abort(404)
+    if not ag:
+        abort(404)
 
     base = public_base_url()
     url = f"{base}/{ag.slug}"
@@ -1251,77 +1134,97 @@ def qr_png(slug):
 
 
 # ==========================
-# ✅ FIX MIRATO: PAGINA PUBBLICA CARD /<slug> (Apri P1/P2/P3 NO 404)
+# ✅ VCF (nel dashboard hai il link ma qui prima mancava -> 404)
 # ==========================
-def _t_func_factory(lang: str = "it"):
-    it = {
-        "actions": "Azioni",
-        "scan_qr": "Apri QR",
-        "whatsapp": "WhatsApp",
-        "contacts": "Contatti",
-        "mobile_phone": "Telefono",
-        "office_phone": "Telefono ufficio",
-        "open_website": "Sito",
-        "open_maps": "Apri Maps",
-        "data": "Dati aziendali",
-        "vat": "P.IVA",
-        "sdi": "SDI",
-        "gallery": "Galleria",
-        "videos": "Video",
-        "documents": "Documenti",
-    }
-    def t(k):
-        return it.get(k, k)
-    return t
+@app.route("/vcf/<slug>")
+def vcf(slug):
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
 
-def _split_lines(s: str):
-    out = []
-    for ln in (s or "").splitlines():
-        ln = (ln or "").strip()
-        if ln:
-            out.append(ln)
-    return out
+    name = (ag.name or ag.slug or "").strip()
+    company = (ag.company or "").strip()
+    role = (ag.role or "").strip()
 
-def _split_commas(s: str):
-    out = []
-    for x in (s or "").split(","):
-        x = (x or "").strip()
-        if x:
-            out.append(x)
-    return out
+    phones = []
+    if (ag.phone_mobile or "").strip():
+        phones.append((ag.phone_mobile or "").strip())
+    if (ag.phone_mobile2 or "").strip():
+        phones.append((ag.phone_mobile2 or "").strip())
+    if (ag.phone_office or "").strip():
+        phones.append((ag.phone_office or "").strip())
 
-def _make_wa_link(v: str):
-    v = (v or "").strip()
-    if not v:
-        return ""
-    if v.startswith("http://") or v.startswith("https://") or v.startswith("wa.me"):
-        if v.startswith("wa.me"):
-            return "https://" + v
-        return v
-    # numero: +39...
-    num = re.sub(r"[^\d+]", "", v)
-    if num.startswith("+"):
-        num2 = num[1:]
-    else:
-        num2 = num
-    if not num2:
-        return ""
-    return f"https://wa.me/{num2}"
+    emails = [e.strip() for e in (ag.emails or "").split(",") if e.strip()]
+    websites = [w.strip() for w in (ag.websites or "").split(",") if w.strip()]
 
-def _parse_pdfs(raw_pdf_pipe: str):
-    items = parse_pipe_list(clean_pdf_pipe(raw_pdf_pipe or ""))
-    out = []
-    for it in items:
-        nm, url = normalize_pdf_item(it)
-        url = canon_url(url)
-        if not _is_valid_pdf_url(url):
-            continue
-        nm = (nm or "").strip() or pdf_name_from_url(url)
-        out.append({"name": nm, "url": url})
-    return out
+    lines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"N:{name};;;;",
+        f"FN:{name}",
+    ]
+    if company:
+        lines.append(f"ORG:{company}")
+    if role:
+        lines.append(f"TITLE:{role}")
 
-@app.route("/<slug>", methods=["GET"])
-def public_card(slug):
+    for p in phones:
+        lines.append(f"TEL;TYPE=CELL:{p}")
+    for e in emails:
+        lines.append(f"EMAIL;TYPE=INTERNET:{e}")
+    for w in websites:
+        lines.append(f"URL:{w}")
+
+    lines.append("END:VCARD")
+    data = "\r\n".join(lines) + "\r\n"
+    return Response(
+        data,
+        mimetype="text/vcard; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{slug}.vcf"'}
+    )
+
+
+# ==========================
+# ✅ PDF ALIAS: apre anche /Brochure_Qualcosa.pdf (redirect al vero /uploads/pdf/uuid.pdf)
+# ==========================
+@app.route("/<path:filename>")
+def pdf_alias_or_card(filename):
+    # se è pdf, prova a risolvere dal DB
+    if filename.lower().endswith(".pdf"):
+        wanted = filename.rsplit("/", 1)[-1]  # solo basename
+        s = db()
+        agents = s.query(Agent).all()
+
+        # cerca in P1 e nei profili json
+        for ag in agents:
+            # P1
+            items = parse_pipe_list(clean_pdf_pipe(ag.pdf1_url or ""))
+            for it in items:
+                nm, url = normalize_pdf_item(it)
+                nm = (nm or "").strip()
+                url = canon_url(url)
+                if nm == wanted and _is_valid_pdf_url(url):
+                    return redirect(url, code=302)
+
+            # P2/P3
+            for prof in ["p2", "p3"]:
+                d = get_profile_data(ag, prof)
+                items2 = parse_pipe_list(clean_pdf_pipe(d.get("pdf_urls", "")))
+                for it in items2:
+                    nm, url = normalize_pdf_item(it)
+                    nm = (nm or "").strip()
+                    url = canon_url(url)
+                    if nm == wanted and _is_valid_pdf_url(url):
+                        return redirect(url, code=302)
+
+        abort(404)
+
+    # altrimenti trattalo come slug card
+    slug = filename.strip("/").split("/", 1)[0]
+    if not slug:
+        return redirect(url_for("login"))
+
     profile = (request.args.get("p") or "p1").strip().lower()
     if profile not in ["p1", "p2", "p3"]:
         profile = "p1"
@@ -1331,7 +1234,6 @@ def public_card(slug):
     if not ag:
         abort(404)
 
-    # blocco accesso P2/P3 se non attivi
     if profile == "p2" and int(ag.p2_enabled or 0) != 1:
         abort(404)
     if profile == "p3" and int(ag.p3_enabled or 0) != 1:
@@ -1339,11 +1241,9 @@ def public_card(slug):
 
     data = get_profile_data(ag, profile)
 
-    # usa il template CARD che mi hai dato (card.html), ma lui usa "ag"
-    # quindi costruiamo "ag" con i campi della card (senza cambiare il template)
+    # prepara oggetto "ag" per card.html
     class Obj: pass
     ag_view = Obj()
-    # campi testuali
     ag_view.slug = ag.slug
     ag_view.name = data.get("name", "") or ag.name or ""
     ag_view.company = data.get("company", "") or ""
@@ -1352,7 +1252,6 @@ def public_card(slug):
     ag_view.piva = data.get("piva", "") or ""
     ag_view.sdi = data.get("sdi", "") or ""
 
-    # media / effetti
     ag_view.photo_url = canon_url(data.get("photo_url", "") or "")
     ag_view.logo_url = canon_url(data.get("logo_url", "") or "")
     ag_view.back_media_url = canon_url(data.get("back_media_url", "") or "")
@@ -1374,26 +1273,59 @@ def public_card(slug):
         mobiles.append((data.get("phone_mobile2") or "").strip())
     office_value = (data.get("phone_office") or "").strip()
 
-    emails = _split_commas(data.get("emails") or "")
-    websites = _split_commas(data.get("websites") or "")
-    wa_link = _make_wa_link(data.get("whatsapp") or "")
+    emails = [e.strip() for e in (data.get("emails") or "").split(",") if e.strip()]
+    websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]
+
+    wa_link = ""
+    wa_raw = (data.get("whatsapp") or "").strip()
+    if wa_raw:
+        if wa_raw.startswith("http://") or wa_raw.startswith("https://") or wa_raw.startswith("wa.me"):
+            wa_link = "https://" + wa_raw if wa_raw.startswith("wa.me") else wa_raw
+        else:
+            num = re.sub(r"[^\d+]", "", wa_raw)
+            num2 = num[1:] if num.startswith("+") else num
+            if num2:
+                wa_link = f"https://wa.me/{num2}"
 
     # indirizzi
     addresses = []
-    for a in _split_lines(data.get("addresses") or ""):
-        q = re.sub(r"\s+", "+", a.strip())
-        addresses.append({
-            "text": a,
-            "maps": f"https://www.google.com/maps/search/?api=1&query={q}"
-        })
+    for ln in (data.get("addresses") or "").splitlines():
+        a = (ln or "").strip()
+        if not a:
+            continue
+        q = re.sub(r"\s+", "+", a)
+        addresses.append({"text": a, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
 
-    # gallery / videos / pdfs
     gallery = [canon_url(x) for x in parse_pipe_list(clean_media_pipe(data.get("gallery_urls") or ""))]
     videos = [canon_url(x) for x in parse_pipe_list(clean_media_pipe(data.get("video_urls") or ""))]
-    pdfs = _parse_pdfs(data.get("pdf_urls") or "")
 
-    lang = "it"
-    t_func = _t_func_factory(lang)
+    pdfs = []
+    items = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls") or ""))
+    for it in items:
+        nm, url = normalize_pdf_item(it)
+        url = canon_url(url)
+        if _is_valid_pdf_url(url):
+            pdfs.append({"name": (nm or "").strip() or pdf_name_from_url(url), "url": url})
+
+    # traduzioni: card.html usa t_func, manteniamo IT
+    def t_func(k):
+        it = {
+            "actions": "Azioni",
+            "scan_qr": "Apri QR",
+            "whatsapp": "WhatsApp",
+            "contacts": "Contatti",
+            "mobile_phone": "Telefono",
+            "office_phone": "Telefono ufficio",
+            "open_website": "Sito",
+            "open_maps": "Apri Maps",
+            "data": "Dati aziendali",
+            "vat": "P.IVA",
+            "sdi": "SDI",
+            "gallery": "Galleria",
+            "videos": "Video",
+            "documents": "Documenti",
+        }
+        return it.get(k, k)
 
     base = public_base_url()
     qr_url = f"{base}/qr/{ag.slug}.png"
@@ -1403,7 +1335,7 @@ def public_card(slug):
     return render_template(
         "card.html",
         ag=ag_view,
-        lang=lang,
+        lang="it",
         t_func=t_func,
         qr_url=qr_url,
         wa_link=wa_link,
