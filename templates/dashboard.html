@@ -7,7 +7,6 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
-
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -25,6 +24,7 @@
     <div class="toolbar">
       {% if is_admin %}
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
+        <a class="btn danger" href="/area/admin/reset_pdfs" onclick="return confirm('RESET PDF DI TUTTI GLI AGENTI? (P1+P2+P3)')">Reset PDF (tutti)</a>
       {% endif %}
       <a class="btn danger" href="/area/logout">Logout</a>
     </div>
@@ -48,7 +48,7 @@
           <div class="dash-left">
             <div class="dash-avatar">
               {% if a.photo_url %}
-                <img src="{{ a.photo_url }}" alt="foto">
+                <img src="{{ a.photo_url }}" alt="foto" loading="lazy" decoding="async">
               {% else %}
                 <div class="dash-ph">👤</div>
               {% endif %}
@@ -61,7 +61,6 @@
           </div>
 
           <div class="dash-actions">
-            <!-- APRI -->
             <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
             {% if a.p2_enabled == 1 %}
               <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
@@ -72,7 +71,6 @@
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <!-- QR -->
             <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
               <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
@@ -82,7 +80,6 @@
             {% endif %}
 
             {% if is_admin %}
-              <!-- MODIFICA -->
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
@@ -91,7 +88,6 @@
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>
               {% endif %}
 
-              <!-- ATTIVA/DISATTIVA -->
               {% if a.p2_enabled == 1 %}
                 <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"
                       onsubmit="return confirm('Disattivare P2? Verrà svuotato.');">
@@ -116,13 +112,7 @@
                 </form>
               {% endif %}
 
-              <form class="inline" method="post" action="/area/admin/credentials/{{ a.slug }}"
-                    onsubmit="return confirm('Generare una nuova password per questo cliente?');">
-                <button class="btn-mini" type="submit">Invia credenziali</button>
-              </form>
             {% else %}
-              <!-- CLIENTE -->
-              <!-- ✅ nel tuo app.py P1 è /area/me/edit -->
               <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
 
               {% if a.p2_enabled == 1 %}
@@ -166,7 +156,7 @@
                 {% endif %}
               {% endfor %}
               {% for g in imgs2[:6] %}
-                <img class="dash-mini" src="{{ g }}" alt="">
+                <img class="dash-mini" src="{{ g }}" alt="" loading="lazy" decoding="async">
               {% endfor %}
               {% if imgs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
@@ -185,7 +175,7 @@
                 {% endif %}
               {% endfor %}
               {% for v in vids2[:4] %}
-                <video class="dash-mini" muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
+                <video class="dash-mini" muted playsinline preload="none" src="{{ v }}#t=0.1"></video>
               {% endfor %}
               {% if vids2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
@@ -248,38 +238,6 @@
   </div>
 </div>
 
-<!-- CREDENTIALS MODAL (come prima) -->
-<div id="credModal" class="modal-overlay" style="display:none" onclick="overlayClose(event,'credModal')">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-x" type="button" onclick="closeCred()">✕</button>
-    <div class="modal-title">Credenziali (mostrate una sola volta)</div>
-
-    <div class="cred-box">
-      <div class="cred-row"><span>Username</span><code id="cUser"></code></div>
-      <div class="cred-row"><span>Password</span><code id="cPass"></code></div>
-      <div class="sep" style="margin:12px 0"></div>
-
-      <div class="cred-links">
-        <div class="cred-row"><span>Link Login</span><a id="cLogin" target="_blank" href="">Apri</a></div>
-        <div class="cred-row"><span>Link Card P1</span><a id="cCard1" target="_blank" href="">Apri</a></div>
-        <div class="cred-row" id="cCard2Row" style="display:none"><span>Link Card P2</span><a id="cCard2" target="_blank" href="">Apri</a></div>
-        <div class="cred-row" id="cCard3Row" style="display:none"><span>Link Card P3</span><a id="cCard3" target="_blank" href="">Apri</a></div>
-      </div>
-
-      <div class="hint" style="margin-top:10px">
-        Invio via Email/WhatsApp lo attiviamo dopo (SMTP + WhatsApp).
-      </div>
-    </div>
-
-    <form method="post" action="/area/admin/send_credentials" class="modal-actions">
-      <input type="hidden" name="slug" id="cSlug" value="">
-      <button class="btn" type="submit" name="channel" value="whatsapp">Invia WhatsApp</button>
-      <button class="btn" type="submit" name="channel" value="email">Invia Email</button>
-      <button class="btn ghost" type="button" onclick="closeCred()">Chiudi</button>
-    </form>
-  </div>
-</div>
-
 <script>
   function overlayClose(e, id){
     if(e.target && e.target.id === id){
@@ -299,18 +257,10 @@
     return base + '/' + u;
   }
 
-  // ✅ Gmail compose (con tf=1, spesso risolve body vuoto)
   function gmailCompose(subject, body){
     const su = encodeURIComponent(subject || "");
     const bd = encodeURIComponent(body || "");
     return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
-  }
-
-  // fallback Outlook Web
-  function outlookCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
   }
 
   function openQr(slug, profile){
@@ -346,53 +296,9 @@
       return;
     }
 
-    // ✅ Email senza CTRL+V: prima Gmail, poi fallback Outlook se serve
     const subject = `Pay4You QR ${slug.toUpperCase()} ${profile.toUpperCase()}`.trim();
-    const g = gmailCompose(subject, msg);
-    const w = window.open(g, '_blank');
-
-    // se popup bloccato o window null, prova Outlook
-    if(!w){
-      window.open(outlookCompose(subject, msg), '_blank');
-    }
+    window.open(gmailCompose(subject, msg), '_blank');
   }
-
-  function openCred(slug, username, password){
-    document.getElementById('cSlug').value = slug;
-    document.getElementById('cUser').textContent = username;
-    document.getElementById('cPass').textContent = password;
-
-    const base = window.location.origin;
-    document.getElementById('cLogin').href = base + "/area/login";
-    document.getElementById('cCard1').href = base + "/" + slug;
-
-    const row2 = document.getElementById('cCard2Row');
-    const row3 = document.getElementById('cCard3Row');
-    row2.style.display = 'none';
-    row3.style.display = 'none';
-
-    const hasP2 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p2"]`);
-    const hasP3 = document.querySelector(`section[data-slug="${slug}"] a[href="/${slug}?p=p3"]`);
-
-    if(hasP2){
-      row2.style.display = '';
-      document.getElementById('cCard2').href = base + "/" + slug + "?p=p2";
-    }
-    if(hasP3){
-      row3.style.display = '';
-      document.getElementById('cCard3').href = base + "/" + slug + "?p=p3";
-    }
-
-    document.getElementById('credModal').style.display = 'flex';
-  }
-  function closeCred(){ closeModal('credModal'); }
-
-  (function(){
-    const creds = {{ (session.get("last_credentials") or {}) | tojson }};
-    if(creds && creds.slug){
-      openCred(creds.slug, creds.username, creds.password);
-    }
-  })();
 </script>
 
 </body>
