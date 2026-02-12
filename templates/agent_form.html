@@ -369,6 +369,30 @@
     sync();
   })();
 </script>
+<script>
+  // ... tuo JS crop / viewer ...
+</script>
+
+<script>
+  function bindPreview(inputId, imgId){
+    const inp = document.getElementById(inputId);
+    const img = document.getElementById(imgId);
+    if(!inp || !img) return;
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0];
+      if(!f) return;
+      img.src = URL.createObjectURL(f);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    bindPreview('photoInput','prevPhoto');
+    bindPreview('logoInput','prevLogo');
+    bindPreview('backInput','prevBack');
+  });
+</script>
+
+</body>
+</html>
 
 </body>
 </html>
