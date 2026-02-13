@@ -327,11 +327,10 @@ def _is_valid_pdf_url(u: str) -> bool:
     return u.startswith("/uploads/pdf/") and u.lower().endswith(".pdf")
 
 def _norm_pdf_name(n: str) -> str:
-    # ✅ normalizzazione robusta per confronto nomi (evita 404)
     n = (n or "").strip()
     if not n:
         return ""
-    n = secure_filename(n)  # spazi -> underscore, ecc
+    n = secure_filename(n)
     return n.lower()
 
 def clean_pdf_pipe(raw: str) -> str:
@@ -408,11 +407,9 @@ def default_profile_dict():
         "emails": "", "websites": "", "pec": "", "addresses": "",
         "piva": "", "sdi": "",
         "facebook": "", "instagram": "", "linkedin": "", "tiktok": "", "telegram": "", "youtube": "", "spotify": "",
-
         "photo_url": "", "logo_url": "", "back_media_url": "",
         "photo_pos_x": 50, "photo_pos_y": 35, "photo_zoom": "1.0",
         "orbit_spin": 0, "avatar_spin": 0, "logo_spin": 0, "allow_flip": 0,
-
         "gallery_urls": "", "video_urls": "", "pdf_urls": ""
     }
 
@@ -589,36 +586,6 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_VIDEOS]
         data["video_urls"] = clean_media_pipe(join_pipe_list(current))
 
-    # ✅ PDF OVERWRITE (non append): se carichi pdf, sostituisci la lista
-    pdfs = request.files.getlist("pdf_files")
-    if pdfs and any((f and f.filename) for f in pdfs):
-        current = []
-        for f in pdfs:
-            if f and f.filename:
-                url = save_upload(f, "pdf")
-                nm = secure_filename(f.filename) or pdf_name_from_url(url)
-                current.append(f"{nm}||{url}")
-        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
-
-
-    imgs = request.files.getlist("gallery_images")
-    if imgs:
-        current = parse_pipe_list(clean_media_pipe(data.get("gallery_urls", "")))
-        for f in imgs:
-            if f and f.filename:
-                current.append(save_upload(f, "images"))
-        current = current[:MAX_GALLERY_IMAGES]
-        data["gallery_urls"] = clean_media_pipe(join_pipe_list(current))
-
-    vids = request.files.getlist("gallery_videos")
-    if vids:
-        current = parse_pipe_list(clean_media_pipe(data.get("video_urls", "")))
-        for f in vids:
-            if f and f.filename:
-                current.append(save_upload(f, "videos"))
-        current = current[:MAX_VIDEOS]
-        data["video_urls"] = clean_media_pipe(join_pipe_list(current))
-
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
@@ -660,17 +627,15 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_VIDEOS]
         agent.video_urls = clean_media_pipe(join_pipe_list(current))
 
-    # ✅ PDF OVERWRITE (non append): se carichi pdf, sostituisci la lista
     pdfs = request.files.getlist("pdf_files")
-    if pdfs and any((f and f.filename) for f in pdfs):
-        current = []
+    if pdfs:
+        current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
         for f in pdfs:
             if f and f.filename:
                 url = save_upload(f, "pdf")
                 nm = secure_filename(f.filename) or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
-
 
 
 # ==========================
@@ -944,7 +909,7 @@ def edit_agent_p3(slug):
 
 
 # ==========================
-# CLIENT EDIT (ME) P1/P2/P3  ✅ (mancavano nel tuo incolla)
+# CLIENT EDIT (ME) P1/P2/P3
 # ==========================
 @app.route("/area/me/edit", methods=["GET", "POST"])
 def me_edit_p1():
@@ -1090,10 +1055,12 @@ def admin_activate_p2(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
+
     ag.p2_enabled = 1
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
+
     flash("P2 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1109,10 +1076,12 @@ def admin_deactivate_p2(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
+
     ag.p2_enabled = 0
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
+
     flash("P2 disattivato.", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1128,10 +1097,12 @@ def admin_activate_p3(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
+
     ag.p3_enabled = 1
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
+
     flash("P3 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1147,16 +1118,18 @@ def admin_deactivate_p3(slug):
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
+
     ag.p3_enabled = 0
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
+
     flash("P3 disattivato.", "ok")
     return redirect(url_for("dashboard"))
 
 
 # ==========================
-# DELETE MEDIA
+# DELETE MEDIA (P1/P2/P3)   kind=img|vid|pdf
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
@@ -1169,6 +1142,7 @@ def media_delete(slug, profile):
     if not ag:
         abort(404)
 
+    # permessi: admin o proprietario
     if not is_admin() and session.get("slug") != ag.slug:
         abort(403)
 
@@ -1178,7 +1152,6 @@ def media_delete(slug, profile):
 
     kind = (request.args.get("kind") or "").strip().lower()
     url = canon_url(unquote((request.args.get("url") or "").strip()))
-
     if not url or kind not in ["img", "vid", "pdf"]:
         abort(400)
 
@@ -1222,11 +1195,14 @@ def media_delete(slug, profile):
             ag.video_urls = remove_url_from_pipe(ag.video_urls or "", url)
         else:
             ag.pdf1_url = remove_pdf_from_pipe(ag.pdf1_url or "", url)
+
+        ag.updated_at = dt.datetime.utcnow()
         s.commit()
         try_delete_physical(url)
         flash("Eliminato.", "ok")
         return redirect(request.referrer or url_for("dashboard"))
 
+    # P2/P3
     d = get_profile_data(ag, profile)
     if kind == "img":
         d["gallery_urls"] = remove_url_from_pipe(d.get("gallery_urls", ""), url)
@@ -1245,7 +1221,7 @@ def media_delete(slug, profile):
 
 
 # ==========================
-# PURGE PDF TOTALE (file + DB) ✅ (mancava nel tuo incolla)
+# PURGE PDF TOTALE (file + DB)
 # ==========================
 @app.route("/area/admin/purge_pdfs", methods=["POST"])
 def purge_pdfs_all():
@@ -1271,14 +1247,12 @@ def purge_pdfs_all():
     agents = s.query(Agent).all()
     for ag in agents:
         ag.pdf1_url = ""
-
         b2 = get_profile_data(ag, "p2")
         b3 = get_profile_data(ag, "p3")
         b2["pdf_urls"] = ""
         b3["pdf_urls"] = ""
         save_profile_json(ag, "p2", b2)
         save_profile_json(ag, "p3", b3)
-
         ag.updated_at = dt.datetime.utcnow()
 
     s.commit()
@@ -1325,6 +1299,7 @@ def qr_png(slug):
         abort(500)
 
     p = (request.args.get("p") or "").strip().lower()
+
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
@@ -1417,11 +1392,9 @@ def pdf_alias_or_card(filename):
                 nm, url = normalize_pdf_item(it)
                 nm = (nm or "").strip()
                 url = canon_url(url)
-
                 if not _is_valid_pdf_url(url):
                     continue
 
-                # ✅ match robusto: nome caricato / nome normalizzato / basename url (uuid.pdf)
                 if _norm_pdf_name(nm) == wanted_norm or _norm_pdf_name(pdf_name_from_url(url)) == wanted_norm:
                     return redirect(url, code=302)
 
@@ -1433,7 +1406,6 @@ def pdf_alias_or_card(filename):
                     nm, url = normalize_pdf_item(it)
                     nm = (nm or "").strip()
                     url = canon_url(url)
-
                     if not _is_valid_pdf_url(url):
                         continue
 
