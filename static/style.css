@@ -503,3 +503,10 @@ input:focus, textarea:focus{
 @media (max-width: 860px){
   .upload-rect .upload-grid{ grid-template-columns: 1fr; }
 }
+.triple-upload{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+@media (max-width: 860px){.triple-upload{grid-template-columns:1fr;}}
+.up-card{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.10);border-radius:16px;padding:12px;}
+.up-title{font-weight:950;margin-bottom:8px;}
+.up-prev{margin-top:10px;width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;}
+.up-prev img{width:100%;height:100%;object-fit:cover;display:block;}
+.up-ph{opacity:.75;font-weight:900;}
