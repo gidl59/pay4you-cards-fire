@@ -1,169 +1,477 @@
 <!doctype html>
+
 <html lang="it">
+
 <head>
+
   <meta charset="utf-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>Dashboard | Pay4You</title>
 
+
   <link rel="icon" href="/favicon.ico">
+
   <link rel="icon" href="/static/favicon.ico">
+
   <link rel="stylesheet" href="/static/style.css">
+
 </head>
+
 <body>
+
 <div class="app-shell">
 
+
   <header class="app-header">
+
     <a class="brand" href="/area">
+
       <div class="logo-dot"></div>
+
       <div>
+
         <div class="brand-title">Pay4You Cards</div>
+
         <div class="hint">{{ "Admin" if is_admin else "Cliente" }}</div>
+
       </div>
+
     </a>
 
+
     <div class="toolbar">
+
       {% if is_admin %}
+
         <a class="btn primary" href="/area/new">+ Nuova Card</a>
 
+
+        <!-- ✅ NUOVO: PULIZIA DB PDF (NON cancella file) -->
+
         <form class="inline" method="post" action="/area/admin/clean_pdf_db"
+
               onsubmit="return confirm('Pulire il DB dei PDF (rimuove duplicati e link sporchi) senza cancellare file?');">
+
           <button class="btn" type="submit">PULISCI PDF (solo DB)</button>
+
         </form>
+
 
         <form class="inline" method="post" action="/area/admin/purge_pdfs"
+
               onsubmit="return confirm('ATTENZIONE: elimina TUTTI i PDF (file + DB) per TUTTI gli agenti. Continuare?');">
+
           <button class="btn danger" type="submit">PURGE PDF (totale)</button>
+
         </form>
+
       {% endif %}
+
       <a class="btn danger" href="/area/logout">Logout</a>
+
     </div>
+
   </header>
 
+
   <main class="app-main">
+
     {% with messages = get_flashed_messages(with_categories=true) %}
+
       {% if messages %}
+
         <div class="flash-wrap">
+
           {% for cat,msg in messages %}
+
             <div class="flash flash-{{cat}}">{{ msg }}</div>
+
           {% endfor %}
+
         </div>
+
       {% endif %}
+
     {% endwith %}
 
+
     <div class="dash-grid">
+
       {% for a in agents %}
+
       <section class="dash-card" data-slug="{{ a.slug }}">
+
         <div class="dash-head">
+
           <div class="dash-left">
+
             <div class="dash-avatar">
+
               {% if a.photo_url %}
+
                 <img src="{{ a.photo_url }}" alt="foto">
+
               {% else %}
+
                 <div class="dash-ph">👤</div>
+
               {% endif %}
+
             </div>
+
             <div>
+
               <div class="dash-name">{{ a.name or a.slug }}</div>
+
               <div class="dash-sub">{{ a.company or "—" }}</div>
+
               <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
+
             </div>
+
           </div>
 
+
           <div class="dash-actions">
+
             <a class="btn-mini" target="_blank" href="/{{ a.slug }}">Apri P1</a>
-            {% if a.p2_enabled == 1 %}<a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>{% endif %}
-            {% if a.p3_enabled == 1 %}<a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p3">Apri P3</a>{% endif %}
+
+            {% if a.p2_enabled == 1 %}
+
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p2">Apri P2</a>
+
+            {% endif %}
+
+            {% if a.p3_enabled == 1 %}
+
+              <a class="btn-mini" target="_blank" href="/{{ a.slug }}?p=p3">Apri P3</a>
+
+            {% endif %}
+
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
-            <button class="btn-mini ghost" type="button" onclick="openQrModal('{{ a.slug }}','p1')">QR P1</button>
-            {% if a.p2_enabled == 1 %}<button class="btn-mini ghost" type="button" onclick="openQrModal('{{ a.slug }}','p2')">QR P2</button>{% endif %}
-            {% if a.p3_enabled == 1 %}<button class="btn-mini ghost" type="button" onclick="openQrModal('{{ a.slug }}','p3')">QR P3</button>{% endif %}
+
+            <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p1')">QR P1</button>
+
+            {% if a.p2_enabled == 1 %}
+
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p2')">QR P2</button>
+
+            {% endif %}
+
+            {% if a.p3_enabled == 1 %}
+
+              <button class="btn-mini ghost" type="button" onclick="openQr('{{ a.slug }}','p3')">QR P3</button>
+
+            {% endif %}
+
 
             {% if is_admin %}
+
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
-              {% if a.p2_enabled == 1 %}<a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>{% endif %}
-              {% if a.p3_enabled == 1 %}<a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>{% endif %}
+
+              {% if a.p2_enabled == 1 %}
+
+                <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
+
+              {% endif %}
+
+              {% if a.p3_enabled == 1 %}
+
+                <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p3">Modifica P3</a>
+
+              {% endif %}
+
+
+              {% if a.p2_enabled == 1 %}
+
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"
+
+                      onsubmit="return confirm('Disattivare P2? Verrà svuotato.');">
+
+                  <button class="btn-mini danger" type="submit">Disattiva P2</button>
+
+                </form>
+
+              {% else %}
+
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p2"
+
+                      onsubmit="return confirm('Attivare P2 vuoto?');">
+
+                  <button class="btn-mini" type="submit">Attiva P2</button>
+
+                </form>
+
+              {% endif %}
+
+
+              {% if a.p3_enabled == 1 %}
+
+                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p3"
+
+                      onsubmit="return confirm('Disattivare P3? Verrà svuotato.');">
+
+                  <button class="btn-mini danger" type="submit">Disattiva P3</button>
+
+                </form>
+
+              {% else %}
+
+                <form class="inline" method="post" action="/area/admin/activate/{{ a.slug }}/p3"
+
+                      onsubmit="return confirm('Attivare P3 vuoto?');">
+
+                  <button class="btn-mini" type="submit">Attiva P3</button>
+
+                </form>
+
+              {% endif %}
+
             {% else %}
+
               <a class="btn-mini warn" href="/area/me/edit">Modifica P1</a>
-              {% if a.p2_enabled == 1 %}<a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>{% endif %}
-              {% if a.p3_enabled == 1 %}<a class="btn-mini warn" href="/area/me/p3">Modifica P3</a>{% endif %}
+
+              {% if a.p2_enabled == 1 %}
+
+                <a class="btn-mini warn" href="/area/me/p2">Modifica P2</a>
+
+              {% endif %}
+
+              {% if a.p3_enabled == 1 %}
+
+                <a class="btn-mini warn" href="/area/me/p3">Modifica P3</a>
+
+              {% endif %}
+
             {% endif %}
+
           </div>
+
         </div>
+
+
+        <div class="dash-preview">
+
+          <div class="dash-preview-col">
+
+            <div class="dash-preview-title">Foto</div>
+
+            <div class="dash-mini-grid">
+
+              {% set imgs = (a.gallery_urls or "").split("|") %}
+
+              {% set imgs2 = [] %}
+
+              {% for x in imgs %}
+
+                {% if x and x.strip() %}
+
+                  {% set _ = imgs2.append(x) %}
+
+                {% endif %}
+
+              {% endfor %}
+
+              {% for g in imgs2[:6] %}
+
+                <img class="dash-mini" src="{{ g }}" alt="">
+
+              {% endfor %}
+
+              {% if imgs2|length == 0 %}
+
+                <div class="dash-mini-empty">—</div>
+
+              {% endif %}
+
+            </div>
+
+          </div>
+
+
+          <div class="dash-preview-col">
+
+            <div class="dash-preview-title">Video</div>
+
+            <div class="dash-mini-grid">
+
+              {% set vids = (a.video_urls or "").split("|") %}
+
+              {% set vids2 = [] %}
+
+              {% for x in vids %}
+
+                {% if x and x.strip() %}
+
+                  {% set _ = vids2.append(x) %}
+
+                {% endif %}
+
+              {% endfor %}
+
+
+              {% for v in vids2[:4] %}
+
+                <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
+
+              {% endfor %}
+
+
+              {% if vids2|length == 0 %}
+
+                <div class="dash-mini-empty">—</div>
+
+              {% endif %}
+
+            </div>
+
+          </div>
+
+
+          <div class="dash-preview-col">
+
+            <div class="dash-preview-title">PDF</div>
+
+            <div class="dash-pdf-list">
+
+              {% set pdfs = (a.pdf1_url or "").split("|") %}
+
+              {% set pdfs2 = [] %}
+
+              {% for x in pdfs %}
+
+                {% if x and x.strip() %}
+
+                  {% set _ = pdfs2.append(x) %}
+
+                {% endif %}
+
+              {% endfor %}
+
+              {% for p in pdfs2[:6] %}
+
+                {% if "||" in p %}
+
+                  {% set nm = p.split("||")[0] %}
+
+                {% else %}
+
+                  {% set nm = p %}
+
+                {% endif %}
+
+                <div class="dash-pdf-pill" title="{{ nm }}">{{ nm }}</div>
+
+              {% endfor %}
+
+              {% if pdfs2|length == 0 %}
+
+                <div class="dash-mini-empty">—</div>
+
+              {% endif %}
+
+            </div>
+
+          </div>
+
+        </div>
+
+
       </section>
+
       {% endfor %}
+
     </div>
+
 
     <div class="footer">Pay4You.store</div>
 
+
   </main>
 
+
 </div>
 
-<!-- ✅ QR MODAL (NO X) -->
-<div id="qrModal" class="modal-overlay" style="display:none" onclick="overlayCloseQr(event)">
-  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:720px;">
-    <div class="modal-title" id="qrTitle">QR</div>
-    <div id="qrBody" style="margin-top:12px; display:flex; flex-direction:column; align-items:center; gap:10px;"></div>
-
-    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-      <button class="btn" type="button" onclick="shareQr('whatsapp')">Invia WhatsApp</button>
-      <button class="btn" type="button" onclick="shareQr('email')">Invia Email</button>
-      <button class="btn ghost" type="button" onclick="closeQrModal()">Chiudi</button>
-    </div>
-
-    <input type="hidden" id="qrUrl" value="">
-  </div>
-</div>
 
 <script>
-  function absUrl(u){
-    if(!u) return '';
-    u = (u + '').trim();
-    const base = window.location.origin;
-    if(/^https?:\/\//i.test(u)) return u;
-    if(u.startsWith('/')) return base + u;
-    return base + '/' + u;
-  }
 
-  function overlayCloseQr(e){
-    if(e.target && e.target.id === "qrModal") closeQrModal();
-  }
-  function closeQrModal(){
-    const m = document.getElementById('qrModal');
-    const b = document.getElementById('qrBody');
-    if(b) b.innerHTML = '';
-    if(m) m.style.display = 'none';
-    document.getElementById('qrUrl').value = '';
-  }
+  // video thumb: lazy load + seek 0.1
 
-  function openQrModal(slug, p){
-    let url = `/qr/${slug}.png`;
-    if(p && p !== 'p1') url += `?p=${p}`;
-    const abs = absUrl(url);
-    document.getElementById('qrUrl').value = abs;
+  (function(){
 
-    document.getElementById('qrTitle').textContent = `QR ${p.toUpperCase()}`;
-    document.getElementById('qrBody').innerHTML = `
-      <img src="${abs}" alt="QR" style="width:min(360px, 86vw); border-radius:16px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.15); padding:10px;">
-      <div style="opacity:.7; font-size:12px;">Scansiona per aprire la card</div>
-    `;
-    document.getElementById('qrModal').style.display = 'flex';
-  }
+    const vids = Array.from(document.querySelectorAll('video.vthumb[data-src]'));
 
-  function shareQr(channel){
-    const url = document.getElementById('qrUrl').value || '';
-    if(!url) return;
-    const msg = `QR Pay4You\n${url}`;
+    if(!vids.length) return;
 
-    if(channel === 'whatsapp'){
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-      return;
+
+    function loadThumb(v){
+
+      if(v.dataset.loaded === "1") return;
+
+      v.dataset.loaded = "1";
+
+      const src = v.getAttribute('data-src');
+
+      if(!src) return;
+
+      v.src = src + "#t=0.1";
+
+      v.load();
+
+      const onLoaded = () => {
+
+        try { v.currentTime = 0.1; v.pause(); } catch(e){}
+
+        v.removeEventListener('loadeddata', onLoaded);
+
+      };
+
+      v.addEventListener('loadeddata', onLoaded);
+
     }
-    window.open(`mailto:?subject=${encodeURIComponent('QR Pay4You')}&body=${encodeURIComponent(msg)}`, '_blank');
+
+
+    const io = new IntersectionObserver((entries) => {
+
+      entries.forEach(en => {
+
+        if(en.isIntersecting){
+
+          loadThumb(en.target);
+
+          io.unobserve(en.target);
+
+        }
+
+      });
+
+    }, { rootMargin: "150px" });
+
+
+    vids.forEach(v => io.observe(v));
+
+  })();
+
+
+  // ✅ QR popup semplice (se non hai già una funzione openQr nel tuo style.js)
+
+  function openQr(slug, p){
+
+    let url = `/qr/${slug}.png`;
+
+    if(p && p !== 'p1') url += `?p=${p}`;
+
+    window.open(url, "_blank");
+
   }
+
 </script>
 
+
 </body>
+
 </html>
