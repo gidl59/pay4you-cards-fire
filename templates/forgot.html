@@ -1,1 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Password dimenticata | Pay4You</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
+<div class="login-shell">
+  <div class="login-card login-card-gold">
+
+    <div class="login-top">
+      <img class="login-logo" src="/static/pay4you-logo.png">
+      <div class="login-head">
+        <h1>Password dimenticata</h1>
+        <p>Inserisci la tua email</p>
+      </div>
+    </div>
+
+    {% if err %}
+      <div class="flash flash-error">{{ err }}</div>
+    {% endif %}
+
+    <form method="post" class="login-form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" name="email" required>
+      </div>
+
+      <button class="btn btn-login-primary" type="submit">
+        Recupera password
+      </button>
+    </form>
+
+    <div class="login-foot">
+      <a href="/area/login">← Torna al login</a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
