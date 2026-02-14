@@ -85,3 +85,92 @@ textarea{min-height:84px;resize:vertical}
 .login-hint{color:var(--muted);margin-top:4px}
 .inp{width:100%}
 @media (max-width:860px){.dash-preview{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.triple-cols{grid-template-columns:1fr}}
+
+/* =========================================================
+   ✅ SOLO CLIENTE: dashboard più grande (senza toccare admin)
+   Rileva "Cliente" nella .hint in header.
+   ========================================================= */
+.app-header:has(.hint){
+  /* nessuna modifica globale */
+}
+
+.app-shell:has(.app-header .hint:contains("Cliente")){
+  /* (fallback non supportato) */
+}
+
+/* ✅ Selettore pratico: applichiamo su body quando la hint è Cliente
+   Nota: :has() è supportato su Safari/Chrome moderni. */
+body:has(.app-header .hint){
+  /* niente */
+}
+
+body:has(.app-header .hint)::before{
+  content:"";
+  display:none;
+}
+
+/* ✅ CLIENTE */
+body:has(.app-header .hint:where(:not(*))){
+  /* placeholder */
+}
+
+/* ✅ CLIENTE (vero) */
+body:has(.app-header .hint:contains("Cliente")){
+  /* Questo selettore :contains NON esiste in CSS standard.
+     Quindi usiamo un approccio sicuro: aggiungiamo una classe via HTML? NO (tu hai detto non cambiare altro).
+     Allora facciamo la versione "solo cliente" usando un target robusto:
+     In dashboard.html tu stampi: <div class="hint">{{ "Admin" if is_admin else "Cliente" }}</div>
+     In CSS puro non posso leggere il testo.
+     SOLUZIONE sicura senza toccare HTML: usiamo il fatto che per cliente non ci sono bottoni admin in toolbar:
+     se NON esiste .btn.primary in header => cliente.
+  */
+}
+
+/* ✅ CLIENTE = header SENZA pulsante "+ Nuova Card" (btn.primary) */
+body:not(:has(.app-header .toolbar .btn.primary)) .app-main{
+  padding:18px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-grid{
+  gap:16px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-card{
+  padding:18px;
+  border-radius:22px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-avatar{
+  width:72px;height:72px;border-radius:18px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-name{
+  font-size:18px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-sub{
+  font-size:14px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-actions .btn-mini{
+  padding:10px 12px;
+  border-radius:14px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-preview{
+  margin-top:14px;
+  gap:12px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-preview-title{
+  font-size:13px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-mini{
+  width:74px;height:74px;border-radius:14px;
+}
+
+body:not(:has(.app-header .toolbar .btn.primary)) .dash-pdf-pill{
+  padding:10px 12px;
+  font-size:14px;
+}
