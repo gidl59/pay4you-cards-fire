@@ -167,16 +167,15 @@
             </div>
           </div>
 
-          <!-- ✅ 3 colonne verticali affiancate -->
           <div class="section-box">
             <div class="h3">Foto profilo · Logo · Foto dietro</div>
-            <div class="hint">Tre riquadri affiancati con anteprima e upload.</div>
+            <div class="hint">Tre riquadri quadrati affiancati con anteprima e upload.</div>
 
             <div class="triple-cols">
 
               <div class="triple-col">
                 <div class="tc-title">Foto profilo</div>
-                <div class="tc-preview">
+                <div class="tc-preview square">
                   {% if data.get("photo_url") %}
                     <img id="prevPhoto" src="{{ data.get('photo_url') }}" alt="">
                   {% else %}
@@ -189,7 +188,7 @@
 
               <div class="triple-col">
                 <div class="tc-title">Logo</div>
-                <div class="tc-preview">
+                <div class="tc-preview square">
                   {% if data.get("logo_url") %}
                     <img id="prevLogo" src="{{ data.get('logo_url') }}" alt="">
                   {% else %}
@@ -202,7 +201,7 @@
 
               <div class="triple-col">
                 <div class="tc-title">Foto dietro</div>
-                <div class="tc-preview">
+                <div class="tc-preview square">
                   {% if data.get("back_media_url") %}
                     <img id="prevBack" src="{{ data.get('back_media_url') }}" alt="">
                   {% else %}
@@ -340,7 +339,6 @@
   </main>
 </div>
 
-<!-- MODAL MEDIA (senza X) -->
 <div id="mediaModal" class="modal-overlay" style="display:none" onclick="overlayCloseMedia(event)">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:920px;">
     <div class="modal-title" id="mediaTitle">Media</div>
