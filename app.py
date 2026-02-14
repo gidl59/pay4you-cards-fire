@@ -698,6 +698,20 @@ def serve_uploads(filename):
     return send_from_directory(str(UPLOADS_DIR), filename)
 
 
+# =========================
+# PUBLIC LEGAL PAGES (no auth)
+# =========================
+
+@app.route("/privacy")
+def privacy_policy():
+    return render_template("privacy.html")
+
+
+@app.route("/cookie")
+def cookie_policy():
+    return render_template("cookie.html")
+
+
 # ==========================
 # AUTH
 # ==========================
