@@ -4,31 +4,55 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login | Pay4You</title>
+
   <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/static/favicon.ico">
+
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="login-shell">
-    <div class="login-box">
-      <div class="login-title">Pay4You Cards</div>
-      <div class="login-hint">Accedi</div>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div style="margin-top:10px;">
-            {% for cat,msg in messages %}
-              <div class="flash flash-{{cat}}">{{ msg }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
+<div class="login-shell">
+  <div class="login-card">
 
-      <form method="post" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
-        <input class="inp" name="username" placeholder="username" autocomplete="username">
-        <input class="inp" name="password" type="password" placeholder="password" autocomplete="current-password">
-        <button class="btn primary" type="submit">Entra</button>
-      </form>
+    <div class="login-brand">
+      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
+      <div class="login-brand-text">
+        <div class="login-title">Pay4You Cards</div>
+        <div class="hint">Accesso Area Riservata</div>
+      </div>
     </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap" style="margin-top:12px">
+          {% for cat,msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="/area/login" class="login-form">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </div>
+
+      <button class="btn primary" type="submit" style="width:100%">Accedi</button>
+    </form>
+
+    <div class="hint" style="margin-top:12px; text-align:center;">
+      Pay4You.store
+    </div>
+
   </div>
+</div>
+
 </body>
 </html>
