@@ -712,6 +712,10 @@ def serve_uploads(filename):
 # ==========================
 # AUTH
 # ==========================
+@app.get("/area/forgot")
+def area_forgot():
+    # TODO: pagina + invio email reset
+    return render_template("forgot.html")
 @app.route("/area/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
