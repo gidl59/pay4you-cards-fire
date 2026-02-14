@@ -89,6 +89,7 @@
             {% endif %}
 
             {% if is_admin %}
+              <button class="btn-mini" type="button" onclick="openCredModal('{{ a.slug }}','{{ a.username }}')">Invia credenziali</button>
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
@@ -230,6 +231,18 @@
 
     <div id="smBody" style="margin-top:12px;"></div>
 
+    <div id="smCreds" style="display:none; margin-top:12px;">
+      <div class="field">
+        <label>Password da inviare</label>
+        <input id="smPass" type="text" placeholder="es. 8-12 caratteri" oninput="updateCredsMsg()">
+        <div class="hint">Per sicurezza la password non è salvata in chiaro: inseriscila tu e poi invia il messaggio.</div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>Testo (modificabile)</label>
+        <textarea id="smMsg" style="min-height:110px;">...</textarea>
+      </div>
+    </div>
+
     <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
       <button class="btn" type="button" onclick="shareCurrent('whatsapp')">Invia WhatsApp</button>
       <button class="btn" type="button" onclick="shareCurrent('email')">Invia Email</button>
@@ -319,6 +332,60 @@
     if(body) body.innerHTML = '';
   }
 
+  function openCredModal(slug, username){
+    slug = (slug || '').trim();
+    username = (username || '').trim() || slug;
+    const loginUrl = absUrl('/area/login');
+    const cardUrl = absUrl('/' + slug);
+
+    document.getElementById('smKind').value = 'creds';
+    document.getElementById('smSlug').value = slug;
+    document.getElementById('smProfile').value = 'p1';
+    document.getElementById('smUrl').value = loginUrl;
+
+    document.getElementById('smTitle').textContent = `Credenziali: ${slug.toUpperCase()}`;
+
+    const body = document.getElementById('smBody');
+    body.innerHTML = `
+      <div class="section-box" style="margin:0;">
+        <div class="hint" style="margin-bottom:8px;">Inserisci la password (se l'hai generata tu) e poi usa i pulsanti per inviare.</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="field">
+            <label>Username</label>
+            <input type="text" id="credUser" value="${username}" readonly>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="text" id="credPass" placeholder="Inserisci password...">
+          </div>
+          <div class="field full">
+            <label>Messaggio</label>
+            <textarea id="credMsg" style="min-height:130px;">${
+              `Benvenuto in Pay4You Cards!\n\nAccesso dashboard: ${loginUrl}\nUsername: ${username}\nPassword: (inserisci qui)\n\nLa tua card: ${cardUrl}`
+            }</textarea>
+            <div class="hint">Suggerimento: dopo aver incollato la password, puoi modificare il testo liberamente.</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const pass = body.querySelector('#credPass');
+    const msg = body.querySelector('#credMsg');
+    if(pass && msg){
+      pass.addEventListener('input', () => {
+        const p = (pass.value || '').trim();
+        const base = `Benvenuto in Pay4You Cards!\n\nAccesso dashboard: ${loginUrl}\nUsername: ${username}\nPassword: ${p ? p : '(inserisci qui)'}\n\nLa tua card: ${cardUrl}`;
+        msg.value = base;
+      });
+    }
+
+    {% if is_admin %}
+      document.getElementById('smDeleteHref').value = '';
+    {% endif %}
+
+    document.getElementById('shareModal').style.display = 'flex';
+  }
+
   function openQrModal(slug, p){
     const url = (p && p !== 'p1') ? `/qr/${slug}.png?p=${p}` : `/qr/${slug}.png`;
     document.getElementById('smKind').value = 'qr';
@@ -360,17 +427,25 @@
     const url = document.getElementById('smUrl').value;
     const media = absUrl(url);
 
-    const msg = [
-      `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`,
-      `Link: ${media}`
-    ].join("\r\n");
+    let msg = '';
+    let subject = '';
+    if(kind === 'creds'){
+      const ta = document.getElementById('smCredMsg');
+      msg = (ta && ta.value) ? ta.value : '';
+      subject = 'Pay4You Card - Credenziali';
+    } else {
+      msg = [
+        `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`,
+        `Link: ${media}`
+      ].join("\r\n");
+      subject = `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`;
+    }
 
     if(channel === 'whatsapp'){
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
 
-    const subject = `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`;
     const g = gmailCompose(subject, msg);
     const w = window.open(g, '_blank');
     if(!w){
