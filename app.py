@@ -252,6 +252,7 @@ def save_upload(file_storage, kind: str):
     if not ok:
         raise ValueError(err)
 
+    # nome file SOLO per estensione (il display name lo salviamo a parte)
     filename = secure_filename(file_storage.filename)
     ext = os.path.splitext(filename)[1].lower()
 
@@ -407,9 +408,11 @@ def default_profile_dict():
         "emails": "", "websites": "", "pec": "", "addresses": "",
         "piva": "", "sdi": "",
         "facebook": "", "instagram": "", "linkedin": "", "tiktok": "", "telegram": "", "youtube": "", "spotify": "",
+
         "photo_url": "", "logo_url": "", "back_media_url": "",
         "photo_pos_x": 50, "photo_pos_y": 35, "photo_zoom": "1.0",
         "orbit_spin": 0, "avatar_spin": 0, "logo_spin": 0, "allow_flip": 0,
+
         "gallery_urls": "", "video_urls": "", "pdf_urls": ""
     }
 
@@ -592,7 +595,8 @@ def handle_media_uploads_common(data: dict):
         for f in pdfs:
             if f and f.filename:
                 url = save_upload(f, "pdf")
-                nm = secure_filename(f.filename) or pdf_name_from_url(url)
+                # ✅ display name: mantieni nome originale (basename)
+                nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
         data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
@@ -633,7 +637,7 @@ def handle_media_uploads_p1(agent: Agent):
         for f in pdfs:
             if f and f.filename:
                 url = save_upload(f, "pdf")
-                nm = secure_filename(f.filename) or pdf_name_from_url(url)
+                nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
                 current.append(f"{nm}||{url}")
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
@@ -676,6 +680,7 @@ def login():
 
     return render_template("login.html")
 
+
 @app.route("/area/logout")
 def logout():
     session.clear()
@@ -694,6 +699,11 @@ def dashboard():
     s = db()
     if is_admin():
         agents = s.query(Agent).all()
+        # ✅ pulizia per non vedere pdf duplicati con nomi diversi
+        for a in agents:
+            a.pdf1_url = clean_pdf_pipe(a.pdf1_url or "")
+            a.gallery_urls = clean_media_pipe(a.gallery_urls or "")
+            a.video_urls = clean_media_pipe(a.video_urls or "")
         agents.sort(key=lambda x: ((x.name or "").strip().lower(), (x.slug or "").strip().lower()))
         return render_template("dashboard.html", agents=agents, is_admin=True)
 
@@ -701,6 +711,9 @@ def dashboard():
     if not ag:
         session.clear()
         return redirect(url_for("login"))
+    ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
+    ag.gallery_urls = clean_media_pipe(ag.gallery_urls or "")
+    ag.video_urls = clean_media_pipe(ag.video_urls or "")
     return render_template("dashboard.html", agents=[ag], is_admin=False)
 
 
@@ -773,7 +786,7 @@ def new_agent():
 
 
 # ==========================
-# ADMIN EDIT P1
+# EDIT P1/P2/P3 + ME + ACTIVATE
 # ==========================
 @app.route("/area/edit/<slug>/p1", methods=["GET", "POST"])
 def edit_agent_p1(slug):
@@ -817,10 +830,6 @@ def edit_agent_p1(slug):
         profile_label="Profilo 1"
     )
 
-
-# ==========================
-# ADMIN EDIT P2 / P3
-# ==========================
 @app.route("/area/edit/<slug>/p2", methods=["GET", "POST"])
 def edit_agent_p2(slug):
     r = require_login()
@@ -907,10 +916,6 @@ def edit_agent_p3(slug):
         profile_label="Profilo 3"
     )
 
-
-# ==========================
-# CLIENT EDIT (ME) P1/P2/P3
-# ==========================
 @app.route("/area/me/edit", methods=["GET", "POST"])
 def me_edit_p1():
     r = require_login()
@@ -1041,7 +1046,7 @@ def me_edit_p3():
 
 
 # ==========================
-# ACTIVATE/DEACTIVATE P2/P3
+# ACTIVATE/DEACTIVATE
 # ==========================
 @app.route("/area/admin/activate/<slug>/p2", methods=["POST"])
 def admin_activate_p2(slug):
@@ -1050,17 +1055,14 @@ def admin_activate_p2(slug):
         return r
     if not is_admin():
         abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p2_enabled = 1
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
-
     flash("P2 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1071,17 +1073,14 @@ def admin_deactivate_p2(slug):
         return r
     if not is_admin():
         abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p2_enabled = 0
     ag.p2_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
-
     flash("P2 disattivato.", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1092,17 +1091,14 @@ def admin_activate_p3(slug):
         return r
     if not is_admin():
         abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p3_enabled = 1
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
-
     flash("P3 attivato (vuoto).", "ok")
     return redirect(url_for("dashboard"))
 
@@ -1113,23 +1109,20 @@ def admin_deactivate_p3(slug):
         return r
     if not is_admin():
         abort(403)
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
         abort(404)
-
     ag.p3_enabled = 0
     ag.p3_json = json.dumps(default_profile_dict(), ensure_ascii=False)
     ag.updated_at = dt.datetime.utcnow()
     s.commit()
-
     flash("P3 disattivato.", "ok")
     return redirect(url_for("dashboard"))
 
 
 # ==========================
-# DELETE MEDIA (P1/P2/P3)   kind=img|vid|pdf
+# DELETE MEDIA (admin/owner)
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
@@ -1142,7 +1135,6 @@ def media_delete(slug, profile):
     if not ag:
         abort(404)
 
-    # permessi: admin o proprietario
     if not is_admin() and session.get("slug") != ag.slug:
         abort(403)
 
@@ -1152,6 +1144,7 @@ def media_delete(slug, profile):
 
     kind = (request.args.get("kind") or "").strip().lower()
     url = canon_url(unquote((request.args.get("url") or "").strip()))
+
     if not url or kind not in ["img", "vid", "pdf"]:
         abort(400)
 
@@ -1195,14 +1188,11 @@ def media_delete(slug, profile):
             ag.video_urls = remove_url_from_pipe(ag.video_urls or "", url)
         else:
             ag.pdf1_url = remove_pdf_from_pipe(ag.pdf1_url or "", url)
-
-        ag.updated_at = dt.datetime.utcnow()
         s.commit()
         try_delete_physical(url)
         flash("Eliminato.", "ok")
         return redirect(request.referrer or url_for("dashboard"))
 
-    # P2/P3
     d = get_profile_data(ag, profile)
     if kind == "img":
         d["gallery_urls"] = remove_url_from_pipe(d.get("gallery_urls", ""), url)
@@ -1218,46 +1208,6 @@ def media_delete(slug, profile):
     try_delete_physical(url)
     flash("Eliminato.", "ok")
     return redirect(request.referrer or url_for("dashboard"))
-
-
-# ==========================
-# PURGE PDF TOTALE (file + DB)
-# ==========================
-@app.route("/area/admin/purge_pdfs", methods=["POST"])
-def purge_pdfs_all():
-    r = require_login()
-    if r:
-        return r
-    if not is_admin():
-        abort(403)
-
-    # cancella file
-    try:
-        for p in SUBDIR_PDF.glob("*"):
-            if p.is_file():
-                try:
-                    p.unlink()
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    # pulisci DB
-    s = db()
-    agents = s.query(Agent).all()
-    for ag in agents:
-        ag.pdf1_url = ""
-        b2 = get_profile_data(ag, "p2")
-        b3 = get_profile_data(ag, "p3")
-        b2["pdf_urls"] = ""
-        b3["pdf_urls"] = ""
-        save_profile_json(ag, "p2", b2)
-        save_profile_json(ag, "p3", b3)
-        ag.updated_at = dt.datetime.utcnow()
-
-    s.commit()
-    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
-    return redirect(url_for("dashboard"))
 
 
 # ==========================
@@ -1291,6 +1241,48 @@ def clean_pdf_db_all():
 
 
 # ==========================
+# PURGE PDF TOTALE (file + DB)
+# ==========================
+@app.route("/area/admin/purge_pdfs", methods=["POST"])
+def purge_pdfs_all():
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    # cancella file
+    try:
+        for p in SUBDIR_PDF.glob("*"):
+            if p.is_file():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # pulisci DB
+    s = db()
+    agents = s.query(Agent).all()
+    for ag in agents:
+        ag.pdf1_url = ""
+
+        b2 = get_profile_data(ag, "p2")
+        b3 = get_profile_data(ag, "p3")
+        b2["pdf_urls"] = ""
+        b3["pdf_urls"] = ""
+        save_profile_json(ag, "p2", b2)
+        save_profile_json(ag, "p3", b3)
+
+        ag.updated_at = dt.datetime.utcnow()
+
+    s.commit()
+    flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
+    return redirect(url_for("dashboard"))
+
+
+# ==========================
 # QR
 # ==========================
 @app.route("/qr/<slug>.png")
@@ -1299,7 +1291,6 @@ def qr_png(slug):
         abort(500)
 
     p = (request.args.get("p") or "").strip().lower()
-
     s = db()
     ag = s.query(Agent).filter(Agent.slug == slug).first()
     if not ag:
@@ -1392,9 +1383,11 @@ def pdf_alias_or_card(filename):
                 nm, url = normalize_pdf_item(it)
                 nm = (nm or "").strip()
                 url = canon_url(url)
+
                 if not _is_valid_pdf_url(url):
                     continue
 
+                # match robusto: nome caricato / basename url
                 if _norm_pdf_name(nm) == wanted_norm or _norm_pdf_name(pdf_name_from_url(url)) == wanted_norm:
                     return redirect(url, code=302)
 
@@ -1406,6 +1399,7 @@ def pdf_alias_or_card(filename):
                     nm, url = normalize_pdf_item(it)
                     nm = (nm or "").strip()
                     url = canon_url(url)
+
                     if not _is_valid_pdf_url(url):
                         continue
 
@@ -1468,7 +1462,7 @@ def pdf_alias_or_card(filename):
     office_value = (data.get("phone_office") or "").strip()
 
     emails = [e.strip() for e in (data.get("emails") or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]
+    websites = [w.strip() for w in (data.get("websites") or "").split(",") if e.strip()]
 
     wa_link = ""
     wa_raw = (data.get("whatsapp") or "").strip()
@@ -1539,6 +1533,9 @@ def pdf_alias_or_card(filename):
         gallery=gallery,
         videos=videos,
         pdfs=pdfs,
+        profile=profile,
+        p2_enabled=int(ag.p2_enabled or 0),
+        p3_enabled=int(ag.p3_enabled or 0),
     )
 
 
