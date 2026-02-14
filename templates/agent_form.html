@@ -92,13 +92,37 @@
           {% endif %}
 
           {% if agent %}
-          <div class="section-box tone-slate">
+          <div class="section-box tone-1">
             <div class="h3">Identificativo</div>
             <div class="form-grid">
               <div class="field">
                 <label>Slug (non modificabile)</label>
                 <input type="text" value="{{ agent.slug }}" readonly>
                 <div class="hint">È il link pubblico della card.</div>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="section-box tone-1">
+            <div class="h3">Dati accesso (creazione)</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Nome</label>
+                <input type="text" name="first_name" placeholder="Nome" required>
+              </div>
+              <div class="field">
+                <label>Cognome (opzionale)</label>
+                <input type="text" name="last_name" placeholder="Cognome">
+              </div>
+              <div class="field">
+                <label>Slug (consigliato)</label>
+                <input type="text" name="slug" placeholder="es. bar-rossi">
+                <div class="hint">Se lasci vuoto, lo generiamo dal nome.</div>
+              </div>
+              <div class="field">
+                <label>Password iniziale</label>
+                <input type="text" name="password" placeholder="Minimo 4 caratteri" required>
+                <div class="hint">Al primo accesso potrà cambiarla da <b>Password dimenticata</b>.</div>
               </div>
             </div>
           </div>
@@ -334,31 +358,11 @@
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box tone-6">
             <div class="h3">PDF</div>
-            <div class="form-grid">
-              <div class="field full"><label>Aggiungi PDF (multiple)</label><input type="file" name="pdf_files" accept="application/pdf" multiple></div>
-            </div>
-
-            <div class="pdf-list">
-              {% set pdfs = (data.get("pdf_urls","") or "").split("|") %}
-              {% set any_pdf = false %}
-              {% for p in pdfs %}
-                {% if p and p.strip() %}
-                  {% set any_pdf = true %}
-                  {% if "||" in p %}
-                    {% set nm = p.split("||")[0] %}
-                    {% set u = p.split("||")[1] %}
-                  {% else %}
-                    {% set nm = p %}
-                    {% set u = p %}
-                  {% endif %}
-                  <button type="button" class="pdf-open-btn" data-url="{{ u }}" data-name="{{ nm|e }}">📄 {{ nm }}</button>
-                {% endif %}
-              {% endfor %}
-              {% if not any_pdf %}<div class="hint">—</div>{% endif %}
-            </div>
+            <div class="hint">Sezione PDF temporaneamente disattivata (stiamo risolvendo un bug di duplicazione).</div>
           </div>
+
 
           {% if show_i18n %}
           <div class="section-box">
