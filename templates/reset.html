@@ -1,1 +1,46 @@
 
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuova password | Pay4You</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="login-shell">
+  <div class="login-card login-card-gold">
+
+    <div class="login-top">
+      <img class="login-logo" src="/static/pay4you-logo.png">
+      <div class="login-head">
+        <h1>Nuova password</h1>
+      </div>
+    </div>
+
+    {% if err %}
+      <div class="flash flash-error">{{ err }}</div>
+    {% endif %}
+
+    <form method="post" class="login-form">
+      <div class="field">
+        <label>Nuova password</label>
+        <input type="password" name="password" required>
+      </div>
+
+      <div class="field">
+        <label>Ripeti password</label>
+        <input type="password" name="password2" required>
+      </div>
+
+      <button class="btn btn-login-primary" type="submit">
+        Salva password
+      </button>
+    </form>
+
+  </div>
+</div>
+
+</body>
+</html>
