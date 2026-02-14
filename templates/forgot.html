@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Password dimenticata | Pay4You</title>
+
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/static/favicon.ico">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,31 +15,39 @@
   <div class="login-card login-card-gold">
 
     <div class="login-top">
-      <img class="login-logo" src="/static/pay4you-logo.png">
+      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
       <div class="login-head">
         <h1>Password dimenticata</h1>
-        <p>Inserisci la tua email</p>
+        <p>Ti inviamo un link per impostare una nuova password</p>
       </div>
     </div>
 
-    {% if err %}
-      <div class="flash flash-error">{{ err }}</div>
-    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap" style="margin-top:12px">
+          {% for cat,msg in messages %}
+            <div class="flash flash-{{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-    <form method="post" class="login-form">
+    <form method="post" action="/area/forgot" class="login-form" autocomplete="on" style="margin-top:10px">
       <div class="field">
-        <label>Email</label>
-        <input type="email" name="email" required>
+        <label>Email (o username)</label>
+        <input type="text" name="user" autocomplete="username" required>
+        <div class="hint">Se usi l'email, deve combaciare con quella inserita in anagrafica.</div>
       </div>
 
-      <button class="btn btn-login-primary" type="submit">
-        Recupera password
-      </button>
-    </form>
+      <div class="login-actions">
+        <button class="btn btn-login-primary" type="submit">Invia link reset</button>
+        <a class="btn btn-login-outline" href="/area/login">Torna al login</a>
+      </div>
 
-    <div class="login-foot">
-      <a href="/area/login">← Torna al login</a>
-    </div>
+      <div class="login-foot">
+        © 2026 Pay4You — Giuseppe Di Lisio
+      </div>
+    </form>
 
   </div>
 </div>
