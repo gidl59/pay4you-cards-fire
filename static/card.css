@@ -316,3 +316,28 @@ body.light .btn:hover{background: rgba(0,0,0,.08)}
   .v,a{color:#111}
   .ps-btn{border-color:rgba(0,0,0,.14);color:#111}
 }
+
+/* === Theme: light (fix white-on-white) === */
+body[data-theme="light"]{
+  background: #f5f7fb;
+  color:#0f172a;
+}
+body[data-theme="light"] .hero{
+  background: radial-gradient(circle at top left, rgba(45,212,191,.25) 0, rgba(96,165,250,.15) 35%, rgba(245,247,251,1) 85%);
+}
+body[data-theme="light"] .hero-overlay{ background: rgba(255,255,255,.55); }
+body[data-theme="light"] .box{
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(15,23,42,.10);
+}
+body[data-theme="light"] .row{ border-top: 1px solid rgba(15,23,42,.08); }
+body[data-theme="light"] .k{ color: rgba(15,23,42,.65); }
+body[data-theme="light"] a{ color:#0f172a; }
+body[data-theme="light"] .btn{
+  background: rgba(15,23,42,.06);
+  border: 1px solid rgba(15,23,42,.10);
+  color:#0f172a;
+}
+body[data-theme="light"] .btn:hover{ background: rgba(45,212,191,.18); border-color: rgba(45,212,191,.35); }
+body[data-theme="light"] .theme-btn{ border-color: rgba(15,23,42,.14); }
+body[data-theme="light"] .theme-btn.active{ border-color: rgba(45,212,191,.75); }
