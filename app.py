@@ -255,10 +255,28 @@ def save_upload(file_storage, kind: str):
         raise ValueError(err)
 
     filename = secure_filename(file_storage.filename)
-    ext = os.path.splitext(filename)[1].lower()
+    ext = os.path.splitext(filename)[1].lower() or ".bin"
 
-    uid = uuid.uuid4().hex[:12]
-    outname = f"{uid}{ext}"
+    if kind == "pdf":
+        # Read stream once to hash, then rewind for saving.
+        h = hashlib.sha256()
+        try:
+            file_storage.stream.seek(0)
+        except Exception:
+            pass
+        while True:
+            chunk = file_storage.stream.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+        try:
+            file_storage.stream.seek(0)
+        except Exception:
+            pass
+        outname = f"{h.hexdigest()[:24]}.pdf"
+    else:
+        uid = uuid.uuid4().hex[:12]
+        outname = f"{uid}{ext}"
 
     if kind == "images":
         outpath = SUBDIR_IMG / outname
