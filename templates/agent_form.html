@@ -157,13 +157,36 @@
             <div class="hint">Inserisci URL completi (se non valido non verrà mostrato).</div>
 
             <div class="form-grid">
-              <div class="field"><label>Facebook</label><input type="text" name="facebook" value="{{ data.get('facebook','') }}"></div>
-              <div class="field"><label>Instagram</label><input type="text" name="instagram" value="{{ data.get('instagram','') }}"></div>
-              <div class="field"><label>LinkedIn</label><input type="text" name="linkedin" value="{{ data.get('linkedin','') }}"></div>
-              <div class="field"><label>TikTok</label><input type="text" name="tiktok" value="{{ data.get('tiktok','') }}"></div>
-              <div class="field"><label>Telegram</label><input type="text" name="telegram" value="{{ data.get('telegram','') }}"></div>
-              <div class="field"><label>YouTube</label><input type="text" name="youtube" value="{{ data.get('youtube','') }}"></div>
-              <div class="field"><label>Spotify</label><input type="text" name="spotify" value="{{ data.get('spotify','') }}"></div>
+              <div class="field">
+                <label>Facebook</label>
+                <input type="text" name="facebook" placeholder="https://www.facebook.com/..." value="{{ data.get('facebook','') }}">
+                <div class="hint">Inserisci il link completo (es. https://www.facebook.com/share/...)</div>
+              </div>
+              <div class="field">
+                <label>Instagram</label>
+                <input type="text" name="instagram" placeholder="https://www.instagram.com/..." value="{{ data.get('instagram','') }}">
+                <div class="hint">Inserisci il link completo (es. https://www.instagram.com/tuoprofilo)</div>
+              </div>
+              <div class="field">
+                <label>LinkedIn</label>
+                <input type="text" name="linkedin" placeholder="https://www.linkedin.com/in/..." value="{{ data.get('linkedin','') }}">
+              </div>
+              <div class="field">
+                <label>TikTok</label>
+                <input type="text" name="tiktok" placeholder="https://www.tiktok.com/@..." value="{{ data.get('tiktok','') }}">
+              </div>
+              <div class="field">
+                <label>Telegram</label>
+                <input type="text" name="telegram" placeholder="https://t.me/..." value="{{ data.get('telegram','') }}">
+              </div>
+              <div class="field">
+                <label>YouTube</label>
+                <input type="text" name="youtube" placeholder="https://www.youtube.com/@..." value="{{ data.get('youtube','') }}">
+              </div>
+              <div class="field">
+                <label>Spotify</label>
+                <input type="text" name="spotify" placeholder="https://open.spotify.com/..." value="{{ data.get('spotify','') }}">
+              </div>
             </div>
           </div>
 
