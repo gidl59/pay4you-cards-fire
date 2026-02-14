@@ -2,6 +2,7 @@ import os
 import re
 import json
 import uuid
+import hashlib
 import datetime as dt
 from pathlib import Path
 from urllib.parse import unquote
@@ -47,7 +48,7 @@ MAX_PDF_MB = 15
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_PDFS = 12  # ✅ richiesto
+MAX_PDFS = 12  # ✅ come richiesto
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -557,19 +558,30 @@ def set_profile_from_form(existing: dict, form: dict) -> dict:
 
     return d
 
-
-# ==========================
-# ✅ FIX PDF DUPLICATI (P1 / P2 / P3)
-# ==========================
-def _request_file_signature(fs):
-    """Firma semplice per deduplicare 'doppio invio' nello stesso POST."""
+# ---- PDF dedup robusto nella stessa request (Chrome/iPhone) ----
+def _file_fingerprint(file_storage) -> str:
+    """
+    Fingerprint: filename normalizzato + size + hash dei primi 64KB.
+    Evita il caso in cui lo stesso file arriva 2 volte in request.files.
+    """
     try:
-        nm = secure_filename(fs.filename or "").lower()
-    except Exception:
-        nm = (fs.filename or "").lower()
-    sz = file_size_bytes(fs)
-    return (nm, sz)
+        name = secure_filename(file_storage.filename or "").lower().strip()
+        size = file_size_bytes(file_storage)
 
+        stream = file_storage.stream
+        pos = stream.tell()
+        stream.seek(0)
+        chunk = stream.read(65536) or b""
+        stream.seek(pos, os.SEEK_SET)
+
+        h = hashlib.sha1(chunk).hexdigest()[:12]
+        return f"{name}::{size}::{h}"
+    except Exception:
+        return (secure_filename(file_storage.filename or "") or "").lower().strip()
+
+def _pdf_display_name(original_filename: str, fallback_url: str) -> str:
+    nm = (os.path.basename(original_filename or "") or "").strip()
+    return nm or pdf_name_from_url(fallback_url or "")
 
 def handle_media_uploads_common(data: dict):
     photo = request.files.get("photo")
@@ -602,37 +614,25 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_VIDEOS]
         data["video_urls"] = clean_media_pipe(join_pipe_list(current))
 
-    # ✅ PDF: dedupe nella request + dedupe su URL in db
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
-        current_items = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
-        existing_urls = set()
-        for it in current_items:
-            _nm, _u = normalize_pdf_item(it)
-            _u = canon_url(_u)
-            if _u:
-                existing_urls.add(_u)
+        current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
 
-        seen_sig = set()
+        seen_fp = set()
         for f in pdfs:
             if not (f and f.filename):
                 continue
 
-            sig = _request_file_signature(f)
-            if sig in seen_sig:
+            fp = _file_fingerprint(f)
+            if fp in seen_fp:
                 continue
-            seen_sig.add(sig)
+            seen_fp.add(fp)
 
-            url = canon_url(save_upload(f, "pdf"))
-            if url in existing_urls:
-                continue
-            existing_urls.add(url)
+            url = save_upload(f, "pdf")
+            nm = _pdf_display_name(f.filename, url)
+            current.append(f"{nm}||{url}")
 
-            nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
-            current_items.append(f"{nm}||{url}")
-
-        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current_items))
-
+        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
 def handle_media_uploads_p1(agent: Agent):
     photo = request.files.get("photo")
@@ -665,36 +665,25 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_VIDEOS]
         agent.video_urls = clean_media_pipe(join_pipe_list(current))
 
-    # ✅ PDF: dedupe nella request + dedupe su URL in db
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
-        current_items = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
-        existing_urls = set()
-        for it in current_items:
-            _nm, _u = normalize_pdf_item(it)
-            _u = canon_url(_u)
-            if _u:
-                existing_urls.add(_u)
+        current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
 
-        seen_sig = set()
+        seen_fp = set()
         for f in pdfs:
             if not (f and f.filename):
                 continue
 
-            sig = _request_file_signature(f)
-            if sig in seen_sig:
+            fp = _file_fingerprint(f)
+            if fp in seen_fp:
                 continue
-            seen_sig.add(sig)
+            seen_fp.add(fp)
 
-            url = canon_url(save_upload(f, "pdf"))
-            if url in existing_urls:
-                continue
-            existing_urls.add(url)
+            url = save_upload(f, "pdf")
+            nm = _pdf_display_name(f.filename, url)
+            current.append(f"{nm}||{url}")
 
-            nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
-            current_items.append(f"{nm}||{url}")
-
-        agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current_items))
+        agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
 
 # ==========================
@@ -712,10 +701,6 @@ def serve_uploads(filename):
 # ==========================
 # AUTH
 # ==========================
-@app.get("/area/forgot")
-def area_forgot():
-    # TODO: pagina + invio email reset
-    return render_template("forgot.html")
 @app.route("/area/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -1180,7 +1165,7 @@ def admin_deactivate_p3(slug):
 
 
 # ==========================
-# DELETE MEDIA
+# DELETE MEDIA (admin/owner)
 # ==========================
 @app.route("/area/media/delete/<slug>/<profile>")
 def media_delete(slug, profile):
@@ -1269,7 +1254,7 @@ def media_delete(slug, profile):
 
 
 # ==========================
-# CLEAN/PURGE PDF
+# CLEAN PDF DB (NON cancella file)
 # ==========================
 @app.route("/area/admin/clean_pdf_db", methods=["POST"])
 def clean_pdf_db_all():
@@ -1297,6 +1282,10 @@ def clean_pdf_db_all():
     flash("Pulizia PDF DB completata (rimossi duplicati/spazzatura).", "ok")
     return redirect(url_for("dashboard"))
 
+
+# ==========================
+# PURGE PDF TOTALE (file + DB)
+# ==========================
 @app.route("/area/admin/purge_pdfs", methods=["POST"])
 def purge_pdfs_all():
     r = require_login()
@@ -1420,6 +1409,7 @@ def vcf(slug):
 # ==========================
 @app.route("/<path:filename>")
 def pdf_alias_or_card(filename):
+    # ---- PDF alias ----
     if filename.lower().endswith(".pdf"):
         wanted = filename.rsplit("/", 1)[-1]
         wanted_norm = _norm_pdf_name(wanted)
@@ -1456,6 +1446,7 @@ def pdf_alias_or_card(filename):
 
         abort(404)
 
+    # ---- CARD by slug ----
     slug = filename.strip("/").split("/", 1)[0]
     if not slug:
         return redirect(url_for("login"))
@@ -1509,7 +1500,7 @@ def pdf_alias_or_card(filename):
     office_value = (data.get("phone_office") or "").strip()
 
     emails = [e.strip() for e in (data.get("emails") or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]
+    websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]  # ✅ fix
 
     wa_link = ""
     wa_raw = (data.get("whatsapp") or "").strip()
