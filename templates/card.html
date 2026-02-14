@@ -79,6 +79,28 @@
         </div>
       {% endif %}
 
+      {# Social icons under bio #}
+      {% set has_social = false %}
+      {% for key, label, abbr in socials %}
+        {% set val = (ag|attr(key)) %}
+        {% if val and (val.startswith('http://') or val.startswith('https://')) %}
+          {% set has_social = true %}
+        {% endif %}
+      {% endfor %}
+
+      {% if has_social %}
+        <div class="social-row" aria-label="Social">
+          {% for key, label, abbr in socials %}
+            {% set val = (ag|attr(key)) %}
+            {% if val and (val.startswith('http://') or val.startswith('https://')) %}
+              <a class="sbtn" data-key="{{ key }}" href="{{ val }}" target="_blank" rel="noopener" title="{{ label }}">
+                <span class="abbr">{{ abbr }}</span>
+              </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
       <div class="box">
         <h3>{{ t_func("actions") }}</h3>
         <div class="actions">
@@ -107,20 +129,18 @@
         {% endif %}
       {% endfor %}
 
+      {# Social icons under bio, not as a separate box #}
       {% if has_social %}
-      <div class="box">
-        <h3>{{ t_func("social") }}</h3>
-        <div class="socials">
+        <div class="social-row" aria-label="{{ t_func('social') }}">
           {% for key, label, abbr in socials %}
             {% set val = (ag|attr(key)) %}
             {% if val and (val.startswith('http://') or val.startswith('https://')) %}
-              <a class="sbtn" href="{{ val }}" target="_blank" rel="noopener" aria-label="{{ label }}">
+              <a class="sbtn" data-key="{{ key }}" href="{{ val }}" target="_blank" rel="noopener" aria-label="{{ label }}">
                 <span class="sico">{{ abbr }}</span>
               </a>
             {% endif %}
           {% endfor %}
         </div>
-      </div>
       {% endif %}
 
       <div class="box">
