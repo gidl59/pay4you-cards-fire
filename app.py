@@ -725,6 +725,80 @@ def login():
     return render_template("login.html")
 
 
+import secrets
+import time
+
+# memoria temporanea reset (puoi poi passare a DB)
+RESET_TOKENS = {}
+
+# ==========================
+# FORGOT PASSWORD
+# ==========================
+@app.route("/area/forgot", methods=["GET","POST"])
+def area_forgot():
+    msg = ""
+    err = ""
+
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+
+        if not email:
+            err = "Inserisci email"
+        else:
+            db = SessionLocal()
+            user = db.query(Agent).filter_by(email=email).first()
+            db.close()
+
+            if not user:
+                err = "Email non trovata"
+            else:
+                token = secrets.token_urlsafe(32)
+                RESET_TOKENS[token] = {
+                    "email": email,
+                    "exp": time.time() + 3600  # 1 ora
+                }
+
+                return redirect(f"/area/reset/{token}")
+
+    return render_template("forgot.html", msg=msg, err=err)
+
+
+# ==========================
+# RESET PASSWORD
+# ==========================
+@app.route("/area/reset/<token>", methods=["GET","POST"])
+def area_reset(token):
+    data = RESET_TOKENS.get(token)
+
+    if not data or data["exp"] < time.time():
+        return "Link non valido o scaduto"
+
+    err = ""
+    msg = ""
+
+    if request.method == "POST":
+        p1 = request.form.get("password")
+        p2 = request.form.get("password2")
+
+        if not p1 or len(p1) < 4:
+            err = "Password troppo corta"
+        elif p1 != p2:
+            err = "Le password non coincidono"
+        else:
+            db = SessionLocal()
+            user = db.query(Agent).filter_by(email=data["email"]).first()
+
+            if user:
+                user.password = p1  # se usi hash fammelo sapere
+                db.commit()
+
+            db.close()
+
+            del RESET_TOKENS[token]
+
+            return redirect("/area/login")
+
+    return render_template("reset.html", err=err, msg=msg)
 @app.route("/area/logout")
 def logout():
     session.clear()
