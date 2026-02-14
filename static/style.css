@@ -1,25 +1,20 @@
 /* Pay4You admin UI styles */
 :root{
   --bg:#0b0f14;
-  --panel: rgba(255,255,255,.06);
-  --border: rgba(255,255,255,.12);
+  --bg2:#0a1220;
+  --panel: rgba(255,255,255,.08);
+  --panel2: rgba(255,255,255,.12);
+  --border: rgba(255,255,255,.14);
   --text:#e8eef7;
-  --muted: rgba(232,238,247,.70);
+  --muted: rgba(232,238,247,.72);
   --brand:#2dd4bf;
-  --blue:#60a5fa;
-  --gold:#fbbf24;
+  --brand2:#60a5fa;
+  --warn:#fbbf24;
+  --danger:#ef4444;
 }
 
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  color:var(--text);
-  background:
-    radial-gradient(1200px 700px at 18% -10%, rgba(45,212,191,.18), transparent 55%),
-    radial-gradient(1100px 650px at 88% 20%, rgba(96,165,250,.16), transparent 58%),
-    radial-gradient(900px 600px at 50% 120%, rgba(251,191,36,.10), transparent 60%),
-    var(--bg);
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background: radial-gradient(1200px 600px at 15% -10%, rgba(45,212,191,.18), transparent 60%),radial-gradient(900px 500px at 85% 20%, rgba(96,165,250,.16), transparent 55%),linear-gradient(180deg, var(--bg2), var(--bg));color:var(--text)
 }
 a{color:inherit}
 
@@ -41,16 +36,16 @@ a{color:inherit}
   background:rgba(255,255,255,.07);color:var(--text);text-decoration:none;font-weight:900;cursor:pointer
 }
 .btn:hover{background:rgba(255,255,255,.11)}
-.btn.primary{background:rgba(45,212,191,.18);border-color:rgba(45,212,191,.40)}
+.btn.primary{background:linear-gradient(90deg, rgba(45,212,191,.22), rgba(96,165,250,.18));border-color:rgba(45,212,191,.45)}
 .btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.38)}
 .btn.ghost{background:transparent}
 
 .btn-mini{
   padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.06);text-decoration:none;font-weight:900;cursor:pointer;color:var(--text)
+  background:rgba(255,255,255,.08);text-decoration:none;font-weight:900;cursor:pointer;color:var(--text)
 }
 .btn-mini.ghost{background:transparent}
-.btn-mini.warn{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.28)}
+.btn-mini.warn{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.34)}
 .btn-mini.danger{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.30)}
 .inline{display:inline}
 
@@ -61,7 +56,7 @@ a{color:inherit}
 .flash-ok{border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.10)}
 
 .dash-grid{display:flex;flex-direction:column;gap:12px}
-.dash-card{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:18px;padding:14px}
+.dash-card{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);border-radius:18px;padding:14px}
 .dash-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .dash-left{display:flex;gap:12px;align-items:center}
 .dash-avatar{width:56px;height:56px;border-radius:16px;border:1px solid rgba(255,255,255,.14);overflow:hidden;background:rgba(0,0,0,.20);display:flex;align-items:center;justify-content:center}
@@ -86,7 +81,7 @@ a{color:inherit}
 .modal-title{font-weight:950}
 .footer{margin-top:16px;color:var(--muted);text-align:center}
 
-.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:18px;padding:14px}
+.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);border-radius:18px;padding:14px}
 .panel-wide{max-width:1100px;margin:0 auto}
 .page-title{margin:0}
 .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
@@ -134,7 +129,7 @@ textarea{min-height:84px;resize:vertical}
 .pdf-open-btn{width:100%;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.16);color:var(--text);cursor:pointer;font-weight:900}
 
 .login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-.login-box{width:min(420px,100%);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:18px;padding:16px;backdrop-filter:blur(8px)}
+.login-box{width:min(420px,100%);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);border-radius:18px;padding:16px;backdrop-filter:blur(8px)}
 .login-title{font-weight:950;font-size:18px}
 .inp{width:100%}
 
@@ -143,3 +138,39 @@ textarea{min-height:84px;resize:vertical}
   .form-grid{grid-template-columns:1fr}
   .triple-cols{grid-template-columns:1fr}
 }
+
+/* accent strip */
+.dash-card{position:relative; overflow:hidden}
+.dash-card::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:4px;
+  background: linear-gradient(180deg, rgba(45,212,191,.9), rgba(96,165,250,.85));
+  opacity:.85;
+}
+.dash-card{padding-left:16px}
+
+/* force square previews */
+.tc-preview{aspect-ratio: 1 / 1; height:auto; min-height:220px}
+@media (max-width:860px){.tc-preview{min-height:200px}}
+
+/* login */
+.login-card{width:min(460px,100%);border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));border-radius:20px;padding:18px}
+.login-card-gold{position:relative}
+.login-card-gold::before{
+  content:"";
+  position:absolute; inset:-1px; border-radius:20px; padding:1px;
+  background: linear-gradient(90deg, rgba(201,154,47,.65), rgba(45,212,191,.35), rgba(96,165,250,.35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events:none;
+}
+.login-top{display:flex;gap:12px;align-items:center}
+.login-logo{width:56px;height:56px;object-fit:contain;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);padding:6px}
+.login-head h1{margin:0;font-size:20px}
+.login-head p{margin:4px 0 0;color:var(--muted);font-weight:800}
+.login-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn-login-primary{background:rgba(201,154,47,.92);color:#0b0f14;border-color:rgba(201,154,47,.75)}
+.btn-login-primary:hover{filter:brightness(.95)}
+.btn-login-outline{background:transparent;border-color:rgba(201,154,47,.55);color:rgba(246,226,160,.98)}
+.login-foot{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}
