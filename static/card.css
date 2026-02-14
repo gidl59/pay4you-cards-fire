@@ -1,6 +1,4 @@
 /* Pay4You Card CSS */
-
-/* ✅ Theme variables (AUTO/LIGHT/DARK) */
 :root{
   --bg:#0b0f14;
   --panel: rgba(255,255,255,.06);
@@ -9,26 +7,6 @@
   --muted: rgba(232,238,247,.70);
   --border: rgba(255,255,255,.12);
   --brand:#2dd4bf;
-}
-
-:root[data-theme="dark"]{
-  --bg:#0b0f14;
-  --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.09);
-  --text:#e8eef7;
-  --muted: rgba(232,238,247,.70);
-  --border: rgba(255,255,255,.12);
-  --brand:#2dd4bf;
-}
-
-:root[data-theme="light"]{
-  --bg:#f6f7fb;
-  --panel: rgba(0,0,0,.04);
-  --panel2: rgba(0,0,0,.06);
-  --text:#111318;
-  --muted: rgba(17,19,24,.70);
-  --border: rgba(0,0,0,.10);
-  --brand:#0ea5a4;
 }
 
 *{box-sizing:border-box}
