@@ -107,6 +107,25 @@ body{
 .addr a{color:rgba(45,212,191,.95);font-weight:800}
 
 .actions{display:flex;gap:10px;flex-wrap:wrap}
+
+.socials{display:flex;gap:10px;flex-wrap:wrap}
+.social{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  text-decoration:none;
+  color:#fff;
+  font-weight:950;
+  letter-spacing:.02em;
+}
+.social:hover{border-color:rgba(125,211,230,.55);background:rgba(125,211,230,.12)}
+body.light .social{border-color:rgba(0,0,0,.18);background:rgba(255,255,255,.65);color:#111}
+body.light .social:hover{border-color:rgba(14,165,233,.55);background:rgba(14,165,233,.12)}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;
   padding:10px 14px;
@@ -124,7 +143,7 @@ body{
 .media-grid{
   display:grid;
   grid-template-columns: repeat(4, 1fr);
-  gap:8px;
+  gap:10px;
 }
 .thumb{
   all:unset;
@@ -136,16 +155,18 @@ body{
   display:block;
 }
 .thumb img{width:100%;aspect-ratio:1/1;height:auto;object-fit:cover;display:block}
+.thumb video{width:100%;aspect-ratio:1/1;height:auto;object-fit:cover;display:block}
 
 .video-row{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap:8px;
+  display:flex;
+  gap:10px;
+  overflow:auto;
+  padding-bottom:4px;
 }
 .vthumb{
   all:unset;
   cursor:pointer;
-  width:100%;
+  width:auto;
   border-radius:14px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.12);
@@ -194,7 +215,7 @@ body{
 .logo.spin{animation:spin 6s linear infinite}
 .avatar.spin{animation:spin 8s linear infinite}
 .avatar-wrap.orbit{animation:spin 12s linear infinite}
-.avatar.tapflip,.avatar.autoflip{transform-style:preserve-3d; perspective:900px}
+.avatar.flip{transform-style:preserve-3d}
 
 .modal-overlay{
   position:fixed; inset:0;
@@ -220,17 +241,13 @@ body{
   .row{grid-template-columns:1fr}
   .k{margin-bottom:2px}
   .media-grid{grid-template-columns: repeat(2, 1fr)}
-  .thumb img{height:76px}
-  .video-row{grid-template-columns: repeat(2, 1fr)}
+  .thumb img{height:96px}
 }
 
 /* back media behind avatar */
 .avatar-wrap{position:relative}
 .backdisc{
   position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
   width:184px;height:184px;
   border-radius:50%;
   background: rgba(0,0,0,.15);
@@ -252,12 +269,9 @@ body{
 .backdisc.spin{animation:spin 10s linear infinite}
 
 /* flip: front photo, back logo */
-.avatar.tapflip,.avatar.autoflip{perspective:900px}
-.avatar.tapflip .flip-inner,.avatar.autoflip .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .65s ease}
-.avatar.tapflip.is-flipped .flip-inner{transform:rotateY(180deg)}
-.avatar.autoflip .flip-inner{animation:autoflip 4.5s linear infinite}
-
-@keyframes autoflip{0%{transform:rotateY(0)}50%{transform:rotateY(180deg)}100%{transform:rotateY(360deg)}}
+.avatar.flip{perspective:900px}
+.avatar.flip .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .65s ease}
+.avatar.flip.is-flipped .flip-inner{transform:rotateY(180deg)}
 .flip-face{position:absolute; inset:0; backface-visibility:hidden}
 .flip-back{transform:rotateY(180deg)}
 .flip-back img{width:100%;height:100%;object-fit:cover}
