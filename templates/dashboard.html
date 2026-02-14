@@ -80,6 +80,10 @@
 
             <a class="btn-mini ghost" href="/vcf/{{ a.slug }}">VCF</a>
 
+            {% if is_admin %}
+              <button class="btn-mini primary" type="button" onclick="sendCred('{{ a.slug }}')">Invia credenziali</button>
+            {% endif %}
+
             <button class="btn-mini ghost" type="button" onclick="openQrModal('{{ a.slug }}','p1')">QR P1</button>
             {% if a.p2_enabled == 1 %}
               <button class="btn-mini ghost" type="button" onclick="openQrModal('{{ a.slug }}','p2')">QR P2</button>
@@ -89,7 +93,6 @@
             {% endif %}
 
             {% if is_admin %}
-              <button class="btn-mini" type="button" onclick="openCredModal('{{ a.slug }}','{{ a.username }}')">Invia credenziali</button>
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
@@ -136,76 +139,98 @@
         <div class="dash-preview">
           <div class="dash-preview-col">
             <div class="dash-preview-title">Foto</div>
-            <div class="dash-mini-grid">
-              {% set imgs = (a.gallery_urls or "").split("|") %}
-              {% set imgs2 = [] %}
-              {% for x in imgs %}
-                {% if x and x.strip() %}
-                  {% set _ = imgs2.append(x) %}
+            {% if not is_admin %}
+              {% for lbl,pipe in [('P1',a.gallery_urls),('P2',a.p2_gallery_urls),('P3',a.p3_gallery_urls)] %}
+                {% if pipe %}
+                  <div class="dash-mini-label">{{ lbl }}</div>
+                  <div class="dash-mini-grid">
+                    {% set imgs = (pipe or "").split("|") %}
+                    {% set imgs2 = [] %}
+                    {% for x in imgs %}
+                      {% if x and x.strip() %}{% set _ = imgs2.append(x) %}{% endif %}
+                    {% endfor %}
+                    {% for g in imgs2[:6] %}
+                      <img class="dash-mini" src="{{ g }}" alt="">
+                    {% endfor %}
+                    {% if imgs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+                  </div>
                 {% endif %}
               {% endfor %}
-              {% for g in imgs2[:6] %}
-                <img class="dash-mini" src="{{ g }}" alt="">
-              {% endfor %}
-              {% if imgs2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
+            {% else %}
+              <div class="dash-mini-grid">
+                {% set imgs = (a.gallery_urls or "").split("|") %}
+                {% set imgs2 = [] %}
+                {% for x in imgs %}
+                  {% if x and x.strip() %}{% set _ = imgs2.append(x) %}{% endif %}
+                {% endfor %}
+                {% for g in imgs2[:6] %}
+                  <img class="dash-mini" src="{{ g }}" alt="">
+                {% endfor %}
+                {% if imgs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+              </div>
+            {% endif %}
           </div>
 
           <div class="dash-preview-col">
             <div class="dash-preview-title">Video</div>
-            <div class="dash-mini-grid">
-              {% set vids = (a.video_urls or "").split("|") %}
-              {% set vids2 = [] %}
-              {% for x in vids %}
-                {% if x and x.strip() %}
-                  {% set _ = vids2.append(x) %}
+            {% if not is_admin %}
+              {% for lbl,pipe in [('P1',a.video_urls),('P2',a.p2_video_urls),('P3',a.p3_video_urls)] %}
+                {% if pipe %}
+                  <div class="dash-mini-label">{{ lbl }}</div>
+                  <div class="dash-mini-grid">
+                    {% set vids = (pipe or "").split("|") %}
+                    {% set vids2 = [] %}
+                    {% for x in vids %}{% if x and x.strip() %}{% set _ = vids2.append(x) %}{% endif %}{% endfor %}
+                    {% for v in vids2[:4] %}
+                      <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
+                    {% endfor %}
+                    {% if vids2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+                  </div>
                 {% endif %}
               {% endfor %}
-
-              {% for v in vids2[:4] %}
-                <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
-              {% endfor %}
-
-              {% if vids2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
+            {% else %}
+              <div class="dash-mini-grid">
+                {% set vids = (a.video_urls or "").split("|") %}
+                {% set vids2 = [] %}
+                {% for x in vids %}{% if x and x.strip() %}{% set _ = vids2.append(x) %}{% endif %}{% endfor %}
+                {% for v in vids2[:4] %}
+                  <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
+                {% endfor %}
+                {% if vids2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+              </div>
+            {% endif %}
           </div>
 
           <div class="dash-preview-col">
             <div class="dash-preview-title">PDF</div>
-            <div class="dash-pdf-list">
-              {% set pdfs = (a.pdf1_url or "").split("|") %}
-              {% set pdfs2 = [] %}
-              {% for x in pdfs %}
-                {% if x and x.strip() %}
-                  {% set _ = pdfs2.append(x) %}
+            {% if not is_admin %}
+              {% for lbl,pipe in [('P1',a.pdf1_url),('P2',a.p2_pdf1_url),('P3',a.p3_pdf1_url)] %}
+                {% if pipe %}
+                  <div class="dash-mini-label">{{ lbl }}</div>
+                  <div class="dash-pdf-list">
+                    {% set pdfs = (pipe or "").split("|") %}
+                    {% set pdfs2 = [] %}
+                    {% for x in pdfs %}{% if x and x.strip() %}{% set _ = pdfs2.append(x) %}{% endif %}{% endfor %}
+                    {% for p in pdfs2[:6] %}
+                      {% if "||" in p %}{% set nm = p.split("||")[0] %}{% set u = p.split("||")[1] %}{% else %}{% set nm = p %}{% set u = p %}{% endif %}
+                      <button type="button" class="dash-pdf-pill" title="{{ nm }}" onclick="openPdfModal('{{ a.slug }}','p1','{{ u|e }}','{{ nm|e }}')">{{ nm }}</button>
+                    {% endfor %}
+                    {% if pdfs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+                  </div>
                 {% endif %}
               {% endfor %}
-
-              {% for p in pdfs2[:6] %}
-                {% if "||" in p %}
-                  {% set nm = p.split("||")[0] %}
-                  {% set u = p.split("||")[1] %}
-                {% else %}
-                  {% set nm = p %}
-                  {% set u = p %}
-                {% endif %}
-
-                <button type="button"
-                        class="dash-pdf-pill"
-                        title="{{ nm }}"
-                        onclick="openPdfModal('{{ a.slug }}','p1','{{ u|e }}','{{ nm|e }}')">
-                  {{ nm }}
-                </button>
-              {% endfor %}
-
-              {% if pdfs2|length == 0 %}
-                <div class="dash-mini-empty">—</div>
-              {% endif %}
-            </div>
+            {% else %}
+              <div class="dash-pdf-list">
+                {% set pdfs = (a.pdf1_url or "").split("|") %}
+                {% set pdfs2 = [] %}
+                {% for x in pdfs %}{% if x and x.strip() %}{% set _ = pdfs2.append(x) %}{% endif %}{% endfor %}
+                {% for p in pdfs2[:6] %}
+                  {% if "||" in p %}{% set nm = p.split("||")[0] %}{% set u = p.split("||")[1] %}{% else %}{% set nm = p %}{% set u = p %}{% endif %}
+                  <button type="button" class="dash-pdf-pill" title="{{ nm }}" onclick="openPdfModal('{{ a.slug }}','p1','{{ u|e }}','{{ nm|e }}')">{{ nm }}</button>
+                {% endfor %}
+                {% if pdfs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
+              </div>
+            {% endif %}
           </div>
         </div>
 
@@ -230,18 +255,6 @@
     <div class="modal-title" id="smTitle">Anteprima</div>
 
     <div id="smBody" style="margin-top:12px;"></div>
-
-    <div id="smCreds" style="display:none; margin-top:12px;">
-      <div class="field">
-        <label>Password da inviare</label>
-        <input id="smPass" type="text" placeholder="es. 8-12 caratteri" oninput="updateCredsMsg()">
-        <div class="hint">Per sicurezza la password non è salvata in chiaro: inseriscila tu e poi invia il messaggio.</div>
-      </div>
-      <div class="field" style="margin-top:10px;">
-        <label>Testo (modificabile)</label>
-        <textarea id="smMsg" style="min-height:110px;">...</textarea>
-      </div>
-    </div>
 
     <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
       <button class="btn" type="button" onclick="shareCurrent('whatsapp')">Invia WhatsApp</button>
@@ -332,60 +345,6 @@
     if(body) body.innerHTML = '';
   }
 
-  function openCredModal(slug, username){
-    slug = (slug || '').trim();
-    username = (username || '').trim() || slug;
-    const loginUrl = absUrl('/area/login');
-    const cardUrl = absUrl('/' + slug);
-
-    document.getElementById('smKind').value = 'creds';
-    document.getElementById('smSlug').value = slug;
-    document.getElementById('smProfile').value = 'p1';
-    document.getElementById('smUrl').value = loginUrl;
-
-    document.getElementById('smTitle').textContent = `Credenziali: ${slug.toUpperCase()}`;
-
-    const body = document.getElementById('smBody');
-    body.innerHTML = `
-      <div class="section-box" style="margin:0;">
-        <div class="hint" style="margin-bottom:8px;">Inserisci la password (se l'hai generata tu) e poi usa i pulsanti per inviare.</div>
-        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
-          <div class="field">
-            <label>Username</label>
-            <input type="text" id="credUser" value="${username}" readonly>
-          </div>
-          <div class="field">
-            <label>Password</label>
-            <input type="text" id="credPass" placeholder="Inserisci password...">
-          </div>
-          <div class="field full">
-            <label>Messaggio</label>
-            <textarea id="credMsg" style="min-height:130px;">${
-              `Benvenuto in Pay4You Cards!\n\nAccesso dashboard: ${loginUrl}\nUsername: ${username}\nPassword: (inserisci qui)\n\nLa tua card: ${cardUrl}`
-            }</textarea>
-            <div class="hint">Suggerimento: dopo aver incollato la password, puoi modificare il testo liberamente.</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const pass = body.querySelector('#credPass');
-    const msg = body.querySelector('#credMsg');
-    if(pass && msg){
-      pass.addEventListener('input', () => {
-        const p = (pass.value || '').trim();
-        const base = `Benvenuto in Pay4You Cards!\n\nAccesso dashboard: ${loginUrl}\nUsername: ${username}\nPassword: ${p ? p : '(inserisci qui)'}\n\nLa tua card: ${cardUrl}`;
-        msg.value = base;
-      });
-    }
-
-    {% if is_admin %}
-      document.getElementById('smDeleteHref').value = '';
-    {% endif %}
-
-    document.getElementById('shareModal').style.display = 'flex';
-  }
-
   function openQrModal(slug, p){
     const url = (p && p !== 'p1') ? `/qr/${slug}.png?p=${p}` : `/qr/${slug}.png`;
     document.getElementById('smKind').value = 'qr';
@@ -427,25 +386,81 @@
     const url = document.getElementById('smUrl').value;
     const media = absUrl(url);
 
-    let msg = '';
-    let subject = '';
-    if(kind === 'creds'){
-      const ta = document.getElementById('smCredMsg');
-      msg = (ta && ta.value) ? ta.value : '';
-      subject = 'Pay4You Card - Credenziali';
-    } else {
-      msg = [
-        `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`,
-        `Link: ${media}`
-      ].join("\r\n");
-      subject = `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`;
-    }
+    const msg = [
+      `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`,
+      `Link: ${media}`
+    ].join("\r\n");
 
     if(channel === 'whatsapp'){
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       return;
     }
 
+    const subject = `Pay4You ${kind === 'qr' ? 'QR Code' : 'PDF'}`;
+    const g = gmailCompose(subject, msg);
+    const w = window.open(g, '_blank');
+    if(!w){
+      window.open(outlookCompose(subject, msg), '_blank');
+    }
+  }
+
+  // ====== INVIA CREDENZIALI (ADMIN) ======
+  async function sendCred(slug){
+    try{
+      const r = await fetch(`/area/admin/credentials/${slug}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'fetch' }
+      });
+      const data = await r.json();
+      if(!r.ok){
+        alert(data && data.error ? data.error : 'Errore.');
+        return;
+      }
+
+      const msg = data.message || '';
+      document.getElementById('smKind').value = 'cred';
+      document.getElementById('smSlug').value = slug;
+      document.getElementById('smProfile').value = 'p1';
+      document.getElementById('smUrl').value = '';
+      document.getElementById('smTitle').textContent = `Credenziali: ${slug.toUpperCase()}`;
+
+      const safeMsg = (msg || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      document.getElementById('smBody').innerHTML =
+        `<div class="cred-box">
+           <div class="hint" style="margin-bottom:8px;">Password temporanea generata. Consiglia al cliente di cambiarla al primo accesso (o usando "Password dimenticata").</div>
+           <textarea id="credText" style="width:100%; min-height:140px; border-radius:14px; padding:12px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.18); color:#fff;">${safeMsg}</textarea>
+           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+             <button class="btn" type="button" onclick="copyCred()">Copia testo</button>
+             <button class="btn" type="button" onclick="sendCredShare('whatsapp')">WhatsApp</button>
+             <button class="btn" type="button" onclick="sendCredShare('email')">Email</button>
+           </div>
+         </div>`;
+
+      {% if is_admin %}
+        document.getElementById('smDeleteHref').value = '';
+      {% endif %}
+      document.getElementById('shareModal').style.display = 'flex';
+    } catch(e){
+      alert('Errore di rete.');
+    }
+  }
+
+  function copyCred(){
+    const t = document.getElementById('credText');
+    if(!t) return;
+    t.focus();
+    t.select();
+    try{ document.execCommand('copy'); }catch(e){}
+  }
+
+  function sendCredShare(channel){
+    const t = document.getElementById('credText');
+    const msg = t ? t.value : '';
+    if(channel === 'whatsapp'){
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+      return;
+    }
+    const subject = 'Credenziali Pay4You Card';
     const g = gmailCompose(subject, msg);
     const w = window.open(g, '_blank');
     if(!w){
