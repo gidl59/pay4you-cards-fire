@@ -268,4 +268,4 @@ body.light{
 body.light .hero{background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.95))}
 body.light .hero-overlay{background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.85))}
 body.light .btn{background: rgba(0,0,0,.04)}
-body.light .btn:hover{backgr
+body.light .btn:hover{background: rgba(0,0,0,.08)}
