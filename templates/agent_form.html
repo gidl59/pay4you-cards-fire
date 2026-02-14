@@ -64,6 +64,33 @@
 
         <form method="post" enctype="multipart/form-data" class="card-form">
 
+          {% if not agent %}
+          <div class="section-box tone-gold">
+            <div class="h3">Crea nuova Card</div>
+            <div class="hint">Compila i dati minimi. Lo <b>username</b> sarà lo <b>slug</b>.</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Nome</label>
+                <input type="text" name="first_name" placeholder="Es. Giuseppe" required>
+              </div>
+              <div class="field">
+                <label>Cognome</label>
+                <input type="text" name="last_name" placeholder="Es. Di Lisio">
+              </div>
+              <div class="field">
+                <label>Slug (link pubblico)</label>
+                <input type="text" name="slug" placeholder="es. giuseppe" required>
+                <div class="hint">Solo lettere/numeri. Verrà normalizzato automaticamente.</div>
+              </div>
+              <div class="field">
+                <label>Password iniziale</label>
+                <input type="text" name="password" placeholder="Min 4 caratteri" required>
+                <div class="hint">Consiglio: password casuale. Al primo accesso potrai farla cambiare.</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
           {% if agent %}
           <div class="section-box tone-slate">
             <div class="h3">Identificativo</div>
