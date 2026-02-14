@@ -1462,7 +1462,9 @@ def pdf_alias_or_card(filename):
     office_value = (data.get("phone_office") or "").strip()
 
     emails = [e.strip() for e in (data.get("emails") or "").split(",") if e.strip()]
-    websites = [w.strip() for w in (data.get("websites") or "").split(",") if e.strip()]
+
+    # ✅ FIX 500: qui era "if e.strip()" ma e non esiste (NameError) -> usiamo w
+    websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]
 
     wa_link = ""
     wa_raw = (data.get("whatsapp") or "").strip()
