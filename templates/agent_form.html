@@ -170,22 +170,27 @@
               <div class="field">
                 <label>LinkedIn</label>
                 <input type="text" name="linkedin" placeholder="https://www.linkedin.com/in/..." value="{{ data.get('linkedin','') }}">
+                <div class="hint">Inserisci il link completo (es. https://www.linkedin.com/in/tuonome)</div>
               </div>
               <div class="field">
                 <label>TikTok</label>
                 <input type="text" name="tiktok" placeholder="https://www.tiktok.com/@..." value="{{ data.get('tiktok','') }}">
+                <div class="hint">Inserisci il link completo (es. https://www.tiktok.com/@tuoprofilo)</div>
               </div>
               <div class="field">
                 <label>Telegram</label>
                 <input type="text" name="telegram" placeholder="https://t.me/..." value="{{ data.get('telegram','') }}">
+                <div class="hint">Inserisci il link completo (es. https://t.me/tuocanale)</div>
               </div>
               <div class="field">
                 <label>YouTube</label>
                 <input type="text" name="youtube" placeholder="https://www.youtube.com/@..." value="{{ data.get('youtube','') }}">
+                <div class="hint">Inserisci il link completo (es. https://www.youtube.com/@tuocanale)</div>
               </div>
               <div class="field">
                 <label>Spotify</label>
                 <input type="text" name="spotify" placeholder="https://open.spotify.com/..." value="{{ data.get('spotify','') }}">
+                <div class="hint">Inserisci il link completo (es. https://open.spotify.com/artist/...)</div>
               </div>
             </div>
           </div>
@@ -426,6 +431,20 @@
     bindPreview('photoInput','prevPhoto');
     bindPreview('logoInput','prevLogo');
     bindPreview('backInput','prevBack');
+
+    // ✅ Mutua esclusione: FLIP (auto) e TAP su foto
+    const cbFlip = document.querySelector('input[name="allow_flip"]');
+    const cbTap  = document.querySelector('input[name="avatar_spin"]');
+    function syncFlipTap(){
+      if(!cbFlip || !cbTap) return;
+      if(cbFlip.checked){ cbTap.checked = false; cbTap.disabled = true; }
+      else { cbTap.disabled = false; }
+      if(cbTap.checked){ cbFlip.checked = false; cbFlip.disabled = true; }
+      else { cbFlip.disabled = false; }
+    }
+    if(cbFlip) cbFlip.addEventListener('change', syncFlipTap);
+    if(cbTap) cbTap.addEventListener('change', syncFlipTap);
+    syncFlipTap();
 
     const box = document.getElementById('cropCircleBg');
     if(box){
