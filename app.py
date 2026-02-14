@@ -47,7 +47,7 @@ MAX_PDF_MB = 15
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_PDFS = 10
+MAX_PDFS = 12
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
