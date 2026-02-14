@@ -10,7 +10,7 @@
 <body>
   <div class="card-wrap">
 
-    <div class="hero" style="{% if ag.back_media_url %}background-image:url('{{ ag.back_media_url }}');{% endif %}">
+    <div class="hero">
       <div class="hero-overlay"></div>
 
       <div class="top">
@@ -20,14 +20,45 @@
       </div>
 
       <div class="avatar-wrap {{ 'orbit' if ag.orbit_spin==1 else '' }}">
-        <div class="avatar {{ 'spin' if ag.avatar_spin==1 else '' }} {{ 'flip' if ag.allow_flip==1 else '' }}">
-          {% if ag.photo_url %}
-            <img src="{{ ag.photo_url }}" alt="foto" style="
-              object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%;
-              transform: scale({{ ag.photo_zoom }});
-            ">
+        {% if ag.back_media_url %}
+          <div class="backdisc {{ 'spin' if ag.orbit_spin==1 else '' }}" style="background-image:url('{{ ag.back_media_url }}'); background-size:cover; background-position:center;"></div>
+        {% else %}
+          <div class="backdisc" style="background:rgba(0,0,0,.12)"></div>
+        {% endif %}
+
+        <div class="avatar {{ 'spin' if ag.avatar_spin==1 else '' }} {{ 'flip' if ag.allow_flip==1 else '' }}" id="avatarBox">
+          {% if ag.allow_flip==1 %}
+            <div class="flip-inner">
+              <div class="flip-face flip-front">
+                {% if ag.photo_url %}
+                  <img src="{{ ag.photo_url }}" alt="foto" style="
+                    object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%;
+                    transform: scale({{ ag.photo_zoom }});
+                  ">
+                {% else %}
+                  <div class="avatar-ph">👤</div>
+                {% endif %}
+              </div>
+
+              <div class="flip-face flip-back">
+                {% if ag.logo_url %}
+                  <img src="{{ ag.logo_url }}" alt="logo">
+                {% elif ag.back_media_url %}
+                  <img src="{{ ag.back_media_url }}" alt="dietro">
+                {% else %}
+                  <div class="avatar-ph">★</div>
+                {% endif %}
+              </div>
+            </div>
           {% else %}
-            <div class="avatar-ph">👤</div>
+            {% if ag.photo_url %}
+              <img src="{{ ag.photo_url }}" alt="foto" style="
+                object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%;
+                transform: scale({{ ag.photo_zoom }});
+              ">
+            {% else %}
+              <div class="avatar-ph">👤</div>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -126,6 +157,38 @@
         {% endif %}
       </div>
 
+      {% if socials and socials|length %}
+        <div class="box">
+          <h3>Social</h3>
+          <div class="actions">
+            {% for s in socials %}
+              <a class="btn ghost" target="_blank" rel="noopener" href="{{ s.url }}">{{ s.label }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- ✅ profili + tema DOPO i dati aziendali -->
+      <div class="box">
+        <h3>Profili</h3>
+
+        <div class="profile-switch">
+          <a class="ps-btn {{ 'active' if profile=='p1' else '' }}" href="/{{ ag.slug }}">P1</a>
+          {% if p2_enabled == 1 %}
+            <a class="ps-btn {{ 'active' if profile=='p2' else '' }}" href="/{{ ag.slug }}?p=p2">P2</a>
+          {% endif %}
+          {% if p3_enabled == 1 %}
+            <a class="ps-btn {{ 'active' if profile=='p3' else '' }}" href="/{{ ag.slug }}?p=p3">P3</a>
+          {% endif %}
+        </div>
+
+        <div class="profile-switch" style="margin-top:10px">
+          <button class="ps-btn" type="button" onclick="setTheme('auto')">Auto</button>
+          <button class="ps-btn" type="button" onclick="setTheme('light')">Chiaro</button>
+          <button class="ps-btn" type="button" onclick="setTheme('dark')">Scuro</button>
+        </div>
+      </div>
+
       {% if gallery %}
         <div class="box">
           <h3>{{ t_func("gallery") }}</h3>
@@ -142,7 +205,7 @@
       {% if videos %}
         <div class="box">
           <h3>{{ t_func("videos") }}</h3>
-          <div class="video-row">
+          <div class="media-grid">
             {% for v in videos %}
               <button class="vthumb" type="button" onclick="openShareModal('vid','{{ v }}','Video')">
                 <video muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
@@ -162,16 +225,6 @@
           </ul>
         </div>
       {% endif %}
-
-      <div class="profile-switch">
-        <a class="ps-btn {{ 'active' if profile=='p1' else '' }}" href="/{{ ag.slug }}">P1</a>
-        {% if p2_enabled == 1 %}
-          <a class="ps-btn {{ 'active' if profile=='p2' else '' }}" href="/{{ ag.slug }}?p=p2">P2</a>
-        {% endif %}
-        {% if p3_enabled == 1 %}
-          <a class="ps-btn {{ 'active' if profile=='p3' else '' }}" href="/{{ ag.slug }}?p=p3">P3</a>
-        {% endif %}
-      </div>
 
     </div>
 
@@ -272,6 +325,42 @@
       window.open(outlookCompose(subject, msg), '_blank');
     }
   }
+
+  // THEME (auto/light/dark)
+  function applyTheme(mode){
+    document.body.classList.remove('light');
+    if(mode === 'light') document.body.classList.add('light');
+    if(mode === 'dark') document.body.classList.remove('light'); // default is dark
+  }
+  function setTheme(mode){
+    localStorage.setItem('p4y_theme', mode);
+    if(mode === 'auto'){
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      applyTheme(prefersLight ? 'light' : 'dark');
+    } else {
+      applyTheme(mode);
+    }
+  }
+  (function(){
+    const mode = localStorage.getItem('p4y_theme') || 'auto';
+    setTheme(mode);
+    if(window.matchMedia){
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        const m = localStorage.getItem('p4y_theme') || 'auto';
+        if(m === 'auto') setTheme('auto');
+      });
+    }
+  })();
+
+  // FLIP
+  (function(){
+    const box = document.getElementById('avatarBox');
+    if(!box) return;
+    if(!box.classList.contains('flip')) return;
+    box.addEventListener('click', () => {
+      box.classList.toggle('is-flipped');
+    });
+  })();
 </script>
 
 </body>
