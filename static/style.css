@@ -46,6 +46,7 @@ a{color:inherit}
 }
 .btn-mini.ghost{background:transparent}
 .btn-mini.warn{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.34)}
+.btn-mini.primary{background:rgba(34,211,238,.16);border-color:rgba(34,211,238,.40)}
 .btn-mini.danger{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.30)}
 .inline{display:inline}
 
@@ -56,15 +57,7 @@ a{color:inherit}
 .flash-ok{border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.10)}
 
 .dash-grid{display:flex;flex-direction:column;gap:12px}
-.dash-card{
-  border:1px solid rgba(255,255,255,.14);
-  background:
-    radial-gradient(circle at top left, rgba(45,212,191,.18), transparent 45%),
-    radial-gradient(circle at top right, rgba(251,191,36,.18), transparent 42%),
-    rgba(255,255,255,.06);
-  border-radius:18px;
-  padding:14px;
-}
+.dash-card{border:1px solid rgba(255,255,255,.14);background:linear-gradient(135deg, rgba(34,211,238,.10), rgba(245,158,11,.08), rgba(255,255,255,.06));border-radius:18px;padding:14px}
 .dash-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .dash-left{display:flex;gap:12px;align-items:center}
 .dash-avatar{width:56px;height:56px;border-radius:16px;border:1px solid rgba(255,255,255,.14);overflow:hidden;background:rgba(0,0,0,.20);display:flex;align-items:center;justify-content:center}
@@ -77,6 +70,8 @@ a{color:inherit}
 
 .dash-preview{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .dash-preview-title{font-weight:950;font-size:12px;color:var(--muted);margin-bottom:6px}
+.dash-mini-group{margin-bottom:10px}
+.dash-mini-label{font-size:12px;font-weight:950;color:rgba(255,255,255,.82);margin-bottom:6px}
 .dash-mini-grid{display:flex;gap:6px;flex-wrap:wrap}
 .dash-mini{width:54px;height:54px;border-radius:12px;border:1px solid rgba(255,255,255,.12);object-fit:cover;background:rgba(0,0,0,.18)}
 .dash-mini-empty{color:var(--muted)}
@@ -89,27 +84,19 @@ a{color:inherit}
 .modal-title{font-weight:950}
 .footer{margin-top:16px;color:var(--muted);text-align:center}
 
-.panel{
-  border:1px solid rgba(255,255,255,.14);
-  background:
-    radial-gradient(900px 520px at 12% -10%, rgba(45,212,191,.14), transparent 55%),
-    radial-gradient(780px 520px at 92% 10%, rgba(96,165,250,.12), transparent 55%),
-    rgba(255,255,255,.08);
-  border-radius:18px;
-  padding:14px;
-}
+.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);border-radius:18px;padding:14px}
 .panel-wide{max-width:1100px;margin:0 auto}
 .page-title{margin:0}
 .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .page-main{padding:6px 0}
 .sep{height:1px;background:rgba(255,255,255,.10);margin:12px 0}
-.section-box{
-  border:1px solid rgba(255,255,255,.12);
-  background: linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,.16));
-  border-radius:18px;
-  padding:14px;
-  margin-bottom:12px;
-}
+.section-box{border:1px solid rgba(255,255,255,.12);background:linear-gradient(135deg, rgba(255,255,255,.06), rgba(0,0,0,.12));border-radius:18px;padding:14px;margin-bottom:12px}
+
+/* Soft color accents (used on Nuova Card / Modifica) */
+.section-box.tone-slate{background:linear-gradient(135deg, rgba(148,163,184,.14), rgba(0,0,0,.12));border-color:rgba(148,163,184,.22)}
+.section-box.tone-cyan{background:linear-gradient(135deg, rgba(45,212,191,.14), rgba(0,0,0,.12));border-color:rgba(45,212,191,.26)}
+.section-box.tone-blue{background:linear-gradient(135deg, rgba(59,130,246,.14), rgba(0,0,0,.12));border-color:rgba(59,130,246,.24)}
+.section-box.tone-gold{background:linear-gradient(135deg, rgba(234,179,8,.12), rgba(0,0,0,.12));border-color:rgba(234,179,8,.24)}
 .h3{font-weight:950;margin-bottom:8px}
 
 .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
