@@ -6,101 +6,12 @@
   <title>{{ ag.name or ag.slug }} | Pay4You</title>
   <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/static/card.css">
-
-  <!-- ✅ THEME AUTO/LIGHT/DARK (default: AUTO come iPhone) -->
-  <script>
-  (function () {
-    const KEY = "p4y_theme"; // "auto" | "light" | "dark"
-
-    function systemTheme() {
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    }
-
-    function applyTheme(mode) {
-      const finalTheme = (mode === "auto" ? systemTheme() : mode);
-      document.documentElement.setAttribute("data-theme", finalTheme);
-      document.documentElement.setAttribute("data-theme-mode", mode);
-    }
-
-    const saved = localStorage.getItem(KEY) || "auto";
-    applyTheme(saved);
-
-    window.P4YTheme = {
-      get: () => localStorage.getItem(KEY) || "auto",
-      set: (mode) => { localStorage.setItem(KEY, mode); applyTheme(mode); }
-    };
-
-    if (window.matchMedia) {
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-        if ((localStorage.getItem(KEY) || "auto") === "auto") applyTheme("auto");
-      });
-    }
-  })();
-  </script>
-
-  <!-- ✅ Toolbar styles MINIMI (senza cambiare card.css). Se vuoi, poi li spostiamo in card.css -->
-  <style>
-    .p4y-toolbar{
-      position:absolute;
-      left:12px;
-      right:12px;
-      top:12px;
-      z-index:5;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      pointer-events:auto;
-    }
-    .p4y-toolbar .grp{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .p4y-pill{
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(0,0,0,.18);
-      color:#fff;
-      padding:8px 10px;
-      border-radius:999px;
-      font-size:13px;
-      line-height:1;
-      text-decoration:none;
-      cursor:pointer;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-    .p4y-pill:active{ transform: translateY(1px); }
-    .p4y-pill.ghost{
-      background:rgba(255,255,255,.10);
-    }
-  </style>
 </head>
 <body>
   <div class="card-wrap">
 
     <div class="hero" style="{% if ag.back_media_url %}background-image:url('{{ ag.back_media_url }}');{% endif %}">
       <div class="hero-overlay"></div>
-
-      <!-- ✅ Toolbar in alto: P1/P2/P3 + Tema AUTO/☀/🌙 (senza evidenziare attivo) -->
-      <div class="p4y-toolbar">
-        <div class="grp">
-          <a class="p4y-pill" href="/{{ ag.slug }}">P1</a>
-          {% if p2_enabled == 1 %}
-            <a class="p4y-pill" href="/{{ ag.slug }}?p=p2">P2</a>
-          {% endif %}
-          {% if p3_enabled == 1 %}
-            <a class="p4y-pill" href="/{{ ag.slug }}?p=p3">P3</a>
-          {% endif %}
-        </div>
-        <div class="grp">
-          <button class="p4y-pill ghost" type="button" onclick="P4YTheme.set('auto')">AUTO</button>
-          <button class="p4y-pill ghost" type="button" onclick="P4YTheme.set('light')">☀️</button>
-          <button class="p4y-pill ghost" type="button" onclick="P4YTheme.set('dark')">🌙</button>
-        </div>
-      </div>
 
       <div class="top">
         {% if ag.logo_url %}
@@ -252,7 +163,6 @@
         </div>
       {% endif %}
 
-      <!-- ✅ Switch P1 / P2 / P3 sotto i social (originale, lasciato invariato) -->
       <div class="profile-switch">
         <a class="ps-btn {{ 'active' if profile=='p1' else '' }}" href="/{{ ag.slug }}">P1</a>
         {% if p2_enabled == 1 %}
@@ -271,7 +181,6 @@
 
   </div>
 
-  <!-- MODAL (senza X) -->
   <div id="shareModal" class="modal-overlay" style="display:none" onclick="overlayClose(event)">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div class="modal-title" id="mTitle">Anteprima</div>
