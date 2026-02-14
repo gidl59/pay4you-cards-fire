@@ -47,7 +47,7 @@ MAX_PDF_MB = 15
 
 MAX_GALLERY_IMAGES = 30
 MAX_VIDEOS = 10
-MAX_PDFS = 12
+MAX_PDFS = 12  # ✅ richiesto
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -252,7 +252,6 @@ def save_upload(file_storage, kind: str):
     if not ok:
         raise ValueError(err)
 
-    # nome file SOLO per estensione (il display name lo salviamo a parte)
     filename = secure_filename(file_storage.filename)
     ext = os.path.splitext(filename)[1].lower()
 
@@ -558,6 +557,8 @@ def set_profile_from_form(existing: dict, form: dict) -> dict:
 
     return d
 
+
+# ✅ FIX PDF DUPLICATI (P2/P3)
 def handle_media_uploads_common(data: dict):
     photo = request.files.get("photo")
     if photo and photo.filename:
@@ -591,15 +592,27 @@ def handle_media_uploads_common(data: dict):
 
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
-        current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
+        current_items = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
+        existing_urls = set()
+        for it in current_items:
+            _nm, _u = normalize_pdf_item(it)
+            _u = canon_url(_u)
+            if _u:
+                existing_urls.add(_u)
+
         for f in pdfs:
             if f and f.filename:
-                url = save_upload(f, "pdf")
-                # ✅ display name: mantieni nome originale (basename)
+                url = canon_url(save_upload(f, "pdf"))
+                if url in existing_urls:
+                    continue
+                existing_urls.add(url)
                 nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
-                current.append(f"{nm}||{url}")
-        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
+                current_items.append(f"{nm}||{url}")
 
+        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current_items))
+
+
+# ✅ FIX PDF DUPLICATI (P1)
 def handle_media_uploads_p1(agent: Agent):
     photo = request.files.get("photo")
     if photo and photo.filename:
@@ -633,13 +646,24 @@ def handle_media_uploads_p1(agent: Agent):
 
     pdfs = request.files.getlist("pdf_files")
     if pdfs:
-        current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
+        current_items = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
+        existing_urls = set()
+        for it in current_items:
+            _nm, _u = normalize_pdf_item(it)
+            _u = canon_url(_u)
+            if _u:
+                existing_urls.add(_u)
+
         for f in pdfs:
             if f and f.filename:
-                url = save_upload(f, "pdf")
+                url = canon_url(save_upload(f, "pdf"))
+                if url in existing_urls:
+                    continue
+                existing_urls.add(url)
                 nm = (os.path.basename(f.filename) or "").strip() or pdf_name_from_url(url)
-                current.append(f"{nm}||{url}")
-        agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
+                current_items.append(f"{nm}||{url}")
+
+        agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current_items))
 
 
 # ==========================
@@ -699,7 +723,6 @@ def dashboard():
     s = db()
     if is_admin():
         agents = s.query(Agent).all()
-        # ✅ pulizia per non vedere pdf duplicati con nomi diversi
         for a in agents:
             a.pdf1_url = clean_pdf_pipe(a.pdf1_url or "")
             a.gallery_urls = clean_media_pipe(a.gallery_urls or "")
@@ -1251,7 +1274,6 @@ def purge_pdfs_all():
     if not is_admin():
         abort(403)
 
-    # cancella file
     try:
         for p in SUBDIR_PDF.glob("*"):
             if p.is_file():
@@ -1262,7 +1284,6 @@ def purge_pdfs_all():
     except Exception:
         pass
 
-    # pulisci DB
     s = db()
     agents = s.query(Agent).all()
     for ag in agents:
@@ -1368,16 +1389,14 @@ def vcf(slug):
 # ==========================
 @app.route("/<path:filename>")
 def pdf_alias_or_card(filename):
-    # ---- PDF alias ----
     if filename.lower().endswith(".pdf"):
-        wanted = filename.rsplit("/", 1)[-1]  # basename
+        wanted = filename.rsplit("/", 1)[-1]
         wanted_norm = _norm_pdf_name(wanted)
 
         s = db()
         agents = s.query(Agent).all()
 
         for ag in agents:
-            # P1
             items = parse_pipe_list(clean_pdf_pipe(ag.pdf1_url or ""))
             for it in items:
                 nm, url = normalize_pdf_item(it)
@@ -1387,11 +1406,9 @@ def pdf_alias_or_card(filename):
                 if not _is_valid_pdf_url(url):
                     continue
 
-                # match robusto: nome caricato / basename url
                 if _norm_pdf_name(nm) == wanted_norm or _norm_pdf_name(pdf_name_from_url(url)) == wanted_norm:
                     return redirect(url, code=302)
 
-            # P2/P3
             for prof in ["p2", "p3"]:
                 d = get_profile_data(ag, prof)
                 items2 = parse_pipe_list(clean_pdf_pipe(d.get("pdf_urls", "")))
@@ -1408,7 +1425,6 @@ def pdf_alias_or_card(filename):
 
         abort(404)
 
-    # ---- CARD by slug ----
     slug = filename.strip("/").split("/", 1)[0]
     if not slug:
         return redirect(url_for("login"))
@@ -1463,7 +1479,7 @@ def pdf_alias_or_card(filename):
 
     emails = [e.strip() for e in (data.get("emails") or "").split(",") if e.strip()]
 
-    # ✅ FIX 500: qui era "if e.strip()" ma e non esiste (NameError) -> usiamo w
+    # ✅ FIX 500: qui era "if e.strip()" sbagliato
     websites = [w.strip() for w in (data.get("websites") or "").split(",") if w.strip()]
 
     wa_link = ""
