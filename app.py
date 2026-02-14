@@ -560,24 +560,42 @@ def set_profile_from_form(existing: dict, form: dict) -> dict:
 
 # ---- PDF dedup robusto nella stessa request (Chrome/iPhone) ----
 def _file_fingerprint(file_storage) -> str:
-    """
-    Fingerprint: filename normalizzato + size + hash dei primi 64KB.
-    Evita il caso in cui lo stesso file arriva 2 volte in request.files.
+    """Fingerprint robusto "sha1:size" del contenuto.
+
+    Nota: su alcuni browser/stack (soprattutto Windows/Chrome) può capitare che
+    lo stesso file venga inoltrato 2 volte in request.files con nomi diversi.
+    Per eliminare questi duplicati, non ci basiamo sul filename ma sul contenuto.
+
+    Importante: resettiamo lo stream a 0 per permettere poi il salvataggio.
     """
     try:
-        name = secure_filename(file_storage.filename or "").lower().strip()
-        size = file_size_bytes(file_storage)
-
         stream = file_storage.stream
-        pos = stream.tell()
-        stream.seek(0)
-        chunk = stream.read(65536) or b""
-        stream.seek(pos, os.SEEK_SET)
+        # Porta lo stream a inizio (se possibile)
+        try:
+            stream.seek(0)
+        except Exception:
+            pass
 
-        h = hashlib.sha1(chunk).hexdigest()[:12]
-        return f"{name}::{size}::{h}"
+        sha = hashlib.sha1()
+        total = 0
+        while True:
+            buf = stream.read(1024 * 1024)  # 1MB
+            if not buf:
+                break
+            sha.update(buf)
+            total += len(buf)
+
+        # Reset per eventuale save_upload
+        try:
+            stream.seek(0)
+        except Exception:
+            pass
+
+        return f"{sha.hexdigest()}::{total}"
     except Exception:
-        return (secure_filename(file_storage.filename or "") or "").lower().strip()
+        # fallback (meno affidabile)
+        name = (secure_filename(file_storage.filename or "") or "").lower().strip()
+        return name
 
 def _pdf_display_name(original_filename: str, fallback_url: str) -> str:
     nm = (os.path.basename(original_filename or "") or "").strip()
@@ -786,7 +804,7 @@ def area_forgot():
     # In questa app non inviamo email automatiche (a meno di SMTP configurato):
     # mostriamo una conferma generica e un contatto assistenza.
     if request.method == "POST":
-        flash("Richiesta inviata. Se l’account esiste, ti contatteremo a breve.", "ok")
+        flash("Richiesta inviata. Se l’account esiste, riceverai una email con il link per cambiare la password.", "ok")
         return redirect(url_for("area_forgot"))
     return render_template("forgot.html")
 
