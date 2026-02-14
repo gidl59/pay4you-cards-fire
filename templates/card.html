@@ -26,7 +26,7 @@
           <div class="backdisc" style="background:rgba(0,0,0,.12)"></div>
         {% endif %}
 
-        <div class="avatar {{ 'spin' if ag.avatar_spin==1 else '' }} {{ 'flip' if ag.allow_flip==1 else '' }}" id="avatarBox">
+        <div class="avatar {{ 'tapflip' if ag.avatar_spin==1 else '' }} {{ 'autoflip' if ag.allow_flip==1 else '' }}" id="avatarBox">
           {% if ag.allow_flip==1 %}
             <div class="flip-inner">
               <div class="flip-face flip-front">
@@ -88,6 +88,26 @@
           {% endif %}
         </div>
       </div>
+
+      {% set socials = [] %}
+      {% for k in ['facebook','instagram','linkedin','tiktok','telegram','youtube','spotify'] %}
+        {% if ag[k] %}{% set _ = socials.append(k) %}{% endif %}
+      {% endfor %}
+      {% if socials|length > 0 %}
+        <div class="box">
+          <h3>{{ t_func("social") }}</h3>
+          <div class="social-row">
+            {% if ag.facebook %}<a class="soc" href="{{ ag.facebook }}" target="_blank" rel="noopener" aria-label="Facebook"><span class="si">f</span></a>{% endif %}
+            {% if ag.instagram %}<a class="soc" href="{{ ag.instagram }}" target="_blank" rel="noopener" aria-label="Instagram"><span class="si">⌁</span></a>{% endif %}
+            {% if ag.linkedin %}<a class="soc" href="{{ ag.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn"><span class="si">in</span></a>{% endif %}
+            {% if ag.tiktok %}<a class="soc" href="{{ ag.tiktok }}" target="_blank" rel="noopener" aria-label="TikTok"><span class="si">♪</span></a>{% endif %}
+            {% if ag.telegram %}<a class="soc" href="{{ ag.telegram }}" target="_blank" rel="noopener" aria-label="Telegram"><span class="si">✈</span></a>{% endif %}
+            {% if ag.youtube %}<a class="soc" href="{{ ag.youtube }}" target="_blank" rel="noopener" aria-label="YouTube"><span class="si">▶</span></a>{% endif %}
+            {% if ag.spotify %}<a class="soc" href="{{ ag.spotify }}" target="_blank" rel="noopener" aria-label="Spotify"><span class="si">●</span></a>{% endif %}
+          </div>
+          <div class="hint" style="margin-top:8px">I link devono essere completi (https://...).</div>
+        </div>
+      {% endif %}
 
       <div class="box">
         <h3>{{ t_func("contacts") }}</h3>
@@ -251,6 +271,18 @@
   </div>
 
 <script>
+  // Tap su foto: flip orizzontale (solo se attivo e NON in auto-flip)
+  document.addEventListener('DOMContentLoaded', () => {
+    const av = document.getElementById('avatarBox');
+    if(!av) return;
+    const isTap = av.classList.contains('tapflip');
+    const isAuto = av.classList.contains('autoflip');
+    if(isTap && !isAuto){
+      av.style.cursor = 'pointer';
+      av.addEventListener('click', () => av.classList.toggle('is-flipped'));
+    }
+  });
+
   function absUrl(u){
     if(!u) return '';
     u = (u + '').trim();
