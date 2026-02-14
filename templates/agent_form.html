@@ -65,7 +65,7 @@
         <form method="post" enctype="multipart/form-data" class="card-form">
 
           {% if agent %}
-          <div class="section-box">
+          <div class="section-box tone-slate">
             <div class="h3">Identificativo</div>
             <div class="form-grid">
               <div class="field">
@@ -77,7 +77,7 @@
           </div>
           {% endif %}
 
-          <div class="section-box">
+          <div class="section-box tone-cyan">
             <div class="h3">Dati principali</div>
             <div class="form-grid">
               <div class="field">
@@ -99,7 +99,7 @@
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box tone-blue">
             <div class="h3">Contatti</div>
             <div class="form-grid">
               <div class="field">
@@ -138,7 +138,7 @@
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box tone-gold">
             <div class="h3">Dati aziendali</div>
             <div class="form-grid">
               <div class="field">
@@ -152,7 +152,7 @@
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box tone-cyan">
             <div class="h3">Social</div>
             <div class="hint">Inserisci URL completi (se non valido non verrà mostrato).</div>
 
@@ -170,7 +170,7 @@
               <div class="field">
                 <label>LinkedIn</label>
                 <input type="text" name="linkedin" placeholder="https://www.linkedin.com/in/..." value="{{ data.get('linkedin','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.linkedin.com/in/tuonome)</div>
+                <div class="hint">Inserisci il link completo (es. https://www.linkedin.com/in/tuoprofilo)</div>
               </div>
               <div class="field">
                 <label>TikTok</label>
@@ -195,7 +195,7 @@
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box tone-purple">
             <div class="h3">Foto profilo · Logo · Foto dietro</div>
             <div class="hint">Tre riquadri quadrati affiancati con anteprima e upload.</div>
 
@@ -432,18 +432,21 @@
     bindPreview('logoInput','prevLogo');
     bindPreview('backInput','prevBack');
 
-    // ✅ Mutua esclusione: FLIP (auto) e TAP su foto
+    // ✅ Flip e "Tap su foto" non possono stare insieme (evita comportamenti confusi sulla card)
     const cbFlip = document.querySelector('input[name="allow_flip"]');
     const cbTap  = document.querySelector('input[name="avatar_spin"]');
     function syncFlipTap(){
       if(!cbFlip || !cbTap) return;
       if(cbFlip.checked){ cbTap.checked = false; cbTap.disabled = true; }
       else { cbTap.disabled = false; }
-      if(cbTap.checked){ cbFlip.checked = false; cbFlip.disabled = true; }
-      else { cbFlip.disabled = false; }
     }
-    if(cbFlip) cbFlip.addEventListener('change', syncFlipTap);
-    if(cbTap) cbTap.addEventListener('change', syncFlipTap);
+    function syncTapFlip(){
+      if(!cbFlip || !cbTap) return;
+      if(cbTap.checked){ cbFlip.checked = false; }
+      syncFlipTap();
+    }
+    if(cbFlip){ cbFlip.addEventListener('change', syncFlipTap); }
+    if(cbTap){ cbTap.addEventListener('change', syncTapFlip); }
     syncFlipTap();
 
     const box = document.getElementById('cropCircleBg');
