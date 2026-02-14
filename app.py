@@ -796,7 +796,7 @@ def area_forgot():
     # In questa app non inviamo email automatiche (a meno di SMTP configurato):
     # mostriamo una conferma generica e un contatto assistenza.
     if request.method == "POST":
-        flash("Richiesta inviata. Se l’account esiste, riceverai una email con il link per cambiare la password.", "ok")
+        flash("Richiesta inviata. Se l’account esiste, RICEVERAI UNA EMAIL CON IL LINK PER CAMBIARE LA PASSWORD.", "ok")
         return redirect(url_for("area_forgot"))
     return render_template("forgot.html")
 
@@ -1542,6 +1542,171 @@ def vcf(slug):
 # ==========================
 # ROUTE UNIVERSALE: PDF alias + CARD
 # ==========================
+
+# Compatibility: some builds call render_card_public()
+def render_card_public(slug: str):
+    """Render the public card for a slug (P1/P2/P3 via ?p=)."""
+    slug = (slug or "").strip().strip("/")
+    if not slug:
+        abort(404)
+
+    profile = (request.args.get("p") or "p1").lower().strip()
+    if profile not in ("p1", "p2", "p3"):
+        profile = "p1"
+
+    ag = get_agent_by_slug(slug)
+    if not ag:
+        abort(404)
+
+    # Select profile data
+    data = agent_to_dict(ag, profile=profile)
+
+    # Derived fields for template
+    lang = pick_lang(request)
+    t_func = make_t(lang, data)
+    qr_url = build_qr_url(slug, profile)
+
+    # Contacts
+    mobiles = split_list(data.get("phone_mobile"))
+    if data.get("phone_mobile2"):
+        mobiles += split_list(data.get("phone_mobile2"))
+    office_value = (data.get("phone_office") or "").strip()
+    emails = split_list(data.get("emails"))
+    websites = normalize_websites(split_list(data.get("websites")))
+    addresses = parse_addresses(data.get("addresses"))
+
+    wa_link = build_whatsapp_link(data.get("whatsapp") or (mobiles[0] if mobiles else ""))
+
+    gallery = split_pipe(data.get("gallery_urls"))
+    videos = split_pipe(data.get("video_urls"))
+    pdfs = parse_pdfs(split_pipe(data.get("pdf_urls")))
+
+    p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0)
+    p3_enabled = int(getattr(ag, "p3_enabled", 0) or 0)
+
+    return render_template("card.html",
+        ag=SimpleNamespace(**data),
+        profile=profile,
+        p2_enabled=p2_enabled,
+        p3_enabled=p3_enabled,
+        qr_url=qr_url,
+        wa_link=wa_link,
+        mobiles=mobiles,
+        office_value=office_value,
+        emails=emails,
+        websites=websites,
+        addresses=addresses,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+        lang=lang,
+        t_func=t_func
+    )
+
+
+# Compatibility: some builds call render_card_public()
+def render_card_public(slug: str):
+    """Render the public card for a slug (P1/P2/P3 via ?p=)."""
+    slug = (slug or "").strip().strip("/")
+    if not slug:
+        abort(404)
+
+    profile = (request.args.get("p") or "p1").lower().strip()
+    if profile not in ("p1", "p2", "p3"):
+        profile = "p1"
+
+    ag = load_agent(slug)
+    if not ag:
+        abort(404)
+
+    # profile enable check
+    if profile == "p2" and int(getattr(ag, "p2_enabled", 0) or 0) != 1:
+        profile = "p1"
+    if profile == "p3" and int(getattr(ag, "p3_enabled", 0) or 0) != 1:
+        profile = "p1"
+
+    data = build_profile_data(ag, profile)
+
+    # Parse fields
+    mobiles = [x.strip() for x in (data.get("phone_mobile", "") or "").split(",") if x.strip()]
+    if data.get("phone_mobile2"):
+        mobiles += [x.strip() for x in (data.get("phone_mobile2", "") or "").split(",") if x.strip()]
+    office_value = (data.get("phone_office") or "").strip() or None
+    emails = [x.strip() for x in (data.get("emails", "") or "").split(",") if x.strip()]
+    websites = [x.strip() for x in (data.get("websites", "") or "").split(",") if x.strip()]
+
+    addresses = []
+    raw_addr = (data.get("addresses", "") or "").strip()
+    if raw_addr:
+        for line in raw_addr.splitlines():
+            t = line.strip()
+            if not t:
+                continue
+            q = urllib.parse.quote_plus(t)
+            addresses.append({"text": t, "maps": f"https://www.google.com/maps/search/?api=1&query={q}"})
+
+    # Media
+    gallery = [x.strip() for x in (data.get("gallery_urls", "") or "").split("|") if x.strip()]
+    videos = [x.strip() for x in (data.get("video_urls", "") or "").split("|") if x.strip()]
+
+    pdfs = []
+    for item in [x.strip() for x in (data.get("pdf_urls", "") or "").split("|") if x.strip()]:
+        if "||" in item:
+            nm, u = item.split("||", 1)
+            nm = (nm or "Documento").strip()
+            u = u.strip()
+        else:
+            u = item
+            nm = os.path.basename(item)
+        pdfs.append({"name": nm, "url": u})
+
+    # WhatsApp link
+    wa_value = (data.get("whatsapp") or "").strip()
+    wa_link = wa_value
+    if wa_value and not wa_value.lower().startswith("http"):
+        digits = re.sub(r"[^0-9+]", "", wa_value)
+        wa_link = f"https://wa.me/{digits.lstrip('+')}" if digits else None
+
+    # QR url
+    qr_url = f"/qr/{ag.slug}.png" + ("?p=" + profile if profile != "p1" else "")
+
+    # translations helper
+    lang = pick_lang(request)
+    t_func = make_t_func(lang)
+
+    # Socials list
+    socials = build_socials(data)
+
+    return render_template(
+        "card.html",
+        ag=SimpleNamespace(**data),
+        profile=profile,
+        p2_enabled=int(getattr(ag, "p2_enabled", 0) or 0),
+        p3_enabled=int(getattr(ag, "p3_enabled", 0) or 0),
+        mobiles=mobiles,
+        office_value=office_value,
+        emails=emails,
+        websites=websites,
+        addresses=addresses,
+        gallery=gallery,
+        videos=videos,
+        pdfs=pdfs,
+        wa_link=wa_link,
+        qr_url=qr_url,
+        t_func=t_func,
+        lang=lang,
+        socials=socials,
+    )
+
+# Compatibility: some builds call render_card_public()
+def render_card_public(slug: str):
+    # Use the existing public handler (it already supports ?p=)
+    return serve_public(slug)
+
+# Compatibility: some builds call render_card_public()
+def render_card_public(slug: str):
+    # Use the existing public handler (it already supports ?p=)
+    return serve_public(slug)
 @app.route("/<path:filename>")
 def pdf_alias_or_card(filename):
     # ---- PDF alias ----
