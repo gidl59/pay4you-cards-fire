@@ -1,89 +1,105 @@
-/* Minimal admin UI styles (safe). If you already have style.css keep yours. */
 :root{
   --bg:#0b0f14;
-  --panel: rgba(255,255,255,.06);
-  --border: rgba(255,255,255,.12);
-  --text:#e8eef7;
-  --muted: rgba(232,238,247,.70);
+  --panel: rgba(255,255,255,.075);
+  --panel2: rgba(255,255,255,.11);
+  --border: rgba(255,255,255,.14);
+  --text:#eef3fb;
+  --muted: rgba(238,243,251,.72);
 
-  /* ✅ un po' di colore (soft) */
   --brand:#2dd4bf;
   --brand2:#60a5fa;
   --warn:#fbbf24;
   --danger:#ef4444;
 }
+
 *{box-sizing:border-box}
+
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  color:var(--text);
   background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(45,212,191,.16), transparent 60%),
-    radial-gradient(900px 500px at 80% 20%, rgba(96,165,250,.14), transparent 55%),
+    radial-gradient(1200px 600px at 18% -10%, rgba(45,212,191,.22), transparent 60%),
+    radial-gradient(900px 500px at 82% 18%, rgba(96,165,250,.18), transparent 55%),
+    radial-gradient(800px 420px at 50% 110%, rgba(251,191,36,.10), transparent 55%),
     var(--bg);
-  color:var(--text)
 }
+
 a{color:inherit}
+
 .app-shell{min-height:100vh;display:flex;flex-direction:column}
+
 .app-header{
   display:flex;justify-content:space-between;align-items:center;
   padding:14px 14px;
   border-bottom:1px solid var(--border);
-  background:rgba(0,0,0,.25);
+  background: linear-gradient(90deg, rgba(45,212,191,.10), rgba(96,165,250,.08), rgba(0,0,0,.18));
   backdrop-filter: blur(10px);
 }
+
 .brand{display:flex;gap:10px;align-items:center;text-decoration:none}
 .logo-dot{
   width:14px;height:14px;border-radius:50%;
   background:var(--brand);
-  box-shadow:0 0 0 4px rgba(45,212,191,.18)
+  box-shadow:0 0 0 4px rgba(45,212,191,.22);
 }
-.brand-title{font-weight:950}
+.brand-title{font-weight:950; letter-spacing:.2px}
 .hint{color:var(--muted);font-size:12px}
+
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
 .btn{
   padding:10px 14px;border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.18);
   color:var(--text);text-decoration:none;
   font-weight:900;cursor:pointer
 }
-.btn:hover{background:rgba(255,255,255,.10)}
-.btn.primary{background:rgba(45,212,191,.18);border-color:rgba(45,212,191,.40)}
-.btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.38)}
+.btn:hover{background:rgba(0,0,0,.28)}
+.btn.primary{
+  background:linear-gradient(135deg, rgba(45,212,191,.22), rgba(96,165,250,.18));
+  border-color:rgba(45,212,191,.42)
+}
+.btn.danger{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.42)}
 .btn.ghost{background:transparent}
 
 .btn-mini{
   padding:8px 10px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.16);
   text-decoration:none;font-weight:900;cursor:pointer;color:var(--text)
 }
+.btn-mini:hover{background:rgba(0,0,0,.26)}
 .btn-mini.ghost{background:transparent}
-.btn-mini.warn{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.28)}
-.btn-mini.danger{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.30)}
+.btn-mini.warn{background:rgba(251,191,36,.16);border-color:rgba(251,191,36,.32)}
+.btn-mini.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.32)}
 .inline{display:inline}
 
 .app-main{padding:14px}
+
 .flash-wrap{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.flash{padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06)}
-.flash-error{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.10)}
-.flash-ok{border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.10)}
+.flash{
+  padding:10px 12px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.16)
+}
+.flash-error{border-color:rgba(239,68,68,.42);background:rgba(239,68,68,.12)}
+.flash-ok{border-color:rgba(45,212,191,.42);background:rgba(45,212,191,.12)}
 
 .dash-grid{display:flex;flex-direction:column;gap:12px}
 .dash-card{
   border:1px solid var(--border);
-  background:var(--panel);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.12));
   border-radius:18px;
   padding:14px;
-  box-shadow: 0 16px 40px rgba(0,0,0,.22);
+  box-shadow: 0 16px 44px rgba(0,0,0,.24);
 }
 .dash-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .dash-left{display:flex;gap:12px;align-items:center}
 .dash-avatar{
   width:56px;height:56px;border-radius:16px;
-  border:1px solid rgba(255,255,255,.14);
-  overflow:hidden;background:rgba(0,0,0,.20);
+  border:1px solid rgba(255,255,255,.16);
+  overflow:hidden;background:rgba(0,0,0,.22);
   display:flex;align-items:center;justify-content:center
 }
 .dash-avatar img{width:100%;height:100%;object-fit:cover}
@@ -92,74 +108,148 @@ a{color:inherit}
 .dash-sub,.dash-sub2{color:var(--muted);font-size:13px}
 .slug-badge{
   padding:2px 8px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.15)
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.18)
 }
+
 .dash-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
 .dash-preview{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .dash-preview-title{font-weight:950;font-size:12px;color:var(--muted);margin-bottom:6px}
 .dash-mini-grid{display:flex;gap:6px;flex-wrap:wrap}
 .dash-mini{
   width:54px;height:54px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.14);
   object-fit:cover;background:rgba(0,0,0,.18)
 }
 .dash-mini-empty{color:var(--muted)}
 .dash-pdf-list{display:flex;gap:6px;flex-wrap:wrap}
 .dash-pdf-pill{
   padding:8px 10px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.15);
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.16);
   color:var(--text);font-weight:900;cursor:pointer
 }
-.dash-pdf-pill:hover{background:rgba(0,0,0,.25)}
+.dash-pdf-pill:hover{background:rgba(0,0,0,.26)}
 
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999}
-.modal-box{width:min(920px,100%);background:rgba(18,22,30,.94);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px;backdrop-filter:blur(10px)}
-.modal-title{font-weight:950}
-.footer{margin-top:16px;color:var(--muted);text-align:center}
-
-.panel{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:14px}
+.panel{
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(0,0,0,.12));
+  border-radius:18px;
+  padding:14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.24);
+}
 .panel-wide{max-width:1100px;margin:0 auto}
+
 .page-title{margin:0}
-.sep{height:1px;background:rgba(255,255,255,.10);margin:12px 0}
-.section-box{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.12);border-radius:18px;padding:14px;margin-bottom:12px}
+.sep{height:1px;background:rgba(255,255,255,.12);margin:12px 0}
+
+.section-box{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:14px;
+  margin-bottom:12px;
+}
 .h3{font-weight:950;margin-bottom:8px}
+
 .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .form-grid.compact{grid-template-columns:repeat(2,1fr)}
 .field{display:flex;flex-direction:column;gap:6px}
 .field.full{grid-column:1/-1}
-label{font-weight:800;color:rgba(232,238,247,.80);font-size:12px}
-input,textarea{padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);color:var(--text)}
-textarea{min-height:84px;resize:vertical}
-.sticky-save{position:sticky;bottom:10px;display:flex;gap:10px;padding:10px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.35);border-radius:18px}
 
+label{font-weight:800;color:rgba(238,243,251,.86);font-size:12px}
+
+/* ✅ qui aumentiamo la leggibilità: input più chiari, bordi più visibili */
+input,textarea{
+  padding:10px 12px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.14);
+  color:var(--text);
+  outline:none;
+}
+input:focus,textarea:focus{
+  border-color: rgba(45,212,191,.55);
+  box-shadow: 0 0 0 3px rgba(45,212,191,.15);
+}
+textarea{min-height:84px;resize:vertical}
+
+.sticky-save{
+  position:sticky;
+  bottom:10px;
+  display:flex;gap:10px;
+  padding:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.28);
+  border-radius:18px;
+  backdrop-filter: blur(10px);
+}
+
+/* ✅ 3 COLONNE QUADRATE */
 .triple-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.triple-col{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.10);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.triple-col{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.14);
+  border-radius:18px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px
+}
 .tc-title{font-weight:950}
-.tc-preview{height:180px;border-radius:16px;border:1px solid rgba(255,255,255,.10);overflow:hidden;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center}
+
+/* ✅ QUADRATO vero */
+.tc-preview{
+  aspect-ratio: 1 / 1;
+  width:100%;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  overflow:hidden;
+  background:rgba(0,0,0,.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 .tc-preview img{width:100%;height:100%;object-fit:cover}
 .tc-ph{opacity:.7;font-weight:950}
 
+/* MEDIA STRIP */
 .media-strip{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
-.media-thumb-btn{all:unset;cursor:pointer;width:110px;height:110px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);display:block}
+.media-thumb-btn{
+  all:unset;cursor:pointer;
+  width:110px;height:110px;border-radius:14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.18);
+  display:block
+}
 .media-thumb-btn img,.media-thumb-btn video{width:100%;height:100%;object-fit:cover;display:block}
 
+/* PDF LIST */
 .pdf-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-.pdf-open-btn{width:100%;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.16);color:var(--text);cursor:pointer;font-weight:900}
-
-/* =========================
-   ✅ CROP CERCHIO (mancava!)
-   ========================= */
-.crop-preview{
-  display:flex;
-  justify-content:center;
-  padding-top:6px;
+.pdf-open-btn{
+  width:100%;
+  text-align:left;
+  padding:10px 12px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.16);
+  color:var(--text);
+  cursor:pointer;
+  font-weight:900
 }
+.pdf-open-btn:hover{background:rgba(0,0,0,.26)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999}
+.modal-box{width:min(920px,100%);background:rgba(18,22,30,.94);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px;backdrop-filter:blur(10px)}
+.modal-title{font-weight:950}
+
+.footer{margin-top:16px;color:var(--muted);text-align:center}
+
+/* CROP CERCHIO */
+.crop-preview{display:flex;justify-content:center;padding-top:6px}
 .crop-circle-bg{
-  width:170px;
-  height:170px;
-  border-radius:50%;
+  width:170px;height:170px;border-radius:50%;
   border:2px solid rgba(255,255,255,.18);
   box-shadow: 0 18px 40px rgba(0,0,0,.35);
   background-color: rgba(0,0,0,.18);
@@ -172,25 +262,23 @@ textarea{min-height:84px;resize:vertical}
 .crop-empty{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
-  color: rgba(232,238,247,.75);
+  color: rgba(238,243,251,.78);
   font-weight:900;
 }
 
-/* =========================
-   ✅ LOGIN (fix logo gigante)
-   ========================= */
+/* LOGIN */
 .login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
 .login-card{
   width: min(420px, 100%);
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.16));
   border-radius:18px;
   padding:16px;
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
 }
 .login-brand{display:flex;align-items:center;gap:12px}
 .login-logo{
-  width:68px;height:68px;max-width:68px;max-height:68px;
+  width:68px;height:68px;
   object-fit:contain;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.14);
@@ -200,6 +288,7 @@ textarea{min-height:84px;resize:vertical}
 .login-brand-text .login-title{font-weight:950;font-size:18px}
 .login-form{margin-top:14px;display:flex;flex-direction:column;gap:10px}
 
+/* RESPONSIVE */
 @media (max-width:860px){
   .dash-preview{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
