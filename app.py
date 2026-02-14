@@ -642,53 +642,6 @@ def handle_media_uploads_common(data: dict):
         current = current[:MAX_VIDEOS]
         data["video_urls"] = clean_media_pipe(join_pipe_list(current))
 
-    pdfs = request.files.getlist("pdf_files")
-    if pdfs:
-        current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
-
-        # Dedup forte: a volte Chrome/OS invia 2 file uguali nella stessa submit.
-        # Calcolo fingerprint PRIMA di salvare così non creiamo doppioni (né su DB né su filesystem).
-        seen_fp = set()
-        seen_names = set()
-        for entry in current:
-            entry = (entry or "").strip()
-            if not entry:
-                continue
-            if "||" in entry:
-                nm = (entry.split("||", 1)[0] or "").strip()
-            else:
-                nm = pdf_name_from_url(entry)
-            if nm:
-                seen_names.add(nm.lower())
-
-        for f in pdfs:
-            if not (f and f.filename):
-                continue
-
-            # 1) dedup per nome (caso: stesso file selezionato 2 volte)
-            base_nm = os.path.basename((f.filename or "").strip())
-            if base_nm and base_nm.lower() in seen_names:
-                continue
-
-            # 2) dedup per contenuto
-            fp = _file_fingerprint(f)
-            if fp in seen_fp:
-                continue
-            seen_fp.add(fp)
-
-            # assicurati che lo stream sia all'inizio prima del save
-            try:
-                f.stream.seek(0)
-            except Exception:
-                pass
-
-            url = save_upload(f, "pdf")
-            nm = _pdf_display_name(f.filename, url)
-            current.append(f"{nm}||{url}")
-            if base_nm:
-                seen_names.add(base_nm.lower())
-
-        data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
 def handle_media_uploads_p1(agent: Agent):
     photo = request.files.get("photo")
@@ -721,51 +674,6 @@ def handle_media_uploads_p1(agent: Agent):
         current = current[:MAX_VIDEOS]
         agent.video_urls = clean_media_pipe(join_pipe_list(current))
 
-    pdfs = request.files.getlist("pdf_files")
-    if pdfs:
-        current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
-
-        # Anti-duplica: alcuni browser possono inviare lo stesso PDF 2 volte
-        # nella stessa POST (con nomi diversi). Deduplichiamo per fingerprint
-        # e anche per nome (case-insensitive) prima di salvare.
-        seen_fp = set()
-        seen_names = set()
-        for entry in current:
-            entry = (entry or "").strip()
-            if not entry:
-                continue
-            if "||" in entry:
-                nm = (entry.split("||", 1)[0] or "").strip()
-            else:
-                nm = pdf_name_from_url(entry)
-            if nm:
-                seen_names.add(nm.lower())
-
-        for f in pdfs:
-            if not (f and f.filename):
-                continue
-
-            nm_try = _pdf_display_name(f.filename, "")
-            if nm_try and nm_try.lower() in seen_names:
-                continue
-
-            fp = _file_fingerprint(f)
-            if fp in seen_fp:
-                continue
-            seen_fp.add(fp)
-
-            try:
-                f.stream.seek(0)
-            except Exception:
-                pass
-
-            url = save_upload(f, "pdf")
-            nm = _pdf_display_name(f.filename, url)
-            current.append(f"{nm}||{url}")
-            if nm:
-                seen_names.add(nm.lower())
-
-        agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
 
 # ==========================
@@ -1597,7 +1505,7 @@ def render_card_public(slug: str):
 
     gallery = split_pipe(data.get("gallery_urls"))
     videos = split_pipe(data.get("video_urls"))
-    pdfs = parse_pdfs(split_pipe(data.get("pdf_urls")))
+    pdfs = []  # PDF disabilitati per evitare duplicati
 
     p2_enabled = int(getattr(ag, "p2_enabled", 0) or 0)
     p3_enabled = int(getattr(ag, "p3_enabled", 0) or 0)
@@ -1843,13 +1751,6 @@ def pdf_alias_or_card(filename):
     videos = [canon_url(x) for x in parse_pipe_list(clean_media_pipe(data.get("video_urls") or ""))]
 
     pdfs = []
-    items = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls") or ""))
-    for it in items:
-        nm, url = normalize_pdf_item(it)
-        url = canon_url(url)
-        if _is_valid_pdf_url(url):
-            pdfs.append({"name": (nm or "").strip() or pdf_name_from_url(url), "url": url})
-
     def t_func(k):
         it = {
             "actions": "Azioni",
