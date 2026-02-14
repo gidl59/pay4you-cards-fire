@@ -65,11 +65,7 @@
             <div>
               <div class="dash-name">{{ a.name or a.slug }}</div>
               <div class="dash-sub">{{ a.company or "—" }}</div>
-
-              <!-- ✅ SOLO ADMIN vede lo slug -->
-              {% if is_admin %}
-                <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
-              {% endif %}
+              <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
             </div>
           </div>
 
@@ -147,12 +143,9 @@
                   {% set _ = imgs2.append(x) %}
                 {% endif %}
               {% endfor %}
-
-              {% set img_limit = 6 if is_admin else 30 %}
-              {% for g in imgs2[:img_limit] %}
+              {% for g in imgs2[:6] %}
                 <img class="dash-mini" src="{{ g }}" alt="">
               {% endfor %}
-
               {% if imgs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -170,8 +163,7 @@
                 {% endif %}
               {% endfor %}
 
-              {% set vid_limit = 4 if is_admin else 10 %}
-              {% for v in vids2[:vid_limit] %}
+              {% for v in vids2[:4] %}
                 <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
               {% endfor %}
 
@@ -192,8 +184,7 @@
                 {% endif %}
               {% endfor %}
 
-              {% set pdf_limit = 6 if is_admin else 12 %}
-              {% for p in pdfs2[:pdf_limit] %}
+              {% for p in pdfs2[:6] %}
                 {% if "||" in p %}
                   {% set nm = p.split("||")[0] %}
                   {% set u = p.split("||")[1] %}
@@ -227,7 +218,6 @@
 
 </div>
 
-<!-- ✅ MODAL QR/PDF (senza X) -->
 <div id="shareModal" class="modal-overlay" style="display:none" onclick="overlayCloseShare(event)">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:820px;">
     <div class="modal-title" id="smTitle">Anteprima</div>
@@ -254,7 +244,6 @@
 </div>
 
 <script>
-  // video thumb: lazy load + seek 0.1
   (function(){
     const vids = Array.from(document.querySelectorAll('video.vthumb[data-src]'));
     if(!vids.length) return;
@@ -285,7 +274,6 @@
     vids.forEach(v => io.observe(v));
   })();
 
-  // URL assoluto robusto
   function absUrl(u){
     if(!u) return '';
     u = (u + '').trim();
@@ -293,7 +281,6 @@
 
     if(u.startsWith('uploads/')) u = '/' + u;
     if(u.startsWith('/uploads/')) {
-      // ok
     } else if(u.startsWith('pdf/') || u.startsWith('images/') || u.startsWith('videos/')) {
       u = '/uploads/' + u;
     } else if(u.startsWith('/pdf/') || u.startsWith('/images/') || u.startsWith('/videos/')) {
@@ -338,7 +325,6 @@
       `<img src="${absUrl(url)}" alt="qr" style="width:100%; max-height:70vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.15);">`;
 
     {% if is_admin %}
-      // QR non si elimina (solo file immagine generato)
       document.getElementById('smDeleteHref').value = '';
     {% endif %}
 
