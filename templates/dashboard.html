@@ -94,6 +94,7 @@
 
             {% if is_admin %}
               <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p1">Modifica P1</a>
+              <button class="btn-mini" type="button" onclick="openCredModal('{{ a.slug }}')">Credenziali</button>
               {% if a.p2_enabled == 1 %}
                 <a class="btn-mini warn" href="/area/edit/{{ a.slug }}/p2">Modifica P2</a>
               {% endif %}
@@ -200,40 +201,6 @@
               </div>
             {% endif %}
           </div>
-
-          <div class="dash-preview-col">
-            <div class="dash-preview-title">PDF</div>
-            {% if not is_admin %}
-              {% for lbl,pipe in [('P1',a.pdf1_url),('P2',a.p2_pdf1_url),('P3',a.p3_pdf1_url)] %}
-                {% if pipe %}
-                  <div class="dash-mini-label">{{ lbl }}</div>
-                  <div class="dash-pdf-list">
-                    {% set pdfs = (pipe or "").split("|") %}
-                    {% set pdfs2 = [] %}
-                    {% for x in pdfs %}{% if x and x.strip() %}{% set _ = pdfs2.append(x) %}{% endif %}{% endfor %}
-                    {% for p in pdfs2[:6] %}
-                      {% if "||" in p %}{% set nm = p.split("||")[0] %}{% set u = p.split("||")[1] %}{% else %}{% set nm = p %}{% set u = p %}{% endif %}
-                      <button type="button" class="dash-pdf-pill" title="{{ nm }}" onclick="openPdfModal('{{ a.slug }}','p1','{{ u|e }}','{{ nm|e }}')">{{ nm }}</button>
-                    {% endfor %}
-                    {% if pdfs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            {% else %}
-              <div class="dash-pdf-list">
-                {% set pdfs = (a.pdf1_url or "").split("|") %}
-                {% set pdfs2 = [] %}
-                {% for x in pdfs %}{% if x and x.strip() %}{% set _ = pdfs2.append(x) %}{% endif %}{% endfor %}
-                {% for p in pdfs2[:6] %}
-                  {% if "||" in p %}{% set nm = p.split("||")[0] %}{% set u = p.split("||")[1] %}{% else %}{% set nm = p %}{% set u = p %}{% endif %}
-                  <button type="button" class="dash-pdf-pill" title="{{ nm }}" onclick="openPdfModal('{{ a.slug }}','p1','{{ u|e }}','{{ nm|e }}')">{{ nm }}</button>
-                {% endfor %}
-                {% if pdfs2|length == 0 %}<div class="dash-mini-empty">—</div>{% endif %}
-              </div>
-            {% endif %}
-          </div>
-        </div>
-
       </section>
       {% endfor %}
     </div>
@@ -272,6 +239,25 @@
     <input type="hidden" id="smProfile" value="">
     <input type="hidden" id="smUrl" value="">
     <input type="hidden" id="smDeleteHref" value="">
+  </div>
+</div>
+
+<div id="credModal" class="modal-overlay" style="display:none" onclick="overlayCloseCred(event)">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:720px;">
+    <div class="modal-title">Invia credenziali</div>
+    <div class="hint" style="margin-top:6px">Genera una password casuale. Il cliente dovrà cambiarla al primo accesso.</div>
+
+    <div id="credBody" style="margin-top:12px"></div>
+
+    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn primary" type="button" onclick="generateCred()">Genera password</button>
+      <button class="btn" type="button" onclick="shareCred('whatsapp')">Invia WhatsApp</button>
+      <button class="btn" type="button" onclick="shareCred('email')">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeCredModal()">Chiudi</button>
+    </div>
+
+    <input type="hidden" id="credSlug" value="">
+    <input type="hidden" id="credPass" value="">
   </div>
 </div>
 
@@ -479,6 +465,25 @@
     window.location.href = href;
   }
 </script>
+
+
+<div id="credModal" class="modal-overlay" style="display:none" onclick="overlayCloseCred(event)">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:720px;">
+    <div class="modal-title">Invia credenziali</div>
+    <div class="hint" style="margin-top:6px">Genera una password casuale. Il cliente dovrà cambiarla al primo accesso.</div>
+    <div id="credBody" style="margin-top:12px"></div>
+    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+      <button class="btn" type="button" onclick="genCred()">Genera password</button>
+      <button class="btn" type="button" onclick="sendCred("whatsapp")">Invia WhatsApp</button>
+      <button class="btn" type="button" onclick="sendCred("email")">Invia Email</button>
+      <button class="btn ghost" type="button" onclick="closeCredModal()">Chiudi</button>
+    </div>
+    <input type="hidden" id="credSlug" value="">
+    <input type="hidden" id="credLink" value="">
+    <input type="hidden" id="credUser" value="">
+    <input type="hidden" id="credPass" value="">
+  </div>
+</div>
 
 </body>
 </html>
