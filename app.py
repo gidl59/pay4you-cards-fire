@@ -618,19 +618,47 @@ def handle_media_uploads_common(data: dict):
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(data.get("pdf_urls", "")))
 
+        # Dedup forte: a volte Chrome/OS invia 2 file uguali nella stessa submit.
+        # Calcolo fingerprint PRIMA di salvare così non creiamo doppioni (né su DB né su filesystem).
         seen_fp = set()
+        seen_names = set()
+        for entry in current:
+            entry = (entry or "").strip()
+            if not entry:
+                continue
+            if "||" in entry:
+                nm = (entry.split("||", 1)[0] or "").strip()
+            else:
+                nm = pdf_name_from_url(entry)
+            if nm:
+                seen_names.add(nm.lower())
+
         for f in pdfs:
             if not (f and f.filename):
                 continue
 
+            # 1) dedup per nome (caso: stesso file selezionato 2 volte)
+            base_nm = os.path.basename((f.filename or "").strip())
+            if base_nm and base_nm.lower() in seen_names:
+                continue
+
+            # 2) dedup per contenuto
             fp = _file_fingerprint(f)
             if fp in seen_fp:
                 continue
             seen_fp.add(fp)
 
+            # assicurati che lo stream sia all'inizio prima del save
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+
             url = save_upload(f, "pdf")
             nm = _pdf_display_name(f.filename, url)
             current.append(f"{nm}||{url}")
+            if base_nm:
+                seen_names.add(base_nm.lower())
 
         data["pdf_urls"] = clean_pdf_pipe(join_pipe_list(current))
 
@@ -669,9 +697,28 @@ def handle_media_uploads_p1(agent: Agent):
     if pdfs:
         current = parse_pipe_list(clean_pdf_pipe(agent.pdf1_url or ""))
 
+        # Anti-duplica: alcuni browser possono inviare lo stesso PDF 2 volte
+        # nella stessa POST (con nomi diversi). Deduplichiamo per fingerprint
+        # e anche per nome (case-insensitive) prima di salvare.
         seen_fp = set()
+        seen_names = set()
+        for entry in current:
+            entry = (entry or "").strip()
+            if not entry:
+                continue
+            if "||" in entry:
+                nm = (entry.split("||", 1)[0] or "").strip()
+            else:
+                nm = pdf_name_from_url(entry)
+            if nm:
+                seen_names.add(nm.lower())
+
         for f in pdfs:
             if not (f and f.filename):
+                continue
+
+            nm_try = _pdf_display_name(f.filename, "")
+            if nm_try and nm_try.lower() in seen_names:
                 continue
 
             fp = _file_fingerprint(f)
@@ -679,9 +726,16 @@ def handle_media_uploads_p1(agent: Agent):
                 continue
             seen_fp.add(fp)
 
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+
             url = save_upload(f, "pdf")
             nm = _pdf_display_name(f.filename, url)
             current.append(f"{nm}||{url}")
+            if nm:
+                seen_names.add(nm.lower())
 
         agent.pdf1_url = clean_pdf_pipe(join_pipe_list(current))
 
@@ -696,20 +750,6 @@ def favicon():
 @app.route("/uploads/<path:filename>")
 def serve_uploads(filename):
     return send_from_directory(str(UPLOADS_DIR), filename)
-
-
-# =========================
-# PUBLIC LEGAL PAGES (no auth)
-# =========================
-
-@app.route("/privacy")
-def privacy_policy():
-    return render_template("privacy.html")
-
-
-@app.route("/cookie")
-def cookie_policy():
-    return render_template("cookie.html")
 
 
 # ==========================
@@ -742,10 +782,11 @@ def login():
 
 @app.route("/area/forgot", methods=["GET", "POST"])
 def area_forgot():
-    # In questa versione l'area riservata usa solo ADMIN_PASSWORD (variabile d'ambiente).
-    # Quindi non possiamo "recuperare" la password: si resetta da Render/hosting.
+    # Password dimenticata: pagina pubblica, quindi NON mostriamo mai istruzioni tecniche.
+    # In questa app non inviamo email automatiche (a meno di SMTP configurato):
+    # mostriamo una conferma generica e un contatto assistenza.
     if request.method == "POST":
-        flash("Per reimpostare la password: vai su Render → Environment → modifica ADMIN_PASSWORD → Deploy.", "info")
+        flash("Richiesta inviata. Se l’account esiste, ti contatteremo a breve.", "ok")
         return redirect(url_for("area_forgot"))
     return render_template("forgot.html")
 
