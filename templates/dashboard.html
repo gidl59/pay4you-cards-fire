@@ -65,7 +65,11 @@
             <div>
               <div class="dash-name">{{ a.name or a.slug }}</div>
               <div class="dash-sub">{{ a.company or "—" }}</div>
-              <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
+
+              <!-- ✅ SOLO ADMIN vede lo slug -->
+              {% if is_admin %}
+                <div class="dash-sub2">Slug: <span class="slug-badge">{{ a.slug }}</span></div>
+              {% endif %}
             </div>
           </div>
 
@@ -143,9 +147,13 @@
                   {% set _ = imgs2.append(x) %}
                 {% endif %}
               {% endfor %}
-              {% for g in imgs2[:6] %}
+
+              <!-- ✅ CLIENTE: più foto (12). ADMIN: come prima (6) -->
+              {% set img_limit = 6 if is_admin else 12 %}
+              {% for g in imgs2[:img_limit] %}
                 <img class="dash-mini" src="{{ g }}" alt="">
               {% endfor %}
+
               {% if imgs2|length == 0 %}
                 <div class="dash-mini-empty">—</div>
               {% endif %}
@@ -163,7 +171,9 @@
                 {% endif %}
               {% endfor %}
 
-              {% for v in vids2[:4] %}
+              <!-- ✅ CLIENTE: più video (8). ADMIN: come prima (4) -->
+              {% set vid_limit = 4 if is_admin else 8 %}
+              {% for v in vids2[:vid_limit] %}
                 <video class="dash-mini vthumb" muted playsinline preload="metadata" data-src="{{ v }}"></video>
               {% endfor %}
 
@@ -184,7 +194,9 @@
                 {% endif %}
               {% endfor %}
 
-              {% for p in pdfs2[:6] %}
+              <!-- ✅ CLIENTE: più pdf (12). ADMIN: come prima (6) -->
+              {% set pdf_limit = 6 if is_admin else 12 %}
+              {% for p in pdfs2[:pdf_limit] %}
                 {% if "||" in p %}
                   {% set nm = p.split("||")[0] %}
                   {% set u = p.split("||")[1] %}
