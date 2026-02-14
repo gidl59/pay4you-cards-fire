@@ -4,12 +4,13 @@ import json
 import uuid
 import hashlib
 import datetime as dt
+import secrets
 from pathlib import Path
 from urllib.parse import unquote
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, session, abort, flash, send_from_directory, Response
+    url_for, session, abort, flash, send_from_directory, Response, jsonify
 )
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
@@ -291,7 +292,16 @@ def canon_url(u: str) -> str:
     u = (u or "").strip()
     if not u:
         return ""
+    # Older DB rows may contain absolute URLs (e.g. https://domain/uploads/...).
+    # Normalize those to a stable /uploads/... path so we can dedupe correctly.
     if re.match(r"^https?://", u, re.I):
+        try:
+            from urllib.parse import urlparse
+            p = urlparse(u)
+            if "/uploads/" in p.path:
+                return p.path
+        except Exception:
+            pass
         return u
     if u.startswith("/uploads/"):
         return u
@@ -560,42 +570,24 @@ def set_profile_from_form(existing: dict, form: dict) -> dict:
 
 # ---- PDF dedup robusto nella stessa request (Chrome/iPhone) ----
 def _file_fingerprint(file_storage) -> str:
-    """Fingerprint robusto "sha1:size" del contenuto.
-
-    Nota: su alcuni browser/stack (soprattutto Windows/Chrome) può capitare che
-    lo stesso file venga inoltrato 2 volte in request.files con nomi diversi.
-    Per eliminare questi duplicati, non ci basiamo sul filename ma sul contenuto.
-
-    Importante: resettiamo lo stream a 0 per permettere poi il salvataggio.
+    """
+    Fingerprint: filename normalizzato + size + hash dei primi 64KB.
+    Evita il caso in cui lo stesso file arriva 2 volte in request.files.
     """
     try:
+        name = secure_filename(file_storage.filename or "").lower().strip()
+        size = file_size_bytes(file_storage)
+
         stream = file_storage.stream
-        # Porta lo stream a inizio (se possibile)
-        try:
-            stream.seek(0)
-        except Exception:
-            pass
+        pos = stream.tell()
+        stream.seek(0)
+        chunk = stream.read(65536) or b""
+        stream.seek(pos, os.SEEK_SET)
 
-        sha = hashlib.sha1()
-        total = 0
-        while True:
-            buf = stream.read(1024 * 1024)  # 1MB
-            if not buf:
-                break
-            sha.update(buf)
-            total += len(buf)
-
-        # Reset per eventuale save_upload
-        try:
-            stream.seek(0)
-        except Exception:
-            pass
-
-        return f"{sha.hexdigest()}::{total}"
+        h = hashlib.sha1(chunk).hexdigest()[:12]
+        return f"{name}::{size}::{h}"
     except Exception:
-        # fallback (meno affidabile)
-        name = (secure_filename(file_storage.filename or "") or "").lower().strip()
-        return name
+        return (secure_filename(file_storage.filename or "") or "").lower().strip()
 
 def _pdf_display_name(original_filename: str, fallback_url: str) -> str:
     nm = (os.path.basename(original_filename or "") or "").strip()
@@ -840,6 +832,21 @@ def dashboard():
     ag.pdf1_url = clean_pdf_pipe(ag.pdf1_url or "")
     ag.gallery_urls = clean_media_pipe(ag.gallery_urls or "")
     ag.video_urls = clean_media_pipe(ag.video_urls or "")
+
+    # Per il cliente: aggiungiamo anteprime media anche di P2/P3 (se presenti)
+    try:
+        b2 = get_profile_data(ag, "p2")
+        b3 = get_profile_data(ag, "p3")
+        ag.p2_gallery_urls = clean_media_pipe((b2.get("gallery_urls") or ""))
+        ag.p3_gallery_urls = clean_media_pipe((b3.get("gallery_urls") or ""))
+        ag.p2_video_urls = clean_media_pipe((b2.get("video_urls") or ""))
+        ag.p3_video_urls = clean_media_pipe((b3.get("video_urls") or ""))
+        ag.p2_pdf1_url = clean_pdf_pipe((b2.get("pdf_urls") or b2.get("pdf1_url") or ""))
+        ag.p3_pdf1_url = clean_pdf_pipe((b3.get("pdf_urls") or b3.get("pdf1_url") or ""))
+    except Exception:
+        ag.p2_gallery_urls = ag.p3_gallery_urls = ""
+        ag.p2_video_urls = ag.p3_video_urls = ""
+        ag.p2_pdf1_url = ag.p3_pdf1_url = ""
     return render_template("dashboard.html", agents=[ag], is_admin=False)
 
 
@@ -1404,6 +1411,51 @@ def purge_pdfs_all():
     s.commit()
     flash("PURGE completato: eliminati tutti i PDF (file + DB) per tutti gli agenti.", "ok")
     return redirect(url_for("dashboard"))
+
+
+# ==========================
+# INVIA CREDENZIALI (genera password temporanea)
+# ==========================
+@app.route("/area/admin/credentials/<slug>", methods=["POST"])
+def admin_generate_credentials(slug):
+    r = require_login()
+    if r:
+        return r
+    if not is_admin():
+        abort(403)
+
+    s = db()
+    ag = s.query(Agent).filter(Agent.slug == slug).first()
+    if not ag:
+        abort(404)
+
+    # Password temporanea: semplice da copiare, abbastanza lunga
+    temp = secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
+    ag.password_hash = generate_password_hash(temp)
+    ag.updated_at = dt.datetime.utcnow()
+    s.commit()
+
+    base = public_base_url()
+    login_url = f"{base}/area/login"
+    card_url = f"{base}/{ag.slug}"
+
+    msg = (
+        f"Credenziali Pay4You Cards\n"
+        f"Login: {login_url}\n"
+        f"Username: {ag.slug}\n"
+        f"Password temporanea: {temp}\n\n"
+        f"Al primo accesso ti consigliamo di cambiarla da 'Password dimenticata'.\n"
+        f"Link Card: {card_url}"
+    )
+
+    return jsonify({
+        "ok": True,
+        "slug": ag.slug,
+        "login_url": login_url,
+        "card_url": card_url,
+        "temp_password": temp,
+        "message": msg,
+    })
 
 
 # ==========================
