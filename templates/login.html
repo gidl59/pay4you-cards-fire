@@ -7,19 +7,18 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
-
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <div class="login-shell">
-  <div class="login-card">
+  <div class="login-card login-card-gold">
 
-    <div class="login-brand">
+    <div class="login-top">
       <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
-      <div class="login-brand-text">
-        <div class="login-title">Pay4You Cards</div>
-        <div class="hint">Accesso Area Riservata</div>
+      <div class="login-head">
+        <h1>Area riservata</h1>
+        <p>Accedi con le tue credenziali</p>
       </div>
     </div>
 
@@ -33,7 +32,7 @@
       {% endif %}
     {% endwith %}
 
-    <form method="post" action="/area/login" class="login-form">
+    <form method="post" action="/area/login" class="login-form" autocomplete="on">
       <div class="field">
         <label>Username</label>
         <input type="text" name="username" autocomplete="username" required>
@@ -44,12 +43,15 @@
         <input type="password" name="password" autocomplete="current-password" required>
       </div>
 
-      <button class="btn primary" type="submit" style="width:100%">Accedi</button>
-    </form>
+      <div class="login-actions">
+        <button class="btn btn-login-primary" type="submit">Accedi</button>
+        <a class="btn btn-login-outline" href="/">Home</a>
+      </div>
 
-    <div class="hint" style="margin-top:12px; text-align:center;">
-      Pay4You.store
-    </div>
+      <div class="login-foot">
+        © 2026 Pay4You — Giuseppe Di Lisio
+      </div>
+    </form>
 
   </div>
 </div>
