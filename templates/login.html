@@ -7,19 +7,18 @@
 
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
-
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <div class="login-shell">
-  <div class="login-box">
+  <div class="login-card login-card-gold">
 
-    <div class="login-brand" style="display:flex;align-items:center;gap:12px;">
-      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You" style="width:64px;height:64px;object-fit:contain;border-radius:16px;">
-      <div>
-        <div class="login-title">Pay4You Cards</div>
-        <div class="hint">Accesso Area Riservata</div>
+    <div class="login-top">
+      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
+      <div class="login-head">
+        <h1>Area riservata</h1>
+        <p>Accedi con le tue credenziali</p>
       </div>
     </div>
 
@@ -33,25 +32,37 @@
       {% endif %}
     {% endwith %}
 
-    <form method="post" action="/area/login" class="login-form" style="margin-top:12px;">
+    <form method="post" action="/area/login" class="login-form" autocomplete="on">
       <div class="field">
         <label>Username</label>
-        <input class="inp" type="text" name="username" autocomplete="username" required>
+        <input type="text" name="username" autocomplete="username" required>
       </div>
 
       <div class="field">
         <label>Password</label>
-        <input class="inp" type="password" name="password" autocomplete="current-password" required>
+        <input type="password" name="password" autocomplete="current-password" required>
       </div>
 
-      <button class="btn primary" type="submit" style="width:100%">Accedi</button>
+      <div class="login-actions">
+        <button class="btn btn-login-primary" type="submit">Accedi</button>
+        <a class="btn btn-login-outline" href="/">Home</a>
+      </div>
 
-      <a class="btn ghost" href="/area/forgot" style="width:100%;margin-top:10px;text-align:center;">Password dimenticata</a>
+      <!-- ✅ Password dimenticata -->
+      <div style="margin-top:10px; text-align:center;">
+        <a href="/area/forgot"
+           style="color: rgba(246,226,160,.95); font-weight:950; text-decoration:none;">
+          Hai dimenticato la password?
+        </a>
+        <div style="margin-top:6px; color: rgba(238,243,251,.70); font-weight:800; font-size:13px;">
+          Ti invieremo un link per reimpostarla.
+        </div>
+      </div>
+
+      <div class="login-foot">
+        © 2026 Pay4You — Giuseppe Di Lisio
+      </div>
     </form>
-
-    <div class="hint" style="margin-top:12px; text-align:center;">
-      Pay4You.store
-    </div>
 
   </div>
 </div>
