@@ -2,92 +2,80 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Control Room | Pay4You</title>
+    <title>Master Control</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .admin-box { background:#111; padding:20px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .admin-table th { text-align: left; padding: 10px; background: #222; color: #aaa; }
-        .admin-table td { padding: 10px; border-bottom: 1px solid #333; color: white; }
-        .btn-mini { padding: 6px 12px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; display:inline-block;}
+        .file-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:10px; margin-top:15px; }
+        .file-item { background:#222; padding:5px; border-radius:5px; text-align:center; font-size:10px; color:#aaa; overflow:hidden;}
+        .file-item img { width:100%; height:80px; object-fit:cover; border-radius:4px; margin-bottom:5px; }
+        .btn-mini { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; font-size:11px;}
         .bg-blue { background: #0088cc; }
         .bg-red { background: #cc0000; }
-        .bg-green { background: #00ffc8; color: black; font-weight:bold; }
-        
-        /* Form Aggiungi */
-        .add-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
-        .input-dark { background: #222; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; width: 100%; box-sizing: border-box;}
+        .bg-green { background: #00ffc8; color:black; }
     </style>
 </head>
-<body style="background:#050505; padding:20px; font-family:sans-serif;">
+<body style="background:#050505; padding:20px; font-family:sans-serif; color:white;">
 
     <div class="dash-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <h1 style="color:#ff4444; margin:0;">🎛️ MASTER CONTROL</h1>
-            <a href="/master/logout" style="color:#fff;">Esci</a>
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h1 style="color:#ff4444; margin:0;">MASTER ROOM</h1>
+            <a href="/master/logout" style="color:white;">Esci</a>
         </div>
 
-        <div class="admin-box" style="border-color: #00ffc8;">
-            <h3 style="color:#00ffc8; margin-top:0;">➕ Aggiungi Nuovo Cliente</h3>
-            <form action="/master/add" method="POST" class="add-form">
-                <div>
-                    <label style="color:#888; font-size:12px;">Nome Cliente</label>
-                    <input type="text" name="nome" class="input-dark" placeholder="Mario Rossi" required>
+        <div class="admin-box" style="border-color:#0088cc;">
+            <h3 style="color:#0088cc; margin:0;">📂 File Trovati sul Disco ({{ files|length }})</h3>
+            <p style="font-size:12px; color:#888;">Questi sono i file salvati dalla vecchia versione. Copia il percorso e incollalo nel profilo.</p>
+            
+            <div class="file-grid">
+                {% for f in files %}
+                <div class="file-item">
+                    <a href="/uploads/{{ f }}" target="_blank">
+                        <img src="/uploads/{{ f }}" onerror="this.src='https://via.placeholder.com/80?text=FILE'">
+                    </a>
+                    <div style="margin-bottom:5px;">{{ f }}</div>
+                    <button class="btn-mini bg-blue" onclick="copiaPercorso('/uploads/{{ f }}')">Copia Link</button>
                 </div>
-                <div>
-                    <label style="color:#888; font-size:12px;">Username</label>
-                    <input type="text" name="username" class="input-dark" placeholder="mario" required>
-                </div>
-                <div>
-                    <label style="color:#888; font-size:12px;">Password</label>
-                    <input type="text" name="password" class="input-dark" placeholder="12345" required>
-                </div>
-                <div>
-                    <label style="color:#888; font-size:12px;">SLUG (Indirizzo Card)</label>
-                    <input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required>
-                </div>
-                <button type="submit" class="btn-mini bg-green" style="padding:10px 20px;">CREA ORA</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="admin-box">
+            <h3>➕ Nuovo Cliente</h3>
+            <form action="/master/add" method="POST" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px;">
+                <input type="text" name="nome" placeholder="Nome" style="padding:8px; background:#222; border:1px solid #444; color:white;" required>
+                <input type="text" name="username" placeholder="User" style="padding:8px; background:#222; border:1px solid #444; color:white;" required>
+                <input type="text" name="password" placeholder="Pass" style="padding:8px; background:#222; border:1px solid #444; color:white;" required>
+                <input type="text" name="slug" placeholder="Slug (es. mario)" style="padding:8px; background:#222; border:1px solid #444; color:white;" required>
+                <button type="submit" class="btn-mini bg-green" style="padding:10px;">CREA</button>
             </form>
         </div>
 
         <div class="admin-box">
-            <h3 style="color:white; margin-top:0;">Lista Clienti ({% if clienti %}{{ clienti|length }}{% else %}0{% endif %})</h3>
-            
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Cliente</th>
-                        <th>Login</th>
-                        <th>Card (Slug)</th>
-                        <th>Azioni</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in clienti %}
-                    <tr>
-                        <td>#{{ c.id }}</td>
-                        <td><strong>{{ c.nome }}</strong></td>
-                        <td>{{ c.username }} / {{ c.password }}</td>
-                        <td>
-                            <a href="/card/{{ c.slug }}" target="_blank" style="color:#0088cc;">/{{ c.slug }}</a>
-                        </td>
-                        <td>
-                            <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue" title="Entra nel profilo per modificare">👁️ Gestisci</a>
-                            
-                            {% if c.id != 1 %} <a href="/master/delete/{{ c.id }}" class="btn-mini bg-red" onclick="return confirm('Sicuro di voler cancellare {{ c.nome }}?')">🗑️</a>
-                            {% else %}
-                                <span style="font-size:10px; color:#555;">(Admin)</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+            <h3>Utenti Attivi</h3>
+            <table style="width:100%; text-align:left; font-size:14px;">
+                {% for c in clienti %}
+                <tr>
+                    <td style="padding:10px;">#{{ c.id }} <strong>{{ c.nome }}</strong></td>
+                    <td>{{ c.username }}</td>
+                    <td><a href="/card/{{ c.slug }}" target="_blank" style="color:#00ffc8;">/{{ c.slug }}</a></td>
+                    <td>
+                        <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️ Gestisci</a>
+                        {% if c.id != 1 %}<a href="/master/delete/{{ c.id }}" class="btn-mini bg-red">🗑️</a>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
             </table>
         </div>
 
     </div>
 
+    <script>
+        function copiaPercorso(testo) {
+            navigator.clipboard.writeText(testo);
+            alert("Percorso copiato: " + testo + "\nOra incollalo nel campo 'Foto Manuale' del profilo!");
+        }
+    </script>
 </body>
 </html>
