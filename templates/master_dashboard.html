@@ -7,10 +7,12 @@
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .admin-box { background:#111; padding:20px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .btn-mini { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; font-size:12px; display:inline-block;}
+        .btn-mini { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; font-size:12px; display:inline-block; margin-right:3px;}
         .bg-blue { background: #0088cc; }
         .bg-red { background: #cc0000; }
         .bg-green { background: #00ffc8; color:black; font-weight:bold; }
+        .bg-wa { background: #25D366; }
+        .bg-mail { background: #fff; color:#000; }
         .input-dark { background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 5px; width: 100%; box-sizing:border-box;}
     </style>
 </head>
@@ -26,33 +28,34 @@
             <h3 style="color:#00ffc8; margin-top:0;">➕ Aggiungi Cliente</h3>
             <form action="/master/add" method="POST" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;">
                 <div>
-                    <label style="font-size:11px; color:#888;">Nome Cliente</label>
-                    <input type="text" name="nome" class="input-dark" placeholder="Mario Rossi" required>
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Username</label>
-                    <input type="text" name="username" class="input-dark" placeholder="mario" required>
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Password</label>
-                    <input type="text" name="password" class="input-dark" placeholder="pass123" required>
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Slug (no spazi)</label>
+                    <label style="font-size:11px; color:#888;">Slug (es: mario-rossi)</label>
                     <input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#888;">Nome (Opzionale)</label>
+                    <input type="text" name="nome" class="input-dark" placeholder="Mario">
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#888;">Username (Opzionale)</label>
+                    <input type="text" name="username" class="input-dark" placeholder="mario">
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#888;">Password (Opzionale)</label>
+                    <input type="text" name="password" class="input-dark" placeholder="auto-generata">
                 </div>
                 <button type="submit" class="btn-mini bg-green" style="height:38px;">CREA</button>
             </form>
         </div>
 
         <div class="admin-box">
-            <h3 style="margin-top:0;">Lista Clienti Attivi</h3>
+            <h3 style="margin-top:0;">Clienti Attivi</h3>
             <table style="width:100%; text-align:left; border-collapse: collapse;">
                 <thead style="background:#222; color:#888;">
                     <tr>
-                        <th style="padding:10px;">Nome</th>
-                        <th style="padding:10px;">Card Link</th>
-                        <th style="padding:10px; text-align:right;">Azioni</th>
+                        <th style="padding:10px;">Cliente / Slug</th>
+                        <th style="padding:10px;">Credenziali</th>
+                        <th style="padding:10px;">Invia Dati</th>
+                        <th style="padding:10px; text-align:right;">Gestione</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,22 +63,51 @@
                     <tr style="border-bottom:1px solid #222;">
                         <td style="padding:15px;">
                             <strong style="font-size:15px;">{{ c.nome }}</strong><br>
-                            <span style="color:#666; font-size:12px;">User: {{ c.username }} / Pass: {{ c.password }}</span>
+                            <a href="/card/{{ c.slug }}" target="_blank" style="color:#0088cc; font-size:12px;">/card/{{ c.slug }}</a>
                         </td>
                         <td>
-                            <a href="/card/{{ c.slug }}" target="_blank" style="color:#0088cc; text-decoration:none;">/card/{{ c.slug }}</a>
+                            <div style="background:#222; padding:5px; font-family:monospace; font-size:11px; display:inline-block;">
+                                U: {{ c.username }}<br>P: {{ c.password }}
+                            </div>
+                        </td>
+                        <td>
+                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-wa" title="Invia su WhatsApp">💬 WA</button>
+                            
+                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-mail" title="Invia per Email">✉️ Mail</button>
                         </td>
                         <td style="text-align:right;">
                             <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️ Gestisci</a>
-                            
-                            <a href="/master/delete/{{ c.id }}" class="btn-mini bg-red" onclick="return confirm('Eliminare {{ c.nome }}?')">🗑️</a>
+                            <a href="/master/delete/{{ c.id }}" class="btn-mini bg-red" onclick="return confirm('Eliminare?')">🗑️</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
     </div>
+
+    <script>
+        function getMessage(user, pass, slug) {
+            var loginUrl = window.location.origin + "/area/login";
+            var cardUrl = window.location.origin + "/card/" + slug;
+            return "Benvenuto in Pay4You!\n\n" +
+                   "Ecco le credenziali per gestire la tua Card Digitale:\n" +
+                   "🔗 Login: " + loginUrl + "\n" +
+                   "👤 User: " + user + "\n" +
+                   "🔑 Pass: " + pass + "\n\n" +
+                   "⚠️ IMPORTANTE: Al primo accesso è OBBLIGATORIO cambiare la password.\n\n" +
+                   "La tua card è visibile qui: " + cardUrl;
+        }
+
+        function sendWa(user, pass, slug) {
+            var msg = getMessage(user, pass, slug);
+            window.open("https://wa.me/?text=" + encodeURIComponent(msg), '_blank');
+        }
+
+        function sendMail(user, pass, slug) {
+            var msg = getMessage(user, pass, slug);
+            window.location.href = "mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(msg);
+        }
+    </script>
 </body>
 </html>
