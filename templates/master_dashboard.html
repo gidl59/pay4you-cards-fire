@@ -80,9 +80,9 @@
         }
 
         function sendMail(user, pass) {
-            // Testo molto breve per evitare problemi con Gmail
-            var body = "User: " + user + "\nPassword: " + pass + "\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            window.open("mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(body));
+            var subject = "Credenziali Pay4You";
+            var body = "Ecco le tue credenziali:\n\nUser: " + user + "\nPassword: " + pass + "\n\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
+            window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
         }
     </script>
 </body>
