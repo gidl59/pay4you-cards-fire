@@ -1,1 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Master Admin | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Stile specifico per distinguere l'admin dal cliente */
+        .master-bg { background: radial-gradient(#330000, #000); } /* Rosso scuro */
+        .btn-master { background: linear-gradient(90deg, #ff4444, #cc0000); color: white; border: none; }
+    </style>
+</head>
+<body>
+    <div class="login-wrap master-bg">
+        <img src="/static/pay4you-logo.png" class="logo-login">
+        
+        <div class="login-box" style="border-color:#ff4444;">
+            <h2 style="color:#ff4444; margin-top:0;">MASTER ADMIN</h2>
+            <p style="color:#aaa; font-size:12px;">Accesso consentito solo all'amministratore</p>
+            
+            {% if error %}
+                <div style="color:#ff4444; padding:10px; border:1px solid red; margin-bottom:10px;">{{ error }}</div>
+            {% endif %}
 
+            <form method="POST" action="/master">
+                <input type="text" name="username" class="input-rect" placeholder="Master User" required>
+                <input type="password" name="password" class="input-rect" placeholder="Master Password" required>
+                <button type="submit" class="btn-login btn-master">ENTRA NEL SISTEMA</button>
+            </form>
+        </div>
+        
+        <div style="margin-top:20px;">
+            <a href="/area/login" style="color:#666; font-size:12px;">← Vai al login clienti</a>
+        </div>
+    </div>
+</body>
+</html>
