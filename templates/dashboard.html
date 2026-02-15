@@ -2,42 +2,58 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
     <title>Dashboard | Pay4You</title>
 </head>
 <body>
     <div class="dash-head-compact">
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:15px;">
             <img src="{{ user.avatar }}" class="dash-avatar-small">
-            <h3>{{ user.nome }}</h3>
+            <div>
+                <h2 style="margin:0; font-size:18px;">{{ user.nome }}</h2>
+                <small style="color:var(--brand)">@{{ user.slug }}</small>
+            </div>
         </div>
-        <a href="/area/logout" style="color:red; text-decoration:none;">Esci</a>
+        <div style="display:flex; gap:10px;">
+            <a href="/" class="btn-login-outline" style="margin:0">Vedi Card</a>
+            <a href="/area/logout" style="color:red; text-decoration:none; font-weight:bold;">Esci</a>
+        </div>
     </div>
 
-    {% for p in ['1', '2', '3'] %}
-    <div class="profile-row {{ 'active' if user['p'~p~'_active'] else 'disabled' }}">
-        <div style="display:flex; justify-content:space-between;">
-            <h4>Profilo P{{p}}</h4>
+    {% for p_id in ['1', '2', '3'] %}
+    <div class="profile-row {{ 'active' if user['p'~p_id~'_active'] else 'disabled' }}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Profilo P{{ p_id }}</h3>
             <div>
-                <button>Modifica</button>
-                <button>Disattiva</button>
+                <button class="btn-login-outline">Modifica</button>
+                <button class="btn-login-outline" style="border-color:red; color:red !important;">Disattiva</button>
             </div>
         </div>
-        
+
         <div class="media-manager">
-            <div>
-                <h5>📸 Foto</h5>
+            <div class="media-box">
+                <small>📸 FOTO GALLERY</small>
                 <div class="thumb-strip">
-                    {% for f in user['p'~p~'_fotos'] %}<img src="{{f}}" class="thumb-item">{% endfor %}
+                    <form action="/upload/{{p_id}}/foto" method="post" enctype="multipart/form-data">
+                        <label class="thumb-item add-media">
+                            <span>+</span>
+                            <input type="file" name="file" accept="image/*" onchange="this.form.submit()" style="display:none">
+                        </label>
+                    </form>
                 </div>
             </div>
-            <div>
-                <h5>🎥 Video</h5>
-                <div class="thumb-item">▶️</div>
-            </div>
-            <div>
-                <h5>📄 PDF</h5>
-                <div class="thumb-item">PDF</div>
+
+            <div class="media-box">
+                <small>🎥 VIDEO GALLERY (MP4)</small>
+                <div class="thumb-strip">
+                    <form action="/upload/{{p_id}}/video" method="post" enctype="multipart/form-data">
+                        <label class="thumb-item add-media video">
+                            <span>▶️</span>
+                            <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()" style="display:none">
+                        </label>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
