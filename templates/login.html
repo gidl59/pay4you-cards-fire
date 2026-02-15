@@ -2,40 +2,29 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Pay4You</title>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Accedi | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="login-page">
-    <div class="login-wrapper">
-        <img src="/static/pay4you-logo.png" alt="Logo" class="logo-main">
-
-        <div class="login-card-block">
-            <div class="header-text">
-                <h1>{{ t.login }}</h1>
-                <p>{{ t.sub }}</p>
-            </div>
-
+<body>
+    <div class="login-wrap">
+        <img src="/static/pay4you-logo.png" class="logo-login">
+        
+        <div class="login-box">
+            <h2 style="color:var(--brand); margin-top:0;">Area Riservata</h2>
             <form method="POST" action="/area/login">
-                <div class="input-group">
-                    <input type="text" name="username" placeholder="👤 {{ t.user }}" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" name="password" placeholder="🔒 {{ t.pass }}" required>
-                </div>
-                <button type="submit" class="btn-block-gradient">{{ t.btn }}</button>
+                <input type="text" name="username" class="input-rect" placeholder="Username" required>
+                <input type="password" name="password" class="input-rect" placeholder="Password" required>
+                <button type="submit" class="btn-login">ACCEDI ORA</button>
             </form>
 
-            <div class="action-links">
-                <a href="/area/forgot" class="link-box">Password dimenticata?</a>
-                <a href="/" class="link-box">Home</a>
+            <div class="login-links">
+                <a href="/area/forgot">Password dimenticata?</a>
             </div>
         </div>
 
-        <div class="legal-footer">
-            <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
-            <a href="/privacy">Privacy</a> • <a href="/cookie">Cookie</a>
+        <div class="legal-foot">
+            <a href="/privacy">Privacy Policy</a> • <a href="/cookie">Cookie Policy</a>
+            <br><br>© 2026 Pay4You
         </div>
     </div>
 </body>
