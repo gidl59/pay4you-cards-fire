@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_full_power_v2"
+app.secret_key = "pay4you_2026_auto_fix"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -17,15 +17,16 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB Max Upload
 
-# --- DATABASE (Corretto: Niente più righe appiccicate!) ---
+# --- GESTIONE DB ---
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
     try:
         with open(DB_FILE, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            return data
     except:
         return []
 
@@ -36,7 +37,6 @@ def save_db(data):
     except Exception as e:
         print(f"Errore salvataggio DB: {e}")
 
-# --- FUNZIONE SALVATAGGIO FILE ---
 def save_file(file, prefix):
     if file and file.filename:
         filename = secure_filename(f"{prefix}_{file.filename}")
@@ -44,7 +44,38 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-# --- MODIFICA COMPLETA (SALVATAGGIO DATI AVANZATI) ---
+# --- FUNZIONE RIPARA UTENTE (Evita Errore 500) ---
+def repair_user_structure(user):
+    """Controlla e aggiunge i campi mancanti a un utente vecchio"""
+    changed = False
+    
+    # Assicura che esistano i profili P1, P2, P3
+    for pid in ['p1', 'p2', 'p3']:
+        if pid not in user:
+            user[pid] = {'active': False}
+            changed = True
+        
+        p = user[pid]
+        # Assicura che esistano le liste e i campi nuovi
+        defaults = {
+            'name': '', 'role': '', 'company': '', 'bio': '',
+            'foto': '', 'logo': '', 'personal_foto': '',
+            'mobiles': [], 'emails': [], 'websites': [], 'socials': [],
+            'gallery_img': [], 'gallery_vid': [], 'gallery_pdf': [],
+            'piva': '', 'cod_sdi': '', 'pec': '',
+            'fx_rotate_logo': 'off', 'fx_rotate_agent': 'off',
+            'fx_interaction': 'tap', 'fx_back_content': 'logo',
+            'trans': {}
+        }
+        
+        for key, val in defaults.items():
+            if key not in p:
+                p[key] = val
+                changed = True
+                
+    return changed
+
+# --- MODIFICA PROFILO ---
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
     if not session.get('logged_in'):
@@ -56,34 +87,26 @@ def edit_profile(p_id):
     if not user:
         return redirect(url_for('logout'))
 
+    # RIPARAZIONE AL VOLO
+    if repair_user_structure(user):
+        save_db(clienti) # Salva la struttura corretta
+
     p_key = 'p' + p_id
-    
-    # Se il profilo non è attivo, lo attiviamo vuoto
-    if not user[p_key].get('active'):
-        user[p_key] = {
-            "active": True, "name": "", "role": "", "company": "", "foto": "", 
-            "logo": "", "personal_foto": "", "bio": "", 
-            "mobiles": [], "emails": [], "websites": [], "socials": [],
-            "gallery_img": [], "gallery_vid": [], "gallery_pdf": []
-        }
-        save_db(clienti)
     
     if request.method == 'POST':
         p = user[p_key]
         prefix = f"u{user['id']}_{p_id}"
         
-        # 1. TESTI BASE
+        # 1. TESTI & BUSINESS
         p['name'] = request.form.get('name')
         p['role'] = request.form.get('role')
         p['company'] = request.form.get('company')
         p['bio'] = request.form.get('bio')
-        
-        # Dati fiscali
         p['piva'] = request.form.get('piva')
         p['cod_sdi'] = request.form.get('cod_sdi')
         p['pec'] = request.form.get('pec')
         
-        # 2. CONTATTI MULTIPLI
+        # 2. CONTATTI
         p['mobiles'] = []
         if request.form.get('mobile1'): p['mobiles'].append(request.form.get('mobile1'))
         if request.form.get('mobile2'): p['mobiles'].append(request.form.get('mobile2'))
@@ -95,19 +118,19 @@ def edit_profile(p_id):
         p['websites'] = []
         if request.form.get('website'): p['websites'].append(request.form.get('website'))
 
-        # 3. SOCIAL NETWORK (7 Social)
+        # 3. SOCIAL (7 Icone)
         socials = []
         for soc in ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']:
             url = request.form.get(soc.lower())
-            if url:
-                socials.append({'label': soc, 'url': url})
+            if url: socials.append({'label': soc, 'url': url})
         p['socials'] = socials
 
-        # 4. IMMAGINI PRINCIPALI
+        # 4. GRAFICA
         if 'foto' in request.files:
             path = save_file(request.files['foto'], f"{prefix}_foto")
             if path: p['foto'] = path
-            
+        if request.form.get('foto_manual'): p['foto'] = request.form.get('foto_manual')
+
         if 'logo' in request.files:
             path = save_file(request.files['logo'], f"{prefix}_logo")
             if path: p['logo'] = path
@@ -116,15 +139,16 @@ def edit_profile(p_id):
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path: p['personal_foto'] = path
 
-        # Recupero manuale
-        if request.form.get('foto_manual'):
-            p['foto'] = request.form.get('foto_manual')
-
-        # 5. EFFETTI GRAFICI
+        # 5. EFFETTI
         p['fx_rotate_logo'] = 'on' if request.form.get('fx_rotate_logo') else 'off'
         p['fx_rotate_agent'] = 'on' if request.form.get('fx_rotate_agent') else 'off'
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
+        
+        # Posizione e Zoom
+        p['pos_x'] = request.form.get('pos_x', 50)
+        p['pos_y'] = request.form.get('pos_y', 50)
+        p['zoom'] = request.form.get('zoom', 1)
 
         # 6. TRADUZIONI
         p['trans'] = {
@@ -134,40 +158,31 @@ def edit_profile(p_id):
             'de': {'role': request.form.get('role_de'), 'bio': request.form.get('bio_de')}
         }
 
-        # 7. GALLERIE MEDIA
+        # 7. MEDIA GALLERIES
         if 'gallery_img' in request.files:
-            files = request.files.getlist('gallery_img')
-            for f in files:
+            for f in request.files.getlist('gallery_img'):
                 if len(p.get('gallery_img', [])) < 30:
                     path = save_file(f, f"{prefix}_gimg")
-                    if path:
-                        if 'gallery_img' not in p: p['gallery_img'] = []
-                        p['gallery_img'].append(path)
+                    if path: p['gallery_img'].append(path)
 
         if 'gallery_pdf' in request.files:
-            files = request.files.getlist('gallery_pdf')
-            for f in files:
+            for f in request.files.getlist('gallery_pdf'):
                 if len(p.get('gallery_pdf', [])) < 12:
                     path = save_file(f, f"{prefix}_gpdf")
-                    if path:
-                        if 'gallery_pdf' not in p: p['gallery_pdf'] = []
-                        p['gallery_pdf'].append({'path': path, 'name': f.filename})
+                    if path: p['gallery_pdf'].append({'path': path, 'name': f.filename})
 
         if 'gallery_vid' in request.files:
-            files = request.files.getlist('gallery_vid')
-            for f in files:
+            for f in request.files.getlist('gallery_vid'):
                 if len(p.get('gallery_vid', [])) < 10:
                     path = save_file(f, f"{prefix}_gvid")
-                    if path:
-                        if 'gallery_vid' not in p: p['gallery_vid'] = []
-                        p['gallery_vid'].append(path)
+                    if path: p['gallery_vid'].append(path)
 
         # CANCELLAZIONE MEDIA
         if request.form.get('delete_media'):
-            to_delete = request.form.getlist('delete_media')
-            p['gallery_img'] = [x for x in p.get('gallery_img',[]) if x not in to_delete]
-            p['gallery_pdf'] = [x for x in p.get('gallery_pdf',[]) if x['path'] not in to_delete]
-            p['gallery_vid'] = [x for x in p.get('gallery_vid',[]) if x not in to_delete]
+            to_del = request.form.getlist('delete_media')
+            p['gallery_img'] = [x for x in p.get('gallery_img',[]) if x not in to_del]
+            p['gallery_pdf'] = [x for x in p.get('gallery_pdf',[]) if x['path'] not in to_del]
+            p['gallery_vid'] = [x for x in p.get('gallery_vid',[]) if x not in to_del]
 
         save_db(clienti)
         return redirect(url_for('area'))
@@ -183,10 +198,11 @@ def view_card(slug):
     user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
     
+    # Riparazione al volo anche qui (per sicurezza)
+    if repair_user_structure(user): save_db(clienti)
+
     p_req = request.args.get('p', 'p1')
-    if not user.get(p_req, {}).get('active'):
-        p_req = 'p1'
-    
+    if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
     
     ag = {
@@ -197,7 +213,8 @@ def view_card(slug):
         "fx_rotate_logo": p.get('fx_rotate_logo'), 
         "fx_rotate_agent": p.get('fx_rotate_agent'),
         "fx_interaction": p.get('fx_interaction'), 
-        "fx_back": p.get('fx_back_content')
+        "fx_back": p.get('fx_back_content'),
+        "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1)
     }
     
     return render_template('card.html', lang='it', ag=ag, 
@@ -210,40 +227,30 @@ def view_card(slug):
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
     if session.get('is_master'): 
-        try:
-            files = os.listdir(app.config['UPLOAD_FOLDER'])
-        except:
-            files = []
+        try: files = os.listdir(app.config['UPLOAD_FOLDER'])
+        except: files = []
         return render_template('master_dashboard.html', clienti=load_db(), files=files)
-        
     if request.method == 'POST' and request.form.get('password') == "pay2026": 
-        session['is_master'] = True
-        return redirect(url_for('master_login'))
-    
+        session['is_master'] = True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
 
 @app.route('/master/add', methods=['POST'])
 def master_add():
     clienti = load_db()
+    if len(clienti) > 0: new_id = max([c['id'] for c in clienti]) + 1
+    else: new_id = 1
     
-    if len(clienti) > 0:
-        new_id = max([c['id'] for c in clienti]) + 1
-    else:
-        new_id = 1
-
-    clienti.append({
-        "id": new_id, 
-        "username": request.form.get('username'), 
-        "password": request.form.get('password'), 
-        "slug": request.form.get('slug'), 
-        "nome": request.form.get('nome'), 
-        "azienda": "New", 
-        "p1": {
-            "active": True, "name": request.form.get('nome'), 
-            "socials": [], "gallery_img": [], "gallery_vid": [], "gallery_pdf": []
-        },
-        "p2": {"active": False}, "p3": {"active": False}
-    })
+    # Crea nuovo cliente PULITO
+    new_c = {
+        "id": new_id, "username": request.form.get('username'), 
+        "password": request.form.get('password'), "slug": request.form.get('slug'), 
+        "nome": request.form.get('nome'), "azienda": "New", 
+        "p1": {"active": True}, "p2": {"active": False}, "p3": {"active": False}
+    }
+    # La funzione repair lo completerà al primo accesso
+    repair_user_structure(new_c)
+    
+    clienti.append(new_c)
     save_db(clienti)
     return redirect(url_for('master_login'))
 
@@ -255,73 +262,39 @@ def master_delete(id):
 
 @app.route('/master/impersonate/<int:id>')
 def master_impersonate(id):
-    session['logged_in'] = True
-    session['user_id'] = id
+    session['logged_in'] = True; session['user_id'] = id
     return redirect(url_for('area'))
-
 @app.route('/master/logout')
-def master_logout():
-    session.pop('is_master', None)
-    return redirect(url_for('master_login'))
+def master_logout(): session.pop('is_master', None); return redirect(url_for('master_login'))
 
-# --- LOGIN CLIENTE ---
+# --- LOGIN & UTILITÀ ---
 @app.route('/')
-def home():
-    return redirect(url_for('login'))
-
+def home(): return redirect(url_for('login'))
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        u = request.form.get('username')
-        p = request.form.get('password')
+        u = request.form.get('username'); p = request.form.get('password')
         clienti = load_db()
         user = next((c for c in clienti if c['username'] == u and c['password'] == p), None)
-        
-        if user:
-            session['logged_in'] = True
-            session['user_id'] = user['id']
-            return redirect(url_for('area'))
-            
+        if user: session['logged_in'] = True; session['user_id'] = user['id']; return redirect(url_for('area'))
     return render_template('login.html')
-
 @app.route('/area')
 def area():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
+    if not session.get('logged_in'): return redirect(url_for('login'))
     user = next((c for c in load_db() if c['id'] == session.get('user_id')), None)
-    if not user:
-        return redirect(url_for('logout'))
-        
+    if not user: return redirect(url_for('logout'))
     return render_template('dashboard.html', user=user)
-
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
-    clienti = load_db()
-    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    
+    clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p' + p_id]['active'] = True
-    # Inizializza liste vuote
-    if 'socials' not in user['p'+p_id]:
-        user['p'+p_id]['socials'] = []
-        user['p'+p_id]['gallery_img'] = []
-        
-    save_db(clienti)
-    return redirect(url_for('area'))
-
-# --- UTILITÀ ---
+    repair_user_structure(user) # Assicura che sia completo
+    save_db(clienti); return redirect(url_for('area'))
 @app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
+def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/favicon.ico')
-def favicon():
-    return send_from_directory('static', 'favicon.ico')
-
+def favicon(): return send_from_directory('static', 'favicon.ico')
 @app.route('/area/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
+def logout(): session.clear(); return redirect(url_for('login'))
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == '__main__': app.run(debug=True)
