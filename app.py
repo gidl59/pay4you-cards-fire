@@ -3,22 +3,33 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_fire"
+app.secret_key = "pay4you_cards_2026_premium_fix"
 
+# Configurazione Cartelle
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# --- CREDENZIALI DI ACCESSO ---
+# --- DATABASE UTENTE (Dati Esempio) ---
 USER_DATA = {
     "username": "admin",
-    "password": "password123", # <--- USA QUESTA ORA
+    "password": "password123",
     "nome": "Giuseppe Di Lisio",
     "slug": "giuseppe",
     "avatar": "/static/uploads/avatar.jpg",
-    "p1_active": True, "p2_active": False, "p3_active": False,
-    "p1_fotos": [], "p1_videos": [], "p1_pdfs": []
+    # Profilo 1 (Sempre Attivo)
+    "p1_name": "Profilo Personale",
+    "p1_active": True,
+    "p1_foto_agente": "/static/uploads/agente1.jpg",
+    # Profilo 2
+    "p2_name": "Profilo Business",
+    "p2_active": False,
+    "p2_foto_agente": "/static/uploads/agente2.jpg",
+    # Profilo 3
+    "p3_name": "Profilo Eventi",
+    "p3_active": False,
+    "p3_foto_agente": "/static/uploads/agente3.jpg"
 }
 
 @app.route('/favicon.ico')
@@ -38,7 +49,6 @@ def login():
         flash("Credenziali errate!", "error")
     return render_template('login.html')
 
-# --- FIX PASSWORD DIMENTICATA ---
 @app.route('/area/forgot')
 def forgot():
     return render_template('forgot.html')
@@ -47,6 +57,16 @@ def forgot():
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=USER_DATA)
+
+@app.route('/upload/<p_id>/<file_type>', methods=['POST'])
+def upload(p_id, file_type):
+    if 'file' not in request.files: return redirect(url_for('area'))
+    file = request.files['file']
+    if file and file.filename != '':
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        flash(f"{file_type.upper()} caricato con successo!", "success")
+    return redirect(url_for('area'))
 
 @app.route('/area/logout')
 def logout():
