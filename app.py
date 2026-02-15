@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_super_fix_final"
+app.secret_key = "pay4you_2026_clean_start"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -21,17 +21,22 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# --- DATABASE ---
+# --- GESTIONE DB (SINTASSI CORRETTA) ---
 def load_db():
-    if not os.path.exists(DB_FILE): return []
+    if not os.path.exists(DB_FILE):
+        return []
     try:
-        with open(DB_FILE, 'r') as f: return json.load(f)
-    except: return []
+        with open(DB_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return []
 
 def save_db(data):
     try:
-        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
-    except Exception as e: print(f"Errore DB: {e}")
+        with open(DB_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Errore salvataggio: {e}")
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -40,17 +45,25 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-# --- RIPARAZIONE STRUTTURA (Anti-Crash) ---
+# --- ROTTA DI EMERGENZA PER CANCELLARE DB ---
+@app.route('/reset-tutto')
+def reset_db_emergency():
+    # CANCELLA IL FILE JSON CORROTTO
+    if os.path.exists(DB_FILE):
+        os.remove(DB_FILE)
+        return "<h1>DATABASE CANCELLATO CORRETTAMENTE.</h1><p>Ora vai su <a href='/master'>/master</a> e crea il primo cliente.</p>"
+    else:
+        return "<h1>Nessun database trovato (è già pulito).</h1><p>Vai su <a href='/master'>/master</a>.</p>"
+
+# --- RIPARAZIONE UTENTE ---
 def repair_user(user):
     dirty = False
-    # Assicura P1, P2, P3
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
             dirty = True
         
         p = user[pid]
-        # Campi obbligatori per evitare KeyError
         defaults = {
             'name': '', 'role': '', 'company': '', 'bio': '',
             'foto': '', 'logo': '', 'personal_foto': '',
@@ -68,17 +81,17 @@ def repair_user(user):
                 p[k] = v
                 dirty = True
         
-        # Fix liste None
+        # Fix liste
         if p.get('socials') is None: p['socials'] = []; dirty = True
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
-        if p.get('gallery_vid') is None: p['gallery_vid'] = []; dirty = True
-        if p.get('gallery_pdf') is None: p['gallery_pdf'] = []; dirty = True
+        if p.get('trans') is None: p['trans'] = defaults['trans']; dirty = True
 
     return dirty
 
 # --- LOGIN & DASHBOARD ---
 @app.route('/')
-def home(): return redirect(url_for('login'))
+def home():
+    return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
@@ -90,7 +103,6 @@ def login():
         if user:
             session['logged_in'] = True
             session['user_id'] = user['id']
-            # Ripara al login per sicurezza
             if repair_user(user): save_db(clienti)
             return redirect(url_for('area'))
     return render_template('login.html')
@@ -107,23 +119,16 @@ def area():
 def activate_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    
-    # Attiva
     user['p' + p_id]['active'] = True
-    
-    # Se era vuoto, inizializza strutture
-    if repair_user(user): pass 
-    
+    if repair_user(user): pass
     save_db(clienti)
     return redirect(url_for('area'))
 
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
-    if p_id == '1': return "Impossibile disattivare P1" # P1 è sacro
-    
+    if p_id == '1': return "Impossibile disattivare P1"
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    
     user['p' + p_id]['active'] = False
     save_db(clienti)
     return redirect(url_for('area'))
@@ -136,11 +141,13 @@ def edit_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
-    # PROTEZIONE 500: Se l'utente è rotto, lo ripariamo PRIMA di leggere p_key
-    if repair_user(user):
-        save_db(clienti)
+    if not user: return redirect(url_for('logout'))
+    if repair_user(user): save_db(clienti)
 
     p_key = 'p' + p_id
+    if not user[p_key].get('active'):
+        user[p_key]['active'] = True
+        save_db(clienti)
     
     if request.method == 'POST':
         p = user[p_key]
@@ -193,7 +200,7 @@ def edit_profile(p_id):
         if 'logo' in request.files:
             path = save_file(request.files['logo'], f"{prefix}_logo")
             if path: p['logo'] = path
-        
+            
         if 'personal_foto' in request.files:
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path: p['personal_foto'] = path
@@ -245,10 +252,9 @@ def master_add():
     if len(clienti) > 0: new_id = max([c['id'] for c in clienti]) + 1
     else: new_id = 1
     
-    # PASSWORD COMPLESSA (Lettere + Numeri + Simboli)
+    # PASSWORD COMPLESSA
     chars = string.ascii_letters + string.digits + "!@#$%"
     auto_pass = ''.join(random.choice(chars) for i in range(10))
-    
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     
     slug = request.form.get('slug')
@@ -261,12 +267,10 @@ def master_add():
         "slug": slug,
         "nome": request.form.get('nome') or "Nuovo Cliente",
         "azienda": "New",
-        # P1 Attivo, P2/P3 Spenti
         "p1": {"active": True, "name": request.form.get('nome') or "Nuovo Cliente"},
         "p2": {"active": False}, "p3": {"active": False}
     }
-    repair_user(new_c) # Crea subito la struttura completa
-    
+    repair_user(new_c)
     clienti.append(new_c)
     save_db(clienti)
     return redirect(url_for('master_login'))
