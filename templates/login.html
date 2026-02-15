@@ -3,31 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Login | Pay4You</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="login-body">
-    <div class="login-container">
-        <div class="login-box">
-            <img src="/static/pay4you-logo.png" class="logo-img" alt="Pay4You">
-            <h1>{{ t.login }}</h1>
-            <p class="subtitle">Accedi per gestire le tue card</p>
+<body class="login-page">
 
-            <form method="POST" action="/area/login" class="login-form">
-                <input type="text" name="username" placeholder="{{ t.user }}" required>
-                <input type="password" name="password" placeholder="{{ t.pass }}" required>
-                <button type="submit" class="btn-primary">{{ t.btn }}</button>
-            </form>
+    <div class="login-wrapper">
+        <div class="brand-header">
+            <img src="/static/pay4you-logo.png" alt="Pay4You" class="logo-main">
+        </div>
 
-            <div class="footer-links">
-                <a href="/area/forgot">Password dimenticata?</a> · <a href="/">Home</a>
+        <div class="login-card-block">
+            <div class="header-text">
+                <h1>{{ t.login }}</h1>
+                <span class="badge">{{ t.sub }}</span>
             </div>
 
-            <div class="legal-footer">
-                <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
-                <a href="/privacy">Privacy Policy</a> · <a href="/cookie">Cookie Policy</a>
+            <form method="POST" action="/area/login" class="form-stack">
+                <div class="input-group">
+                    <label>👤 {{ t.user }}</label>
+                    <input type="text" name="username" required>
+                </div>
+                
+                <div class="input-group">
+                    <label>🔒 {{ t.pass }}</label>
+                    <input type="password" name="password" required>
+                </div>
+
+                <button type="submit" class="btn-block-gradient">{{ t.btn }}</button>
+            </form>
+
+            <div class="action-links">
+                <a href="/area/forgot" class="link-box">🔑 Password dimenticata?</a>
+                <a href="/" class="link-box">🏠 Torna alla Home</a>
+            </div>
+        </div>
+
+        <div class="legal-footer">
+            <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
+            <div class="legal-row">
+                <a href="/privacy">Privacy Policy</a>
+                <span class="dot">•</span>
+                <a href="/cookie">Cookie Policy</a>
             </div>
         </div>
     </div>
+
 </body>
 </html>
