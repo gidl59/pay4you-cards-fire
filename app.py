@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_clean_start"
+app.secret_key = "pay4you_2026_nuclear_fix"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -21,22 +21,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# --- GESTIONE DB (SINTASSI CORRETTA) ---
+# --- GESTIONE DB ---
 def load_db():
-    if not os.path.exists(DB_FILE):
-        return []
+    if not os.path.exists(DB_FILE): return []
     try:
-        with open(DB_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return []
+        with open(DB_FILE, 'r') as f: return json.load(f)
+    except: return []
 
 def save_db(data):
     try:
-        with open(DB_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        print(f"Errore salvataggio: {e}")
+        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
+    except Exception as e: print(f"Errore DB: {e}")
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -45,25 +40,25 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-# --- ROTTA DI EMERGENZA PER CANCELLARE DB ---
-@app.route('/reset-tutto')
-def reset_db_emergency():
-    # CANCELLA IL FILE JSON CORROTTO
+# --- ROTTA DI EMERGENZA (CANCELLA DB) ---
+@app.route('/reset-db-force')
+def reset_db_force():
     if os.path.exists(DB_FILE):
         os.remove(DB_FILE)
-        return "<h1>DATABASE CANCELLATO CORRETTAMENTE.</h1><p>Ora vai su <a href='/master'>/master</a> e crea il primo cliente.</p>"
-    else:
-        return "<h1>Nessun database trovato (è già pulito).</h1><p>Vai su <a href='/master'>/master</a>.</p>"
+        return "<h1>DATABASE CANCELLATO.</h1> <p>Tutti i vecchi dati corrotti sono stati rimossi. <a href='/master'>Vai al Master</a> e crea un nuovo cliente.</p>"
+    return "<h1>Database già pulito.</h1> <a href='/master'>Vai al Master</a>"
 
-# --- RIPARAZIONE UTENTE ---
+# --- RIPARAZIONE UTENTE (Evita Errore 500) ---
 def repair_user(user):
     dirty = False
+    # Assicura P1, P2, P3
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
             dirty = True
         
         p = user[pid]
+        # Struttura completa
         defaults = {
             'name': '', 'role': '', 'company': '', 'bio': '',
             'foto': '', 'logo': '', 'personal_foto': '',
@@ -81,17 +76,16 @@ def repair_user(user):
                 p[k] = v
                 dirty = True
         
-        # Fix liste
+        # Fix liste None
         if p.get('socials') is None: p['socials'] = []; dirty = True
-        if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
         if p.get('trans') is None: p['trans'] = defaults['trans']; dirty = True
+        if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
 
     return dirty
 
-# --- LOGIN & DASHBOARD ---
+# --- LOGIN ---
 @app.route('/')
-def home():
-    return redirect(url_for('login'))
+def home(): return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
@@ -119,8 +113,11 @@ def area():
 def activate_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    
     user['p' + p_id]['active'] = True
-    if repair_user(user): pass
+    # Se attiviamo un profilo vuoto, lo ripariamo subito
+    repair_user(user)
+    
     save_db(clienti)
     return redirect(url_for('area'))
 
@@ -129,6 +126,7 @@ def deactivate_profile(p_id):
     if p_id == '1': return "Impossibile disattivare P1"
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    
     user['p' + p_id]['active'] = False
     save_db(clienti)
     return redirect(url_for('area'))
@@ -141,19 +139,17 @@ def edit_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
+    # PROTEZIONE TOTALE: Se l'utente è rotto, RIPARALO ORA
     if not user: return redirect(url_for('logout'))
     if repair_user(user): save_db(clienti)
 
     p_key = 'p' + p_id
-    if not user[p_key].get('active'):
-        user[p_key]['active'] = True
-        save_db(clienti)
     
     if request.method == 'POST':
         p = user[p_key]
         prefix = f"u{user['id']}_{p_id}"
         
-        # Testi
+        # Salvataggio dati
         p['name'] = request.form.get('name')
         p['role'] = request.form.get('role')
         p['company'] = request.form.get('company')
@@ -162,7 +158,6 @@ def edit_profile(p_id):
         p['cod_sdi'] = request.form.get('cod_sdi')
         p['pec'] = request.form.get('pec')
         
-        # Contatti
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
         p['emails'] = [x for x in [request.form.get('email1'), request.form.get('email2')] if x]
         p['websites'] = [x for x in [request.form.get('website')] if x]
@@ -221,7 +216,7 @@ def edit_profile(p_id):
                 path = save_file(f, f"{prefix}_gvid")
                 if path: p['gallery_vid'].append(path)
         
-        # Cancella Media
+        # Delete Media
         if request.form.get('delete_media'):
             to_del = request.form.getlist('delete_media')
             p['gallery_img'] = [x for x in p.get('gallery_img',[]) if x not in to_del]
@@ -252,9 +247,9 @@ def master_add():
     if len(clienti) > 0: new_id = max([c['id'] for c in clienti]) + 1
     else: new_id = 1
     
-    # PASSWORD COMPLESSA
+    # Password Complessa (Simboli inclusi)
     chars = string.ascii_letters + string.digits + "!@#$%"
-    auto_pass = ''.join(random.choice(chars) for i in range(10))
+    auto_pass = ''.join(random.choices(chars, k=10))
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     
     slug = request.form.get('slug')
@@ -275,15 +270,13 @@ def master_add():
     save_db(clienti)
     return redirect(url_for('master_login'))
 
-# --- CARD PUBBLICA ---
+# --- VIEW CARD ---
 def dummy_t(k): return "SALVA CONTATTO"
-
 @app.route('/card/<slug>')
 def view_card(slug):
     clienti = load_db()
     user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
-    
     if repair_user(user): save_db(clienti)
 
     p_req = request.args.get('p', 'p1')
@@ -300,14 +293,9 @@ def view_card(slug):
         "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1),
         "trans": p.get('trans', {})
     }
-    
-    return render_template('card.html', lang='it', ag=ag, 
-                           mobiles=p.get('mobiles', []), emails=p.get('emails', []), 
-                           websites=p.get('websites', []), socials=p.get('socials', []), 
-                           p_data=p, t_func=dummy_t, profile=p_req, 
-                           p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
+    return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, t_func=dummy_t, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
-# --- ALTRE ROTTE ---
+# --- UTILITÀ ---
 @app.route('/master/delete/<int:id>')
 def master_delete(id): save_db([c for c in load_db() if c['id'] != id]); return redirect(url_for('master_login'))
 @app.route('/master/impersonate/<int:id>')
