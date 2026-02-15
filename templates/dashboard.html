@@ -1,163 +1,33 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard | Pay4You</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="app-shell">
-
-  <header class="app-header">
-    <a class="brand" href="/area">
-      <div class="logo-dot"></div>
-      <div>
-        <div class="brand-title">Pay4You Cards</div>
-        <div class="hint">{{ "Amministratore" if is_admin else "Area Cliente" }}</div>
-      </div>
-    </a>
-
-    <div class="toolbar">
-      {% if is_admin %}
-        <a class="btn primary" href="/area/new">+ Nuova Card</a>
-      {% endif %}
-      <a class="btn danger" href="/area/logout">Logout</a>
+<div class="dash-head-compact">
+    <img src="{{ user.avatar }}" class="dash-avatar-small">
+    <div>
+        <h2 style="margin:0">{{ user.nome }}</h2>
+        <a href="/card/{{ user.slug }}" class="btn-view" target="_blank">Visualizza Card</a>
     </div>
-  </header>
-
-  <main class="app-main">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for cat,msg in messages %}
-          <div class="flash flash-{{cat}}">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="dash-grid">
-      {% for a in agents %}
-      <section class="dash-card">
-        <div class="dash-head">
-          <div class="dash-left">
-            <div class="dash-avatar">
-              {% if a.photo_url %}<img src="{{ a.photo_url }}" alt="">{% else %}<div class="dash-ph">👤</div>{% endif %}
-            </div>
-            <div>
-              <div class="dash-name">{{ a.name or a.slug }}</div>
-              <div class="dash-sub">{{ a.company or "Nessuna Azienda" }}</div>
-              <div class="slug-badge">{{ a.slug }}</div>
-            </div>
-          </div>
-          
-          <div class="dash-main-actions">
-             <a class="btn-action view" target="_blank" href="/{{ a.slug }}">Visualizza Card</a>
-             {% if is_admin %}
-               <button class="btn-action cred" onclick="sendCred('{{ a.slug }}')">Invia Accesso</button>
-             {% endif %}
-          </div>
-        </div>
-
-        <div class="profiles-container">
-          <div class="profile-box p1">
-            <div class="p-header">Profilo Principale (P1)</div>
-            <div class="p-buttons">
-              <a href="{% if is_admin %}/area/edit/{{ a.slug }}/p1{% else %}/area/me/edit{% endif %}" class="btn-mini warn">Modifica Dati</a>
-              <button class="btn-mini ghost" onclick="openQrModal('{{ a.slug }}','p1')">Scarica QR</button>
-            </div>
-          </div>
-
-          <div class="profile-box p2 {% if a.p2_enabled != 1 %}disabled{% endif %}">
-            <div class="p-header">Profilo Business (P2)</div>
-            <div class="p-buttons">
-              {% if a.p2_enabled == 1 %}
-                <a href="{% if is_admin %}/area/edit/{{ a.slug }}/p2{% else %}/area/me/p2{% endif %}" class="btn-mini warn">Modifica</a>
-                <button class="btn-mini ghost" onclick="openQrModal('{{ a.slug }}','p2')">QR</button>
-                {% if is_admin %}
-                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p2"><button class="btn-mini danger">Spegni</button></form>
-                {% endif %}
-              {% else %}
-                {% if is_admin %}<form method="post" action="/area/admin/activate/{{ a.slug }}/p2"><button class="btn-mini primary">Attiva P2</button></form>{% endif %}
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="profile-box p3 {% if a.p3_enabled != 1 %}disabled{% endif %}">
-            <div class="p-header">Profilo Personal (P3)</div>
-            <div class="p-buttons">
-              {% if a.p3_enabled == 1 %}
-                <a href="{% if is_admin %}/area/edit/{{ a.slug }}/p3{% else %}/area/me/p3{% endif %}" class="btn-mini warn">Modifica</a>
-                <button class="btn-mini ghost" onclick="openQrModal('{{ a.slug }}','p3')">QR</button>
-                {% if is_admin %}
-                <form class="inline" method="post" action="/area/admin/deactivate/{{ a.slug }}/p3"><button class="btn-mini danger">Spegni</button></form>
-                {% endif %}
-              {% else %}
-                {% if is_admin %}<form method="post" action="/area/admin/activate/{{ a.slug }}/p3"><button class="btn-mini primary">Attiva P3</button></form>{% endif %}
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <div class="media-preview-section">
-           <div class="media-group">
-              <h4>📸 Foto Gallery</h4>
-              <div class="mini-grid">
-                {% set imgs = (a.gallery_urls or "").split("|") %}
-                {% for g in imgs[:4] %}{% if g %}<img src="{{ g }}" class="mini-thumb">{% endif %}{% endfor %}
-              </div>
-           </div>
-           <div class="media-group">
-              <h4>📄 Documenti PDF</h4>
-              <div class="pdf-list">
-                 <small>Nessun PDF caricato</small>
-              </div>
-           </div>
-        </div>
-      </section>
-      {% endfor %}
-    </div>
-  </main>
 </div>
 
-<div id="shareModal" class="modal-overlay" style="display:none" onclick="this.style.display='none'">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <h3 id="smTitle"></h3>
-    <div id="smBody"></div>
-    <div class="modal-actions">
-      <button class="btn primary" onclick="shareCurrent('whatsapp')">WhatsApp</button>
-      <button class="btn" onclick="shareCurrent('email')">Email</button>
-      <button class="btn ghost" onclick="document.getElementById('shareModal').style.display='none'">Chiudi</button>
+<div class="profile-row active">
+    <div class="row-header">
+        <h3>Profilo Principale (P1)</h3>
+        <div class="actions">
+            <button class="btn" onclick="openQR('1')">QR Code</button>
+            <a href="/edit/p1" class="btn primary">Modifica</a>
+            <button class="btn btn-disattiva">Disattiva</button>
+        </div>
     </div>
-    <input type="hidden" id="smUrl">
-  </div>
+    
+    <div class="media-manager">
+        <div class="media-box">
+            <h5>Foto Gallery</h5>
+            <div class="thumb-strip"> </div>
+        </div>
+        <div class="media-box">
+            <h5>Video Gallery</h5>
+            <div class="thumb-strip"> </div>
+        </div>
+        <div class="media-box">
+            <h5>Documenti PDF</h5>
+            <div class="thumb-strip"> </div>
+        </div>
+    </div>
 </div>
-
-<script>
-// Logica per invio credenziali
-async function sendCred(slug){
-    const r = await fetch(`/area/admin/credentials/${slug}`, {method: 'POST'});
-    const data = await r.json();
-    if(r.ok) {
-        document.getElementById('smTitle').innerText = "Credenziali " + slug;
-        document.getElementById('smBody').innerHTML = `<textarea id="credText" style="width:100%; height:100px;">${data.message}</textarea>`;
-        document.getElementById('shareModal').style.display = 'flex';
-    }
-}
-
-function openQrModal(slug, p){
-    const url = window.location.origin + (p === 'p1' ? `/qr/${slug}.png` : `/qr/${slug}.png?p=${p}`);
-    document.getElementById('smTitle').innerText = "QR Code " + p.toUpperCase();
-    document.getElementById('smBody').innerHTML = `<img src="${url}" style="width:200px; display:block; margin:auto;">`;
-    document.getElementById('smUrl').value = url;
-    document.getElementById('shareModal').style.display = 'flex';
-}
-
-function shareCurrent(channel){
-    const url = document.getElementById('smUrl').value;
-    const msg = "Ecco il link: " + url;
-    if(channel === 'whatsapp') window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-    else window.location.href = `mailto:?subject=Condivisione&body=${encodeURIComponent(msg)}`;
-}
-</script>
-</body>
-</html>
