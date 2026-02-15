@@ -1,215 +1,59 @@
-/* Pay4You Card CSS - Versione Restyling 2026 */
 :root {
-    /* Tema Scuro (Default) */
-    --bg-color: #121212;
-    --card-bg: #1e1e1e;
-    --text-main: #ffffff;
-    --text-muted: #a0a0a0;
-    --accent-orange: #ff5722;
-    --border-color: rgba(255, 255, 255, 0.1);
-    --input-bg: rgba(255, 255, 255, 0.05);
-    --social-bg: #ffffff;
-    --social-icon: #121212;
-}
-
-body[data-theme="light"] {
-    /* Tema Chiaro */
-    --bg-color: #f8f9fa;
-    --card-bg: #ffffff;
+    --bg-main: #ffffff;
+    --bg-card: #ffffff;
     --text-main: #1a1a1a;
     --text-muted: #666666;
-    --accent-orange: #ff5722;
-    --border-color: rgba(0, 0, 0, 0.08);
-    --input-bg: #f1f3f5;
-    --social-bg: #f1f3f5;
-    --social-icon: #1a1a1a;
+    --accent: #ff5722;
+    --border: rgba(0,0,0,0.08);
+    --social-circle: #f1f3f5;
+    --social-img: #1a1a1a;
+}
+
+[data-theme="dark"] {
+    --bg-main: #121212;
+    --bg-card: #121212;
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+    --border: rgba(255,255,255,0.1);
+    --social-circle: #1e1e1e;
+    --social-img: #ffffff;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); transition: 0.3s; }
 
-body {
-    margin: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    transition: background-color 0.3s ease;
-    line-height: 1.5;
-}
+.card-wrap { max-width: 480px; margin: 0 auto; background: var(--bg-card); min-height: 100vh; }
 
-.card-wrap {
-    max-width: 500px;
-    margin: 0 auto;
-    min-height: 100vh;
-    background-color: var(--card-bg);
-    box-shadow: 0 0 40px rgba(0,0,0,0.1);
-}
+/* Header e Avatar stile iPhone */
+.hero { position: relative; height: 160px; background: #f0f0f0; }
+[data-theme="dark"] .hero { background: #1e1e1e; }
 
-/* Header & Avatar */
-.hero {
-    position: relative;
-    height: 180px;
-    background: #e9ecef; /* Colore neutro per l'header come nell'esempio */
-}
-
-.top {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-}
-
-.logo-bubble {
-    width: 40px;
-    height: 40px;
-    background: white;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.avatar-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: -75px; /* Sovrapposizione metà avatar */
-    position: relative;
-    z-index: 10;
-}
-
-.avatar {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    border: 5px solid var(--card-bg);
-    overflow: hidden;
-    background: #ccc;
-}
-
+.avatar-wrap { display: flex; justify-content: center; margin-top: -70px; position: relative; z-index: 5; }
+.avatar { width: 140px; height: 140px; border-radius: 50%; border: 4px solid var(--bg-card); overflow: hidden; background: #ccc; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Testi Principali */
-.title {
-    text-align: center;
-    padding: 20px 20px 10px;
-}
+.title { text-align: center; padding: 15px; }
+.title h1 { margin: 0; font-size: 22px; }
+.sub { color: var(--text-muted); font-size: 14px; }
 
-.title h1 { margin: 0; font-size: 24px; font-weight: 700; }
-.sub { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+/* Social Icons - Tonde e pulite sotto la Bio */
+.social-row { display: flex; justify-content: center; gap: 12px; padding: 10px 20px 20px; flex-wrap: wrap; }
+.social { width: 42px; height: 42px; background: var(--social-circle); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; border: 1px solid var(--border); }
+.social span { color: var(--text-main); font-size: 18px; font-weight: bold; }
 
 /* Pulsanti Azione */
-.actions {
-    display: flex;
-    padding: 10px 20px;
-    gap: 10px;
-}
+.actions { display: flex; padding: 0 20px 20px; gap: 10px; }
+.btn.primary { flex: 1; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 12px; font-weight: bold; text-align: center; text-decoration: none; font-size: 14px; }
+.btn-qr { width: 45px; background: var(--social-circle); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; color: var(--text-main); }
 
-.btn.primary {
-    flex: 1;
-    background-color: var(--accent-orange);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 14px;
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 13px;
-    text-decoration: none;
-    text-align: center;
-}
+/* Lista Contatti - Senza etichette come volevi */
+.content { padding: 0 20px; }
+.row { padding: 15px 0; border-bottom: 1px solid var(--border); }
+.v a { color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 16px; }
+.bio { text-align: center; color: var(--text-muted); padding: 0 20px 15px; font-size: 14px; line-height: 1.4; }
 
-.btn-qr {
-    width: 50px;
-    background: var(--input-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Bio */
-.bio {
-    padding: 10px 30px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-/* Social Row - Minimal come esempio */
-.social-row {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding: 20px;
-}
-
-.social {
-    width: 45px;
-    height: 45px;
-    background-color: var(--social-bg);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    transition: transform 0.2s;
-    border: 1px solid var(--border-color);
-}
-
-.social:hover { transform: scale(1.1); }
-
-.ico::before {
-    content: attr(data-i);
-    font-weight: bold;
-    color: var(--social-icon);
-}
-
-/* Contatti List */
-.content { padding: 0 20px 40px; }
-
-.box { border: none; background: transparent; }
-.box h3 { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 15px; letter-spacing: 1px; }
-
-.row {
-    display: flex;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.k { display: none; } /* Nascondiamo le etichette per pulizia come negli esempi */
-.v { flex: 1; font-size: 15px; }
-.v a { text-decoration: none; color: var(--text-main); font-weight: 500; }
-
-/* Footer & Switcher (Spostati in fondo e resi discreti) */
-.switch-row {
-    padding: 30px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    border-top: 1px solid var(--border-color);
-    margin-top: 20px;
-}
-
-.profile-switch, .theme-switch {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-}
-
-.ps-btn, .ts {
-    padding: 6px 12px;
-    font-size: 11px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    background: var(--input-bg);
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.ts.active, .ps-btn.active {
-    border-color: var(--accent-orange);
-    color: var(--text-main);
-}
-
-.foot { font-size: 10px; color: var(--text-muted); padding-bottom: 20px; }
+/* Switcher in fondo */
+.switch-row { margin-top: 40px; padding: 20px; border-top: 1px solid var(--border); text-align: center; }
+.ps-btn, .ts { background: var(--social-circle); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 12px; border-radius: 15px; font-size: 12px; margin: 2px; cursor: pointer; }
+.ts.active, .ps-btn.active { border-color: var(--accent); color: var(--accent); }
+.foot { font-size: 10px; color: var(--text-muted); text-align: center; padding-bottom: 30px; }
