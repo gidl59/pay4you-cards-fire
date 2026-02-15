@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_clean_start"
+app.secret_key = "pay4you_2026_nuclear_reset_v2"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -21,14 +21,22 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# --- GESTIONE DB (SINTASSI CORRETTA) ---
+# --- GESTIONE DB INDISTRUTTIBILE ---
 def load_db():
+    # Se il file non esiste, ritorna lista vuota
     if not os.path.exists(DB_FILE):
         return []
+    
     try:
         with open(DB_FILE, 'r') as f:
-            return json.load(f)
-    except:
+            data = json.load(f)
+            # Se per caso non è una lista, ritorna vuoto per evitare crash
+            if not isinstance(data, list):
+                return []
+            return data
+    except Exception as e:
+        # SE IL FILE È CORROTTO (ERRORE JSON), LO IGNORA E RITORNA VUOTO
+        print(f"⚠️ DATABASE CORROTTO, AVVIO PULITO: {e}")
         return []
 
 def save_db(data):
@@ -48,14 +56,16 @@ def save_file(file, prefix):
 # --- ROTTA DI EMERGENZA PER CANCELLARE DB ---
 @app.route('/reset-tutto')
 def reset_db_emergency():
-    # CANCELLA IL FILE JSON CORROTTO
     if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        return "<h1>DATABASE CANCELLATO CORRETTAMENTE.</h1><p>Ora vai su <a href='/master'>/master</a> e crea il primo cliente.</p>"
+        try:
+            os.remove(DB_FILE)
+            return "<h1>✅ DATABASE CANCELLATO.</h1><p>Tutto pulito. Vai su <a href='/master'>/master</a> e crea il primo cliente.</p>"
+        except Exception as e:
+            return f"<h1>Errore: {e}</h1>"
     else:
-        return "<h1>Nessun database trovato (è già pulito).</h1><p>Vai su <a href='/master'>/master</a>.</p>"
+        return "<h1>✅ Database già pulito (File non esistente).</h1><p>Vai su <a href='/master'>/master</a>.</p>"
 
-# --- RIPARAZIONE UTENTE ---
+# --- RIPARAZIONE STRUTTURA UTENTE ---
 def repair_user(user):
     dirty = False
     for pid in ['p1', 'p2', 'p3']:
@@ -88,10 +98,9 @@ def repair_user(user):
 
     return dirty
 
-# --- LOGIN & DASHBOARD ---
+# --- LOGIN ---
 @app.route('/')
-def home():
-    return redirect(url_for('login'))
+def home(): return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
@@ -114,13 +123,13 @@ def area():
     if not user: return redirect(url_for('logout'))
     return render_template('dashboard.html', user=user)
 
-# --- ATTIVAZIONE / DISATTIVAZIONE ---
+# --- ATTIVAZIONE ---
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p' + p_id]['active'] = True
-    if repair_user(user): pass
+    repair_user(user)
     save_db(clienti)
     return redirect(url_for('area'))
 
@@ -141,6 +150,7 @@ def edit_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
+    # Protezione anti-crash
     if not user: return redirect(url_for('logout'))
     if repair_user(user): save_db(clienti)
 
@@ -153,7 +163,7 @@ def edit_profile(p_id):
         p = user[p_key]
         prefix = f"u{user['id']}_{p_id}"
         
-        # Testi
+        # Dati base
         p['name'] = request.form.get('name')
         p['role'] = request.form.get('role')
         p['company'] = request.form.get('company')
@@ -162,7 +172,6 @@ def edit_profile(p_id):
         p['cod_sdi'] = request.form.get('cod_sdi')
         p['pec'] = request.form.get('pec')
         
-        # Contatti
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
         p['emails'] = [x for x in [request.form.get('email1'), request.form.get('email2')] if x]
         p['websites'] = [x for x in [request.form.get('website')] if x]
@@ -183,7 +192,7 @@ def edit_profile(p_id):
         p['pos_y'] = request.form.get('pos_y', 50)
         p['zoom'] = request.form.get('zoom', 1)
 
-        # Traduzioni
+        # Trans
         p['trans'] = {
             'en': {'role': request.form.get('role_en'), 'bio': request.form.get('bio_en')},
             'fr': {'role': request.form.get('role_fr'), 'bio': request.form.get('bio_fr')},
@@ -205,7 +214,7 @@ def edit_profile(p_id):
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path: p['personal_foto'] = path
 
-        # Gallerie
+        # Galleries
         if 'gallery_img' in request.files:
             for f in request.files.getlist('gallery_img'):
                 path = save_file(f, f"{prefix}_gimg")
@@ -221,7 +230,7 @@ def edit_profile(p_id):
                 path = save_file(f, f"{prefix}_gvid")
                 if path: p['gallery_vid'].append(path)
         
-        # Delete Media
+        # Delete
         if request.form.get('delete_media'):
             to_del = request.form.getlist('delete_media')
             p['gallery_img'] = [x for x in p.get('gallery_img',[]) if x not in to_del]
@@ -249,13 +258,16 @@ def master_login():
 @app.route('/master/add', methods=['POST'])
 def master_add():
     clienti = load_db()
-    if len(clienti) > 0: new_id = max([c['id'] for c in clienti]) + 1
-    else: new_id = 1
+    # Se clienti è vuoto o None, inizializza id a 1
+    if not clienti: 
+        clienti = []
+        new_id = 1
+    else:
+        new_id = max([c['id'] for c in clienti]) + 1
     
-    # PASSWORD COMPLESSA (Lettere + Numeri + Simboli)
-    chars = string.ascii_letters + string.digits + "!@#$%"
-    auto_pass = ''.join(random.choice(chars) for i in range(10))
-    
+    # Password casuale
+    chars = string.ascii_letters + string.digits + "!@#"
+    auto_pass = ''.join(random.choices(chars, k=10))
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     
     slug = request.form.get('slug')
@@ -268,8 +280,51 @@ def master_add():
         "slug": slug,
         "nome": request.form.get('nome') or "Nuovo Cliente",
         "azienda": "New",
-        # P1 Attivo, P2/P3 Spenti
         "p1": {"active": True, "name": request.form.get('nome') or "Nuovo Cliente"},
         "p2": {"active": False}, "p3": {"active": False}
     }
-    repair_user
+    repair_user(new_c)
+    clienti.append(new_c)
+    save_db(clienti)
+    return redirect(url_for('master_login'))
+
+# --- VIEW CARD ---
+def dummy_t(k): return "SALVA CONTATTO"
+@app.route('/card/<slug>')
+def view_card(slug):
+    clienti = load_db()
+    user = next((c for c in clienti if c['slug'] == slug), None)
+    if not user: return "<h1>Card non trovata</h1>", 404
+    if repair_user(user): save_db(clienti)
+
+    p_req = request.args.get('p', 'p1')
+    if not user.get(p_req, {}).get('active'): p_req = 'p1'
+    p = user[p_req]
+    
+    ag = {
+        "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
+        "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
+        "personal_url": p.get('personal_foto'), "slug": slug,
+        "piva": p.get('piva'), "pec": p.get('pec'), "cod_sdi": p.get('cod_sdi'),
+        "fx_rotate_logo": p.get('fx_rotate_logo'), "fx_rotate_agent": p.get('fx_rotate_agent'),
+        "fx_interaction": p.get('fx_interaction'), "fx_back": p.get('fx_back_content'),
+        "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1),
+        "trans": p.get('trans', {})
+    }
+    return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, t_func=dummy_t, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
+
+# --- UTILITÀ ---
+@app.route('/master/delete/<int:id>')
+def master_delete(id): save_db([c for c in load_db() if c['id'] != id]); return redirect(url_for('master_login'))
+@app.route('/master/impersonate/<int:id>')
+def master_impersonate(id): session['logged_in']=True; session['user_id']=id; return redirect(url_for('area'))
+@app.route('/master/logout')
+def master_logout(): session.pop('is_master', None); return redirect(url_for('master_login'))
+@app.route('/area/logout')
+def logout(): session.clear(); return redirect(url_for('login'))
+@app.route('/uploads/<filename>')
+def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+@app.route('/favicon.ico')
+def favicon(): return send_from_directory('static', 'favicon.ico')
+
+if __name__ == '__main__': app.run(debug=True)
