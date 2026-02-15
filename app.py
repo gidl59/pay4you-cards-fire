@@ -1,149 +1,34 @@
 import os
 import json
-import logging
+import shutil
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
-
-# Configurazione Logging (per vedere gli errori su Render)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_ultra_secure"
+app.secret_key = "pay4you_2026_final_v3"
 
-# --- 1. CONFIGURAZIONE DISCO ---
-# Controllo rigoroso del percorso
+# --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
-    logger.info("Usando disco persistente Render: /var/data")
 else:
     BASE_DIR = os.path.join(os.getcwd(), 'static')
-    logger.info("Usando cartella locale static")
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 DB_FILE = os.path.join(BASE_DIR, 'clients.json')
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- CREDENZIALI MASTER ---
-MASTER_USER = "master"
-MASTER_PASS = "pay2026"
-
-# --- 2. GESTIONE DATABASE (CON AUTORIPARAZIONE) ---
-def get_default_db():
-    return [{
-        "id": 1, "username": "admin", "password": "password123", "slug": "giuseppe",
-        "nome": "Giuseppe Di Lisio", "azienda": "Pay4You", "scadenza": "31/12/2030", "stato": "Attivo",
-        "p1": {
-            "active": True, "name": "Giuseppe Di Lisio", "role": "CEO", "company": "Pay4You",
-            "foto": "/static/pay4you-logo.png", "cover": "", "bio": "Card Digitale Admin",
-            "mobiles": ["+39 333 1234567"], "emails": ["info@pay4you.it"], "websites": ["www.pay4you.it"],
-            "socials": []
-        },
-        "p2": {"active": False}, "p3": {"active": False}
-    }]
-
+# --- DATABASE ---
 def load_db():
-    # Se il file non esiste, lo crea
-    if not os.path.exists(DB_FILE):
-        logger.info("Database non trovato. Creazione nuovo DB.")
-        db = get_default_db()
-        save_db(db)
-        return db
-    
+    if not os.path.exists(DB_FILE): return []
     try:
-        with open(DB_FILE, 'r') as f:
-            data = json.load(f)
-            if not isinstance(data, list): raise ValueError("Il DB non è una lista")
-            return data
-    except Exception as e:
-        logger.error(f"ERRORE LETTURA DB: {e}. Ripristino database di default.")
-        # Se il file è corrotto, lo resetta per evitare errore 500
-        db = get_default_db()
-        save_db(db)
-        return db
+        with open(DB_FILE, 'r') as f: return json.load(f)
+    except: return []
 
 def save_db(data):
-    try:
-        with open(DB_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
-        logger.info("Database salvato correttamente.")
-    except Exception as e:
-        logger.error(f"ERRORE SCRITTURA DB: {e}")
+    with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
 
-# --- 3. ROTTE MASTER ---
-@app.route('/master', methods=['GET', 'POST'])
-def master_login():
-    if session.get('is_master'):
-        clienti = load_db()
-        return render_template('master_dashboard.html', clienti=clienti)
-    
-    error = None
-    if request.method == 'POST':
-        if request.form.get('username') == MASTER_USER and request.form.get('password') == MASTER_PASS:
-            session['is_master'] = True
-            return redirect(url_for('master_login'))
-        else:
-            error = "Password Master Errata"
-    return render_template('master_login.html', error=error)
-
-@app.route('/master/add', methods=['POST'])
-def master_add():
-    if not session.get('is_master'): return redirect(url_for('master_login'))
-    
-    try:
-        clienti = load_db()
-        # Calcola nuovo ID
-        new_id = 1
-        if len(clienti) > 0:
-            new_id = max(c['id'] for c in clienti) + 1
-        
-        # Crea nuovo cliente
-        new_client = {
-            "id": new_id,
-            "username": request.form.get('username'),
-            "password": request.form.get('password'),
-            "slug": request.form.get('slug'),
-            "nome": request.form.get('nome'),
-            "azienda": "Nuova Azienda",
-            "scadenza": "31/12/2026",
-            "stato": "Attivo",
-            "p1": {
-                "active": True, "name": request.form.get('nome'), "role": "", "company": "",
-                "foto": "", "cover": "", "bio": "", "mobiles": [], "emails": [], "websites": [], "socials": []
-            },
-            "p2": {"active": False}, "p3": {"active": False}
-        }
-        
-        clienti.append(new_client)
-        save_db(clienti)
-        return redirect(url_for('master_login'))
-    except Exception as e:
-        return f"ERRORE CREAZIONE: {e}", 500
-
-@app.route('/master/delete/<int:id>')
-def master_delete(id):
-    if not session.get('is_master'): return redirect(url_for('master_login'))
-    if id == 1: return "Non puoi cancellare l'Admin principale"
-    
-    clienti = load_db()
-    clienti = [c for c in clienti if c['id'] != id]
-    save_db(clienti)
-    return redirect(url_for('master_login'))
-
-@app.route('/master/impersonate/<int:id>')
-def master_impersonate(id):
-    if not session.get('is_master'): return redirect(url_for('master_login'))
-    session['logged_in'] = True
-    session['user_id'] = id
-    return redirect(url_for('area'))
-
-@app.route('/master/logout')
-def master_logout():
-    session.pop('is_master', None)
-    return redirect(url_for('master_login'))
-
-# --- 4. ROTTE CLIENTE ---
+# --- ROTTE PRINCIPALI ---
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
@@ -154,33 +39,86 @@ def login():
         u = request.form.get('username')
         p = request.form.get('password')
         clienti = load_db()
-        
-        # Cerca utente
         user = next((c for c in clienti if c['username'] == u and c['password'] == p), None)
-        
         if user:
             session['logged_in'] = True
             session['user_id'] = user['id']
             return redirect(url_for('area'))
         else:
             error = "Credenziali errate"
-            
     return render_template('login.html', error=error)
 
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
+    clienti = load_db()
+    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    if not user: return redirect(url_for('logout'))
+    return render_template('dashboard.html', user=user)
+
+# --- ROTTE DI MODIFICA (NUOVE) ---
+
+@app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
+def edit_profile(p_id):
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    
+    clienti = load_db()
+    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    p_key = 'p' + p_id
+    
+    if request.method == 'POST':
+        # 1. Aggiorna Testi
+        user[p_key]['name'] = request.form.get('name')
+        user[p_key]['role'] = request.form.get('role')
+        user[p_key]['company'] = request.form.get('company')
+        user[p_key]['bio'] = request.form.get('bio')
+        
+        # Aggiorna Liste (semplificato: prende 1 solo valore per ora)
+        user[p_key]['mobiles'] = [request.form.get('mobile')] if request.form.get('mobile') else []
+        user[p_key]['emails'] = [request.form.get('email')] if request.form.get('email') else []
+        user[p_key]['websites'] = [request.form.get('website')] if request.form.get('website') else []
+
+        # 2. Gestione FOTO (Upload)
+        if 'foto' in request.files:
+            file = request.files['foto']
+            if file.filename != '':
+                filename = secure_filename(f"user_{user['id']}_{p_id}_foto.jpg")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                user[p_key]['foto'] = f"/uploads/{filename}"
+
+        if 'cover' in request.files:
+            file = request.files['cover']
+            if file.filename != '':
+                filename = secure_filename(f"user_{user['id']}_{p_id}_cover.jpg")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                user[p_key]['cover'] = f"/uploads/{filename}"
+
+        # Salva tutto
+        save_db(clienti)
+        return redirect(url_for('area'))
+
+    return render_template('edit_card.html', p=user[p_key], p_id=p_id)
+
+@app.route('/area/activate/<p_id>')
+def activate_profile(p_id):
+    if not session.get('logged_in'): return redirect(url_for('login'))
     
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
-    if not user: 
-        session.clear()
-        return redirect(url_for('login'))
-        
-    return render_template('dashboard.html', user=user)
+    # Attiva il profilo
+    p_key = 'p' + p_id
+    user[p_key]['active'] = True
+    
+    # Se era vuoto, inizializza i campi base
+    if not user[p_key].get('name'):
+        user[p_key]['name'] = user['nome']
+        user[p_key]['role'] = "Nuovo Profilo"
+    
+    save_db(clienti)
+    return redirect(url_for('area'))
 
-# --- 5. CARD PUBBLICA ---
+# --- VISUALIZZAZIONE CARD ---
 def dummy_t(k): return "SALVA CONTATTO"
 
 @app.route('/card/<slug>')
@@ -189,34 +127,52 @@ def view_card(slug):
     user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
     
-    p1 = user.get('p1', {})
+    p_req = request.args.get('p', 'p1') # Supporto P1, P2, P3
+    if not user.get(p_req, {}).get('active'): p_req = 'p1' # Fallback su P1 se P2 non attivo
+    
+    p_data = user[p_req]
+    
     ag = {
-        "name": p1.get('name', user['nome']),
-        "role": p1.get('role', ''),
-        "company": p1.get('company', user['azienda']),
-        "bio": p1.get('bio', ''),
-        "photo_url": p1.get('foto', ''),
-        "cover_url": p1.get('cover', ''),
-        "slug": slug,
-        "photo_pos_x": 50, "photo_pos_y": 50, "photo_zoom": 1
+        "name": p_data.get('name'), "role": p_data.get('role'), "company": p_data.get('company'),
+        "bio": p_data.get('bio'), "photo_url": p_data.get('foto'), "cover_url": p_data.get('cover'),
+        "slug": slug, "photo_pos_x": 50, "photo_pos_y": 50, "photo_zoom": 1
     }
     return render_template('card.html', lang='it', ag=ag, 
-                           mobiles=p1.get('mobiles', []), emails=p1.get('emails', []), 
-                           websites=p1.get('websites', []), socials=p1.get('socials', []), 
-                           t_func=dummy_t, profile='p1', p2_enabled=0, p3_enabled=0)
+                           mobiles=p_data.get('mobiles', []), emails=p_data.get('emails', []), 
+                           websites=p_data.get('websites', []), socials=p_data.get('socials', []), 
+                           t_func=dummy_t, profile=p_req,
+                           p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
-# --- UTILITÀ ---
+# --- UTILITÀ & MASTER ---
+@app.route('/uploads/<filename>')
+def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/favicon.ico')
 def favicon(): return send_from_directory('static', 'favicon.ico')
 @app.route('/area/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
-@app.route('/uploads/<filename>')
-def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# Gestione errori (Mostra l'errore vero invece di 500 generico)
-@app.errorhandler(500)
-def server_error(e): return f"<h1>Errore Interno: {e}</h1>", 500
+# Master Admin (minimo indispensabile per funzionare)
+@app.route('/master', methods=['GET', 'POST'])
+def master_login():
+    if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db())
+    if request.method=='POST' and request.form.get('password')=="pay2026":
+        session['is_master']=True; return redirect(url_for('master_login'))
+    return render_template('master_login.html')
+
+@app.route('/master/add', methods=['POST'])
+def master_add():
+    clienti = load_db()
+    new_id = max([c['id'] for c in clienti], default=0) + 1
+    new_c = {
+        "id": new_id, "username": request.form.get('username'), "password": request.form.get('password'),
+        "slug": request.form.get('slug'), "nome": request.form.get('nome'), "azienda": "New", "scadenza": "2026", "stato": "Attivo",
+        "p1": {"active": True, "name": request.form.get('nome'), "role": "", "company": "", "foto": "", "mobiles": [], "emails": [], "websites": [], "socials": []},
+        "p2": {"active": False}, "p3": {"active": False}
+    }
+    clienti.append(new_c); save_db(clienti); return redirect(url_for('master_login'))
+
+@app.route('/master/impersonate/<int:id>')
+def master_impersonate(id): session['logged_in']=True; session['user_id']=id; return redirect(url_for('area'))
 
 if __name__ == '__main__':
-    # DEBUG ATTIVO: Se c'è un errore, te lo scrive sulla pagina
     app.run(debug=True)
