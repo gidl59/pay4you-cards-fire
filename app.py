@@ -3,59 +3,60 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_premium_2026"
+app.secret_key = "pay4you_2026_global_disk"
 
-# --- CONFIGURAZIONE RENDER PERSISTENCE ---
-UPLOAD_FOLDER = 'static/uploads'
+# --- CONFIGURAZIONE DISCO RENDER (/var/data) ---
+# Usiamo /var/data per i file persistenti e static per i file di sistema
+UPLOAD_FOLDER = '/var/data/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- TRADUZIONI ---
-TRANSLATIONS = {
-    'it': {'welcome': 'Benvenuto', 'save': 'Salva', 'profile': 'Profilo Personale'},
-    'en': {'welcome': 'Welcome', 'save': 'Save', 'profile': 'Personal Profile'},
-    'es': {'welcome': 'Bienvenido', 'save': 'Guardar', 'profile': 'Perfil Personal'},
-    'fr': {'welcome': 'Bienvenue', 'save': 'Enregistrer', 'profile': 'Profil Personnel'}
-}
+# --- LOGICA MULTILINGUA ---
+def get_texts():
+    lang = request.accept_languages.best_match(['it', 'en', 'es', 'fr']) or 'it'
+    translations = {
+        'it': {'login': 'Area riservata', 'user': 'Username', 'pass': 'Password', 'btn': 'Accedi ora'},
+        'en': {'login': 'Reserved Area', 'user': 'Username', 'pass': 'Password', 'btn': 'Login Now'},
+        'es': {'login': 'Área reservada', 'user': 'Usuario', 'pass': 'Contraseña', 'btn': 'Entrar ahora'},
+        'fr': {'login': 'Espace réservé', 'user': 'Identifiant', 'pass': 'Mot de passe', 'btn': 'Se connecter'}
+    }
+    return translations[lang]
 
-def get_locale():
-    # Rileva la lingua del browser/telefono
-    lang = request.accept_languages.best_match(['it', 'en', 'es', 'fr'])
-    return lang or 'it'
-
-# --- DATABASE CLIENTI ---
+# --- DATI UTENTE ---
 USER_DATA = {
     "username": "admin",
     "password": "password123",
     "nome": "Giuseppe Di Lisio",
-    "avatar": "/static/uploads/avatar.jpg",
-    "p1": {"name": "Profilo Personale", "active": True, "foto": "/static/uploads/agente1.jpg"},
-    "p2": {"name": "Profilo Business", "active": False, "foto": "/static/uploads/agente2.jpg"},
-    "p3": {"name": "Profilo Eventi", "active": False, "foto": "/static/uploads/agente3.jpg"}
+    "avatar": "/uploads/avatar.jpg",
+    "p1": {"name": "Profilo Personale", "active": True, "foto": "/uploads/agente1.jpg"},
+    "p2": {"name": "Profilo Business", "active": False, "foto": "/uploads/agente2.jpg"},
+    "p3": {"name": "Profilo Eventi", "active": False, "foto": "/uploads/agente3.jpg"}
 }
 
+# Rotta per servire i file dal disco esterno di Render
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/')
-def home():
-    return redirect(url_for('login'))
+def home(): return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
+    texts = get_texts()
     if request.method == 'POST':
         if request.form['username'] == USER_DATA['username'] and request.form['password'] == USER_DATA['password']:
             session['logged_in'] = True
             return redirect(url_for('area'))
-        flash("Errore", "error")
-    return render_template('login.html')
+        flash("Errore login", "error")
+    return render_template('login.html', t=texts)
 
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    lang = get_locale()
-    texts = TRANSLATIONS.get(lang, TRANSLATIONS['it'])
-    return render_template('dashboard.html', user=USER_DATA, lang_text=texts)
-
-@app.route('/area/forgot')
-def forgot():
-    return render_template('forgot.html')
+    return render_template('dashboard.html', user=USER_DATA)
 
 @app.route('/area/logout')
 def logout():
