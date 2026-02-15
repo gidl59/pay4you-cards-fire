@@ -3,331 +3,89 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ ag.name or ag.slug }} | Pay4You</title>
-  <link rel="icon" href="/favicon.ico">
+  <title>{{ ag.name }} | Pay4You</title>
   <link rel="stylesheet" href="/static/card.css">
 </head>
 <body data-theme="auto">
   <div class="card-wrap">
-
-    <div class="hero">
-      <div class="hero-bg"></div>
-
-      <div class="top">
-        {% if ag.logo_url %}
-          <div class="logo-bubble {{ 'spin' if ag.logo_spin==1 else '' }}">
-            <img class="logo" src="{{ ag.logo_url }}" alt="logo">
-          </div>
+    <div class="hero"></div>
+    
+    <div class="avatar-wrap">
+      <div class="avatar">
+        {% if ag.photo_url %}
+          <img src="{{ ag.photo_url }}" style="object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform: scale({{ ag.photo_zoom }});">
+        {% else %}
+          <div style="font-size:50px; text-align:center; padding-top:30px;">👤</div>
         {% endif %}
       </div>
+    </div>
 
-      {# back media goes BEHIND the avatar, not full hero #}
-      {% set back_src = ag.back_media_url or ag.logo_url %}
-      {% if back_src %}
-        <div class="back-disc" aria-hidden="true">
-          <img src="{{ back_src }}" alt="">
-        </div>
-      {% endif %}
+    <div class="title">
+      <h1>{{ ag.name }}</h1>
+      {% if ag.role %}<div class="sub">{{ ag.role }}</div>{% endif %}
+      {% if ag.company %}<div class="sub">{{ ag.company }}</div>{% endif %}
+    </div>
 
-      <div class="avatar-wrap {{ 'orbit' if ag.orbit_spin==1 else '' }}">
-        <div id="avatarFlip" class="avatar {{ 'flip-anim' if ag.allow_flip==1 else '' }} {{ 'tapflip' if ag.avatar_spin==1 else '' }}">
-          <div class="face">
-            {% if ag.photo_url %}
-              <img src="{{ ag.photo_url }}" alt="foto" style="object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform: scale({{ ag.photo_zoom }});">
-            {% else %}
-              <div class="avatar-ph">👤</div>
-            {% endif %}
-          </div>
-          <div class="back">
-            {% if back_src %}
-              <img src="{{ back_src }}" alt="">
-            {% else %}
-              <div class="avatar-ph">⭐</div>
-            {% endif %}
-          </div>
-        </div>
+    {% if ag.bio %}<div class="bio">{{ ag.bio }}</div>{% endif %}
+
+    {% if socials %}
+      <div class="social-row">
+        {% for s in socials %}
+          <a class="social" href="{{ s.url }}" target="_blank">
+            <span>{{ s.label[:1] }}</span>
+          </a>
+        {% endfor %}
       </div>
+    {% endif %}
 
-      <div class="title">
-        <h1>{{ ag.name }}</h1>
-        {% if ag.role %}<div class="sub">{{ ag.role }}</div>{% endif %}
-        {% if ag.company %}<div class="sub2">{{ ag.company }}</div>{% endif %}
-      </div>
+    <div class="actions">
+      <a class="btn primary" href="/vcf/{{ ag.slug }}">{{ t_func('save_contact') }}</a>
+      <button class="btn-qr" onclick="openShareModal('qr', '{{ qr_url }}', 'QR')">QR</button>
     </div>
 
     <div class="content">
+      {% for m in mobiles %}<div class="row"><div class="v"><a href="tel:{{ m }}">{{ m }}</a></div></div>{% endfor %}
+      {% for e in emails %}<div class="row"><div class="v"><a href="mailto:{{ e }}">{{ e }}</a></div></div>{% endfor %}
+      {% for w in websites %}<div class="row"><div class="v"><a href="{{ w }}" target="_blank">{{ w }}</a></div></div>{% endfor %}
+    </div>
 
-      {% if ag.bio %}
-        <div class="box tone tone-a">
-          <h3>Info</h3>
-          <p class="bio">{{ ag.bio }}</p>
-        </div>
-      {% endif %}
-
-      {% if socials and socials|length %}
-        <div class="box tone tone-b" style="padding-top:14px">
-          <h3>{{ t_func('social') }}</h3>
-          <div class="social-row">
-            {% for s in socials %}
-              <a class="social" href="{{ s.url }}" target="_blank" rel="noopener" aria-label="{{ s.label }}">
-                <span class="ico ico-{{ s.key }}" data-i="{{ s.label[:1] | lower }}"></span>
-                <span class="slabel">{{ s.label }}</span>
-              </a>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-
-      <div class="box tone tone-d">
-        <h3>{{ t_func('contacts') }}</h3>
-
-        {% if mobiles %}
-          <div class="row">
-            <div class="k">{{ t_func('mobile_phone') }}</div>
-            <div class="v">
-              {% for m in mobiles %}
-                <a href="tel:{{ m }}">{{ m }}</a>{% if not loop.last %} · {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if office_value %}
-          <div class="row">
-            <div class="k">{{ t_func('office_phone') }}</div>
-            <div class="v"><a href="tel:{{ office_value }}">{{ office_value }}</a></div>
-          </div>
-        {% endif %}
-
-        {% if emails %}
-          <div class="row">
-            <div class="k">Email</div>
-            <div class="v">
-              {% for e in emails %}
-                <a href="mailto:{{ e }}">{{ e }}</a>{% if not loop.last %}<br>{% endif %}
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if websites %}
-          <div class="row">
-            <div class="k">{{ t_func('open_website') }}</div>
-            <div class="v">
-              {% for w in websites %}
-                <a target="_blank" rel="noopener" href="{{ w }}">{{ w }}</a>{% if not loop.last %}<br>{% endif %}
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if addresses %}
-          <div class="row">
-            <div class="k">Indirizzi</div>
-            <div class="v">
-              {% for a in addresses %}
-                <div class="addr">
-                  <div>{{ a.text }}</div>
-                  <a target="_blank" rel="noopener" href="{{ a.maps }}">{{ t_func('open_maps') }}</a>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
+    <div class="switch-row">
+      <div style="margin-bottom:10px">
+        <a class="ps-btn {% if profile=='p1' %}active{% endif %}" href="/{{ ag.slug }}">P1</a>
+        {% if p2_enabled == 1 %}<a class="ps-btn {% if profile=='p2' %}active{% endif %}" href="/{{ ag.slug }}?p=p2">P2</a>{% endif %}
+        {% if p3_enabled == 1 %}<a class="ps-btn {% if profile=='p3' %}active{% endif %}" href="/{{ ag.slug }}?p=p3">P3</a>{% endif %}
       </div>
-
-      <div class="box tone tone-e">
-        <h3>{{ t_func('data') }}</h3>
-        {% if ag.piva %}
-          <div class="row"><div class="k">{{ t_func('vat') }}</div><div class="v">{{ ag.piva }}</div></div>
-        {% endif %}
-        {% if ag.sdi %}
-          <div class="row"><div class="k">{{ t_func('sdi') }}</div><div class="v">{{ ag.sdi }}</div></div>
-        {% endif %}
+      <div>
+        <button class="ts" data-theme="light">Chiaro</button>
+        <button class="ts" data-theme="dark">Scuro</button>
+        <button class="ts" data-theme="auto">Auto</button>
       </div>
-
-      <div class="box tone tone-c">
-        <h3>{{ t_func('actions') }}</h3>
-        <div class="actions">
-          <a class="btn primary" href="/vcf/{{ ag.slug }}" target="_blank" rel="noopener">{{ t_func('save_contact') }}</a>
-          <button class="btn" type="button" onclick="openShareModal('qr', '{{ qr_url }}', 'QR Code')">{{ t_func('scan_qr') }}</button>
-          {% if wa_link %}
-            <a class="btn" href="{{ wa_link }}" target="_blank" rel="noopener">{{ t_func('whatsapp') }}</a>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if gallery %}
-        <div class="box tone tone-f">
-          <h3>{{ t_func('gallery') }}</h3>
-          <div class="media-grid">
-            {% for g in gallery %}
-              <button class="thumb" type="button" onclick="openShareModal('img','{{ g }}','Foto')">
-                <img src="{{ g }}" alt="">
-              </button>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-
-      {% if videos %}
-        <div class="box tone tone-g">
-          <h3>{{ t_func('videos') }}</h3>
-          <div class="media-grid">
-            {% for v in videos %}
-              <button class="thumb" type="button" onclick="openShareModal('vid','{{ v }}','Video')">
-                <video muted playsinline preload="metadata" src="{{ v }}#t=0.1"></video>
-              </button>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-
-      <div class="switch-row">
-        <div class="profile-switch">
-          {% if profile != 'p1' %}
-            <a class="ps-btn" href="/{{ ag.slug }}">P1</a>
-          {% endif %}
-          {% if p2_enabled == 1 and profile != 'p2' %}
-            <a class="ps-btn" href="/{{ ag.slug }}?p=p2">P2</a>
-          {% endif %}
-          {% if p3_enabled == 1 and profile != 'p3' %}
-            <a class="ps-btn" href="/{{ ag.slug }}?p=p3">P3</a>
-          {% endif %}
-        </div>
-
-        <div class="theme-switch">
-          <button class="ts" type="button" data-theme="auto">Auto</button>
-          <button class="ts" type="button" data-theme="light">Chiaro</button>
-          <button class="ts" type="button" data-theme="dark">Scuro</button>
-        </div>
-      </div>
-
     </div>
 
     <footer class="foot">
-      <small>Pay4You Card 2026 · realizzato da Giuseppe Di Lisio</small>
+      Pay4You Card 2026
     </footer>
-
   </div>
 
-  <div id="shareModal" class="modal-overlay" style="display:none" onclick="overlayClose(event)">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-title" id="mTitle">Anteprima</div>
-      <div id="mBody" style="margin-top:12px;"></div>
-
-      <div class="modal-actions">
-        <button class="btn" type="button" onclick="share('whatsapp')">Invia WhatsApp</button>
-        <button class="btn" type="button" onclick="share('email')">Invia Email</button>
-        <button class="btn ghost" type="button" onclick="closeModal()">Chiudi</button>
-      </div>
-
-      <input type="hidden" id="mKind" value="">
-      <input type="hidden" id="mUrl" value="">
-    </div>
-  </div>
-
-<script>
-  // Theme (Auto/Light/Dark)
-  (function(){
+  <script>
     const root = document.body;
-    const saved = localStorage.getItem('p4y_theme') || 'auto';
-    function apply(th){
-      root.setAttribute('data-theme', th);
+    function applyTheme(th) {
+      if (th === 'auto') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      } else {
+        root.setAttribute('data-theme', th);
+      }
       document.querySelectorAll('.ts').forEach(b => b.classList.toggle('active', b.dataset.theme === th));
+      localStorage.setItem('p4y_theme', th);
     }
-    apply(saved);
+    
+    const saved = localStorage.getItem('p4y_theme') || 'auto';
+    applyTheme(saved);
+
     document.querySelectorAll('.ts').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const th = btn.dataset.theme;
-        localStorage.setItem('p4y_theme', th);
-        apply(th);
-      });
+      btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
     });
-  })();
-
-  // Effects: tap-to-flip (horizontal). Mutually exclusive with auto flip.
-  (function(){
-    const avatar = document.getElementById('avatarFlip');
-    if(!avatar) return;
-    if(avatar.classList.contains('tapflip') && !avatar.classList.contains('flip-anim')){
-      avatar.addEventListener('click', () => avatar.classList.toggle('is-flipped'));
-    }
-  })();
-
-  function absUrl(u){
-    if(!u) return '';
-    u = (u + '').trim();
-    if(/^https?:\/\//i.test(u)) return u;
-    const base = window.location.origin;
-    if(u.startsWith('/')) return base + u;
-    return base + '/' + u;
-  }
-
-  function gmailCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
-  }
-  function outlookCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
-  }
-
-  function overlayClose(e){
-    if(e.target && e.target.id === "shareModal") closeModal();
-  }
-  function closeModal(){
-    const m = document.getElementById('shareModal');
-    if(m) m.style.display = 'none';
-    const b = document.getElementById('mBody');
-    if(b) b.innerHTML = '';
-  }
-
-  function openShareModal(kind, url, title){
-    document.getElementById('mKind').value = kind;
-    document.getElementById('mUrl').value = url;
-
-    document.getElementById('mTitle').textContent = title || 'Anteprima';
-
-    const abs = absUrl(url);
-    const body = document.getElementById('mBody');
-
-    if(kind === 'img'){
-      body.innerHTML = `<img src="${abs}" style="width:100%; max-height:70vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.12);" alt="">`;
-    } else if(kind === 'vid'){
-      body.innerHTML = `<video src="${abs}" controls playsinline style="width:100%; max-height:70vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:black;"></video>`;
-    } else {
-      body.innerHTML = `<img src="${abs}" style="width:100%; max-height:70vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.12);" alt="">`;
-    }
-
-    document.getElementById('shareModal').style.display = 'flex';
-  }
-
-  function share(channel){
-    const kind = document.getElementById('mKind').value;
-    const url = document.getElementById('mUrl').value;
-    const media = absUrl(url);
-
-    const msg = [
-      `Pay4You ${kind === 'img' ? 'Foto' : (kind === 'vid' ? 'Video' : 'QR')}`,
-      `Link: ${media}`
-    ].join("\r\n");
-
-    if(channel === 'whatsapp'){
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-      return;
-    }
-
-    const subject = `Pay4You ${kind === 'img' ? 'Foto' : (kind === 'vid' ? 'Video' : 'QR')}`;
-    const g = gmailCompose(subject, msg);
-    const w = window.open(g, '_blank');
-    if(!w){
-      window.open(outlookCompose(subject, msg), '_blank');
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
