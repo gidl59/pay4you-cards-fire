@@ -2,9 +2,9 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 
 app = Flask(__name__)
-app.secret_key = "pay4you_fixed_2026"
+app.secret_key = "pay4you_secret_fixed"
 
-# Configurazione Cartelle
+# --- CONFIGURAZIONE CARTELLE ---
 if os.path.exists('/var/data'):
     UPLOAD_FOLDER = '/var/data/uploads'
 else:
@@ -13,15 +13,15 @@ else:
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# DATI CLIENTE (P2 e P3 sono Inattivi/Vuoti)
+# --- DATI UTENTE (CREDENZIALI) ---
 USER_DATA = {
-    "username": "cliente",
-    "password": "password123",
+    "username": "admin",       # <--- RIMESSO ADMIN
+    "password": "password123", # <--- PASSWORD STANDARD
     "nome": "Giuseppe Di Lisio",
-    "avatar": "/static/uploads/avatar.jpg", # Assicurati che esista o usa placeholder
-    "p1": {"active": True, "name": "Profilo Personale", "foto": "/static/uploads/p1.jpg", "slug": "giuseppe"},
-    "p2": {"active": False, "name": "", "foto": "", "slug": ""}, # Vuoto
-    "p3": {"active": False, "name": "", "foto": "", "slug": ""}  # Vuoto
+    "avatar": "/static/pay4you-logo.png", 
+    "p1": {"active": True, "name": "Profilo Personale", "foto": "", "slug": "giuseppe"},
+    "p2": {"active": False, "name": "", "foto": "", "slug": ""},
+    "p3": {"active": False, "name": "", "foto": "", "slug": ""}
 }
 
 @app.route('/')
@@ -29,22 +29,26 @@ def home(): return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        if request.form.get('username') == USER_DATA['username'] and request.form.get('password') == USER_DATA['password']:
+        username_inserito = request.form.get('username')
+        password_inserita = request.form.get('password')
+        
+        # Controllo credenziali
+        if username_inserito == USER_DATA['username'] and password_inserita == USER_DATA['password']:
             session['logged_in'] = True
             return redirect(url_for('area'))
-    return render_template('login.html')
+        else:
+            error = "Credenziali errate! Riprova."
+            
+    return render_template('login.html', error=error)
 
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=USER_DATA)
 
-@app.route('/area/activate/<p_id>')
-def activate_profile(p_id):
-    # Qui attiverai il profilo (logica futura)
-    return f"<h1>Attivazione Profilo {p_id}</h1><p>Qui si apre la scheda vuota da compilare.</p><a href='/area'>Torna indietro</a>"
-
+# --- ALTRE ROTTE ---
 @app.route('/area/forgot')
 def forgot(): return render_template('forgot.html')
 
