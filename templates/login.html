@@ -3,28 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Login | Pay4You</title>
 </head>
 <body>
-    <div class="login-shell">
-        <div class="login-card">
-            <img src="/static/pay4you-logo.png" class="login-logo" alt="Logo">
-            <h1>Area riservata</h1>
-            <p>Accedi per gestire le tue card</p>
+    <div class="login-card">
+        <img src="/static/pay4you-logo.png" class="login-logo" alt="Pay4You Logo">
+        <h1>Area riservata</h1>
+        <p class="subtitle">Accedi con le tue credenziali</p>
 
-            <form method="POST" action="/area/login" class="login-form">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit" class="btn-login-primary">Accedi ora</button>
-            </form>
+        <form method="POST" action="/area/login" class="login-form">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="btn-primary">Accedi ora</button>
+        </form>
 
-            <a href="/area/forgot" class="btn-login-outline">Password dimenticata?</a>
-            
-            <div style="margin-top: 30px; border-top: 1px solid #30363d; padding-top: 20px; font-size: 11px; color: #8b949e;">
-                © 2026 Pay4You — Giuseppe Di Lisio
-            </div>
+        <div class="links-footer">
+            <a href="/area/forgot">Password dimenticata?</a>
+            <a href="/" style="color: #8b949e;">Torna alla Home</a>
+        </div>
+
+        <div class="legal-links">
+            <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
+            <a href="/privacy">Privacy Policy</a> · <a href="/cookie">Cookie Policy</a>
         </div>
     </div>
 </body>
