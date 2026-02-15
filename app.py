@@ -2,9 +2,9 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 
 app = Flask(__name__)
-app.secret_key = "pay4you_final_fix_2026"
+app.secret_key = "pay4you_2026_super_secret"
 
-# --- CONFIGURAZIONE CARTELLE ---
+# --- CONFIGURAZIONE CARTELLE (Render & Locale) ---
 if os.path.exists('/var/data'):
     UPLOAD_FOLDER = '/var/data/uploads'
 else:
@@ -13,37 +13,32 @@ else:
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- CREDENZIALI MASTER (Tua area riservata) ---
+# --- CREDENZIALI MASTER ADMIN ---
 MASTER_USER = "master"
 MASTER_PASS = "pay2026"
 
 # --- DATABASE CLIENTI ---
-# Qui ci sono i dati che alimentano sia la Dashboard che la Card
 CLIENTI_DB = [
     {
         "id": 1,
-        "username": "admin",        # Login Cliente
-        "password": "password123",  # Password Cliente
-        "slug": "giuseppe",         # Indirizzo card: /card/giuseppe
+        "username": "admin",
+        "password": "password123",
+        "slug": "giuseppe",
         "nome": "Giuseppe Di Lisio",
         "azienda": "Pay4You",
         "scadenza": "31/12/2030",
         "stato": "Attivo",
-        
-        # DATI PROFILO P1 (Usati nella tua card HTML)
         "p1": {
             "active": True,
             "name": "Giuseppe Di Lisio",
             "role": "CEO & Founder",
             "company": "Pay4You Digital",
-            "foto": "/static/uploads/foto_giuseppe.jpg", # Assicurati che il file esista!
+            "foto": "/static/uploads/foto_giuseppe.jpg",
             "cover": "/static/uploads/cover.jpg",
-            "bio": "Specialista in soluzioni digitali NFC.",
-            
-            # Liste per la tua card
-            "mobiles": ["+39 333 1234567"],
+            "bio": "Esperto in Digital Cards e NFC.",
+            "mobiles": ["+39 333 0000000"],
             "emails": ["info@pay4you.it"],
-            "websites": ["www.pay4you.it"],
+            "websites": ["https://www.pay4you.it"],
             "socials": [
                 {"label": "Facebook", "url": "#"},
                 {"label": "Instagram", "url": "#"}
@@ -53,16 +48,24 @@ CLIENTI_DB = [
     }
 ]
 
-# --- 1. ROTTA FAVICON (Fix Icona) ---
+# --- 1. ROTTA FAVICON (Fondamentale per vederla) ---
 @app.route('/favicon.ico')
 def favicon():
-    # Cerca il file favicon.ico nella cartella static
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-# --- 2. ROTTE MASTER ADMIN (Fix 404) ---
+# --- 2. GESTIONE ERRORI (Così capiamo se manca un file) ---
+@app.errorhandler(404)
+def page_not_found(e):
+    # Se hai il file 404.html lo usa, altrimenti scritta semplice
+    return render_template('404.html') if os.path.exists('templates/404.html') else "<h1>404 - Pagina non trovata</h1>", 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('500.html') if os.path.exists('templates/500.html') else "<h1>500 - Errore Interno</h1><p>Controlla il codice.</p>", 500
+
+# --- 3. MASTER ADMIN (Risolve il 404 su /master) ---
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
-    # Se sei già loggato master, vedi la lista
     if session.get('is_master'):
         return render_template('master_dashboard.html', clienti=CLIENTI_DB)
     
@@ -74,7 +77,7 @@ def master_login():
         else:
             error = "Password Master Errata"
     
-    # Assicurati di avere il file templates/master_login.html
+    # Questo file ESISTE nel tuo screenshot, quindi deve funzionare
     return render_template('master_login.html', error=error)
 
 @app.route('/master/logout')
@@ -82,7 +85,7 @@ def master_logout():
     session.pop('is_master', None)
     return redirect(url_for('master_login'))
 
-# --- 3. ROTTE LOGIN CLIENTE (Fix 500) ---
+# --- 4. LOGIN CLIENTE (Risolve il 500 su /area/login) ---
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
@@ -93,7 +96,6 @@ def login():
         u = request.form.get('username')
         p = request.form.get('password')
         
-        # Cerca utente nel DB
         user = next((c for c in CLIENTI_DB if c['username'] == u and c['password'] == p), None)
         
         if user:
@@ -108,33 +110,31 @@ def login():
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    
-    # Recupera utente corrente
     user_id = session.get('user_id')
     user = next((c for c in CLIENTI_DB if c['id'] == user_id), None)
     
     if not user: return redirect(url_for('logout'))
     return render_template('dashboard.html', user=user)
 
-# --- 4. ROTTA CARD PUBBLICA (Visualizza la tua card HTML) ---
-def dummy_translate(key): return "SALVA CONTATTO"
+# --- 5. VISUALIZZAZIONE CARD (Usa il TUO card.html) ---
+def dummy_t(k): return "SALVA CONTATTO" # Traduzione finta per non rompere il template
 
 @app.route('/card/<slug>')
 def view_card(slug):
     user = next((c for c in CLIENTI_DB if c['slug'] == slug), None)
-    if not user: return "<h1>Card non trovata</h1>", 404
+    if not user: return "Card non trovata", 404
     
-    # Prepara i dati per il TUO html originale
+    # Prepariamo i dati come li vuole il tuo HTML
     p1 = user['p1']
     ag = {
-        "name": p1.get('name', user['nome']),
-        "photo_url": p1.get('foto', ''),
-        "cover_url": p1.get('cover', ''),
-        "photo_pos_x": 50, "photo_pos_y": 50, "photo_zoom": 1,
-        "role": p1.get('role', ''),
-        "company": p1.get('company', user['azienda']),
-        "bio": p1.get('bio', ''),
-        "slug": slug
+        "name": p1.get('name'),
+        "role": p1.get('role'),
+        "company": p1.get('company'),
+        "bio": p1.get('bio'),
+        "photo_url": p1.get('foto'),
+        "cover_url": p1.get('cover'),
+        "slug": slug,
+        "photo_pos_x": 50, "photo_pos_y": 50, "photo_zoom": 1
     }
     
     return render_template('card.html', 
@@ -143,11 +143,11 @@ def view_card(slug):
                            emails=p1.get('emails', []),
                            websites=p1.get('websites', []),
                            socials=p1.get('socials', []),
-                           t_func=dummy_translate,
+                           t_func=dummy_t,
                            profile='p1',
                            p2_enabled=0, p3_enabled=0)
 
-# --- ALTRE ROTTE ---
+# --- ALTRE ROTTE DI SERVIZIO ---
 @app.route('/area/logout')
 def logout():
     session.clear()
@@ -162,11 +162,12 @@ def privacy(): return render_template('privacy.html')
 @app.route('/cookie')
 def cookie(): return render_template('cookie.html')
 
-# Rotte placeholder per evitare errori 404 sui tasti
+# Rotte placeholder per evitare errori 404 sui tasti dashboard
 @app.route('/area/edit/<pid>')
-def edit_profile(pid): return "Pagina Modifica (In Costruzione)"
+def edit_profile(pid): return render_template('edit_card.html', p_id=pid) if os.path.exists('templates/edit_card.html') else "File edit_card.html mancante"
+
 @app.route('/area/activate/<pid>')
-def activate_profile(pid): return "Pagina Attivazione"
+def activate_profile(pid): return "Attivazione..."
 
 if __name__ == '__main__':
     app.run(debug=True)
