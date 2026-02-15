@@ -2,48 +2,151 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Modifica</title>
+    <title>Modifica Card Avanzata</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <link rel="stylesheet" href="/static/style.css">
-</head>
-<body style="background:#050505; color:white; padding:20px;">
-    
-    <div style="max-width:600px; margin:0 auto; background:#111; padding:30px; border-radius:15px; border:1px solid #333;">
-        <h2 style="color:var(--brand);">Modifica Profilo</h2>
+    <style>
+        .edit-container { max-width:800px; margin:20px auto; padding-bottom:50px; }
+        .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; text-transform:uppercase; font-size:14px; letter-spacing:1px; }
         
-        <form method="POST" enctype="multipart/form-data">
+        .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:15px; }
+        .full-width { grid-column: span 2; }
+        
+        label { display:block; color:#888; margin-bottom:5px; font-size:12px; font-weight:bold; }
+        input[type="text"], textarea, input[type="file"] { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; font-family:sans-serif;}
+        input:focus { border-color:#00ffc8; outline:none; }
+        
+        /* SLIDERS per la foto */
+        .slider-group { background:#1a1a1a; padding:15px; border-radius:10px; margin-top:10px; }
+        input[type=range] { width: 100%; margin: 10px 0; }
+        
+        .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 40px; border-radius:30px; border:none; font-weight:bold; font-size:16px; box-shadow:0 10px 30px rgba(0,255,200,0.3); cursor:pointer; z-index:100; }
+    </style>
+</head>
+<body style="background:#050505; color:white; font-family:sans-serif;">
+
+    <div class="dash-head">
+        <a href="/area" style="color:white; text-decoration:none;">← Annulla e Torna Indietro</a>
+        <span style="color:#00ffc8; font-weight:bold;">MODIFICA P{{ p_id }}</span>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="edit-container">
+        
+        <div class="edit-box">
+            <h3 class="box-title">📸 Immagini & Posizione</h3>
             
-            <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:20px;">
-                <label style="color:#00ffc8; font-weight:bold;">IMMAGINE PROFILO</label>
-                <br><br>
-                <label>1. Carica nuova foto:</label>
-                <input type="file" name="foto" style="width:100%; margin-bottom:10px;">
-                
-                <label>2. Oppure incolla percorso vecchio file (da Master):</label>
-                <input type="text" name="foto_path_manual" placeholder="/uploads/vecchia_foto.jpg" style="width:100%; padding:8px; background:#000; border:1px solid #444; color:white;">
+            <div class="form-grid">
+                <div>
+                    <label>Foto Profilo</label>
+                    <input type="file" name="foto" accept="image/*">
+                    <input type="text" name="foto_manual" placeholder="Oppure incolla percorso file" style="margin-top:5px; font-size:11px; padding:5px;">
+                </div>
+                <div>
+                    <label>Foto Copertina</label>
+                    <input type="file" name="cover" accept="image/*">
+                </div>
             </div>
 
-            <label>Nome:</label>
-            <input type="text" name="name" value="{{ p.name }}" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">
+            <div class="slider-group">
+                <label style="color:#fff;">Regola Posizione Foto Profilo</label>
+                
+                <label>Sposta Orizzontale (X)</label>
+                <input type="range" name="pos_x" min="0" max="100" value="{{ p.pos_x if p.pos_x else 50 }}">
+                
+                <label>Sposta Verticale (Y)</label>
+                <input type="range" name="pos_y" min="0" max="100" value="{{ p.pos_y if p.pos_y else 50 }}">
+                
+                <label>Zoom</label>
+                <input type="range" name="zoom" min="0.5" max="3" step="0.1" value="{{ p.zoom if p.zoom else 1 }}">
+            </div>
+        </div>
 
-            <label>Ruolo:</label>
-            <input type="text" name="role" value="{{ p.role }}" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">
+        <div class="edit-box">
+            <h3 class="box-title">👤 Dati Personali</h3>
+            <div class="form-grid">
+                <div class="full-width">
+                    <label>Nome e Cognome</label>
+                    <input type="text" name="name" value="{{ p.name }}" required>
+                </div>
+                <div>
+                    <label>Ruolo / Qualifica</label>
+                    <input type="text" name="role" value="{{ p.role }}">
+                </div>
+                <div>
+                    <label>Azienda</label>
+                    <input type="text" name="company" value="{{ p.company }}">
+                </div>
+                <div class="full-width">
+                    <label>Bio / Descrizione</label>
+                    <textarea name="bio" rows="3">{{ p.bio }}</textarea>
+                </div>
+            </div>
+        </div>
 
-            <label>Azienda:</label>
-            <input type="text" name="company" value="{{ p.company }}" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">
+        <div class="edit-box">
+            <h3 class="box-title">📞 Contatti</h3>
+            <div class="form-grid">
+                <div>
+                    <label>Cellulare 1</label>
+                    <input type="text" name="mobile1" value="{{ p.mobiles[0] if p.mobiles|length > 0 else '' }}">
+                </div>
+                <div>
+                    <label>Cellulare 2</label>
+                    <input type="text" name="mobile2" value="{{ p.mobiles[1] if p.mobiles|length > 1 else '' }}">
+                </div>
+                <div>
+                    <label>Email 1</label>
+                    <input type="text" name="email1" value="{{ p.emails[0] if p.emails|length > 0 else '' }}">
+                </div>
+                <div>
+                    <label>Email 2</label>
+                    <input type="text" name="email2" value="{{ p.emails[1] if p.emails|length > 1 else '' }}">
+                </div>
+                <div class="full-width">
+                    <label>Sito Web</label>
+                    <input type="text" name="website" value="{{ p.websites[0] if p.websites|length > 0 else '' }}">
+                </div>
+            </div>
+        </div>
 
-            <label>Bio:</label>
-            <textarea name="bio" rows="3" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">{{ p.bio }}</textarea>
+        <div class="edit-box">
+            <h3 class="box-title">🌍 Social Network</h3>
+            
+            {% set fb = '' %}
+            {% set ig = '' %}
+            {% set li = '' %}
+            {% set tk = '' %}
+            
+            {% for s in p.socials %}
+                {% if s.label == 'Facebook' %}{% set fb = s.url %}{% endif %}
+                {% if s.label == 'Instagram' %}{% set ig = s.url %}{% endif %}
+                {% if s.label == 'Linkedin' %}{% set li = s.url %}{% endif %}
+                {% if s.label == 'TikTok' %}{% set tk = s.url %}{% endif %}
+            {% endfor %}
 
-            <label>Telefono:</label>
-            <input type="text" name="mobile" value="{{ p.mobiles[0] if p.mobiles else '' }}" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">
+            <div class="form-grid">
+                <div>
+                    <label>Facebook URL</label>
+                    <input type="text" name="facebook" value="{{ fb }}" placeholder="https://facebook.com/...">
+                </div>
+                <div>
+                    <label>Instagram URL</label>
+                    <input type="text" name="instagram" value="{{ ig }}" placeholder="https://instagram.com/...">
+                </div>
+                <div>
+                    <label>LinkedIn URL</label>
+                    <input type="text" name="linkedin" value="{{ li }}" placeholder="https://linkedin.com/in/...">
+                </div>
+                <div>
+                    <label>TikTok URL</label>
+                    <input type="text" name="tiktok" value="{{ tk }}" placeholder="https://tiktok.com/...">
+                </div>
+            </div>
+        </div>
 
-            <label>Email:</label>
-            <input type="text" name="email" value="{{ p.emails[0] if p.emails else '' }}" style="width:100%; padding:10px; margin-bottom:10px; background:#222; border:none; color:white;">
-
-            <button type="submit" style="width:100%; padding:15px; background:#00ffc8; border:none; font-weight:bold; cursor:pointer;">SALVA TUTTO</button>
-        </form>
-    </div>
+        <button type="submit" class="btn-save">💾 SALVA TUTTO</button>
+    </form>
 
 </body>
 </html>
