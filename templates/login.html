@@ -4,51 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Login | Pay4You</title>
-    <style>
-        .password-container { position: relative; width: 100%; }
-        .toggle-password {
-            position: absolute; right: 15px; top: 18px;
-            cursor: pointer; color: var(--brand); font-size: 18px;
-        }
-    </style>
 </head>
 <body>
     <div class="login-shell">
         <div class="login-card">
             <img src="/static/pay4you-logo.png" class="login-logo" alt="Logo">
             <h1>Area riservata</h1>
-            
+            <p>Accedi per gestire le tue card</p>
+
             <form method="POST" action="/area/login" class="login-form">
                 <input type="text" name="username" placeholder="Username" required>
-                
-                <div class="password-container">
-                    <input type="password" name="password" id="passwordField" placeholder="Password" required>
-                    <span class="toggle-password" onclick="togglePass()">👁️</span>
-                </div>
-                
+                <input type="password" name="password" placeholder="Password" required>
                 <button type="submit" class="btn-login-primary">Accedi ora</button>
-                
-                <div style="margin-top: 15px;">
-                    <a href="/area/forgot" class="btn-login-outline">Password dimenticata?</a>
-                    <a href="/" class="btn-login-outline">Home</a>
-                </div>
             </form>
 
-            <div class="login-foot">
-                <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
-                <a href="/privacy">Privacy</a> · <a href="/cookie">Cookie</a>
+            <a href="/area/forgot" class="btn-login-outline">Password dimenticata?</a>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #30363d; padding-top: 20px; font-size: 11px; color: #8b949e;">
+                © 2026 Pay4You — Giuseppe Di Lisio
             </div>
         </div>
     </div>
-
-    <script>
-        function togglePass() {
-            var x = document.getElementById("passwordField");
-            if (x.type === "password") { x.type = "text"; } 
-            else { x.type = "password"; }
-        }
-    </script>
 </body>
 </html>
