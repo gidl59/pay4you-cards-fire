@@ -1,5 +1,5 @@
 /* ============================================================
-   Pay4You Cards — Admin Dashboard ULTIMATE DARK 2026
+   Pay4You Cards — ULTIMATE STYLE 2026 (Dark & Professional)
    ============================================================ */
 
 :root {
@@ -7,83 +7,102 @@
     --panel: rgba(255, 255, 255, .05);
     --border: rgba(255, 255, 255, .12);
     --text: #e8eef7;
+    --muted: rgba(232, 238, 247, .60);
     --brand: #2dd4bf;
     --accent: #60a5fa;
+    --danger: #ef4444;
+    --warn: #fbbf24;
 }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
 
 body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif;
-    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: 
+        radial-gradient(1000px 600px at 10% 0%, rgba(45,212,191,0.15), transparent 80%),
+        var(--bg);
 }
 
-/* Header & Avatar Rimpicciolito */
+/* --- HEADER & USER INFO --- */
 .dash-head-compact {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 20px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 5%; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
 }
+
+.user-info-main { display: flex; align-items: center; gap: 15px; }
 
 .dash-avatar-small {
-    width: 60px; /* Molto più piccola */
-    height: 60px;
-    border-radius: 50%;
-    border: 2px solid var(--brand);
-    object-fit: cover;
+    width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--brand); box-shadow: 0 0 15px rgba(45,212,191,0.2);
 }
 
-/* Righe P1, P2, P3 Grandi */
+.dash-name { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.slug-badge { font-size: 0.8rem; color: var(--brand); opacity: 0.8; }
+
+/* --- BOTTONI --- */
+.btn, .btn-mini {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 12px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border); transition: 0.2s;
+    text-decoration: none; font-size: 14px;
+}
+.btn-view { background: var(--accent); color: white; border: none; }
+.btn-view:hover { background: #3b82f6; transform: translateY(-2px); }
+
+.btn-mini.primary { background: rgba(45,212,191,0.1); color: var(--brand); border-color: var(--brand); }
+.btn-mini.warn { background: rgba(251,191,36,0.1); color: var(--warn); border-color: var(--warn); }
+.btn-mini.danger { background: rgba(239,68,68,0.1); color: var(--danger); border-color: var(--danger); }
+
+/* --- RIGHE PROFILI P1, P2, P3 --- */
 .profile-row {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    margin: 15px 20px;
-    padding: 25px;
-    transition: transform 0.2s;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 24px; margin: 25px auto; padding: 30px;
+    max-width: 1100px; width: 95%; position: relative;
 }
-
 .profile-row.active { border-left: 8px solid var(--brand); }
-.profile-row.disabled { opacity: 0.4; border-left: 8px solid #444; }
+.profile-row.disabled { opacity: 0.4; filter: grayscale(0.8); border-left: 8px solid #444; }
 
-.row-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
+.row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.p-label { background: var(--brand); color: #000; font-weight: 900; padding: 4px 12px; border-radius: 8px; margin-right: 10px; }
 
-/* Gallerie Interne alle Righe */
+/* --- MEDIA MANAGER (Gallerie) --- */
 .media-manager {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px; border-top: 1px solid var(--border); padding-top: 25px;
 }
 
-.media-box h5 { color: var(--brand); margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; }
+.media-box h5 { margin: 0 0 15px 0; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-size: 11px; }
 
-.thumb-strip { display: flex; gap: 8px; flex-wrap: wrap; }
-.thumb-item { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
-
-/* Modal QR */
-.qr-modal {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-    display: flex; align-items: center; justify-content: center; z-index: 9999;
+.thumb-strip { display: flex; gap: 10px; flex-wrap: wrap; }
+.thumb-item {
+    width: 65px; height: 65px; border-radius: 12px; object-fit: cover;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
 }
+
+/* --- LOGIN MODERNO (+30%) --- */
+.login-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card {
+    width: 100%; max-width: 540px; padding: 45px;
+    background: rgba(15, 20, 28, 0.95); border: 1px solid var(--border);
+    border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+    backdrop-filter: blur(20px);
+}
+.login-logo { width: 90px; margin-bottom: 20px; }
+.login-form input {
+    width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: rgba(255,255,255,0.05); color: white; margin-top: 8px; margin-bottom: 20px;
+}
+
+/* --- MODAL QR --- */
+.qr-modal { position: fixed; inset:0; background: rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:999; }
 .qr-content {
-    background: #1a1f26; padding: 30px; border-radius: 30px; text-align: center;
-    max-width: 400px; width: 90%; border: 1px solid var(--brand);
+    background: #161b22; padding: 40px; border-radius: 35px; text-align:center;
+    width: 90%; max-width: 400px; border: 1px solid var(--brand);
 }
-.qr-image { width: 200px; height: 200px; background: white; margin: 20px auto; padding: 10px; border-radius: 10px; }
-
-.qr-actions { display: grid; gap: 10px; margin-top: 20px; }
-
-/* Bottoni */
-.btn-view { background: var(--accent); color: white; padding: 8px 15px; border-radius: 10px; }
-.btn-disattiva { background: #ef4444; color: white; }
+.qr-image { background: white; padding: 15px; border-radius: 20px; margin: 25px auto; width: 220px; height: 220px; }
+.qr-actions { display: grid; gap: 12px; }
+.btn-share.wa { background: #25d366; color: white; border: none; padding: 14px; border-radius: 15px; font-weight: 800; }
+.btn-share.mail { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 15px; font-weight: 800; }
