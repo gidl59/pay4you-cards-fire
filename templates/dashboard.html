@@ -5,79 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Pay4You</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function openModal(type, src, id) {
+            document.getElementById('modalOverlay').style.display = 'flex';
+            document.getElementById('modalImage').src = src;
+            // Qui potresti settare l'ID per l'eliminazione
+        }
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+        function deleteItem() {
+            if(confirm("Sei sicuro di voler eliminare questo elemento?")) {
+                if(confirm("Conferma definitiva: L'operazione è irreversibile.")) {
+                    alert("Elemento eliminato!");
+                    closeModal();
+                }
+            }
+        }
+    </script>
 </head>
 <body class="dash-body">
 
     <header class="dash-header">
         <div class="user-pill">
-            <img src="{{ user.avatar }}" class="avatar-header">
-            <div>
-                <strong style="display:block; font-size:14px;">{{ user.nome }}</strong>
-                <small style="color:#00ffc8;">Cliente Pay4You</small>
+            <img src="/static/pay4you-logo.png" class="logo-p1-small" alt="Logo P1">
+            <div style="line-height:1.2;">
+                <strong style="display:block; color:white;">{{ user.nome }}</strong>
+                <small style="color:var(--brand-primary);">@{{ user.username }}</small>
             </div>
         </div>
-        <a href="/area/logout" class="btn-logout">Esci</a>
+        <a href="/area/logout" style="color:#ff4444; font-weight:bold;">Esci</a>
     </header>
 
     <div class="dash-container">
-        <h2 style="margin-bottom:20px; color:#fff;">I tuoi Profili</h2>
-
+        
         {% for p_id in ['1', '2', '3'] %}
         {% set p = user['p'~p_id] %}
         
         <div class="profile-strip {{ 'active' if p.active else 'inactive' }}">
             
-            <div class="strip-left">
-                <img src="{{ p.foto }}" class="agent-thumb" onerror="this.src='https://via.placeholder.com/60'">
-                <div class="profile-info">
+            <div class="strip-info">
+                <img src="{{ p.foto }}" class="agent-photo" onerror="this.src='https://via.placeholder.com/70?text=Agente'">
+                <div class="info-text">
                     <h3>{{ p.name }}</h3>
-                    {% if p_id == '1' %}
-                        <span class="profile-label">PRINCIPALE</span>
-                    {% else %}
-                        <span style="color:#888; font-size:12px;">Secondario</span>
-                    {% endif %}
+                    <p>Slug: <strong>{{ user.username }}</strong> • Profilo P{{ p_id }}</p>
                 </div>
             </div>
 
-            <div class="strip-center">
-                <form action="/upload/p{{p_id}}/foto" method="post" enctype="multipart/form-data">
-                    <label class="media-icon">
-                        <div class="icon-box has-content">📸</div>
-                        <span>Foto</span>
-                        <input type="file" name="file" onchange="this.form.submit()">
-                    </label>
-                </form>
+            <div class="strip-actions">
+                <a href="#" target="_blank" class="btn-dash btn-main">🔗 APRI P{{p_id}}</a>
+                <button class="btn-dash" onclick="openModal('qr', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=Example', '{{p_id}}')">📱 QR{{p_id}}</button>
+                <button class="btn-dash">📇 VCF</button>
+                <button class="btn-dash btn-main">✏️ MODIFICA P{{p_id}}</button>
 
-                <form action="/upload/p{{p_id}}/video" method="post" enctype="multipart/form-data">
-                    <label class="media-icon">
-                        <div class="icon-box">▶️</div>
-                        <span>Video</span>
-                        <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()">
-                    </label>
-                </form>
-
-                <form action="/upload/p{{p_id}}/pdf" method="post" enctype="multipart/form-data">
-                    <label class="media-icon">
-                        <div class="icon-box">📄</div>
-                        <span>PDF</span>
-                        <input type="file" name="file" accept=".pdf" onchange="this.form.submit()">
-                    </label>
-                </form>
+                {% if p_id == '1' %}
+                    <button class="btn-dash btn-creds" onclick="alert('Credenziali inviate al cliente!')">📧 INVIA CREDENZIALI</button>
+                {% else %}
+                    <button class="btn-dash btn-del">✕ DISATTIVA</button>
+                {% endif %}
             </div>
 
-            <div class="strip-right">
-                <button class="btn-action btn-edit">✏️ Modifica Dati</button>
-                
-                {% if p_id != '1' %}
-                    <button class="btn-action btn-off">✕ Disattiva</button>
-                {% else %}
-                    <div class="tag-lock">🔒 Bloccato</div>
-                {% endif %}
+            <div class="media-row">
+                <div class="media-thumb" onclick="openModal('img', '/static/uploads/foto1.jpg', '{{p_id}}')">📷</div>
+                <div class="media-thumb" onclick="openModal('img', '/static/uploads/foto2.jpg', '{{p_id}}')">📷</div>
+                <div class="media-thumb" style="border-color:#0088cc; color:#0088cc;" onclick="alert('Apre Video Player')">🎥</div>
+                <div class="media-thumb" style="border-color:#ff4444; color:#ff4444;" onclick="openModal('pdf', '', '{{p_id}}')">📄 PDF</div>
             </div>
 
         </div>
         {% endfor %}
 
     </div>
+
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color:var(--brand-primary); margin-top:0;">Anteprima</h3>
+            <img id="modalImage" src="" class="modal-img">
+            
+            <div class="modal-actions">
+                <button class="btn-modal btn-mail" onclick="alert('Invio per Email...')">✉️ Invia Email</button>
+                <button class="btn-modal btn-wa" onclick="alert('Invio su WhatsApp...')">💬 Invia WhatsApp</button>
+                <button class="btn-modal btn-del" style="border:1px solid red; background:transparent; color:red;" onclick="deleteItem()">🗑️ Elimina</button>
+                <button class="btn-modal btn-close" onclick="closeModal()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
