@@ -1,113 +1,93 @@
-<!doctype html>
-<html lang="{{ lang }}">
+<!DOCTYPE html>
+<html lang="it">
 <head>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ ag.name }} | Pay4You</title>
-  <link rel="stylesheet" href="/static/card.css">
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-  
-  <style>
-    /* Stile per la finestra QR Code che mancava */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; }
-    .modal-box { background: var(--bg-card, #fff); padding: 20px; border-radius: 15px; text-align: center; max-width: 300px; }
-    .btn-close { margin-top: 15px; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 8px; cursor: pointer; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Pay4You</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body data-theme="auto">
-  <div class="card-wrap">
-    
-    <div class="hero" style="background-image: url('{{ ag.cover_url }}'); background-size: cover; background-position: center;"></div>
-    
-    <div class="avatar-wrap">
-      <div class="avatar">
-        {% if ag.photo_url %}
-          <img src="{{ ag.photo_url }}" style="object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform: scale({{ ag.photo_zoom }});">
-        {% else %}
-          <div style="font-size:50px; text-align:center; padding-top:30px;">👤</div>
+<body style="background:#0b0f15;">
+
+    <div class="dash-head">
+        <div class="user-info">
+            <img src="/static/pay4you-logo.png" class="p1-mini-logo" onerror="this.style.display='none'">
+            <div>
+                <span style="color:white; font-weight:bold; display:block;">{{ user.nome }}</span>
+                <small style="color:#00ffc8;">{{ user.azienda }}</small>
+            </div>
+        </div>
+        <a href="/area/logout" style="color:#ff4444; font-size:13px; text-decoration:none;">Esci</a>
+    </div>
+
+    <div class="dash-container">
+        <h2 style="color:white; margin-bottom:20px;">I tuoi Profili</h2>
+
+        {% for p_id in ['1', '2', '3'] %}
+        
+        {% set p_key = 'p' ~ p_id %}
+        {% set p = user[p_key] %}
+        
+        {% if p %}
+            <div class="profile-row {{ 'active' if p.active else 'inactive' }}">
+                
+                <div class="p-left">
+                    {% if p.foto %}
+                        <img src="{{ p.foto }}" class="agent-img">
+                    {% else %}
+                        <div class="agent-img" style="display:flex; align-items:center; justify-content:center; background:#333; font-size:24px;">👤</div>
+                    {% endif %}
+
+                    <div>
+                        <h3 style="margin:0; color:white;">
+                            {% if p.name %}{{ p.name }}{% else %}Profilo {{ p_id }}{% endif %}
+                        </h3>
+                        
+                        {% if p_id == '1' %}
+                            <small style="color:var(--brand);">Profilo Principale</small>
+                        {% else %}
+                            <small style="color:#888;">Secondario</small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="p-actions">
+                    {% if p.active %}
+                        <a href="/card/{{ user.slug }}" target="_blank" class="btn-act" style="background:#222; color:#fff;">🔗 APRI CARD</a>
+                        
+                        <button class="btn-act" style="background:var(--blue); border:none; color:white;" onclick="alert('Funzione Modifica in arrivo!')">✏️ MODIFICA DATI</button>
+
+                        <button class="btn-act" onclick="openModal('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://pay4you.it/card/{{ user.slug }}')">📱 QR</button>
+                    
+                    {% else %}
+                        <button class="btn-act btn-activate" onclick="alert('Contatta l\'amministratore per attivare questo profilo')">➕ ATTIVA PROFILO P{{ p_id }}</button>
+                    {% endif %}
+                </div>
+            </div>
         {% endif %}
-      </div>
-    </div>
-
-    <div class="title">
-      <h1>{{ ag.name }}</h1>
-      {% if ag.role %}<div class="sub">{{ ag.role }}</div>{% endif %}
-      {% if ag.company %}<div class="sub" style="color:#0088cc; font-weight:bold;">{{ ag.company }}</div>{% endif %}
-    </div>
-
-    {% if ag.bio %}<div class="bio">{{ ag.bio }}</div>{% endif %}
-
-    {% if socials %}
-      <div class="social-row">
-        {% for s in socials %}
-          <a class="social" href="{{ s.url }}" target="_blank">
-            <span>{{ s.label[:1] }}</span>
-          </a>
         {% endfor %}
-      </div>
-    {% endif %}
 
-    <div class="actions">
-      <a class="btn primary" href="#">{{ t_func('save_contact') }}</a>
-      <button class="btn-qr" onclick="openShareModal()">QR</button>
     </div>
 
-    <div class="content">
-      {% for m in mobiles %}<div class="row"><div class="v">📞 <a href="tel:{{ m }}">{{ m }}</a></div></div>{% endfor %}
-      {% for e in emails %}<div class="row"><div class="v">✉️ <a href="mailto:{{ e }}">{{ e }}</a></div></div>{% endfor %}
-      {% for w in websites %}<div class="row"><div class="v">🌐 <a href="{{ w }}" target="_blank">{{ w }}</a></div></div>{% endfor %}
+    <div id="qrModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="color:white;">Il tuo QR Code</h3>
+            <img id="modalImg" src="" style="width:200px; margin-bottom:15px; border-radius:10px;">
+            <div class="modal-actions">
+                <button class="btn-share" style="background:#333;" onclick="closeModal()">Chiudi</button>
+            </div>
+        </div>
     </div>
 
-    <div class="switch-row">
-      <div style="margin-bottom:10px">
-        <a class="ps-btn {% if profile=='p1' %}active{% endif %}" href="?p=p1">P1</a>
-        {% if p2_enabled == 1 %}<a class="ps-btn {% if profile=='p2' %}active{% endif %}" href="?p=p2">P2</a>{% endif %}
-        {% if p3_enabled == 1 %}<a class="ps-btn {% if profile=='p3' %}active{% endif %}" href="?p=p3">P3</a>{% endif %}
-      </div>
-      <div>
-        <button class="ts" data-theme="light">☀️</button>
-        <button class="ts" data-theme="dark">🌙</button>
-        <button class="ts" data-theme="auto">⚙️</button>
-      </div>
-    </div>
+    <script>
+        function openModal(src) {
+            document.getElementById('qrModal').style.display = 'flex';
+            document.getElementById('modalImg').src = src;
+        }
+        function closeModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+    </script>
 
-    <footer class="foot">
-      Pay4You Card 2026
-    </footer>
-  </div>
-
-  <div id="qrModal" class="modal-overlay">
-      <div class="modal-box">
-          <h3>Scansiona QR</h3>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ ag.slug }}" alt="QR" style="width:100%;">
-          <button class="btn-close" onclick="closeShareModal()">Chiudi</button>
-      </div>
-  </div>
-
-  <script>
-    const root = document.body;
-    function applyTheme(th) {
-      if (th === 'auto') {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-      } else {
-        root.setAttribute('data-theme', th);
-      }
-      document.querySelectorAll('.ts').forEach(b => b.classList.toggle('active', b.dataset.theme === th));
-      localStorage.setItem('p4y_theme', th);
-    }
-    
-    const saved = localStorage.getItem('p4y_theme') || 'auto';
-    applyTheme(saved);
-
-    document.querySelectorAll('.ts').forEach(btn => {
-      btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
-    });
-
-    // Funzioni per aprire il QR
-    function openShareModal() { document.getElementById('qrModal').style.display = 'flex'; }
-    function closeShareModal() { document.getElementById('qrModal').style.display = 'none'; }
-  </script>
 </body>
 </html>
