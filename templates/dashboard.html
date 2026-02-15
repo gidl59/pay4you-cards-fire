@@ -1,33 +1,130 @@
-<div class="dash-head-compact">
-    <img src="{{ user.avatar }}" class="dash-avatar-small">
-    <div>
-        <h2 style="margin:0">{{ user.nome }}</h2>
-        <a href="/card/{{ user.slug }}" class="btn-view" target="_blank">Visualizza Card</a>
+{% extends "base.html" %}
+{% block content %}
+
+<div class="app-shell">
+    <div class="dash-head-compact">
+        <div class="user-info-main">
+            {% if user.avatar %}
+                <img src="{{ user.avatar }}" class="dash-avatar-small" alt="Avatar">
+            {% else %}
+                <div class="dash-avatar-small dash-ph">👤</div>
+            {% endif %}
+            <div class="user-text">
+                <h2 class="dash-name">{{ user.nome }}</h2>
+                <span class="slug-badge">@{{ user.slug }}</span>
+            </div>
+        </div>
+        <div class="head-actions">
+            <a href="/card/{{ user.slug }}" class="btn btn-view" target="_blank">
+                👁️ Visualizza Card
+            </a>
+            <a href="/area/logout" class="btn btn-mini danger">Esci</a>
+        </div>
+    </div>
+
+    <div class="app-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-wrap">
+                    {% for cat,msg in messages %}
+                        <div class="flash flash-{{cat}}">{{ msg }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="profile-rows-container">
+            
+            {# Loop per generare P1, P2, P3 #}
+            {% for p_id in ['1', '2', '3'] %}
+            {% set active = user['p' ~ p_id ~ '_active'] %}
+            <div class="profile-row {{ 'active' if active else 'disabled' }}">
+                <div class="row-header">
+                    <div class="row-title">
+                        <span class="p-label">P{{ p_id }}</span>
+                        <h3>
+                            {% if p_id == '1' %}Profilo Principale{% elif p_id == '2' %}Profilo Business{% else %}Profilo Personal{% endif %}
+                        </h3>
+                    </div>
+                    <div class="row-actions">
+                        {% if active %}
+                            <button class="btn-mini warn" onclick="openQR('{{ p_id }}')">📱 QR Code</button>
+                            <a href="/edit/p{{ p_id }}" class="btn-mini primary">✏️ Modifica</a>
+                            <form action="/toggle/{{ p_id }}" method="POST" style="display:inline">
+                                <button type="submit" class="btn-mini danger">🚫 Disattiva</button>
+                            </form>
+                        {% else %}
+                            <form action="/toggle/{{ p_id }}" method="POST">
+                                <button type="submit" class="btn-mini primary">✅ Attiva P{{ p_id }}</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="media-manager">
+                    <div class="media-box">
+                        <h5>📸 Foto Gallery</h5>
+                        <div class="thumb-strip">
+                            {% for foto in user['p' ~ p_id ~ '_fotos'] %}
+                                <img src="{{ foto }}" class="thumb-item">
+                            {% else %}
+                                <span class="hint">Nessuna foto</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="media-box">
+                        <h5>🎥 Video Gallery</h5>
+                        <div class="thumb-strip">
+                            {% for video in user['p' ~ p_id ~ '_videos'] %}
+                                <div class="thumb-item video-placeholder">▶️</div>
+                            {% else %}
+                                <span class="hint">Nessun video</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="media-box">
+                        <h5>📄 Documenti PDF</h5>
+                        <div class="thumb-strip">
+                            {% for pdf in user['p' ~ p_id ~ '_pdfs'] %}
+                                <div class="thumb-item pdf-placeholder">PDF</div>
+                            {% else %}
+                                <span class="hint">Nessun PDF</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
     </div>
 </div>
 
-<div class="profile-row active">
-    <div class="row-header">
-        <h3>Profilo Principale (P1)</h3>
-        <div class="actions">
-            <button class="btn" onclick="openQR('1')">QR Code</button>
-            <a href="/edit/p1" class="btn primary">Modifica</a>
-            <button class="btn btn-disattiva">Disattiva</button>
+<script>
+function openQR(id) {
+    const modalHtml = `
+    <div class="qr-modal" id="qrModal" onclick="if(event.target==this)this.remove()">
+        <div class="qr-content">
+            <div class="qr-header">
+                <h3>QR Code Profilo P\${id}</h3>
+            </div>
+            <div class="qr-image">
+                <img src="/static/qrs/qr_p\${id}.png" alt="QR Code" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ request.url_root }}card/{{ user.slug }}?p=\${id}'">
+            </div>
+            <p class="hint">Inquadra o condividi il codice</p>
+            <div class="qr-actions">
+                <button class="btn-share wa" onclick="window.open('https://wa.me/?text=Guarda la mia card: {{ request.url_root }}card/{{ user.slug }}?p=\${id}')">
+                    Invia su WhatsApp
+                </button>
+                <button class="btn-share mail" onclick="window.location.href='mailto:?subject=La mia Card&body=Ecco il link: {{ request.url_root }}card/{{ user.slug }}?p=\${id}'">
+                    Invia per Email
+                </button>
+                <button class="btn-close" onclick="document.getElementById('qrModal').remove()">Chiudi</button>
+            </div>
         </div>
-    </div>
-    
-    <div class="media-manager">
-        <div class="media-box">
-            <h5>Foto Gallery</h5>
-            <div class="thumb-strip"> </div>
-        </div>
-        <div class="media-box">
-            <h5>Video Gallery</h5>
-            <div class="thumb-strip"> </div>
-        </div>
-        <div class="media-box">
-            <h5>Documenti PDF</h5>
-            <div class="thumb-strip"> </div>
-        </div>
-    </div>
-</div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+</script>
+
+{% endblock %}
