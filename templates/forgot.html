@@ -1,56 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Password dimenticata | Pay4You</title>
-
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" href="/static/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Recupero Password | Pay4You</title>
 </head>
 <body>
-
-<div class="login-shell">
-  <div class="login-card login-card-gold">
-
-    <div class="login-top">
-      <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
-      <div class="login-head">
-        <h1>Password dimenticata</h1>
-        <p>Ti inviamo un link per impostare una nuova password</p>
-      </div>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap" style="margin-top:12px">
-          {% for cat,msg in messages %}
-            <div class="flash flash-{{cat}}">{{ msg }}</div>
-          {% endfor %}
+    <div class="login-shell">
+        <div class="login-card">
+            <h1 style="color:var(--brand)">Recupero Password</h1>
+            <p class="muted">Inserisci la tua email per ricevere le nuove credenziali.</p>
+            <form class="login-form" style="margin-top:20px;">
+                <input type="email" placeholder="La tua email" required>
+                <button type="button" class="btn-login-primary" onclick="alert('Richiesta inviata al supporto!')">Invia richiesta</button>
+                <br><br>
+                <a href="/area/login" class="btn-login-outline">Torna al Login</a>
+            </form>
         </div>
-      {% endif %}
-    {% endwith %}
-
-    <form method="post" action="/area/forgot" class="login-form" autocomplete="on" style="margin-top:10px">
-      <div class="field">
-        <label>Email (o username)</label>
-        <input type="text" name="user" autocomplete="username" required>
-        <div class="hint">Se l'indirizzo email inserito è associato a un account, riceverai a breve un'email con le istruzioni per reimpostare la password.</div>
-      </div>
-
-      <div class="login-actions">
-        <button class="btn btn-login-primary" type="submit">Invia link reset</button>
-        <a class="btn btn-login-outline" href="/area/login">Torna al login</a>
-      </div>
-
-      <div class="login-foot">
-        © 2026 Pay4You — Giuseppe Di Lisio
-      </div>
-    </form>
-
-  </div>
-</div>
-
+    </div>
 </body>
 </html>
