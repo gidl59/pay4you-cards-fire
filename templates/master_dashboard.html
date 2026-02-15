@@ -59,8 +59,8 @@
                             </div>
                         </td>
                         <td>
-                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-wa">WA</button>
-                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-mail">✉️</button>
+                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}')" class="btn-mini bg-wa">WA</button>
+                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}')" class="btn-mini bg-mail">✉️</button>
                         </td>
                         <td style="text-align:right;">
                             <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️</a>
@@ -74,15 +74,15 @@
     </div>
 
     <script>
-        function sendWa(user, pass, slug) {
-            var msg = "Pay4You Credenziali:\nLogin: https://pay4you-cards-fire.onrender.com/area/login\nUser: " + user + "\nPass: " + pass + "\n\nCambia password subito!";
+        function sendWa(user, pass) {
+            var msg = "Pay4You - Ecco le tue credenziali:\nUser: " + user + "\nPassword: " + pass + "\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
             window.open("https://wa.me/?text=" + encodeURIComponent(msg), '_blank');
         }
 
-        function sendMail(user, pass, slug) {
-            // Link mailto semplificato per evitare errori
-            var body = "Login: https://pay4you-cards-fire.onrender.com/area/login\nUser: " + user + "\nPass: " + pass;
-            window.open("mailto:?subject=Dati Pay4You&body=" + encodeURIComponent(body));
+        function sendMail(user, pass) {
+            // Testo molto breve per evitare problemi con Gmail
+            var body = "User: " + user + "\nPassword: " + pass + "\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
+            window.open("mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(body));
         }
     </script>
 </body>
