@@ -1,196 +1,69 @@
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  color:#eaf0ff;
-  background:
-    radial-gradient(900px 460px at 15% 0%, rgba(243,198,43,.12), transparent 60%),
-    radial-gradient(900px 520px at 85% 10%, rgba(43,108,255,.16), transparent 62%),
-    #071021;
-}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Area Clienti | Pay4You</title>
+</head>
+<body>
+    <header class="dash-header">
+        <div class="user-info">
+            <img src="{{ user.avatar }}" class="avatar-main" onerror="this.src='https://via.placeholder.com/50'">
+            <div>
+                <strong style="display:block;">{{ user.nome }}</strong>
+                <small style="color:var(--brand);">Account Attivo</small>
+            </div>
+        </div>
+        <div>
+            <a href="/" style="color:var(--brand); text-decoration:none; font-weight:600; margin-right:15px;">Vedi Card</a>
+            <a href="/area/logout" style="color:#f85149; text-decoration:none; font-weight:600;">Esci</a>
+        </div>
+    </header>
 
-/* topbar */
-.topbar{
-  position:sticky; top:0; z-index:20;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 18px;
-  background: rgba(7, 14, 26, .55);
-  border-bottom:1px solid rgba(255,255,255,.10);
-  backdrop-filter: blur(14px);
-}
-.topbar-left{display:flex;align-items:center;gap:12px}
-.branddot{
-  width:14px;height:14px;border-radius:999px;
-  background: linear-gradient(135deg, #2b6cff, #f3c62b);
-  box-shadow:0 0 0 6px rgba(43,108,255,.08);
-}
-.brand1{font-weight:900; letter-spacing:.2px}
-.brand2{opacity:.75; font-size:12px; margin-top:2px}
-.topbar-right{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    <div class="container">
+        {% for p_key, p_data in [('p1', user.p1), ('p2', user.p2), ('p3', user.p3)] %}
+        <div class="profile-box {{ 'active-border' if p_data.active }}">
+            <div class="profile-top">
+                <div class="agente-meta">
+                    <img src="{{ p_data.foto }}" class="foto-agente" onerror="this.src='https://via.placeholder.com/70/161b22/2dd4bf?text=Agente'">
+                    <div class="agente-text">
+                        <h3>{{ p_data.name }}</h3>
+                        <span>Profilo {{ p_data.tipo }}</span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-edit">✏️ Modifica</button>
+                    {% if p_key == 'p1' %}
+                        <span class="tag-main">🔒 PRINCIPALE</span>
+                    {% else %}
+                        <button class="btn-disable">✕ Disattiva</button>
+                    {% endif %}
+                </div>
+            </div>
 
-/* layout */
-.wrap{max-width:1180px;margin:0 auto;padding:18px}
-.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:8px 0 16px}
-.h1{margin:0;font-size:22px;letter-spacing:.2px}
-.sub{opacity:.78;font-size:13px;margin-top:4px}
-
-.searchbox input{
-  width:min(420px, 72vw);
-  padding:12px 14px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf0ff;
-  outline:none;
-}
-.searchbox input::placeholder{color:rgba(234,240,255,.55)}
-
-/* flash */
-.flash-wrap{margin:10px 0 14px}
-.flash{padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06)}
-.flash.error{border-color:rgba(255,70,70,.35);background:rgba(255,70,70,.12)}
-.flash.ok{border-color:rgba(40,200,120,.35);background:rgba(40,200,120,.12)}
-
-/* buttons */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:8px;
-  padding:11px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf0ff;
-  text-decoration:none;
-  cursor:pointer;
-  user-select:none;
-  transition: transform .12s ease, background .12s ease, border-color .12s ease;
-}
-.btn:hover{transform: translateY(-1px); background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.18)}
-.btn:active{transform: translateY(0px)}
-.btn-primary{
-  background: linear-gradient(135deg, rgba(43,108,255,.95), rgba(43,108,255,.75));
-  border-color: rgba(43,108,255,.65);
-}
-.btn-primary:hover{border-color: rgba(43,108,255,.95)}
-.btn-ghost{background:rgba(0,0,0,.18)}
-.btn-danger{
-  background: rgba(255,70,70,.14);
-  border-color: rgba(255,70,70,.35);
-}
-.btn-danger:hover{border-color: rgba(255,70,70,.55)}
-.btn-sm{padding:9px 11px;border-radius:12px;font-size:13px}
-.btn-disabled{opacity:.45; cursor:not-allowed; transform:none !important}
-.inline{display:inline}
-
-/* grid */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:14px;
-}
-@media(max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.grid{grid-template-columns:1fr}}
-
-.agent-card{
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
-  padding:14px;
-  box-shadow: 0 14px 30px rgba(0,0,0,.25);
-}
-.agent-top{display:flex; gap:12px; align-items:center}
-.avatar{
-  width:64px;height:64px;border-radius:18px;
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.10);
-  overflow:hidden;
-  position:relative;
-  flex:0 0 auto;
-}
-.avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.avatar .ph-icon{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:28px; opacity:.9;
-}
-.avatar.ph .ph-icon{display:flex}
-.agent-meta{flex:1; min-width:0}
-.agent-name{font-weight:900; font-size:16px; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.agent-company{opacity:.78; font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.agent-slug{opacity:.65; font-size:12px; margin-top:6px}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:rgba(255,255,255,.10);padding:2px 7px;border-radius:10px}
-
-.agent-badges{flex:0 0 auto; display:flex; gap:8px}
-.badge{
-  padding:7px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.18);
-  font-size:12px;
-  opacity:.86;
-}
-.badge.ok{
-  border-color: rgba(40,200,120,.35);
-  background: rgba(40,200,120,.12);
-}
-
-/* rows */
-.agent-actions{margin-top:12px; display:flex; flex-direction:column; gap:10px}
-.row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.16);
-}
-.row-title{font-weight:800; font-size:13px; opacity:.9; min-width:78px}
-.row-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
-.danger-row{
-  border-color: rgba(255,70,70,.22);
-  background: rgba(255,70,70,.08);
-}
-
-/* modal */
-.modal-overlay{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.62);
-  display:flex; align-items:center; justify-content:center;
-  z-index:50;
-  padding:18px;
-}
-.modal-box{
-  width:min(840px, 100%);
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(8, 12, 20, .88);
-  backdrop-filter: blur(16px);
-  padding:14px;
-  position:relative;
-  box-shadow: 0 22px 60px rgba(0,0,0,.50);
-}
-.modal-x{
-  position:absolute;
-  right:10px; top:10px;
-  width:44px; height:44px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#eaf0ff;
-  cursor:pointer;
-  font-weight:900;
-}
-.modal-title{font-weight:900;font-size:16px;margin:4px 0 10px}
-.modal-actions{display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:12px}
-.qr-img{width:100%; max-width:540px; display:block; margin:10px auto; border-radius:16px; border:1px solid rgba(255,255,255,.10)}
-.cred-text{
-  white-space:pre-wrap;
-  line-height:1.35;
-  padding:12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
-}
+            <div class="media-grid">
+                <div class="media-section">
+                    <h4>📸 Gallery Foto</h4>
+                    <div class="media-flex">
+                        <div class="add-square">+</div>
+                    </div>
+                </div>
+                <div class="media-section">
+                    <h4>🎥 Video MP4</h4>
+                    <div class="media-flex">
+                        <div class="add-square" style="color:#60a5fa; border-color:#60a5fa;">▶️</div>
+                    </div>
+                </div>
+                <div class="media-section">
+                    <h4>📄 Documenti</h4>
+                    <div class="add-square" style="width:100%; height:40px; font-size:14px; border-style:solid;">
+                        + Carica PDF
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
