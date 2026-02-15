@@ -1,46 +1,142 @@
 :root {
-    --bg-body: #f4f4f4;
+    --bg-body: #f0f2f5;
     --bg-card: #ffffff;
-    --text: #333;
+    --text: #1c1e21;
     --brand: #0088cc;
+    --brand-grad: linear-gradient(135deg, #0088cc, #00ffc8);
 }
 [data-theme="dark"] {
-    --bg-body: #111;
-    --bg-card: #222;
+    --bg-body: #000;
+    --bg-card: #111;
     --text: #fff;
+    --brand: #00ffc8;
 }
 
-body { margin: 0; font-family: sans-serif; background: var(--bg-body); display: flex; justify-content: center; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-body); display: flex; justify-content: center; min-height: 100vh; }
 
 .card-wrap {
-    width: 100%; max-width: 400px; background: var(--bg-card); min-height: 100vh;
-    box-shadow: 0 0 15px rgba(0,0,0,0.1); text-align: center; position: relative; color: var(--text);
-    display: flex; flex-direction: column;
+    width: 100%; max-width: 420px; background: var(--bg-card); min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1); text-align: center; position: relative; color: var(--text);
+    display: flex; flex-direction: column; padding-bottom: 80px; overflow-x: hidden;
 }
 
-/* LA TUA HERO E AVATAR */
-.hero { width: 100%; height: 150px; background: #555; background-size: cover; }
-.avatar-wrap { margin-top: -60px; display: inline-block; padding: 5px; background: var(--bg-card); border-radius: 50%; }
-.avatar { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; background: #ccc; }
+/* --- HERO & LOGO --- */
+.hero { 
+    width: 100%; height: 150px; background: #222; position: relative; 
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+/* Immagine Logo Aziendale */
+.hero-logo { 
+    max-height: 90px; max-width: 80%; object-fit: contain; z-index: 2; 
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); 
+}
+/* Effetto Rotazione Continua (Logo) */
+.spin-cw { animation: spin 10s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
-.title { margin-top: 10px; }
-.title h1 { margin: 5px 0; font-size: 22px; }
-.sub { font-size: 14px; opacity: 0.8; }
+/* --- AVATAR 3D (Cerchio Agente) --- */
+.avatar-container {
+    width: 130px; height: 130px; margin: -65px auto 0; position: relative; perspective: 1000px; z-index: 10;
+}
+.avatar-flipper {
+    width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; border-radius: 50%;
+}
+/* Fronte (Agente) e Retro (Logo/Personale) */
+.avatar-front, .avatar-back {
+    position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%;
+    border: 4px solid var(--bg-card); background: var(--bg-card); overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.avatar-front img, .avatar-back img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-back { transform: rotateY(180deg); background: #eee; display: flex; align-items: center; justify-content: center; }
 
-.bio { padding: 15px; font-size: 14px; line-height: 1.4; }
+/* Animazione Specchio (Gira sempre) */
+.mirror-anim { animation: mirrorSpin 6s linear infinite; }
+@keyframes mirrorSpin { 
+    0% { transform: rotateY(0deg); } 
+    50% { transform: rotateY(180deg); } 
+    100% { transform: rotateY(360deg); } 
+}
+/* Classe per il Tap (Gira al click) */
+.avatar-flipper.flipped { transform: rotateY(180deg); }
+/* Rotazione foto agente (separata dal flip) */
+.rotate-agent { animation: spin 10s linear infinite; }
 
-.social-row { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
-.social { width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; font-weight: bold; }
+/* --- TESTI & INFO --- */
+.title { margin-top: 15px; padding: 0 15px; }
+.title h1 { margin: 5px 0; font-size: 26px; font-weight: 800; }
+.sub { font-size: 15px; opacity: 0.8; margin-bottom: 3px; }
+.company-badge { color: var(--brand); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; }
 
-.actions { display: flex; gap: 10px; padding: 0 20px; }
-.btn { flex: 1; padding: 12px; background: var(--brand); color: white; border-radius: 10px; text-decoration: none; font-weight: bold; }
-.btn-qr { width: 50px; background: transparent; border: 1px solid var(--text); color: var(--text); border-radius: 10px; cursor: pointer; }
+/* Traduzioni */
+.lang-box { margin-top: 10px; display: flex; justify-content: center; gap: 10px; }
+.lang-btn { background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.4; transition: 0.2s; }
+.lang-btn.active, .lang-btn:hover { opacity: 1; transform: scale(1.2); }
 
-.content { text-align: left; padding: 15px 20px; }
-.row { padding: 10px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
-.v a { text-decoration: none; color: var(--text); }
+.bio { padding: 15px 20px; font-size: 14px; line-height: 1.5; }
 
-.switch-row { margin-top: auto; padding: 20px; background: rgba(0,0,0,0.05); }
-.ps-btn, .ts { padding: 5px 10px; border: 1px solid var(--text); border-radius: 20px; background: transparent; color: var(--text); text-decoration: none; font-size: 12px; margin: 0 2px; cursor: pointer; }
-.ps-btn.active, .ts.active { background: var(--text); color: var(--bg-card); }
-.foot { padding: 10px; font-size: 11px; opacity: 0.6; }
+/* --- SOCIAL GRID (7 Icone) --- */
+.social-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 15px 0; padding: 0 10px; }
+.soc-btn {
+    width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-body); color: var(--text); font-size: 22px; text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s, color 0.2s;
+}
+.soc-btn:hover { transform: translateY(-3px); }
+/* Colori Brand al passaggio del mouse */
+.soc-fb:hover { color: #1877F2; } .soc-ig:hover { color: #E4405F; } .soc-li:hover { color: #0A66C2; }
+.soc-tk:hover { color: #000; } .soc-sp:hover { color: #1DB954; } .soc-tg:hover { color: #0088cc; } .soc-yt:hover { color: #FF0000; }
+
+/* --- AZIONI PRINCIPALI --- */
+.actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 0 20px; margin-bottom: 20px; }
+.btn-save { 
+    padding: 14px; background: var(--brand-grad); color: #000; border-radius: 12px; 
+    text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 4px 15px rgba(0, 255, 200, 0.3);
+}
+.btn-qr { width: 50px; background: var(--bg-body); border: 1px solid var(--text); border-radius: 12px; cursor: pointer; font-size: 20px; color: var(--text); }
+
+/* --- DATI FISCALI --- */
+.fiscal-box { 
+    background: rgba(128,128,128,0.05); margin: 10px 20px; padding: 15px; border-radius: 10px; 
+    text-align: left; font-size: 12px; border-left: 3px solid var(--brand);
+}
+.f-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.f-label { font-weight: bold; opacity: 0.7; }
+
+/* --- LISTE CONTATTI --- */
+.content { padding: 0 20px; margin-bottom: 20px; text-align: left; }
+.row { padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.1); display: flex; align-items: center; gap: 15px; }
+.row a { text-decoration: none; color: var(--text); font-size: 15px; }
+.icon { width: 25px; text-align: center; font-size: 18px; }
+
+/* --- GALLERIE --- */
+.gallery-section { padding: 10px 20px; text-align: left; }
+.gal-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; color: var(--brand); text-transform: uppercase; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 5px;}
+
+.img-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 15px; }
+.g-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 5px; cursor: pointer; transition: 0.2s; background: #ddd; }
+.g-img:hover { transform: scale(1.02); }
+
+.file-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+.file-btn { 
+    background: var(--bg-body); padding: 10px; border-radius: 8px; text-decoration: none; color: var(--text); 
+    display: flex; align-items: center; gap: 10px; font-size: 13px; border: 1px solid rgba(128,128,128,0.2);
+}
+
+/* --- FOOTER & SWITCHER --- */
+.switch-row { margin-top: auto; padding: 20px; background: rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; }
+.grp { display: flex; gap: 5px; }
+.tiny-btn { padding: 5px 10px; border: 1px solid var(--text); border-radius: 15px; font-size: 10px; text-decoration: none; color: var(--text); background: transparent; cursor: pointer; opacity: 0.6; }
+.tiny-btn.active { background: var(--text); color: var(--bg-card); opacity: 1; }
+
+/* Tasto Whatsapp Galleggiante */
+.wa-float {
+    position: fixed; bottom: 20px; right: 20px; width: 55px; height: 55px; 
+    background: #25D366; color: white; border-radius: 50%; 
+    display: flex; align-items: center; justify-content: center; font-size: 30px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100; text-decoration: none;
+    transition: transform 0.2s;
+}
+.wa-float:hover { transform: scale(1.1); }
