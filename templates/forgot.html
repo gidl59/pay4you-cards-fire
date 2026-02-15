@@ -3,34 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recupero Password | Pay4You</title>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Recupero Password</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function handleRecovery(event) {
+            event.preventDefault(); // Ferma il form
+            
+            // Nasconde il form e mostra il messaggio
+            document.getElementById('recovery-form').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
+
+            // Timer di 3 secondi per tornare al login
+            setTimeout(function() {
+                window.location.href = "/area/login";
+            }, 3000);
+        }
+    </script>
 </head>
 <body class="login-page">
     <div class="login-wrapper">
-        <img src="/static/pay4you-logo.png" alt="Logo" class="logo-main">
-
+        <img src="/static/pay4you-logo.png" class="logo-main">
+        
         <div class="login-card-block">
-            <div class="header-text">
-                <h1>Recupero</h1>
-                <p>Inserisci la tua email per reimpostare</p>
-            </div>
-
-            <form>
-                <div class="input-group">
-                    <input type="email" placeholder="📧 La tua email" required>
+            <div id="recovery-form">
+                <h1 style="color:white; margin:0;">Recupero</h1>
+                <p style="color:#aaa;">Inserisci la tua email</p>
+                <form onsubmit="handleRecovery(event)">
+                    <div class="input-group">
+                        <input type="email" required placeholder="La tua email">
+                    </div>
+                    <button type="submit" class="btn-gradient">INVIA RICHIESTA</button>
+                </form>
+                <div class="links-row" style="justify-content:center; margin-top:15px;">
+                    <a href="/area/login">Annulla e torna al Login</a>
                 </div>
-                <button type="button" onclick="alert('Ti abbiamo inviato una email!')" class="btn-block-gradient">Invia Richiesta</button>
-            </form>
-
-            <div class="action-links" style="justify-content: center; margin-top: 20px;">
-                <a href="/area/login" class="link-box">⬅ Torna al Login</a>
             </div>
-        </div>
 
-        <div class="legal-footer">
-            <p>© 2026 Pay4You</p>
+            <div id="success-message" style="display:none; padding:20px 0;">
+                <h2 style="color:var(--brand-primary);">Richiesta Inviata!</h2>
+                <p style="color:#ddd; font-size:14px; line-height:1.5;">
+                    Se la tua email è registrata, riceverai le istruzioni per recuperare la password.
+                </p>
+                <p style="color:#666; font-size:12px; margin-top:20px;">
+                    Verrai reindirizzato al login tra 3 secondi...
+                </p>
+            </div>
         </div>
     </div>
 </body>
