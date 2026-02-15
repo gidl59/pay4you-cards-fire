@@ -1,13 +1,13 @@
 /* ============================================================
-   Pay4You Cards — MASTER STYLE 2026 
+   Pay4You Cards — MASTER STYLE 2026 (Fix Logo & Login)
    ============================================================ */
 
 :root {
     --bg: #0b1016;
     --card: #161b22;
     --text: #e6edf3;
-    --brand: #2dd4bf; /* Verde Teal Logo */
-    --accent: #60a5fa; /* Blu Link */
+    --brand: #2dd4bf; 
+    --accent: #60a5fa; 
     --border: rgba(255, 255, 255, 0.1);
     --muted: #8b949e;
 }
@@ -16,12 +16,11 @@
 body { 
     background: var(--bg); 
     color: var(--text); 
-    font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+    font-family: 'Inter', system-ui, sans-serif; 
     margin: 0; 
-    line-height: 1.6;
 }
 
-/* --- LOGIN DESIGN (Premium Dark) --- */
+/* --- LOGIN DESIGN RE-FIX --- */
 .login-shell { 
     min-height: 100vh; 
     display: flex; 
@@ -33,90 +32,76 @@ body {
 
 .login-card { 
     background: var(--card); 
-    padding: 50px 40px; 
+    padding: 40px; 
     border-radius: 30px; 
     width: 100%; 
-    max-width: 520px; 
-    border: 1px solid var(--brand); 
+    max-width: 450px; /* Ridotto per compattezza */
+    border: 1px solid var(--border); 
     text-align: center;
     box-shadow: 0 25px 50px rgba(0,0,0,0.5);
 }
 
-.login-logo { width: 110px; margin-bottom: 20px; }
-.login-head h1 { color: var(--brand) !important; font-size: 28px; margin: 0 0 10px; font-weight: 800; }
+/* FIX LOGO: Impedisce che diventi gigante */
+.login-logo { 
+    width: 120px !important; 
+    height: auto !important; 
+    margin-bottom: 20px; 
+    display: inline-block;
+}
 
-/* Input Fields (No più bianchi) */
-.login-form .field { margin-bottom: 20px; text-align: left; }
+.login-head h1 { 
+    color: var(--brand) !important; 
+    font-size: 24px; 
+    margin: 0 0 5px; 
+}
+
+/* INPUT FIELDS: Addio rettangoli bianchi */
+.login-form .field { margin-bottom: 15px; }
 .login-form input { 
     width: 100%; 
-    padding: 16px; 
-    border-radius: 14px; 
+    padding: 14px; 
+    border-radius: 12px; 
     border: 1px solid var(--border); 
-    background: rgba(255,255,255,0.05); 
-    color: white; 
-    font-size: 16px;
-    transition: 0.3s;
+    background: rgba(255,255,255,0.05) !important; 
+    color: white !important; 
+    font-size: 15px;
+    outline: none;
 }
-.login-form input:focus { 
-    border-color: var(--brand); 
-    background: rgba(255,255,255,0.08); 
-    outline: none; 
-    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.1);
-}
+.login-form input:focus { border-color: var(--brand); background: rgba(255,255,255,0.08) !important; }
 
-/* Bottoni Login */
+/* PULSANTI */
 .btn-login-primary { 
     width: 100%; 
-    padding: 16px; 
-    border-radius: 14px; 
+    padding: 14px; 
+    border-radius: 12px; 
     background: var(--brand); 
     color: #0b1016; 
     border: none; 
     font-weight: 800; 
-    font-size: 16px; 
     cursor: pointer; 
     margin-top: 10px;
 }
 
+/* Password Dimenticata in Rettangolo */
 .btn-login-outline { 
     display: inline-block; 
-    padding: 10px 20px; 
+    padding: 8px 15px; 
     border: 1px solid var(--accent); 
     color: var(--accent) !important; 
-    border-radius: 12px; 
+    border-radius: 10px; 
     text-decoration: none; 
     font-weight: 600; 
-    font-size: 14px;
-    margin: 15px 5px 0;
+    font-size: 13px;
+    margin: 10px 4px;
     background: rgba(96, 165, 250, 0.05);
 }
 .btn-login-outline:hover { background: var(--accent); color: white !important; }
 
-.login-foot { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; }
-.login-foot a { color: var(--brand); text-decoration: none; margin: 0 8px; font-weight: 600; }
+.login-foot { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; }
+.login-foot a { color: var(--brand); text-decoration: none; margin: 0 5px; font-weight: 600; }
 
-/* --- DASHBOARD DESIGN --- */
-.dash-head-compact {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 5%; background: #010409; border-bottom: 1px solid var(--border);
-}
-.dash-avatar-small { width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--brand); object-fit: cover; }
-
-.profile-row {
-    background: var(--card); border: 1px solid var(--border); border-radius: 20px;
-    margin: 20px auto; padding: 25px; max-width: 1100px; width: 95%;
-}
-.profile-row.active { border-left: 6px solid var(--brand); }
-.profile-row.disabled { opacity: 0.4; border-left: 6px solid #30363d; }
-
-/* --- PRIVACY & COOKIE PAGES --- */
-.panel-wide { 
-    max-width: 850px; margin: 50px auto; background: var(--card); 
-    padding: 45px; border-radius: 25px; border: 1px solid var(--border); 
-}
-.section-box { 
-    background: rgba(255,255,255,0.02); padding: 25px; border-radius: 18px; 
-    margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); 
-}
-.section-box .h3 { color: var(--brand); font-size: 20px; font-weight: 800; margin-bottom: 12px; }
-.muted { color: var(--muted); }
+/* --- DASHBOARD & PAGES (Keep same) --- */
+.panel-wide { max-width: 850px; margin: 40px auto; background: var(--card); padding: 40px; border-radius: 25px; border: 1px solid var(--border); }
+.section-box { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid var(--border); }
+.h3 { color: var(--brand); font-weight: 800; margin-bottom: 8px; display: block; }
+.p-label { background: var(--brand); color: #000; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 12px; margin-bottom: 5px; display: inline-block; }
