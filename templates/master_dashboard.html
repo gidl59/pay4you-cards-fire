@@ -27,22 +27,10 @@
         <div class="admin-box" style="border-top: 3px solid #00ffc8;">
             <h3 style="color:#00ffc8; margin-top:0;">➕ Aggiungi Cliente</h3>
             <form action="/master/add" method="POST" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;">
-                <div>
-                    <label style="font-size:11px; color:#888;">Slug (es: mario-rossi)</label>
-                    <input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required>
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Nome (Opzionale)</label>
-                    <input type="text" name="nome" class="input-dark" placeholder="Mario">
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Username (Opzionale)</label>
-                    <input type="text" name="username" class="input-dark" placeholder="mario">
-                </div>
-                <div>
-                    <label style="font-size:11px; color:#888;">Password (Opzionale)</label>
-                    <input type="text" name="password" class="input-dark" placeholder="auto-generata">
-                </div>
+                <div><label style="font-size:11px; color:#888;">Slug (es: mario-rossi)</label><input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required></div>
+                <div><label style="font-size:11px; color:#888;">Nome (Opzionale)</label><input type="text" name="nome" class="input-dark" placeholder="Mario"></div>
+                <div><label style="font-size:11px; color:#888;">Username (Opzionale)</label><input type="text" name="username" class="input-dark" placeholder="mario"></div>
+                <div><label style="font-size:11px; color:#888;">Password (Lascia vuoto per auto)</label><input type="text" name="password" class="input-dark" placeholder="***"></div>
                 <button type="submit" class="btn-mini bg-green" style="height:38px;">CREA</button>
             </form>
         </div>
@@ -52,10 +40,10 @@
             <table style="width:100%; text-align:left; border-collapse: collapse;">
                 <thead style="background:#222; color:#888;">
                     <tr>
-                        <th style="padding:10px;">Cliente / Slug</th>
+                        <th style="padding:10px;">Cliente</th>
                         <th style="padding:10px;">Credenziali</th>
-                        <th style="padding:10px;">Invia Dati</th>
-                        <th style="padding:10px; text-align:right;">Gestione</th>
+                        <th style="padding:10px;">Invia</th>
+                        <th style="padding:10px; text-align:right;">Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,17 +54,16 @@
                             <a href="/card/{{ c.slug }}" target="_blank" style="color:#0088cc; font-size:12px;">/card/{{ c.slug }}</a>
                         </td>
                         <td>
-                            <div style="background:#222; padding:5px; font-family:monospace; font-size:11px; display:inline-block;">
+                            <div style="background:#222; padding:5px; font-family:monospace; font-size:11px; display:inline-block; max-width:150px; word-wrap:break-word;">
                                 U: {{ c.username }}<br>P: {{ c.password }}
                             </div>
                         </td>
                         <td>
-                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-wa" title="Invia su WhatsApp">💬 WA</button>
-                            
-                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-mail" title="Invia per Email">✉️ Mail</button>
+                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-wa">WA</button>
+                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}', '{{ c.slug }}')" class="btn-mini bg-mail">✉️</button>
                         </td>
                         <td style="text-align:right;">
-                            <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️ Gestisci</a>
+                            <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️</a>
                             <a href="/master/delete/{{ c.id }}" class="btn-mini bg-red" onclick="return confirm('Eliminare?')">🗑️</a>
                         </td>
                     </tr>
@@ -91,12 +78,12 @@
             var loginUrl = window.location.origin + "/area/login";
             var cardUrl = window.location.origin + "/card/" + slug;
             return "Benvenuto in Pay4You!\n\n" +
-                   "Ecco le credenziali per gestire la tua Card Digitale:\n" +
-                   "🔗 Login: " + loginUrl + "\n" +
-                   "👤 User: " + user + "\n" +
-                   "🔑 Pass: " + pass + "\n\n" +
-                   "⚠️ IMPORTANTE: Al primo accesso è OBBLIGATORIO cambiare la password.\n\n" +
-                   "La tua card è visibile qui: " + cardUrl;
+                   "Ecco le credenziali per la tua Card Digitale:\n" +
+                   "Login: " + loginUrl + "\n" +
+                   "User: " + user + "\n" +
+                   "Pass: " + pass + "\n\n" +
+                   "IMPORTANTE: Al primo accesso è OBBLIGATORIO cambiare la password.\n\n" +
+                   "Tua card: " + cardUrl;
         }
 
         function sendWa(user, pass, slug) {
@@ -106,7 +93,8 @@
 
         function sendMail(user, pass, slug) {
             var msg = getMessage(user, pass, slug);
-            window.location.href = "mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(msg);
+            // Uso window.open per evitare blocchi su alcuni browser con mailto lunghi
+            window.open("mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(msg));
         }
     </script>
 </body>
