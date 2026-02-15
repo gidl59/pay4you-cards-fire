@@ -1,65 +1,35 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login | Pay4You</title>
-
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" href="/static/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-
 <div class="login-shell">
-  <div class="login-card login-card-gold">
-
+  <div class="login-card">
     <div class="login-top">
       <img class="login-logo" src="/static/pay4you-logo.png" alt="Pay4You">
       <div class="login-head">
         <h1>Area riservata</h1>
-        <p>Accedi con le tue credenziali</p>
+        <p class="muted">Accedi per gestire le tue card</p>
       </div>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap" style="margin-top:12px">
-          {% for cat,msg in messages %}
-            <div class="flash flash-{{cat}}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <form method="post" action="/area/login" class="login-form" autocomplete="on" style="margin-top:10px">
+    <form method="post" action="/area/login" class="login-form">
       <div class="field">
-        <label>Username</label>
-        <input type="text" name="username" autocomplete="username" required>
+        <input type="text" name="username" placeholder="Username" required>
       </div>
 
       <div class="field">
-        <label>Password</label>
-        <input type="password" name="password" autocomplete="current-password" required>
+        <input type="password" name="password" placeholder="Password" required>
       </div>
 
       <div class="login-actions">
-        <button class="btn btn-login-primary" type="submit">Accedi</button>
-        <a class="btn btn-login-outline" href="/area/forgot">Password dimenticata</a>
-        <a class="btn btn-login-outline" href="/">Home</a>
+        <button class="btn btn-login-primary" type="submit">Accedi ora</button>
+      </div>
+      
+      <div style="margin-top:20px;">
+        <a class="btn-login-outline" href="/area/forgot">Password dimenticata?</a>
+        <a class="btn-login-outline" href="/">Torna alla Home</a>
       </div>
 
       <div class="login-foot">
-        © 2026 Pay4You — Giuseppe Di Lisio
-        <span style="margin:0 6px; opacity:.6;">·</span>
-        <a href="/privacy" style="text-decoration:none; border-bottom:1px dashed rgba(255,255,255,.35);">Privacy</a>
-        <span style="margin:0 6px; opacity:.6;">·</span>
-        <a href="/cookie" style="text-decoration:none; border-bottom:1px dashed rgba(255,255,255,.35);">Cookie</a>
+        <p class="muted">© 2026 Pay4You — Giuseppe Di Lisio</p>
+        <a href="/privacy">Privacy Policy</a> · <a href="/cookie">Cookie Policy</a>
       </div>
     </form>
-
   </div>
 </div>
-
-</body>
-</html>
