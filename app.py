@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_nuclear_fix"
+app.secret_key = "pay4you_2026_nuclear_reset"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -23,15 +23,20 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # --- GESTIONE DB ---
 def load_db():
-    if not os.path.exists(DB_FILE): return []
+    if not os.path.exists(DB_FILE):
+        return []
     try:
-        with open(DB_FILE, 'r') as f: return json.load(f)
-    except: return []
+        with open(DB_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return []
 
 def save_db(data):
     try:
-        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
-    except Exception as e: print(f"Errore DB: {e}")
+        with open(DB_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Errore DB: {e}")
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -40,25 +45,26 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-# --- ROTTA DI EMERGENZA (CANCELLA DB) ---
+# --- ROTTA DI EMERGENZA: CANCELLA DB ---
 @app.route('/reset-db-force')
 def reset_db_force():
     if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        return "<h1>DATABASE CANCELLATO.</h1> <p>Tutti i vecchi dati corrotti sono stati rimossi. <a href='/master'>Vai al Master</a> e crea un nuovo cliente.</p>"
-    return "<h1>Database già pulito.</h1> <a href='/master'>Vai al Master</a>"
+        try:
+            os.remove(DB_FILE)
+            return "<h1>✅ DATABASE CANCELLATO.</h1><p>Il file vecchio è stato rimosso. Ora vai su <a href='/master'>/master</a> e crea un nuovo cliente pulito.</p>"
+        except Exception as e:
+            return f"<h1>Errore cancellazione: {e}</h1>"
+    return "<h1>✅ Database già pulito (File non trovato).</h1><p>Vai su <a href='/master'>/master</a>.</p>"
 
-# --- RIPARAZIONE UTENTE (Evita Errore 500) ---
+# --- RIPARAZIONE UTENTE (Evita 500) ---
 def repair_user(user):
     dirty = False
-    # Assicura P1, P2, P3
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
             dirty = True
         
         p = user[pid]
-        # Struttura completa
         defaults = {
             'name': '', 'role': '', 'company': '', 'bio': '',
             'foto': '', 'logo': '', 'personal_foto': '',
@@ -76,14 +82,14 @@ def repair_user(user):
                 p[k] = v
                 dirty = True
         
-        # Fix liste None
+        # Fix liste vuote
         if p.get('socials') is None: p['socials'] = []; dirty = True
         if p.get('trans') is None: p['trans'] = defaults['trans']; dirty = True
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
 
     return dirty
 
-# --- LOGIN ---
+# --- LOGIN & DASHBOARD ---
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
@@ -108,16 +114,13 @@ def area():
     if not user: return redirect(url_for('logout'))
     return render_template('dashboard.html', user=user)
 
-# --- ATTIVAZIONE / DISATTIVAZIONE ---
+# --- ATTIVAZIONE P2/P3 ---
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    
     user['p' + p_id]['active'] = True
-    # Se attiviamo un profilo vuoto, lo ripariamo subito
-    repair_user(user)
-    
+    repair_user(user) # Inizializza subito
     save_db(clienti)
     return redirect(url_for('area'))
 
@@ -126,20 +129,18 @@ def deactivate_profile(p_id):
     if p_id == '1': return "Impossibile disattivare P1"
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    
     user['p' + p_id]['active'] = False
     save_db(clienti)
     return redirect(url_for('area'))
 
-# --- MODIFICA PROFILO ---
+# --- MODIFICA ---
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
     if not session.get('logged_in'): return redirect(url_for('login'))
-    
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
-    # PROTEZIONE TOTALE: Se l'utente è rotto, RIPARALO ORA
+    # Se l'utente è rotto, logout invece di crashare 500
     if not user: return redirect(url_for('logout'))
     if repair_user(user): save_db(clienti)
 
@@ -149,7 +150,7 @@ def edit_profile(p_id):
         p = user[p_key]
         prefix = f"u{user['id']}_{p_id}"
         
-        # Salvataggio dati
+        # Testi
         p['name'] = request.form.get('name')
         p['role'] = request.form.get('role')
         p['company'] = request.form.get('company')
@@ -158,6 +159,7 @@ def edit_profile(p_id):
         p['cod_sdi'] = request.form.get('cod_sdi')
         p['pec'] = request.form.get('pec')
         
+        # Contatti
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
         p['emails'] = [x for x in [request.form.get('email1'), request.form.get('email2')] if x]
         p['websites'] = [x for x in [request.form.get('website')] if x]
@@ -178,7 +180,7 @@ def edit_profile(p_id):
         p['pos_y'] = request.form.get('pos_y', 50)
         p['zoom'] = request.form.get('zoom', 1)
 
-        # Traduzioni
+        # Trans
         p['trans'] = {
             'en': {'role': request.form.get('role_en'), 'bio': request.form.get('bio_en')},
             'fr': {'role': request.form.get('role_fr'), 'bio': request.form.get('bio_fr')},
@@ -200,7 +202,7 @@ def edit_profile(p_id):
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path: p['personal_foto'] = path
 
-        # Gallerie
+        # Galleries
         if 'gallery_img' in request.files:
             for f in request.files.getlist('gallery_img'):
                 path = save_file(f, f"{prefix}_gimg")
@@ -216,7 +218,7 @@ def edit_profile(p_id):
                 path = save_file(f, f"{prefix}_gvid")
                 if path: p['gallery_vid'].append(path)
         
-        # Delete Media
+        # Delete
         if request.form.get('delete_media'):
             to_del = request.form.getlist('delete_media')
             p['gallery_img'] = [x for x in p.get('gallery_img',[]) if x not in to_del]
@@ -228,7 +230,7 @@ def edit_profile(p_id):
         
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
 
-# --- MASTER ADMIN ---
+# --- MASTER ---
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
     if session.get('is_master'):
@@ -247,8 +249,8 @@ def master_add():
     if len(clienti) > 0: new_id = max([c['id'] for c in clienti]) + 1
     else: new_id = 1
     
-    # Password Complessa (Simboli inclusi)
-    chars = string.ascii_letters + string.digits + "!@#$%"
+    # Password Complessa (Simboli sicuri)
+    chars = string.ascii_letters + string.digits + "!@#"
     auto_pass = ''.join(random.choices(chars, k=10))
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     
@@ -270,7 +272,7 @@ def master_add():
     save_db(clienti)
     return redirect(url_for('master_login'))
 
-# --- VIEW CARD ---
+# --- CARD ---
 def dummy_t(k): return "SALVA CONTATTO"
 @app.route('/card/<slug>')
 def view_card(slug):
