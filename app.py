@@ -3,33 +3,27 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_key"
+app.secret_key = "pay4you_2026_fire"
 
-# --- CONFIGURAZIONE CARICAMENTI ---
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'ico'}
-
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# --- ROTTA SPECIFICA PER LA FAVICON ---
-# Questa funzione risolve il problema dell'icona mancante
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-# --- DATI ADMIN ---
+# --- CREDENZIALI DI ACCESSO ---
 USER_DATA = {
     "username": "admin",
-    "password": "tua_password_qui", 
+    "password": "password123", # <--- USA QUESTA ORA
     "nome": "Giuseppe Di Lisio",
     "slug": "giuseppe",
     "avatar": "/static/uploads/avatar.jpg",
     "p1_active": True, "p2_active": False, "p3_active": False,
     "p1_fotos": [], "p1_videos": [], "p1_pdfs": []
 }
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
 
 @app.route('/')
 def home():
@@ -44,20 +38,15 @@ def login():
         flash("Credenziali errate!", "error")
     return render_template('login.html')
 
+# --- FIX PASSWORD DIMENTICATA ---
+@app.route('/area/forgot')
+def forgot():
+    return render_template('forgot.html')
+
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=USER_DATA)
-
-@app.route('/upload/<p_id>/<type>', methods=['POST'])
-def upload(p_id, type):
-    if 'file' not in request.files: return redirect(request.url)
-    file = request.files['file']
-    if file and file.filename != '':
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        flash(f"{type.capitalize()} caricato!", "success")
-    return redirect(url_for('area'))
 
 @app.route('/area/logout')
 def logout():
