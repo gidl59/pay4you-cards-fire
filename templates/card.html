@@ -70,8 +70,8 @@
           <div class="social-row">
             {% for s in socials %}
               <a class="social" href="{{ s.url }}" target="_blank" rel="noopener" aria-label="{{ s.label }}">
-                <span class="ico ico-{{ s.key }}"></span>
-                <span>{{ s.label }}</span>
+                <span class="ico ico-{{ s.key }}" data-i="{{ s.label[:1] | lower }}"></span>
+                <span class="slabel">{{ s.label }}</span>
               </a>
             {% endfor %}
           </div>
