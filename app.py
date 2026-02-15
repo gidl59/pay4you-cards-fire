@@ -1,82 +1,58 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 
 app = Flask(__name__)
-app.secret_key = "pay4you_2026_super_key"
+app.secret_key = "pay4you_fixed_2026"
 
-# --- CONFIGURAZIONE DISCO RENDER ---
+# Configurazione Cartelle
 if os.path.exists('/var/data'):
     UPLOAD_FOLDER = '/var/data/uploads'
 else:
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 
-try:
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-except:
-    pass
-
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- LOGICA TESTI MULTILINGUA ---
-def get_texts():
-    lang = request.accept_languages.best_match(['it', 'en', 'es', 'fr']) or 'it'
-    translations = {
-        'it': {'login': 'Area Riservata', 'sub': 'Gestione Card', 'user': 'Nome Utente', 'pass': 'Password', 'btn': 'ACCEDI'},
-        'en': {'login': 'Reserved Area', 'sub': 'Card Management', 'user': 'Username', 'pass': 'Password', 'btn': 'LOGIN'},
-        'es': {'login': 'Área Privada', 'sub': 'Gestión Tarjetas', 'user': 'Usuario', 'pass': 'Contraseña', 'btn': 'ENTRAR'},
-        'fr': {'login': 'Espace Privé', 'sub': 'Gestion Cartes', 'user': 'Utilisateur', 'pass': 'Mot de passe', 'btn': 'CONNEXION'}
-    }
-    return translations[lang]
-
-# --- DATI UTENTE ---
+# DATI CLIENTE (P2 e P3 sono Inattivi/Vuoti)
 USER_DATA = {
-    "username": "admin",
+    "username": "cliente",
     "password": "password123",
     "nome": "Giuseppe Di Lisio",
-    "avatar": "/uploads/avatar.jpg",
-    "p1": {"name": "Profilo Personale", "active": True, "foto": "/uploads/agente1.jpg"},
-    "p2": {"name": "Profilo Business", "active": False, "foto": "/uploads/agente2.jpg"},
-    "p3": {"name": "Profilo Eventi", "active": False, "foto": "/uploads/agente3.jpg"}
+    "avatar": "/static/uploads/avatar.jpg", # Assicurati che esista o usa placeholder
+    "p1": {"active": True, "name": "Profilo Personale", "foto": "/static/uploads/p1.jpg", "slug": "giuseppe"},
+    "p2": {"active": False, "name": "", "foto": "", "slug": ""}, # Vuoto
+    "p3": {"active": False, "name": "", "foto": "", "slug": ""}  # Vuoto
 }
 
-# --- ROTTE FILE SYSTEM ---
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
-
-# --- ROTTE PAGINE ---
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
-    texts = get_texts()
     if request.method == 'POST':
         if request.form.get('username') == USER_DATA['username'] and request.form.get('password') == USER_DATA['password']:
             session['logged_in'] = True
             return redirect(url_for('area'))
-        flash("Dati non validi", "error")
-    return render_template('login.html', t=texts)
+    return render_template('login.html')
 
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=USER_DATA)
 
+@app.route('/area/activate/<p_id>')
+def activate_profile(p_id):
+    # Qui attiverai il profilo (logica futura)
+    return f"<h1>Attivazione Profilo {p_id}</h1><p>Qui si apre la scheda vuota da compilare.</p><a href='/area'>Torna indietro</a>"
+
 @app.route('/area/forgot')
-def forgot():
-    # Se non hai ancora forgot.html, usa login per ora o crea il file
-    return render_template('forgot.html') if os.path.exists('templates/forgot.html') else "Pagina recupero in costruzione (File mancante)"
+def forgot(): return render_template('forgot.html')
 
 @app.route('/privacy')
-def privacy(): return render_template('privacy.html') if os.path.exists('templates/privacy.html') else "Pagina Privacy"
+def privacy(): return render_template('privacy.html')
 
 @app.route('/cookie')
-def cookie(): return render_template('cookie.html') if os.path.exists('templates/cookie.html') else "Pagina Cookie"
+def cookie(): return render_template('cookie.html')
 
 @app.route('/area/logout')
 def logout():
