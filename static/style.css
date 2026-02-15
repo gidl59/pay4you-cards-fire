@@ -1,135 +1,144 @@
 /* --- CONFIGURAZIONE COLORI --- */
 :root {
     --bg-dark: #050505;
-    --card-bg: #121212;
-    --input-bg: #1e1e1e;
-    --brand-primary: #00ffc8; /* Verde fluo acceso */
-    --brand-secondary: #0088cc; /* Blu intenso */
+    --card-bg: #111;
+    --input-bg: #1a1a1a;
+    --brand-primary: #00ffc8; /* Verde Neon */
+    --brand-secondary: #0088cc; /* Blu Neon */
     --text-white: #ffffff;
     --text-gray: #888888;
+    --border: #333;
 }
 
 body {
     margin: 0; padding: 0;
-    font-family: 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-white);
 }
 
-/* --- LAYOUT LOGIN --- */
+a { text-decoration: none; transition: 0.3s; }
+
+/* --- LOGIN & FORGOT PASSWORD (COMPATTO) --- */
 .login-page {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
-    background: radial-gradient(circle at top, #1a2228 0%, #000 100%);
+    background: radial-gradient(circle at top, #0f172a 0%, #000 100%);
+    padding: 15px;
 }
 
 .login-wrapper {
-    width: 100%; max-width: 360px;
-    padding: 20px;
+    width: 100%; max-width: 350px; /* Più stretto */
     display: flex; flex-direction: column; align-items: center;
 }
 
-/* LOGO */
-.logo-main {
-    width: 120px; height: auto;
-    margin-bottom: 30px;
-    filter: drop-shadow(0 0 10px rgba(0, 255, 200, 0.2));
-}
+.logo-main { width: 100px; margin-bottom: 20px; } /* Logo ridotto leggermente */
 
-/* BLOCCO CARD CENTRALE */
 .login-card-block {
     background: var(--card-bg);
-    border: 1px solid #333;
-    border-radius: 20px;
-    padding: 30px 25px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 25px 20px; /* Padding ridotto per accorciare */
     width: 100%;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    position: relative;
+    overflow: hidden;
 }
 
-.header-text { text-align: center; margin-bottom: 25px; }
-.header-text h1 { margin: 0; font-size: 24px; color: var(--text-white); text-transform: uppercase; letter-spacing: 1px; }
-
-/* RETTANGOLO COLORATO (Badge) */
-.badge {
-    display: inline-block;
-    background: rgba(0, 255, 200, 0.1);
-    color: var(--brand-primary);
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: bold;
-    margin-top: 8px;
-    border: 1px solid rgba(0, 255, 200, 0.3);
-}
-
-/* INPUT A RETTANGOLI */
-.input-group { margin-bottom: 15px; text-align: left; }
-.input-group label { display: block; font-size: 12px; color: var(--text-gray); margin-bottom: 5px; margin-left: 5px; }
-
-.input-group input {
-    width: 100%;
-    padding: 15px;
-    background: var(--input-bg);
-    border: 1px solid #333;
-    border-radius: 12px; /* Rettangoli smussati */
-    color: white;
-    font-size: 16px;
-    box-sizing: border-box;
-    transition: all 0.3s;
-}
-
-.input-group input:focus {
-    border-color: var(--brand-primary);
-    background: #252525;
-    outline: none;
-    box-shadow: 0 0 15px rgba(0, 255, 200, 0.1);
-}
-
-/* BOTTONE RETTANGOLO COLORATO */
-.btn-block-gradient {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 12px;
+/* Effetto riga colorata in alto */
+.login-card-block::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
     background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
-    color: #000;
-    font-weight: 800;
-    font-size: 16px;
-    cursor: pointer;
-    text-transform: uppercase;
-    margin-top: 10px;
-    box-shadow: 0 5px 20px rgba(0, 255, 200, 0.2);
-}
-.btn-block-gradient:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0, 255, 200, 0.4);
 }
 
-/* LINK SOTTOSTANTI */
-.action-links {
-    margin-top: 25px;
-    display: flex; flex-direction: column; gap: 10px;
-    text-align: center;
-}
+.header-text h1 { margin: 0 0 5px 0; font-size: 22px; color: white; }
+.header-text p { margin: 0 0 20px 0; font-size: 13px; color: var(--text-gray); }
 
-.link-box {
-    color: var(--brand-secondary);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 5px;
+.input-group { margin-bottom: 12px; }
+.input-group input {
+    width: 100%; padding: 12px; background: var(--input-bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: white; font-size: 15px; box-sizing: border-box;
 }
-.link-box:hover { color: var(--text-white); text-decoration: underline; }
+.input-group input:focus { border-color: var(--brand-primary); outline: none; }
 
-/* FOOTER LEGALE */
+.btn-block-gradient {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
+    color: #000; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px;
+}
+.btn-block-gradient:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* Link Footer più compatti */
+.action-links { margin-top: 15px; display: flex; justify-content: space-between; font-size: 12px; }
+.link-box { color: var(--brand-secondary); }
+
 .legal-footer {
-    margin-top: 40px;
-    text-align: center;
-    border-top: 1px solid #222;
-    padding-top: 20px;
-    width: 100%;
+    margin-top: 20px; /* Alzato rispetto a prima */
+    text-align: center; font-size: 11px; color: #555; width: 100%;
 }
-.legal-footer p { font-size: 11px; color: #555; margin: 0 0 8px 0; }
-.legal-row a { color: #666; font-size: 11px; text-decoration: none; margin: 0 5px; }
-.legal-row a:hover { color: var(--brand-primary); }
-.dot { color: #444; font-size: 10px; }
+.legal-footer a { color: #666; margin: 0 5px; }
+.legal-footer a:hover { color: var(--brand-primary); }
+
+/* --- DASHBOARD ORIZZONTALE (Stile Tabella/Rettangoli) --- */
+.dash-body { background: #0b0f15; padding-bottom: 50px; }
+
+.dash-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* Header Dashboard */
+.dash-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 25px; background: #010409; border-bottom: 1px solid var(--border);
+    margin-bottom: 30px;
+}
+.user-pill { display: flex; align-items: center; gap: 15px; }
+.avatar-header { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--brand-primary); }
+.btn-logout { color: #ff4444; font-weight: bold; font-size: 14px; }
+
+/* RETTANGOLI PROFILO ORIZZONTALI */
+.profile-strip {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 15px 20px; margin-bottom: 15px;
+    transition: 0.3s; flex-wrap: wrap; gap: 15px;
+}
+
+.profile-strip:hover { border-color: #444; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.profile-strip.active { border-left: 5px solid var(--brand-primary); }
+.profile-strip.inactive { border-left: 5px solid #333; opacity: 0.8; }
+
+/* Sezione Sinistra: Foto e Info */
+.strip-left { display: flex; align-items: center; gap: 15px; flex: 2; min-width: 250px; }
+.agent-thumb { 
+    width: 60px; height: 60px; border-radius: 10px; object-fit: cover; 
+    border: 1px solid #333; background: #000;
+}
+.profile-info h3 { margin: 0; font-size: 16px; color: white; }
+.profile-label { font-size: 12px; color: var(--brand-primary); background: rgba(0, 255, 200, 0.1); padding: 2px 6px; border-radius: 4px; }
+
+/* Sezione Centro: Gallerie (Icone) */
+.strip-center { display: flex; gap: 15px; flex: 2; justify-content: center; }
+.media-icon { 
+    display: flex; flex-direction: column; align-items: center; cursor: pointer; 
+    color: #888; font-size: 11px; transition: 0.2s;
+}
+.media-icon:hover { color: var(--text-white); }
+.icon-box { 
+    width: 35px; height: 35px; background: #1a1a1a; border-radius: 8px; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 16px; margin-bottom: 4px; border: 1px solid #333;
+}
+.icon-box.has-content { border-color: var(--brand-secondary); color: var(--brand-secondary); }
+
+/* Sezione Destra: Azioni */
+.strip-right { display: flex; gap: 10px; flex: 1; justify-content: flex-end; }
+
+.btn-action { 
+    padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; 
+}
+.btn-edit { background: #1f6feb; color: white; }
+.btn-off { background: transparent; border: 1px solid #da3633; color: #da3633; }
+.tag-lock { color: #888; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+
+/* Upload nascosto */
+input[type="file"] { display: none; }
