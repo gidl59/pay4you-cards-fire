@@ -1,1 +1,90 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Pannello di Controllo | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Tabella Admin */
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .admin-table th { text-align: left; padding: 15px; background: #222; color: #888; border-bottom: 2px solid #444; }
+        .admin-table td { padding: 15px; border-bottom: 1px solid #333; color: white; }
+        .status-active { color: #00ffc8; font-weight: bold; }
+        .status-expired { color: #ff4444; font-weight: bold; }
+        .btn-mini { padding: 5px 10px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; color: white; margin-right: 5px; }
+        .bg-blue { background: #0088cc; }
+        .bg-red { background: #cc0000; }
+        .bg-green { background: #00ffc8; color: black; }
+    </style>
+</head>
+<body style="background:#050505; padding:20px;">
 
+    <div class="dash-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+            <h1 style="color:#fff; margin:0;">🎛️ Control Room</h1>
+            <div>
+                <span style="color:#888; margin-right:15px;">Ciao, Master</span>
+                <a href="/master/logout" style="color:#ff4444;">Esci</a>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:20px; margin-bottom:30px;">
+            <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #333; flex:1;">
+                <h3 style="margin:0; color:#888;">Card Totali</h3>
+                <span style="font-size:30px; color:white;">{{ clienti|length }}</span>
+            </div>
+            <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #333; flex:1;">
+                <h3 style="margin:0; color:#888;">Card Attive</h3>
+                <span style="font-size:30px; color:#00ffc8;">2</span> </div>
+        </div>
+
+        <div style="background:#111; padding:20px; border-radius:15px; border:1px solid #333;">
+            <h3 style="color:white; margin-top:0;">Lista Clienti Registrati</h3>
+            
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente / Azienda</th>
+                        <th>Card P1 (Slug)</th>
+                        <th>Scadenza</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clienti %}
+                    <tr>
+                        <td>#{{ c.id }}</td>
+                        <td>
+                            <strong>{{ c.nome }}</strong><br>
+                            <small style="color:#888;">{{ c.azienda }}</small>
+                        </td>
+                        <td>
+                            <a href="/card/{{ c.p1.slug }}" target="_blank" style="color:#0088cc;">/{{ c.p1.slug }}</a>
+                        </td>
+                        <td>{{ c.scadenza }}</td>
+                        <td>
+                            {% if c.stato == 'Attivo' %}
+                                <span class="status-active">● Attivo</span>
+                            {% else %}
+                                <span class="status-expired">● Scaduto</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn-mini bg-green" onclick="alert('Credenziali inviate a {{ c.username }}')">✉️ Invia Dati</button>
+                            
+                            <button class="btn-mini bg-blue" onclick="alert('Reset password per {{ c.username }}')">🔑 Reset</button>
+                            
+                            <button class="btn-mini bg-red" onclick="alert('Sei sicuro di voler eliminare {{ c.nome }}?')">🗑️</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>
