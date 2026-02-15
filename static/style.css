@@ -1,91 +1,135 @@
-/* RESET E BASE */
+/* --- CONFIGURAZIONE COLORI --- */
 :root {
-    --bg: #0b0f15;
-    --card: #161b22;
-    --brand: #2dd4bf;
-    --brand-blue: #0077b6;
-    --text: #e6edf3;
-    --border: #30363d;
+    --bg-dark: #050505;
+    --card-bg: #121212;
+    --input-bg: #1e1e1e;
+    --brand-primary: #00ffc8; /* Verde fluo acceso */
+    --brand-secondary: #0088cc; /* Blu intenso */
+    --text-white: #ffffff;
+    --text-gray: #888888;
 }
 
-body { 
-    background-color: var(--bg); 
-    color: var(--text); 
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    margin: 0; 
+body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-white);
 }
 
-/* --- STILE LOGIN (CSS Aggiornato) --- */
-.login-body {
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
+/* --- LAYOUT LOGIN --- */
+.login-page {
+    display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
+    background: radial-gradient(circle at top, #1a2228 0%, #000 100%);
 }
 
-.login-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
+.login-wrapper {
+    width: 100%; max-width: 360px;
     padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
 }
 
-.login-box { 
-    background: var(--card); 
-    padding: 40px; 
-    border-radius: 24px; 
-    width: 100%; 
-    max-width: 380px; 
-    border: 1px solid var(--border); 
-    text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+/* LOGO */
+.logo-main {
+    width: 120px; height: auto;
+    margin-bottom: 30px;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 200, 0.2));
 }
 
-/* FONDAMENTALE: Questo blocca il logo gigante */
-.logo-img { 
-    width: 120px !important; 
-    height: auto; 
-    margin-bottom: 20px; 
+/* BLOCCO CARD CENTRALE */
+.login-card-block {
+    background: var(--card-bg);
+    border: 1px solid #333;
+    border-radius: 20px;
+    padding: 30px 25px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+}
+
+.header-text { text-align: center; margin-bottom: 25px; }
+.header-text h1 { margin: 0; font-size: 24px; color: var(--text-white); text-transform: uppercase; letter-spacing: 1px; }
+
+/* RETTANGOLO COLORATO (Badge) */
+.badge {
     display: inline-block;
+    background: rgba(0, 255, 200, 0.1);
+    color: var(--brand-primary);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-top: 8px;
+    border: 1px solid rgba(0, 255, 200, 0.3);
 }
 
-.login-box h1 { color: var(--brand); font-size: 26px; margin: 10px 0; font-weight: 700; }
-.subtitle { color: #8b949e; margin-bottom: 25px; font-size: 14px; }
+/* INPUT A RETTANGOLI */
+.input-group { margin-bottom: 15px; text-align: left; }
+.input-group label { display: block; font-size: 12px; color: var(--text-gray); margin-bottom: 5px; margin-left: 5px; }
 
-.login-form input { 
-    width: 100%; 
-    padding: 14px; 
-    margin-bottom: 15px; 
-    border-radius: 10px; 
-    border: 1px solid var(--border); 
-    background: #0d1117; 
-    color: white; 
-    font-size: 16px; 
-    box-sizing: border-box; /* Importante per non sbordare */
+.input-group input {
+    width: 100%;
+    padding: 15px;
+    background: var(--input-bg);
+    border: 1px solid #333;
+    border-radius: 12px; /* Rettangoli smussati */
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: all 0.3s;
 }
 
-.btn-primary { 
-    width: 100%; 
-    padding: 14px; 
-    border-radius: 10px; 
-    background: linear-gradient(135deg, var(--brand-blue), var(--brand)); 
-    color: white; 
-    border: none; 
-    font-weight: 700; 
-    font-size: 16px; 
+.input-group input:focus {
+    border-color: var(--brand-primary);
+    background: #252525;
+    outline: none;
+    box-shadow: 0 0 15px rgba(0, 255, 200, 0.1);
+}
+
+/* BOTTONE RETTANGOLO COLORATO */
+.btn-block-gradient {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
+    color: #000;
+    font-weight: 800;
+    font-size: 16px;
     cursor: pointer;
+    text-transform: uppercase;
     margin-top: 10px;
+    box-shadow: 0 5px 20px rgba(0, 255, 200, 0.2);
 }
-.btn-primary:hover { opacity: 0.9; transform: scale(0.98); }
-
-.footer-links { margin-top: 25px; font-size: 13px; }
-.footer-links a { color: var(--brand); text-decoration: none; margin: 0 5px; }
-
-.legal-footer { 
-    margin-top: 30px; 
-    border-top: 1px solid var(--border); 
-    padding-top: 15px; 
-    font-size: 11px; 
-    color: #8b949e; 
+.btn-block-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 255, 200, 0.4);
 }
-.legal-footer a { color: #8b949e; text-decoration: none; }
+
+/* LINK SOTTOSTANTI */
+.action-links {
+    margin-top: 25px;
+    display: flex; flex-direction: column; gap: 10px;
+    text-align: center;
+}
+
+.link-box {
+    color: var(--brand-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px;
+}
+.link-box:hover { color: var(--text-white); text-decoration: underline; }
+
+/* FOOTER LEGALE */
+.legal-footer {
+    margin-top: 40px;
+    text-align: center;
+    border-top: 1px solid #222;
+    padding-top: 20px;
+    width: 100%;
+}
+.legal-footer p { font-size: 11px; color: #555; margin: 0 0 8px 0; }
+.legal-row a { color: #666; font-size: 11px; text-decoration: none; margin: 0 5px; }
+.legal-row a:hover { color: var(--brand-primary); }
+.dot { color: #444; font-size: 10px; }
