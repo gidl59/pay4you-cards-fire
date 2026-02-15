@@ -3,80 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css">
     <title>Dashboard | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="dash-body">
-    <div class="dash-head-compact">
+
+    <header class="dash-header">
         <div class="user-pill">
-            <img src="{{ user.avatar }}" class="dash-avatar-small" onerror="this.src='https://via.placeholder.com/50'">
+            <img src="{{ user.avatar }}" class="avatar-header">
             <div>
-                <h2 style="margin:0; font-size:16px;">{{ user.nome }}</h2>
-                <span class="status-tag">Account Attivo</span>
+                <strong style="display:block; font-size:14px;">{{ user.nome }}</strong>
+                <small style="color:#00ffc8;">Cliente Pay4You</small>
             </div>
         </div>
-        <div class="dash-nav">
-            <a href="/" class="btn-login-outline" style="border-color:var(--brand); color:var(--brand) !important;">Vedi Card</a>
-            <a href="/area/logout" style="color:#ff4444; text-decoration:none; font-weight:bold; font-size:14px; margin-left:15px;">Esci</a>
-        </div>
-    </div>
+        <a href="/area/logout" class="btn-logout">Esci</a>
+    </header>
 
-    <div class="container">
+    <div class="dash-container">
+        <h2 style="margin-bottom:20px; color:#fff;">I tuoi Profili</h2>
+
         {% for p_id in ['1', '2', '3'] %}
-        <div class="profile-card {{ 'active-glow' if user['p'~p_id~'_active'] }}">
-            <div class="profile-header">
-                <div class="agente-box">
-                    <img src="{{ user['p'~p_id~'_foto_agente'] }}" class="foto-agente" onerror="this.src='https://via.placeholder.com/60/161b22/2dd4bf?text=P{{p_id}}'">
-                    <div class="agente-info">
-                        <h3 style="margin:0; color:white;">{{ user['p'~p_id~'_name'] }}</h3>
-                        <p class="muted" style="margin:0; font-size:12px;">Profilo {{ 'Principale' if p_id == '1' else 'Secondario' }}</p>
-                    </div>
-                </div>
-                <div class="actions">
-                    <button class="btn-login-outline" style="font-size:11px;">✏️ Modifica</button>
-                    {% if p_id != '1' %}
-                    <button class="btn-login-outline" style="font-size:11px; border-color:#ff4444; color:#ff4444 !important;">✕ Disattiva</button>
+        {% set p = user['p'~p_id] %}
+        
+        <div class="profile-strip {{ 'active' if p.active else 'inactive' }}">
+            
+            <div class="strip-left">
+                <img src="{{ p.foto }}" class="agent-thumb" onerror="this.src='https://via.placeholder.com/60'">
+                <div class="profile-info">
+                    <h3>{{ p.name }}</h3>
+                    {% if p_id == '1' %}
+                        <span class="profile-label">PRINCIPALE</span>
                     {% else %}
-                    <span class="lock-tag">🔒 Principale</span>
+                        <span style="color:#888; font-size:12px;">Secondario</span>
                     {% endif %}
                 </div>
             </div>
 
-            <div class="media-grid">
-                <div class="media-section">
-                    <h4>📸 Gallery Foto</h4>
-                    <div class="media-row">
-                        <form action="/upload/{{p_id}}/foto" method="post" enctype="multipart/form-data">
-                            <label class="add-btn">
-                                <span>+</span>
-                                <input type="file" name="file" accept="image/*" onchange="this.form.submit()" style="display:none">
-                            </label>
-                        </form>
-                    </div>
-                </div>
-                <div class="media-section">
-                    <h4>🎥 Video MP4</h4>
-                    <div class="media-row">
-                        <form action="/upload/{{p_id}}/video" method="post" enctype="multipart/form-data">
-                            <label class="add-btn video">
-                                <span>▶️</span>
-                                <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()" style="display:none">
-                            </label>
-                        </form>
-                    </div>
-                </div>
-                <div class="media-section">
-                    <h4>📄 Documenti</h4>
-                    <form action="/upload/{{p_id}}/pdf" method="post" enctype="multipart/form-data">
-                        <label class="add-pdf-btn">
-                            + Carica nuovo PDF
-                            <input type="file" name="file" accept=".pdf" onchange="this.form.submit()" style="display:none">
-                        </label>
-                    </form>
-                </div>
+            <div class="strip-center">
+                <form action="/upload/p{{p_id}}/foto" method="post" enctype="multipart/form-data">
+                    <label class="media-icon">
+                        <div class="icon-box has-content">📸</div>
+                        <span>Foto</span>
+                        <input type="file" name="file" onchange="this.form.submit()">
+                    </label>
+                </form>
+
+                <form action="/upload/p{{p_id}}/video" method="post" enctype="multipart/form-data">
+                    <label class="media-icon">
+                        <div class="icon-box">▶️</div>
+                        <span>Video</span>
+                        <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()">
+                    </label>
+                </form>
+
+                <form action="/upload/p{{p_id}}/pdf" method="post" enctype="multipart/form-data">
+                    <label class="media-icon">
+                        <div class="icon-box">📄</div>
+                        <span>PDF</span>
+                        <input type="file" name="file" accept=".pdf" onchange="this.form.submit()">
+                    </label>
+                </form>
             </div>
+
+            <div class="strip-right">
+                <button class="btn-action btn-edit">✏️ Modifica Dati</button>
+                
+                {% if p_id != '1' %}
+                    <button class="btn-action btn-off">✕ Disattiva</button>
+                {% else %}
+                    <div class="tag-lock">🔒 Bloccato</div>
+                {% endif %}
+            </div>
+
         </div>
         {% endfor %}
+
     </div>
 </body>
 </html>
