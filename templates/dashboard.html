@@ -24,70 +24,79 @@
         <h2 style="color:white; margin-bottom:20px;">I tuoi Profili</h2>
 
         {% for p_id in ['1', '2', '3'] %}
-        
         {% set p_key = 'p' ~ p_id %}
         {% set p = user[p_key] %}
         
-        {% if p %}
-            <div class="profile-row {{ 'active' if p.active else 'inactive' }}">
-                
-                <div class="p-left">
-                    {% if p.foto %}
-                        <img src="{{ p.foto }}" class="agent-img">
-                    {% else %}
-                        <div class="agent-img" style="display:flex; align-items:center; justify-content:center; background:#333; font-size:24px;">👤</div>
-                    {% endif %}
+        <div class="profile-row {{ 'active' if p.active else 'inactive' }}">
+            
+            <div class="p-left">
+                {% if p.foto %}
+                    <img src="{{ p.foto }}" class="agent-img">
+                {% else %}
+                    <div class="agent-img" style="display:flex; align-items:center; justify-content:center; background:#333; font-size:24px;">👤</div>
+                {% endif %}
 
-                    <div>
-                        <h3 style="margin:0; color:white;">
-                            {% if p.name %}{{ p.name }}{% else %}Profilo {{ p_id }}{% endif %}
-                        </h3>
-                        
-                        {% if p_id == '1' %}
-                            <small style="color:var(--brand);">Profilo Principale</small>
-                        {% else %}
-                            <small style="color:#888;">Secondario</small>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="p-actions">
-                    {% if p.active %}
-                        <a href="/card/{{ user.slug }}" target="_blank" class="btn-act" style="background:#222; color:#fff;">🔗 APRI CARD</a>
-                        
-                        <button class="btn-act" style="background:var(--blue); border:none; color:white;" onclick="alert('Funzione Modifica in arrivo!')">✏️ MODIFICA DATI</button>
-
-                        <button class="btn-act" onclick="openModal('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://pay4you.it/card/{{ user.slug }}')">📱 QR</button>
-                    
-                    {% else %}
-                        <button class="btn-act btn-activate" onclick="alert('Contatta l\'amministratore per attivare questo profilo')">➕ ATTIVA PROFILO P{{ p_id }}</button>
-                    {% endif %}
+                <div>
+                    <h3 style="margin:0; color:white;">
+                        {% if p.active %}{{ p.name }}{% else %}Profilo {{ p_id }} Vuoto{% endif %}
+                    </h3>
+                    <small style="color:{{ '#00ffc8' if p_id=='1' else '#888' }};">
+                        {{ 'Principale' if p_id=='1' else 'Secondario' }}
+                    </small>
                 </div>
             </div>
-        {% endif %}
-        {% endfor %}
+            
+            <div class="p-actions">
+                {% if p.active %}
+                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222; color:#fff;">🔗 APRI</a>
+                    
+                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:var(--blue); border:none; color:white;">✏️ MODIFICA</a>
 
+                    <button class="btn-act" onclick="openQr('{{ user.slug }}', 'p{{ p_id }}')">📱 QR</button>
+                
+                {% else %}
+                    <a href="/area/activate/{{ p_id }}" class="btn-act btn-activate" onclick="return confirm('Vuoi attivare il Profilo {{ p_id }}?')">➕ ATTIVA ORA</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
     <div id="qrModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 style="color:white;">Il tuo QR Code</h3>
-            <img id="modalImg" src="" style="width:200px; margin-bottom:15px; border-radius:10px;">
-            <div class="modal-actions">
-                <button class="btn-share" style="background:#333;" onclick="closeModal()">Chiudi</button>
+            <h3 style="color:white; margin-top:0;">Condividi Card</h3>
+            
+            <img id="modalImg" src="" style="width:200px; margin-bottom:15px; border-radius:10px; border:2px solid white;">
+            
+            <div class="modal-actions" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                <a id="btnWa" href="#" target="_blank" class="btn-act" style="background:#25D366; border:none; width:100%;">💬 Invia WhatsApp</a>
+                <a id="btnMail" href="#" class="btn-act" style="background:#fff; color:#000; border:none; width:100%;">✉️ Invia Email</a>
+                
+                <button class="btn-act" style="background:#ff4444; border:none; width:100%; margin-top:10px;" onclick="closeModal()">CHIUDI X</button>
             </div>
         </div>
     </div>
 
     <script>
-        function openModal(src) {
+        function openQr(slug, pid) {
+            // URL DELLA CARD (Prende l'indirizzo attuale del sito)
+            var cardUrl = window.location.origin + "/card/" + slug + "?p=" + pid;
+            
+            // Genera QR
+            var qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(cardUrl);
+            document.getElementById('modalImg').src = qrSrc;
+
+            // Link WhatsApp
+            document.getElementById('btnWa').href = "https://wa.me/?text=" + encodeURIComponent("Ecco la mia card digitale: " + cardUrl);
+            
+            // Link Email
+            document.getElementById('btnMail').href = "mailto:?subject=La mia Card Digitale&body=Ciao, ecco il mio biglietto da visita digitale: " + cardUrl;
+
             document.getElementById('qrModal').style.display = 'flex';
-            document.getElementById('modalImg').src = src;
         }
         function closeModal() {
             document.getElementById('qrModal').style.display = 'none';
         }
     </script>
-
 </body>
 </html>
