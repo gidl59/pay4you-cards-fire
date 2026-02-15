@@ -2,91 +2,97 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Pay4You</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
     <script>
-        function openModal(type, src, id) {
-            document.getElementById('modalOverlay').style.display = 'flex';
-            document.getElementById('modalImage').src = src;
-            // Qui potresti settare l'ID per l'eliminazione
-        }
-        function closeModal() {
-            document.getElementById('modalOverlay').style.display = 'none';
-        }
-        function deleteItem() {
-            if(confirm("Sei sicuro di voler eliminare questo elemento?")) {
-                if(confirm("Conferma definitiva: L'operazione è irreversibile.")) {
-                    alert("Elemento eliminato!");
-                    closeModal();
-                }
+        // Gestione Modali (QR, VCF, FOTO)
+        function showModal(type, title) {
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('modalTitle').innerText = title;
+            
+            // Mostra tasti diversi in base al tipo
+            if(type === 'vcf') {
+                document.getElementById('btnDownload').style.display = 'inline-block';
+            } else {
+                document.getElementById('btnDownload').style.display = 'none';
             }
         }
+        function hideModal() { document.getElementById('overlay').style.display = 'none'; }
     </script>
 </head>
-<body class="dash-body">
+<body style="background:#0b0f15;">
 
-    <header class="dash-header">
-        <div class="user-pill">
-            <img src="/static/pay4you-logo.png" class="logo-p1-small" alt="Logo P1">
-            <div style="line-height:1.2;">
-                <strong style="display:block; color:white;">{{ user.nome }}</strong>
-                <small style="color:var(--brand-primary);">@{{ user.username }}</small>
-            </div>
+    <div class="dash-head">
+        <div class="user-info">
+            <img src="/static/pay4you-logo.png" class="p1-mini-logo">
+            <span style="color:white; font-weight:bold;">{{ user.nome }}</span>
         </div>
-        <a href="/area/logout" style="color:#ff4444; font-weight:bold;">Esci</a>
-    </header>
+        <a href="/area/logout" style="color:#ff4444; font-size:13px;">Esci</a>
+    </div>
 
     <div class="dash-container">
-        
-        {% for p_id in ['1', '2', '3'] %}
-        {% set p = user['p'~p_id] %}
-        
-        <div class="profile-strip {{ 'active' if p.active else 'inactive' }}">
-            
-            <div class="strip-info">
-                <img src="{{ p.foto }}" class="agent-photo" onerror="this.src='https://via.placeholder.com/70?text=Agente'">
-                <div class="info-text">
-                    <h3>{{ p.name }}</h3>
-                    <p>Slug: <strong>{{ user.username }}</strong> • Profilo P{{ p_id }}</p>
+
+        <div class="profile-row active">
+            <div class="p-left">
+                <img src="{{ user.p1.foto }}" class="agent-img" onerror="this.src='https://via.placeholder.com/60'">
+                <div>
+                    <h3 style="margin:0; color:white;">{{ user.p1.name }}</h3>
+                    <small style="color:var(--brand);">Principale</small>
                 </div>
             </div>
-
-            <div class="strip-actions">
-                <a href="#" target="_blank" class="btn-dash btn-main">🔗 APRI P{{p_id}}</a>
-                <button class="btn-dash" onclick="openModal('qr', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=Example', '{{p_id}}')">📱 QR{{p_id}}</button>
-                <button class="btn-dash">📇 VCF</button>
-                <button class="btn-dash btn-main">✏️ MODIFICA P{{p_id}}</button>
-
-                {% if p_id == '1' %}
-                    <button class="btn-dash btn-creds" onclick="alert('Credenziali inviate al cliente!')">📧 INVIA CREDENZIALI</button>
-                {% else %}
-                    <button class="btn-dash btn-del">✕ DISATTIVA</button>
-                {% endif %}
+            <div class="p-actions">
+                <a href="#" target="_blank" class="btn-act">🔗 APRI P1</a>
+                <button class="btn-act" onclick="showModal('qr', 'Condividi QR P1')">📱 QR</button>
+                <button class="btn-act" onclick="showModal('vcf', 'Condividi Contatto P1')">📇 VCF</button>
+                <a href="/area/activate/1" class="btn-act" style="background:var(--blue); border:none;">✏️ MODIFICA P1</a>
+                
+                <button class="btn-act">📷 FOTO</button>
+                <button class="btn-act">🎥 VIDEO</button>
+                <button class="btn-act">📄 PDF</button>
             </div>
-
-            <div class="media-row">
-                <div class="media-thumb" onclick="openModal('img', '/static/uploads/foto1.jpg', '{{p_id}}')">📷</div>
-                <div class="media-thumb" onclick="openModal('img', '/static/uploads/foto2.jpg', '{{p_id}}')">📷</div>
-                <div class="media-thumb" style="border-color:#0088cc; color:#0088cc;" onclick="alert('Apre Video Player')">🎥</div>
-                <div class="media-thumb" style="border-color:#ff4444; color:#ff4444;" onclick="openModal('pdf', '', '{{p_id}}')">📄 PDF</div>
-            </div>
-
         </div>
-        {% endfor %}
+
+        {% if user.p2.active %}
+            <div class="profile-row active">
+                </div>
+        {% else %}
+            <div class="profile-row inactive">
+                <div class="p-left"><span style="color:#888;">Profilo P2 (Vuoto)</span></div>
+                <div class="p-actions" style="flex:1;">
+                    <a href="/area/activate/2" class="btn-act btn-activate">➕ ATTIVA PROFILO P2</a>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if user.p3.active %}
+            <div class="profile-row active">
+                </div>
+        {% else %}
+            <div class="profile-row inactive">
+                <div class="p-left"><span style="color:#888;">Profilo P3 (Vuoto)</span></div>
+                <div class="p-actions" style="flex:1;">
+                    <a href="/area/activate/3" class="btn-act btn-activate">➕ ATTIVA PROFILO P3</a>
+                </div>
+            </div>
+        {% endif %}
 
     </div>
 
-    <div id="modalOverlay" class="modal-overlay">
-        <div class="modal-content">
-            <h3 style="color:var(--brand-primary); margin-top:0;">Anteprima</h3>
-            <img id="modalImage" src="" class="modal-img">
+    <div id="overlay" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalTitle" style="color:white; margin-top:0;">Opzioni</h3>
+            <div style="background:#222; height:150px; margin:20px 0; display:flex; align-items:center; justify-content:center; color:#555;">
+                [Anteprima QR o Immagine]
+            </div>
             
             <div class="modal-actions">
-                <button class="btn-modal btn-mail" onclick="alert('Invio per Email...')">✉️ Invia Email</button>
-                <button class="btn-modal btn-wa" onclick="alert('Invio su WhatsApp...')">💬 Invia WhatsApp</button>
-                <button class="btn-modal btn-del" style="border:1px solid red; background:transparent; color:red;" onclick="deleteItem()">🗑️ Elimina</button>
-                <button class="btn-modal btn-close" onclick="closeModal()">Chiudi</button>
+                <button class="btn-share" style="background:#25D366;" onclick="alert('WhatsApp')">WhatsApp</button>
+                <button class="btn-share" style="background:#fff; color:#000;" onclick="alert('Email')">Email</button>
+                <button id="btnDownload" class="btn-share" style="background:var(--brand); color:#000; display:none;" onclick="alert('Scaricato su PC')">Scarica su PC</button>
+                <button class="btn-share" style="background:#333;" onclick="hideModal()">Chiudi</button>
+            </div>
+            <div style="margin-top:15px;">
+                <button style="background:transparent; color:red; border:none; cursor:pointer;" onclick="alert('Eliminato!')">🗑️ Elimina</button>
             </div>
         </div>
     </div>
