@@ -6,26 +6,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Login | Pay4You</title>
 </head>
-<body>
-    <div class="login-card">
-        <img src="/static/pay4you-logo.png" class="login-logo" alt="Pay4You Logo">
-        <h1>Area riservata</h1>
-        <p class="subtitle">Accedi con le tue credenziali</p>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-box">
+            <img src="/static/pay4you-logo.png" class="logo-img" alt="Pay4You">
+            <h1>{{ t.login }}</h1>
+            <p class="subtitle">Accedi per gestire le tue card</p>
 
-        <form method="POST" action="/area/login" class="login-form">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit" class="btn-primary">Accedi ora</button>
-        </form>
+            <form method="POST" action="/area/login" class="login-form">
+                <input type="text" name="username" placeholder="{{ t.user }}" required>
+                <input type="password" name="password" placeholder="{{ t.pass }}" required>
+                <button type="submit" class="btn-primary">{{ t.btn }}</button>
+            </form>
 
-        <div class="links-footer">
-            <a href="/area/forgot">Password dimenticata?</a>
-            <a href="/" style="color: #8b949e;">Torna alla Home</a>
-        </div>
+            <div class="footer-links">
+                <a href="/area/forgot">Password dimenticata?</a> · <a href="/">Home</a>
+            </div>
 
-        <div class="legal-links">
-            <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
-            <a href="/privacy">Privacy Policy</a> · <a href="/cookie">Cookie Policy</a>
+            <div class="legal-footer">
+                <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
+                <a href="/privacy">Privacy Policy</a> · <a href="/cookie">Cookie Policy</a>
+            </div>
         </div>
     </div>
 </body>
