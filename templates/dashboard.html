@@ -21,7 +21,7 @@
     </div>
 
     <div class="dash-container">
-        <h2 style="color:white; margin-bottom:20px;">Gestione Profili</h2>
+        <h2 style="color:white; margin-bottom:20px;">I tuoi Profili</h2>
 
         {% for p_id in ['1', '2', '3'] %}
         {% set p_key = 'p' ~ p_id %}
@@ -30,34 +30,33 @@
         <div class="profile-row {{ 'active' if p.active else 'inactive' }}" style="background:#111; padding:20px; border-radius:15px; margin-bottom:15px; border:1px solid #333;">
             
             <div class="p-left" style="display:flex; align-items:center; gap:15px;">
-                <div style="width:50px; height:50px; background:{{ '#00ffc8' if p.active else '#333' }}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:black;">
+                <div style="width:40px; height:40px; background:{{ '#00ffc8' if p.active else '#333' }}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:black;">
                     P{{ p_id }}
                 </div>
-
                 <div>
                     <h3 style="margin:0; color:white;">
-                        {% if p.active %}
-                            {{ p.name if p.name else 'Profilo Attivo' }}
-                        {% else %}
-                            Slot Libero
-                        {% endif %}
+                        {% if p.active %}{{ p.name if p.name else 'Profilo Attivo' }}{% else %}Slot Vuoto{% endif %}
                     </h3>
                     <small style="color:{{ '#00ffc8' if p.active else '#666' }};">
-                        {% if p.active %}Online{% else %}Non Attivo{% endif %}
+                        {{ 'Online' if p.active else 'Non Attivo' }}
                     </small>
                 </div>
             </div>
             
-            <div class="p-actions" style="margin-top:15px; display:flex; gap:10px;">
+            <div class="p-actions" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
                 {% if p.active %}
-                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222; color:#fff; padding:10px; border-radius:8px; text-decoration:none;">🔗 Apri</a>
+                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222; color:#fff; padding:10px; border-radius:8px; text-decoration:none; flex:1; text-align:center;">🔗 Apri</a>
                     
-                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc; color:white; padding:10px; border-radius:8px; text-decoration:none;">✏️ Modifica</a>
+                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc; color:white; padding:10px; border-radius:8px; text-decoration:none; flex:1; text-align:center;">✏️ Edit</a>
 
-                    <button class="btn-act" onclick="openQr('{{ user.slug }}', 'p{{ p_id }}')" style="background:#00ffc8; color:black; border:none; padding:10px; border-radius:8px; cursor:pointer;">📱 QR</button>
+                    <button class="btn-act" onclick="openQr('{{ user.slug }}', 'p{{ p_id }}')" style="background:#00ffc8; color:black; border:none; padding:10px; border-radius:8px; cursor:pointer; flex:1;">📱 QR</button>
+                    
+                    {% if p_id != '1' %}
+                        <a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000; color:white; padding:10px; border-radius:8px; text-decoration:none; flex:1; text-align:center;" onclick="return confirm('Disattivare P{{ p_id }}?')">⛔ Stop</a>
+                    {% endif %}
                 
                 {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-act btn-activate" style="background:#444; color:white; padding:10px; border-radius:8px; text-decoration:none; width:100%; text-align:center;" onclick="return confirm('Vuoi attivare il Profilo {{ p_id }}?')">➕ ATTIVA ORA</a>
+                    <a href="/area/activate/{{ p_id }}" class="btn-act btn-activate" style="background:#444; color:white; padding:10px; border-radius:8px; text-decoration:none; width:100%; text-align:center; border:1px dashed #666;" onclick="return confirm('Vuoi attivare il Profilo {{ p_id }}?')">➕ ATTIVA ORA</a>
                 {% endif %}
             </div>
         </div>
