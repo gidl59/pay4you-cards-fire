@@ -11,6 +11,13 @@
         
         <div class="login-box">
             <h2 style="color:var(--brand); margin-top:0;">Area Riservata</h2>
+            
+            {% if error %}
+                <div style="background: #ff4444; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 14px;">
+                    ⚠ {{ error }}
+                </div>
+            {% endif %}
+
             <form method="POST" action="/area/login">
                 <input type="text" name="username" class="input-rect" placeholder="Username" required>
                 <input type="password" name="password" class="input-rect" placeholder="Password" required>
