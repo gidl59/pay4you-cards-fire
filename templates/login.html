@@ -8,47 +8,35 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="login-page">
-
     <div class="login-wrapper">
-        <div class="brand-header">
-            <img src="/static/pay4you-logo.png" alt="Pay4You" class="logo-main">
-        </div>
+        <img src="/static/pay4you-logo.png" alt="Logo" class="logo-main">
 
         <div class="login-card-block">
             <div class="header-text">
                 <h1>{{ t.login }}</h1>
-                <span class="badge">{{ t.sub }}</span>
+                <p>{{ t.sub }}</p>
             </div>
 
-            <form method="POST" action="/area/login" class="form-stack">
+            <form method="POST" action="/area/login">
                 <div class="input-group">
-                    <label>👤 {{ t.user }}</label>
-                    <input type="text" name="username" required>
+                    <input type="text" name="username" placeholder="👤 {{ t.user }}" required>
                 </div>
-                
                 <div class="input-group">
-                    <label>🔒 {{ t.pass }}</label>
-                    <input type="password" name="password" required>
+                    <input type="password" name="password" placeholder="🔒 {{ t.pass }}" required>
                 </div>
-
                 <button type="submit" class="btn-block-gradient">{{ t.btn }}</button>
             </form>
 
             <div class="action-links">
-                <a href="/area/forgot" class="link-box">🔑 Password dimenticata?</a>
-                <a href="/" class="link-box">🏠 Torna alla Home</a>
+                <a href="/area/forgot" class="link-box">Password dimenticata?</a>
+                <a href="/" class="link-box">Home</a>
             </div>
         </div>
 
         <div class="legal-footer">
             <p>© 2026 Pay4You — Giuseppe Di Lisio</p>
-            <div class="legal-row">
-                <a href="/privacy">Privacy Policy</a>
-                <span class="dot">•</span>
-                <a href="/cookie">Cookie Policy</a>
-            </div>
+            <a href="/privacy">Privacy</a> • <a href="/cookie">Cookie</a>
         </div>
     </div>
-
 </body>
 </html>
