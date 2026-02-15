@@ -1,31 +1,35 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "pay4you_2026_key"
 
-# Configurazione Caricamenti
+# --- CONFIGURAZIONE CARICAMENTI ---
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'ico'}
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# DATI ADMIN (Cambia password qui)
+# --- ROTTA SPECIFICA PER LA FAVICON ---
+# Questa funzione risolve il problema dell'icona mancante
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+# --- DATI ADMIN ---
 USER_DATA = {
     "username": "admin",
-    "password": "tua_nuova_password", 
+    "password": "tua_password_qui", 
     "nome": "Giuseppe Di Lisio",
     "slug": "giuseppe",
     "avatar": "/static/uploads/avatar.jpg",
     "p1_active": True, "p2_active": False, "p3_active": False,
     "p1_fotos": [], "p1_videos": [], "p1_pdfs": []
 }
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def home():
@@ -49,7 +53,7 @@ def area():
 def upload(p_id, type):
     if 'file' not in request.files: return redirect(request.url)
     file = request.files['file']
-    if file and allowed_file(file.filename):
+    if file and file.filename != '':
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         flash(f"{type.capitalize()} caricato!", "success")
