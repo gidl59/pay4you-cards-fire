@@ -2,29 +2,14 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <title>Dashboard | Pay4You</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script>
-        // Gestione Modali (QR, VCF, FOTO)
-        function showModal(type, title) {
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('modalTitle').innerText = title;
-            
-            // Mostra tasti diversi in base al tipo
-            if(type === 'vcf') {
-                document.getElementById('btnDownload').style.display = 'inline-block';
-            } else {
-                document.getElementById('btnDownload').style.display = 'none';
-            }
-        }
-        function hideModal() { document.getElementById('overlay').style.display = 'none'; }
-    </script>
 </head>
 <body style="background:#0b0f15;">
 
     <div class="dash-head">
         <div class="user-info">
-            <img src="/static/pay4you-logo.png" class="p1-mini-logo">
+            <img src="/static/pay4you-logo.png" class="p1-mini-logo" onerror="this.src='https://placehold.co/40x40/00ffc8/000?text=Logo'">
             <span style="color:white; font-weight:bold;">{{ user.nome }}</span>
         </div>
         <a href="/area/logout" style="color:#ff4444; font-size:13px;">Esci</a>
@@ -34,17 +19,20 @@
 
         <div class="profile-row active">
             <div class="p-left">
-                <img src="{{ user.p1.foto }}" class="agent-img" onerror="this.src='https://via.placeholder.com/60'">
+                <img src="{{ user.p1.foto }}" class="agent-img" onerror="this.src='https://placehold.co/100x100/333/fff?text=Foto+Agente'">
                 <div>
                     <h3 style="margin:0; color:white;">{{ user.p1.name }}</h3>
-                    <small style="color:var(--brand);">Principale</small>
+                    <small style="color:var(--brand);">Profilo Principale</small>
                 </div>
             </div>
+            
             <div class="p-actions">
-                <a href="#" target="_blank" class="btn-act">🔗 APRI P1</a>
-                <button class="btn-act" onclick="showModal('qr', 'Condividi QR P1')">📱 QR</button>
-                <button class="btn-act" onclick="showModal('vcf', 'Condividi Contatto P1')">📇 VCF</button>
-                <a href="/area/activate/1" class="btn-act" style="background:var(--blue); border:none;">✏️ MODIFICA P1</a>
+                <a href="/card/{{ user.p1.slug }}" target="_blank" class="btn-act" style="background:#222; color:#fff;">🔗 APRI P1</a>
+                
+                <a href="/area/edit/1" class="btn-act" style="background:var(--blue); border:none; color:white;">✏️ MODIFICA P1</a>
+
+                <button class="btn-act" onclick="alert('Apre QR Code')">📱 QR</button>
+                <button class="btn-act" onclick="alert('Scarica VCF')">📇 VCF</button>
                 
                 <button class="btn-act">📷 FOTO</button>
                 <button class="btn-act">🎥 VIDEO</button>
@@ -52,49 +40,20 @@
             </div>
         </div>
 
-        {% if user.p2.active %}
-            <div class="profile-row active">
-                </div>
-        {% else %}
-            <div class="profile-row inactive">
-                <div class="p-left"><span style="color:#888;">Profilo P2 (Vuoto)</span></div>
-                <div class="p-actions" style="flex:1;">
-                    <a href="/area/activate/2" class="btn-act btn-activate">➕ ATTIVA PROFILO P2</a>
-                </div>
-            </div>
-        {% endif %}
-
-        {% if user.p3.active %}
-            <div class="profile-row active">
-                </div>
-        {% else %}
-            <div class="profile-row inactive">
-                <div class="p-left"><span style="color:#888;">Profilo P3 (Vuoto)</span></div>
-                <div class="p-actions" style="flex:1;">
-                    <a href="/area/activate/3" class="btn-act btn-activate">➕ ATTIVA PROFILO P3</a>
-                </div>
-            </div>
-        {% endif %}
-
-    </div>
-
-    <div id="overlay" class="modal-overlay">
-        <div class="modal-box">
-            <h3 id="modalTitle" style="color:white; margin-top:0;">Opzioni</h3>
-            <div style="background:#222; height:150px; margin:20px 0; display:flex; align-items:center; justify-content:center; color:#555;">
-                [Anteprima QR o Immagine]
-            </div>
-            
-            <div class="modal-actions">
-                <button class="btn-share" style="background:#25D366;" onclick="alert('WhatsApp')">WhatsApp</button>
-                <button class="btn-share" style="background:#fff; color:#000;" onclick="alert('Email')">Email</button>
-                <button id="btnDownload" class="btn-share" style="background:var(--brand); color:#000; display:none;" onclick="alert('Scaricato su PC')">Scarica su PC</button>
-                <button class="btn-share" style="background:#333;" onclick="hideModal()">Chiudi</button>
-            </div>
-            <div style="margin-top:15px;">
-                <button style="background:transparent; color:red; border:none; cursor:pointer;" onclick="alert('Eliminato!')">🗑️ Elimina</button>
+        <div class="profile-row inactive">
+            <div class="p-left"><span style="color:#888;">Profilo P2 (Vuoto)</span></div>
+            <div class="p-actions" style="flex:1;">
+                <a href="/area/activate/2" class="btn-act btn-activate">➕ ATTIVA PROFILO P2</a>
             </div>
         </div>
+
+        <div class="profile-row inactive">
+            <div class="p-left"><span style="color:#888;">Profilo P3 (Vuoto)</span></div>
+            <div class="p-actions" style="flex:1;">
+                <a href="/area/activate/3" class="btn-act btn-activate">➕ ATTIVA PROFILO P3</a>
+            </div>
+        </div>
+
     </div>
 
 </body>
