@@ -1,59 +1,57 @@
+/* STILE COMPLETO PER LA TUA CARD */
 :root {
-    --bg-main: #ffffff;
+    --bg-body: #f0f2f5;
     --bg-card: #ffffff;
-    --text-main: #1a1a1a;
-    --text-muted: #666666;
-    --accent: #ff5722;
-    --border: rgba(0,0,0,0.08);
-    --social-circle: #f1f3f5;
-    --social-img: #1a1a1a;
+    --text: #1c1e21;
+    --sub: #65676b;
+    --primary: linear-gradient(135deg, #0088cc, #00ffc8);
 }
 
 [data-theme="dark"] {
-    --bg-main: #121212;
-    --bg-card: #121212;
-    --text-main: #ffffff;
-    --text-muted: #a0a0a0;
-    --border: rgba(255,255,255,0.1);
-    --social-circle: #1e1e1e;
-    --social-img: #ffffff;
+    --bg-body: #000;
+    --bg-card: #111;
+    --text: #fff;
+    --sub: #aaa;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg-main); color: var(--text-main); transition: 0.3s; }
+body { margin: 0; font-family: sans-serif; background: var(--bg-body); color: var(--text); display:flex; justify-content:center; }
 
-.card-wrap { max-width: 480px; margin: 0 auto; background: var(--bg-card); min-height: 100vh; }
+.card-wrap {
+    width: 100%; max-width: 420px; background: var(--bg-card); min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1); text-align: center; position: relative;
+    display: flex; flex-direction: column;
+}
 
-/* Header e Avatar stile iPhone */
-.hero { position: relative; height: 160px; background: #f0f0f0; }
-[data-theme="dark"] .hero { background: #1e1e1e; }
+.hero { height: 160px; background: #333; width: 100%; }
 
-.avatar-wrap { display: flex; justify-content: center; margin-top: -70px; position: relative; z-index: 5; }
-.avatar { width: 140px; height: 140px; border-radius: 50%; border: 4px solid var(--bg-card); overflow: hidden; background: #ccc; }
+.avatar-wrap { margin-top: -60px; display: inline-block; padding: 5px; background: var(--bg-card); border-radius: 50%; }
+.avatar { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; background: #ddd; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.title { text-align: center; padding: 15px; }
-.title h1 { margin: 0; font-size: 22px; }
-.sub { color: var(--text-muted); font-size: 14px; }
+.title { padding: 10px; }
+.title h1 { margin: 5px 0; font-size: 24px; }
+.sub { font-size: 14px; color: var(--sub); }
+.bio { padding: 15px; font-size: 14px; line-height: 1.4; }
 
-/* Social Icons - Tonde e pulite sotto la Bio */
-.social-row { display: flex; justify-content: center; gap: 12px; padding: 10px 20px 20px; flex-wrap: wrap; }
-.social { width: 42px; height: 42px; background: var(--social-circle); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; border: 1px solid var(--border); }
-.social span { color: var(--text-main); font-size: 18px; font-weight: bold; }
+.social-row { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+.social { 
+    width: 40px; height: 40px; background: var(--bg-body); border-radius: 50%; 
+    display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); font-weight: bold;
+}
 
-/* Pulsanti Azione */
-.actions { display: flex; padding: 0 20px 20px; gap: 10px; }
-.btn.primary { flex: 1; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 12px; font-weight: bold; text-align: center; text-decoration: none; font-size: 14px; }
-.btn-qr { width: 45px; background: var(--social-circle); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; color: var(--text-main); }
+.actions { display: flex; gap: 10px; padding: 0 20px; margin-bottom: 20px; }
+.btn { flex: 1; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; color: #000; }
+.primary { background: var(--primary); }
+.btn-qr { width: 50px; border-radius: 10px; border: 1px solid var(--sub); background: transparent; color: var(--text); cursor: pointer; }
 
-/* Lista Contatti - Senza etichette come volevi */
-.content { padding: 0 20px; }
-.row { padding: 15px 0; border-bottom: 1px solid var(--border); }
-.v a { color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 16px; }
-.bio { text-align: center; color: var(--text-muted); padding: 0 20px 15px; font-size: 14px; line-height: 1.4; }
+.content { text-align: left; padding: 0 20px; margin-bottom: 20px; }
+.row { padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
+.v a { text-decoration: none; color: var(--text); }
 
-/* Switcher in fondo */
-.switch-row { margin-top: 40px; padding: 20px; border-top: 1px solid var(--border); text-align: center; }
-.ps-btn, .ts { background: var(--social-circle); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 12px; border-radius: 15px; font-size: 12px; margin: 2px; cursor: pointer; }
-.ts.active, .ps-btn.active { border-color: var(--accent); color: var(--accent); }
-.foot { font-size: 10px; color: var(--text-muted); text-align: center; padding-bottom: 30px; }
+.switch-row { margin-top: auto; padding: 20px; background: rgba(128,128,128,0.1); }
+.ps-btn, .ts { 
+    padding: 6px 12px; border: 1px solid var(--sub); border-radius: 20px; 
+    text-decoration: none; color: var(--text); font-size: 12px; margin: 0 2px; background: transparent; cursor: pointer;
+}
+.ps-btn.active { background: var(--text); color: var(--bg-card); }
+.foot { padding: 10px; font-size: 11px; color: var(--sub); }
