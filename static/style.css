@@ -2,143 +2,121 @@
 :root {
     --bg-dark: #050505;
     --card-bg: #111;
-    --input-bg: #1a1a1a;
     --brand-primary: #00ffc8; /* Verde Neon */
     --brand-secondary: #0088cc; /* Blu Neon */
     --text-white: #ffffff;
-    --text-gray: #888888;
+    --text-gray: #aaa;
     --border: #333;
 }
 
 body {
     margin: 0; padding: 0;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-white);
 }
 
 a { text-decoration: none; transition: 0.3s; }
 
-/* --- LOGIN & FORGOT PASSWORD (COMPATTO) --- */
+/* --- LOGIN STYLE (Quello bello) --- */
 .login-page {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
-    background: radial-gradient(circle at top, #0f172a 0%, #000 100%);
-    padding: 15px;
+    background: radial-gradient(circle at center, #1a2228 0%, #000 100%);
 }
-
-.login-wrapper {
-    width: 100%; max-width: 350px; /* Più stretto */
-    display: flex; flex-direction: column; align-items: center;
-}
-
-.logo-main { width: 100px; margin-bottom: 20px; } /* Logo ridotto leggermente */
+.login-wrapper { width: 100%; max-width: 380px; padding: 20px; text-align: center; }
+.logo-main { width: 120px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0,255,200,0.3)); }
 
 .login-card-block {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 25px 20px; /* Padding ridotto per accorciare */
-    width: 100%;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-    position: relative;
-    overflow: hidden;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    position: relative; overflow: hidden;
 }
-
-/* Effetto riga colorata in alto */
+/* Riga colorata sopra */
 .login-card-block::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
     background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
 }
 
-.header-text h1 { margin: 0 0 5px 0; font-size: 22px; color: white; }
-.header-text p { margin: 0 0 20px 0; font-size: 13px; color: var(--text-gray); }
-
-.input-group { margin-bottom: 12px; }
+.input-group { margin-bottom: 15px; }
 .input-group input {
-    width: 100%; padding: 12px; background: var(--input-bg);
-    border: 1px solid var(--border); border-radius: 8px;
-    color: white; font-size: 15px; box-sizing: border-box;
+    width: 100%; padding: 14px; background: #1a1a1a; border: 1px solid #333;
+    border-radius: 10px; color: white; box-sizing: border-box;
 }
 .input-group input:focus { border-color: var(--brand-primary); outline: none; }
 
-.btn-block-gradient {
-    width: 100%; padding: 12px; border: none; border-radius: 8px;
+.btn-gradient {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
     background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary));
-    color: #000; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px;
+    color: #000; font-weight: 800; cursor: pointer; margin-top: 10px;
 }
-.btn-block-gradient:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-gradient:hover { transform: scale(0.98); opacity: 0.9; }
 
-/* Link Footer più compatti */
-.action-links { margin-top: 15px; display: flex; justify-content: space-between; font-size: 12px; }
-.link-box { color: var(--brand-secondary); }
-
-.legal-footer {
-    margin-top: 20px; /* Alzato rispetto a prima */
-    text-align: center; font-size: 11px; color: #555; width: 100%;
-}
+.links-row { margin-top: 20px; display: flex; justify-content: space-between; font-size: 13px; }
+.links-row a { color: var(--brand-secondary); }
+.legal-footer { margin-top: 30px; font-size: 11px; color: #555; }
 .legal-footer a { color: #666; margin: 0 5px; }
-.legal-footer a:hover { color: var(--brand-primary); }
 
-/* --- DASHBOARD ORIZZONTALE (Stile Tabella/Rettangoli) --- */
+/* --- DASHBOARD STYLE --- */
 .dash-body { background: #0b0f15; padding-bottom: 50px; }
-
-.dash-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+.dash-container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
 /* Header Dashboard */
 .dash-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 25px; background: #010409; border-bottom: 1px solid var(--border);
-    margin-bottom: 30px;
+    background: #010409; padding: 15px 20px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid var(--border); margin-bottom: 20px;
 }
 .user-pill { display: flex; align-items: center; gap: 15px; }
-.avatar-header { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--brand-primary); }
-.btn-logout { color: #ff4444; font-weight: bold; font-size: 14px; }
+.logo-p1-small { width: 40px; height: 40px; object-fit: contain; } /* Logo P1 in alto */
 
-/* RETTANGOLI PROFILO ORIZZONTALI */
+/* BARRE PROFILO (Horizontal Strips) */
 .profile-strip {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--card-bg); border: 1px solid var(--border);
-    border-radius: 12px; padding: 15px 20px; margin-bottom: 15px;
-    transition: 0.3s; flex-wrap: wrap; gap: 15px;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+    position: relative;
 }
-
-.profile-strip:hover { border-color: #444; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 .profile-strip.active { border-left: 5px solid var(--brand-primary); }
-.profile-strip.inactive { border-left: 5px solid #333; opacity: 0.8; }
+.profile-strip.inactive { border-left: 5px solid #555; opacity: 0.7; }
 
-/* Sezione Sinistra: Foto e Info */
-.strip-left { display: flex; align-items: center; gap: 15px; flex: 2; min-width: 250px; }
-.agent-thumb { 
-    width: 60px; height: 60px; border-radius: 10px; object-fit: cover; 
-    border: 1px solid #333; background: #000;
+/* Sezioni della barra */
+.strip-info { flex: 2; display: flex; gap: 15px; align-items: center; min-width: 250px; }
+.agent-photo { width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--brand-primary); object-fit: cover; }
+.info-text h3 { margin: 0; color: white; font-size: 18px; }
+.info-text p { margin: 5px 0 0; color: #888; font-size: 13px; }
+
+.strip-actions { flex: 3; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Bottoni Dashboard */
+.btn-dash {
+    padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background: #222;
+    color: white; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px;
 }
-.profile-info h3 { margin: 0; font-size: 16px; color: white; }
-.profile-label { font-size: 12px; color: var(--brand-primary); background: rgba(0, 255, 200, 0.1); padding: 2px 6px; border-radius: 4px; }
+.btn-dash:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+.btn-main { background: var(--brand-secondary); border: none; color: white; } /* Modifica/Apri */
+.btn-creds { background: var(--brand-primary); border: none; color: black; font-weight: bold; } /* Invia Credenziali */
+.btn-del { border-color: #ff4444; color: #ff4444; }
 
-/* Sezione Centro: Gallerie (Icone) */
-.strip-center { display: flex; gap: 15px; flex: 2; justify-content: center; }
-.media-icon { 
-    display: flex; flex-direction: column; align-items: center; cursor: pointer; 
-    color: #888; font-size: 11px; transition: 0.2s;
+/* Media Preview (Gallerie) */
+.media-row { width: 100%; display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
+.media-thumb { 
+    width: 50px; height: 50px; background: #000; border: 1px solid #333; border-radius: 6px; 
+    display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;
 }
-.media-icon:hover { color: var(--text-white); }
-.icon-box { 
-    width: 35px; height: 35px; background: #1a1a1a; border-radius: 8px; 
-    display: flex; align-items: center; justify-content: center; 
-    font-size: 16px; margin-bottom: 4px; border: 1px solid #333;
+.media-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.media-thumb:hover { border-color: var(--brand-primary); }
+
+/* --- MODALE (Finestra che si allarga) --- */
+.modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center;
 }
-.icon-box.has-content { border-color: var(--brand-secondary); color: var(--brand-secondary); }
-
-/* Sezione Destra: Azioni */
-.strip-right { display: flex; gap: 10px; flex: 1; justify-content: flex-end; }
-
-.btn-action { 
-    padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; 
+.modal-content {
+    background: #111; padding: 20px; border-radius: 15px; max-width: 90%; max-height: 90%;
+    text-align: center; border: 1px solid var(--brand-primary); position: relative;
 }
-.btn-edit { background: #1f6feb; color: white; }
-.btn-off { background: transparent; border: 1px solid #da3633; color: #da3633; }
-.tag-lock { color: #888; font-size: 12px; display: flex; align-items: center; gap: 5px; }
-
-/* Upload nascosto */
-input[type="file"] { display: none; }
+.modal-img { max-width: 100%; max-height: 70vh; margin-bottom: 20px; border-radius: 8px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.btn-modal { padding: 10px 20px; border-radius: 8px; cursor: pointer; border: none; font-weight: bold; }
+.btn-wa { background: #25D366; color: white; }
+.btn-mail { background: #fff; color: #000; }
+.btn-close { background: #333; color: white; }
