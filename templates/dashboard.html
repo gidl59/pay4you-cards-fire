@@ -6,57 +6,77 @@
     <link rel="stylesheet" href="/static/style.css">
     <title>Dashboard | Pay4You</title>
 </head>
-<body>
+<body class="dash-body">
     <div class="dash-head-compact">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <img src="{{ user.avatar }}" class="dash-avatar-small">
+        <div class="user-pill">
+            <img src="{{ user.avatar }}" class="dash-avatar-small" onerror="this.src='https://via.placeholder.com/50'">
             <div>
-                <h2 style="margin:0; font-size:18px;">{{ user.nome }}</h2>
-                <small style="color:var(--brand)">@{{ user.slug }}</small>
+                <h2 style="margin:0; font-size:16px;">{{ user.nome }}</h2>
+                <span class="status-tag">Account Attivo</span>
             </div>
         </div>
-        <div style="display:flex; gap:10px;">
-            <a href="/" class="btn-login-outline" style="margin:0">Vedi Card</a>
-            <a href="/area/logout" style="color:red; text-decoration:none; font-weight:bold;">Esci</a>
+        <div class="dash-nav">
+            <a href="/" class="btn-login-outline" style="border-color:var(--brand); color:var(--brand) !important;">Vedi Card</a>
+            <a href="/area/logout" style="color:#ff4444; text-decoration:none; font-weight:bold; font-size:14px; margin-left:15px;">Esci</a>
         </div>
     </div>
 
-    {% for p_id in ['1', '2', '3'] %}
-    <div class="profile-row {{ 'active' if user['p'~p_id~'_active'] else 'disabled' }}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>Profilo P{{ p_id }}</h3>
-            <div>
-                <button class="btn-login-outline">Modifica</button>
-                <button class="btn-login-outline" style="border-color:red; color:red !important;">Disattiva</button>
+    <div class="container">
+        {% for p_id in ['1', '2', '3'] %}
+        <div class="profile-card {{ 'active-glow' if user['p'~p_id~'_active'] }}">
+            <div class="profile-header">
+                <div class="agente-box">
+                    <img src="{{ user['p'~p_id~'_foto_agente'] }}" class="foto-agente" onerror="this.src='https://via.placeholder.com/60/161b22/2dd4bf?text=P{{p_id}}'">
+                    <div class="agente-info">
+                        <h3 style="margin:0; color:white;">{{ user['p'~p_id~'_name'] }}</h3>
+                        <p class="muted" style="margin:0; font-size:12px;">Profilo {{ 'Principale' if p_id == '1' else 'Secondario' }}</p>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn-login-outline" style="font-size:11px;">✏️ Modifica</button>
+                    {% if p_id != '1' %}
+                    <button class="btn-login-outline" style="font-size:11px; border-color:#ff4444; color:#ff4444 !important;">✕ Disattiva</button>
+                    {% else %}
+                    <span class="lock-tag">🔒 Principale</span>
+                    {% endif %}
+                </div>
             </div>
-        </div>
 
-        <div class="media-manager">
-            <div class="media-box">
-                <small>📸 FOTO GALLERY</small>
-                <div class="thumb-strip">
-                    <form action="/upload/{{p_id}}/foto" method="post" enctype="multipart/form-data">
-                        <label class="thumb-item add-media">
-                            <span>+</span>
-                            <input type="file" name="file" accept="image/*" onchange="this.form.submit()" style="display:none">
+            <div class="media-grid">
+                <div class="media-section">
+                    <h4>📸 Gallery Foto</h4>
+                    <div class="media-row">
+                        <form action="/upload/{{p_id}}/foto" method="post" enctype="multipart/form-data">
+                            <label class="add-btn">
+                                <span>+</span>
+                                <input type="file" name="file" accept="image/*" onchange="this.form.submit()" style="display:none">
+                            </label>
+                        </form>
+                    </div>
+                </div>
+                <div class="media-section">
+                    <h4>🎥 Video MP4</h4>
+                    <div class="media-row">
+                        <form action="/upload/{{p_id}}/video" method="post" enctype="multipart/form-data">
+                            <label class="add-btn video">
+                                <span>▶️</span>
+                                <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()" style="display:none">
+                            </label>
+                        </form>
+                    </div>
+                </div>
+                <div class="media-section">
+                    <h4>📄 Documenti</h4>
+                    <form action="/upload/{{p_id}}/pdf" method="post" enctype="multipart/form-data">
+                        <label class="add-pdf-btn">
+                            + Carica nuovo PDF
+                            <input type="file" name="file" accept=".pdf" onchange="this.form.submit()" style="display:none">
                         </label>
                     </form>
                 </div>
             </div>
-
-            <div class="media-box">
-                <small>🎥 VIDEO GALLERY (MP4)</small>
-                <div class="thumb-strip">
-                    <form action="/upload/{{p_id}}/video" method="post" enctype="multipart/form-data">
-                        <label class="thumb-item add-media video">
-                            <span>▶️</span>
-                            <input type="file" name="file" accept="video/mp4" onchange="this.form.submit()" style="display:none">
-                        </label>
-                    </form>
-                </div>
-            </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </body>
 </html>
