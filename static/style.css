@@ -1,69 +1,67 @@
 /* ============================================================
-   Pay4You — CLEAN DASHBOARD STYLE 2026
+   Pay4You MASTER CSS - FIX LOGO & DASHBOARD
    ============================================================ */
 
 :root {
-    --bg: #0d1117;
+    --bg: #0b0f15;
     --card: #161b22;
     --brand: #2dd4bf;
-    --text: #c9d1d9;
+    --text: #e6edf3;
     --border: #30363d;
+    --accent: #58a6ff;
 }
 
 body { 
     background-color: var(--bg); 
     color: var(--text); 
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    margin: 0; font-size: 14px; /* Blocca la dimensione base */
+    font-family: -apple-system, system-ui, sans-serif;
+    margin: 0; padding: 0; font-size: 14px;
 }
 
-/* Header */
-.dash-header {
-    background: #010409; padding: 10px 20px;
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px solid var(--border);
+/* --- LOGIN BLINDATO --- */
+.login-shell { 
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; 
+    background: radial-gradient(circle at top, #1a2a2a 0%, #0b0f15 100%);
 }
 
-.avatar-main { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--brand); object-fit: cover; }
+.login-card { 
+    background: var(--card); padding: 40px; border-radius: 24px; 
+    width: 90%; max-width: 380px; border: 1px solid var(--border); 
+    text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
 
-/* Contenitore */
+/* QUESTO BLOCCA IL LOGO GIGANTE */
+.login-logo { 
+    width: 110px !important; 
+    max-width: 110px !important; 
+    height: auto !important; 
+    margin: 0 auto 20px auto !important; 
+    display: block !important;
+}
+
+.login-card h1 { font-size: 22px; color: white; margin-bottom: 10px; }
+.login-card p { color: #8b949e; margin-bottom: 25px; }
+
+.login-form input { 
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); 
+    background: #0d1117; color: white; margin-bottom: 15px; font-size: 16px; outline: none;
+}
+
+.btn-login-primary { 
+    width: 100%; padding: 12px; border-radius: 10px; background: var(--brand); 
+    color: #0b1016; border: none; font-weight: 700; cursor: pointer; font-size: 16px;
+}
+
+.btn-login-outline { 
+    display: inline-block; margin-top: 15px; color: var(--accent); 
+    text-decoration: none; font-size: 13px; font-weight: 600;
+}
+
+/* --- DASHBOARD PULITA --- */
+.dash-header { background: #010409; padding: 12px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.avatar-main { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--brand); }
 .container { max-width: 700px; margin: 20px auto; padding: 0 15px; }
-
-/* Box Profilo */
-.profile-box {
-    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
-    padding: 20px; margin-bottom: 20px;
-}
-.active-border { border-left: 4px solid var(--brand); }
-
-.profile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-
-/* FIX FOTO AGENTE */
-.agente-meta { display: flex; align-items: center; gap: 12px; }
-.foto-agente { 
-    width: 55px !important; height: 55px !important; 
-    border-radius: 10px; object-fit: cover; 
-    border: 1px solid var(--border); background: #0d1117;
-}
-
-.agente-text h3 { margin: 0; font-size: 16px; color: white; }
-.agente-text span { font-size: 11px; color: #8b949e; }
-
-/* Pulsanti Dashboard */
-.btn-edit { background: #21262d; color: #58a6ff; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
-.btn-edit:hover { background: #30363d; }
-.tag-main { color: var(--brand); font-size: 11px; font-weight: 800; border: 1px solid var(--brand); padding: 3px 8px; border-radius: 4px; }
-
-/* Media Sections */
-.media-section { margin-top: 15px; }
-.media-section h4 { font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; }
-.media-flex { display: flex; gap: 8px; }
-
-.add-square { 
-    width: 45px; height: 45px; border-radius: 8px; border: 1px dashed #484f58;
-    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b949e;
-}
-.add-pdf-btn { 
-    width: 100%; border: 1px solid var(--border); padding: 8px; border-radius: 8px; 
-    text-align: center; font-size: 12px; cursor: pointer; background: #21262d; color: white;
-}
+.profile-box { background: var(--card); border-radius: 16px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-left: 5px solid transparent; }
+.active-border { border-left-color: var(--brand); }
+.foto-agente { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border); }
+.tag-main { color: var(--brand); font-size: 11px; font-weight: 800; border: 1px solid var(--brand); padding: 2px 6px; border-radius: 4px; }
