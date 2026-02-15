@@ -1,114 +1,142 @@
-/* --- DASHBOARD & LOGIN RE-DESIGN 2026 --- */
+/* ============================================================
+   Pay4You Cards — Unified Styles 2026
+   ============================================================ */
 
-/* Ingrandimento Login +30% e contrasto migliorato */
-.login-card {
-    width: min(580px, 100%) !important; /* Ingrandito del 30% */
-    padding: 40px !important;
-    background: rgba(10, 15, 20, 0.95) !important;
-    border: 2px solid rgba(251, 191, 36, 0.3) !important;
-    box-shadow: 0 30px 70px rgba(0,0,0,0.6) !important;
+:root {
+    --bg: #0b0f14;
+    --panel: rgba(255, 255, 255, .07);
+    --panel2: rgba(255, 255, 255, .10);
+    --border: rgba(255, 255, 255, .14);
+    --text: #e8eef7;
+    --muted: rgba(232, 238, 247, .70);
+    --brand: #2dd4bf;
+    --brand2: #60a5fa;
+    --warn: #fbbf24;
+    --danger: #ef4444;
 }
 
-.login-logo {
-    width: 85px !important; /* Logo più grande */
-    height: 85px !important;
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: var(--text);
+    background: 
+        radial-gradient(1200px 700px at 20% -10%, rgba(45, 212, 191, .20), transparent 60%),
+        radial-gradient(900px 520px at 85% 20%, rgba(96, 165, 250, .18), transparent 55%),
+        radial-gradient(900px 500px at 45% 110%, rgba(251, 191, 36, .10), transparent 55%),
+        var(--bg);
 }
 
-/* Fix Dashboard: Forza il testo scuro sulle card bianche */
+a { color: inherit; text-decoration: none; }
+
+/* --- Layout Strutturale --- */
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, .28);
+    backdrop-filter: blur(10px);
+}
+.app-main { padding: 14px; }
+
+/* --- Bottoni Globali --- */
+.btn, .btn-mini {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; cursor: pointer; border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+.btn { padding: 10px 14px; border-radius: 14px; background: var(--panel); color: var(--text); }
+.btn-mini { padding: 8px 10px; border-radius: 12px; font-size: 12px; }
+
+.btn.primary, .btn-mini.primary { background: rgba(45, 212, 191, .18); border-color: var(--brand); }
+.btn.warn, .btn-mini.warn { background: rgba(251, 191, 36, .14); border-color: var(--warn); color: var(--warn); }
+.btn.danger, .btn-mini.danger { background: rgba(239, 68, 68, .16); border-color: var(--danger); color: white; }
+
+/* --- DASHBOARD (Stile Light per contrasto) --- */
+.dash-grid { display: flex; flex-direction: column; gap: 12px; }
+
 .dash-card {
-    background: #ffffff !important;
-    border-radius: 24px;
-    padding: 25px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.12);
-    margin-bottom: 30px;
     border: 1px solid #e2e8f0;
-    color: #1e293b !important; /* Testo Blu Notte leggibile */
+    background: #ffffff !important; /* Forza sfondo bianco */
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    color: #1e293b !important; /* Testo scuro */
 }
 
-/* Testo nomi e sottotitoli nella card bianca */
-.dash-name { color: #0f172a !important; font-size: 1.2rem; }
-.dash-sub, .dash-sub2 { color: #64748b !important; }
-.slug-badge { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
+.dash-name { font-weight: 950; color: #0f172a !important; }
+.dash-sub { color: #64748b !important; font-size: 13px; }
+.slug-badge { padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
-/* Contenitore Rettangoli Profili */
 .profiles-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-    margin: 25px 0;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
 }
 
-/* Rettangoli Colorati per i Profili (Migliorati) */
 .profile-box {
-    padding: 20px;
-    border-radius: 18px;
-    border: 1px solid rgba(0,0,0,0.05);
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    transition: all 0.2s ease;
+    padding: 18px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);
+    background: #f9f9f9 !important; color: #333 !important;
+}
+.profile-box.p1 { border-left: 6px solid #ff5722; background: #fff5f2 !important; }
+.profile-box.p2 { border-left: 6px solid #2196f3; background: #f0f7ff !important; }
+.profile-box.p3 { border-left: 6px solid #4caf50; background: #f2faf3 !important; }
+.profile-box.disabled { opacity: 0.5; filter: grayscale(1); border-left: 6px solid #94a3b8; }
+
+.p-header { font-weight: 900; margin-bottom: 10px; font-size: 14px; color: #111 !important; }
+
+/* --- LOGIN (Stile Dark + Ingrandito 30%) --- */
+.login-shell {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px; background: var(--bg);
 }
 
-.profile-box .p-header { 
-    font-weight: 900; 
-    margin-bottom: 12px; 
-    font-size: 15px; 
-    text-transform: uppercase;
-    color: #1e293b !important;
+.login-card {
+    width: 100%;
+    max-width: 550px !important; /* Ingrandito del 30% */
+    padding: 45px !important;
+    background: rgba(20, 25, 35, 0.95) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 28px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    color: var(--text) !important;
+    position: relative;
 }
 
-/* Colori specifici Profili */
-.profile-box.p1 { border-left: 8px solid #ff5722; background: #fff5f2 !important; }
-.profile-box.p2 { border-left: 8px solid #2196f3; background: #f0f7ff !important; }
-.profile-box.p3 { border-left: 8px solid #4caf50; background: #f2faf3 !important; }
+.login-logo { width: 80px; height: 80px; margin-bottom: 15px; }
+.login-head h1 { margin: 0; font-size: 24px; color: white; }
+.login-head p { margin: 5px 0 0; color: var(--muted); }
 
-/* Stato Disattivato */
-.profile-box.disabled { 
-    opacity: 0.5; 
-    filter: grayscale(1); 
-    background: #f8fafc !important; 
-    border-left: 8px solid #94a3b8;
+.login-form .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+.login-form label { font-weight: 800; color: var(--brand); font-size: 13px; }
+.login-form input {
+    padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+    background: rgba(0,0,0,0.3); color: white; width: 100%;
 }
 
-/* Bottoni Mini nella Dashboard */
-.btn-mini {
-    padding: 10px 16px;
-    font-size: 12px;
-    border-radius: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    border: none;
-}
-.btn-mini.warn { background: #fbbf24 !important; color: #78350f !important; }
-.btn-mini.primary { background: #2dd4bf !important; color: #064e3b !important; }
-.btn-mini.danger { background: #ef4444 !important; color: #ffffff !important; }
-.btn-mini.ghost { background: #e2e8f0 !important; color: #475569 !important; }
+.login-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-login-primary { background: #c99a2f !important; color: #111 !important; flex: 1; border: none; }
+.btn-login-outline { background: transparent; border: 1px solid rgba(201,154,47,0.5); color: #f6e2a0; flex: 1; }
 
-/* Media Preview (Foto/PDF) */
+.login-foot { margin-top: 20px; color: var(--muted); text-align: center; font-size: 12px; }
+
+/* --- Media Preview & Misc --- */
 .media-preview-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    border-top: 2px dashed #e2e8f0;
-    padding-top: 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    border-top: 1px solid #eee; padding-top: 20px; margin-top: 15px;
 }
-.media-group h4 { color: #475569; margin-bottom: 10px; font-size: 13px; text-transform: uppercase; }
-.mini-grid { display: flex; gap: 8px; flex-wrap: wrap; }
-.mini-thumb { 
-    width: 60px; 
-    height: 60px; 
-    object-fit: cover; 
-    border-radius: 12px; 
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+.mini-thumb { width: 55px; height: 55px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
 
-/* Modal Bianco (per contrasto con card bianca) */
-.modal-box { 
-    background: #ffffff !important; 
-    color: #1e293b !important;
-    padding: 40px; 
-    border-radius: 28px; 
-    width: 95%; 
-    max-width: 500px; 
-    text-align: center; 
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+/* --- Flash Messages --- */
+.flash-wrap { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.flash { padding: 12px; border-radius: 12px; border: 1px solid var(--border); font-size: 14px; }
+.flash-error { border-color: var(--danger); background: rgba(239, 68, 68, .12); color: #ff8a8a; }
+.flash-ok { border-color: var(--brand); background: rgba(45, 212, 191, .12); color: var(--brand); }
+
+/* --- Responsive --- */
+@media (max-width: 860px) {
+    .profiles-container, .media-preview-section, .login-actions { grid-template-columns: 1fr; flex-direction: column; }
 }
