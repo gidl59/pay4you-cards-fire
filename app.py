@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 app = Flask(__name__)
 app.secret_key = "pay4you_secret_fixed"
 
-# --- CONFIGURAZIONE CARTELLE ---
+# CONFIGURAZIONE CARTELLE
 if os.path.exists('/var/data'):
     UPLOAD_FOLDER = '/var/data/uploads'
 else:
@@ -13,12 +13,11 @@ else:
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- DATI UTENTE (CREDENZIALI) ---
+# DATI UTENTE
 USER_DATA = {
-    "username": "admin",       # <--- RIMESSO ADMIN
-    "password": "password123", # <--- PASSWORD STANDARD
+    "username": "admin",
+    "password": "password123",
     "nome": "Giuseppe Di Lisio",
-    "avatar": "/static/pay4you-logo.png", 
     "p1": {"active": True, "name": "Profilo Personale", "foto": "", "slug": "giuseppe"},
     "p2": {"active": False, "name": "", "foto": "", "slug": ""},
     "p3": {"active": False, "name": "", "foto": "", "slug": ""}
@@ -31,16 +30,11 @@ def home(): return redirect(url_for('login'))
 def login():
     error = None
     if request.method == 'POST':
-        username_inserito = request.form.get('username')
-        password_inserita = request.form.get('password')
-        
-        # Controllo credenziali
-        if username_inserito == USER_DATA['username'] and password_inserita == USER_DATA['password']:
+        if request.form.get('username') == USER_DATA['username'] and request.form.get('password') == USER_DATA['password']:
             session['logged_in'] = True
             return redirect(url_for('area'))
         else:
-            error = "Credenziali errate! Riprova."
-            
+            error = "Credenziali errate!"
     return render_template('login.html', error=error)
 
 @app.route('/area')
@@ -48,7 +42,25 @@ def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=USER_DATA)
 
-# --- ALTRE ROTTE ---
+# --- NUOVE ROTTE PER I TASTI ---
+
+# 1. TASTO APRI P1 (Visualizza la Card)
+@app.route('/card/<slug>')
+def view_card(slug):
+    # Per ora mostriamo una pagina semplice, poi metteremo la grafica vera
+    return f"<h1>Card di {slug}</h1><p>Qui vedrai la tua card digitale completa.</p>"
+
+# 2. TASTO MODIFICA P1 (Pagina Modifica)
+@app.route('/area/edit/<p_id>')
+def edit_profile(p_id):
+    if not session.get('logged_in'): return redirect(url_for('login'))
+    return render_template('edit_card.html', p_id=p_id)
+
+# 3. ATTIVA P2/P3
+@app.route('/area/activate/<p_id>')
+def activate_profile(p_id):
+    return f"<h1>Attiva Profilo {p_id}</h1><p>Qui compili i dati per P{p_id}</p><a href='/area'>Torna indietro</a>"
+
 @app.route('/area/forgot')
 def forgot(): return render_template('forgot.html')
 
