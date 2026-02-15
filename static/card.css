@@ -1,57 +1,46 @@
-/* STILE COMPLETO PER LA TUA CARD */
 :root {
-    --bg-body: #f0f2f5;
+    --bg-body: #f4f4f4;
     --bg-card: #ffffff;
-    --text: #1c1e21;
-    --sub: #65676b;
-    --primary: linear-gradient(135deg, #0088cc, #00ffc8);
+    --text: #333;
+    --brand: #0088cc;
 }
-
 [data-theme="dark"] {
-    --bg-body: #000;
-    --bg-card: #111;
+    --bg-body: #111;
+    --bg-card: #222;
     --text: #fff;
-    --sub: #aaa;
 }
 
-body { margin: 0; font-family: sans-serif; background: var(--bg-body); color: var(--text); display:flex; justify-content:center; }
+body { margin: 0; font-family: sans-serif; background: var(--bg-body); display: flex; justify-content: center; }
 
 .card-wrap {
-    width: 100%; max-width: 420px; background: var(--bg-card); min-height: 100vh;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1); text-align: center; position: relative;
+    width: 100%; max-width: 400px; background: var(--bg-card); min-height: 100vh;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1); text-align: center; position: relative; color: var(--text);
     display: flex; flex-direction: column;
 }
 
-.hero { height: 160px; background: #333; width: 100%; }
-
+/* LA TUA HERO E AVATAR */
+.hero { width: 100%; height: 150px; background: #555; background-size: cover; }
 .avatar-wrap { margin-top: -60px; display: inline-block; padding: 5px; background: var(--bg-card); border-radius: 50%; }
-.avatar { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; background: #ddd; }
-.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; background: #ccc; }
 
-.title { padding: 10px; }
-.title h1 { margin: 5px 0; font-size: 24px; }
-.sub { font-size: 14px; color: var(--sub); }
+.title { margin-top: 10px; }
+.title h1 { margin: 5px 0; font-size: 22px; }
+.sub { font-size: 14px; opacity: 0.8; }
+
 .bio { padding: 15px; font-size: 14px; line-height: 1.4; }
 
 .social-row { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
-.social { 
-    width: 40px; height: 40px; background: var(--bg-body); border-radius: 50%; 
-    display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); font-weight: bold;
-}
+.social { width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; font-weight: bold; }
 
-.actions { display: flex; gap: 10px; padding: 0 20px; margin-bottom: 20px; }
-.btn { flex: 1; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; color: #000; }
-.primary { background: var(--primary); }
-.btn-qr { width: 50px; border-radius: 10px; border: 1px solid var(--sub); background: transparent; color: var(--text); cursor: pointer; }
+.actions { display: flex; gap: 10px; padding: 0 20px; }
+.btn { flex: 1; padding: 12px; background: var(--brand); color: white; border-radius: 10px; text-decoration: none; font-weight: bold; }
+.btn-qr { width: 50px; background: transparent; border: 1px solid var(--text); color: var(--text); border-radius: 10px; cursor: pointer; }
 
-.content { text-align: left; padding: 0 20px; margin-bottom: 20px; }
-.row { padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
+.content { text-align: left; padding: 15px 20px; }
+.row { padding: 10px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
 .v a { text-decoration: none; color: var(--text); }
 
-.switch-row { margin-top: auto; padding: 20px; background: rgba(128,128,128,0.1); }
-.ps-btn, .ts { 
-    padding: 6px 12px; border: 1px solid var(--sub); border-radius: 20px; 
-    text-decoration: none; color: var(--text); font-size: 12px; margin: 0 2px; background: transparent; cursor: pointer;
-}
-.ps-btn.active { background: var(--text); color: var(--bg-card); }
-.foot { padding: 10px; font-size: 11px; color: var(--sub); }
+.switch-row { margin-top: auto; padding: 20px; background: rgba(0,0,0,0.05); }
+.ps-btn, .ts { padding: 5px 10px; border: 1px solid var(--text); border-radius: 20px; background: transparent; color: var(--text); text-decoration: none; font-size: 12px; margin: 0 2px; cursor: pointer; }
+.ps-btn.active, .ts.active { background: var(--text); color: var(--bg-card); }
+.foot { padding: 10px; font-size: 11px; opacity: 0.6; }
