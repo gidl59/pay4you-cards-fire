@@ -2,21 +2,51 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="/static/style.css">
     <title>Recupero Password | Pay4You</title>
 </head>
 <body>
     <div class="login-shell">
         <div class="login-card">
-            <h1 style="color:var(--brand)">Recupero Password</h1>
-            <p class="muted">Inserisci la tua email per ricevere le nuove credenziali.</p>
-            <form class="login-form" style="margin-top:20px;">
-                <input type="email" placeholder="La tua email" required>
-                <button type="button" class="btn-login-primary" onclick="alert('Richiesta inviata al supporto!')">Invia richiesta</button>
-                <br><br>
+            <img src="/static/pay4you-logo.png" class="login-logo" alt="Logo" style="width:100px;">
+            <h1 style="color:var(--brand); margin-top:10px;">Recupero credenziali</h1>
+            
+            <div id="status-container">
+                <p class="muted" style="margin: 20px 0; line-height: 1.5;">
+                    Se il tuo account è registrato, riceverai a breve una email con le istruzioni necessarie per resettare la tua password e tornare ad accedere alla tua card.
+                </p>
+                <form class="login-form">
+                    <input type="email" placeholder="Inserisci la tua email" id="emailInput" required>
+                    <button type="button" class="btn-login-primary" onclick="sendRequest()">Invia richiesta</button>
+                </form>
+            </div>
+
+            <div class="login-foot">
                 <a href="/area/login" class="btn-login-outline">Torna al Login</a>
-            </form>
+            </div>
         </div>
     </div>
+
+    <script>
+        function sendRequest() {
+            const email = document.getElementById('emailInput').value;
+            if(!email) { alert("Inserisci un indirizzo email."); return; }
+            
+            // Cambio contenuto per feedback
+            document.getElementById('status-container').innerHTML = `
+                <div style="padding:30px 0;">
+                    <h3 style="color:var(--brand)">✅ Richiesta Inviata</h3>
+                    <p class="muted">Controlla la tua posta elettronica.<br>Verrai riportato al login tra pochi secondi...</p>
+                </div>
+            `;
+            
+            // Ritorno automatico ad admin dopo 4 secondi
+            setTimeout(function() {
+                window.location.href = "/area/login";
+            }, 4000);
+        }
+    </script>
 </body>
 </html>
