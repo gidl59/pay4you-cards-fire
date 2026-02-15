@@ -28,9 +28,9 @@
             <h3 style="color:#00ffc8; margin-top:0;">➕ Aggiungi Cliente</h3>
             <form action="/master/add" method="POST" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;">
                 <div><label style="font-size:11px; color:#888;">Slug (es: mario-rossi)</label><input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required></div>
-                <div><label style="font-size:11px; color:#888;">Nome (Opzionale)</label><input type="text" name="nome" class="input-dark" placeholder="Mario"></div>
-                <div><label style="font-size:11px; color:#888;">Username (Opzionale)</label><input type="text" name="username" class="input-dark" placeholder="mario"></div>
-                <div><label style="font-size:11px; color:#888;">Password (Lascia vuoto per auto)</label><input type="text" name="password" class="input-dark" placeholder="***"></div>
+                <div><label style="font-size:11px; color:#888;">Nome</label><input type="text" name="nome" class="input-dark" placeholder="Mario"></div>
+                <div><label style="font-size:11px; color:#888;">Username</label><input type="text" name="username" class="input-dark" placeholder="mario"></div>
+                <div><label style="font-size:11px; color:#888;">Password</label><input type="text" name="password" class="input-dark" placeholder="vuoto = auto"></div>
                 <button type="submit" class="btn-mini bg-green" style="height:38px;">CREA</button>
             </form>
         </div>
@@ -74,27 +74,15 @@
     </div>
 
     <script>
-        function getMessage(user, pass, slug) {
-            var loginUrl = window.location.origin + "/area/login";
-            var cardUrl = window.location.origin + "/card/" + slug;
-            return "Benvenuto in Pay4You!\n\n" +
-                   "Ecco le credenziali per la tua Card Digitale:\n" +
-                   "Login: " + loginUrl + "\n" +
-                   "User: " + user + "\n" +
-                   "Pass: " + pass + "\n\n" +
-                   "IMPORTANTE: Al primo accesso è OBBLIGATORIO cambiare la password.\n\n" +
-                   "Tua card: " + cardUrl;
-        }
-
         function sendWa(user, pass, slug) {
-            var msg = getMessage(user, pass, slug);
+            var msg = "Pay4You Credenziali:\nLogin: https://pay4you-cards-fire.onrender.com/area/login\nUser: " + user + "\nPass: " + pass + "\n\nCambia password subito!";
             window.open("https://wa.me/?text=" + encodeURIComponent(msg), '_blank');
         }
 
         function sendMail(user, pass, slug) {
-            var msg = getMessage(user, pass, slug);
-            // Uso window.open per evitare blocchi su alcuni browser con mailto lunghi
-            window.open("mailto:?subject=Credenziali Pay4You&body=" + encodeURIComponent(msg));
+            // Link mailto semplificato per evitare errori
+            var body = "Login: https://pay4you-cards-fire.onrender.com/area/login\nUser: " + user + "\nPass: " + pass;
+            window.open("mailto:?subject=Dati Pay4You&body=" + encodeURIComponent(body));
         }
     </script>
 </body>
