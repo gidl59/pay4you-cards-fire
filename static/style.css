@@ -1,56 +1,69 @@
+/* ============================================================
+   Pay4You — CLEAN DASHBOARD STYLE 2026
+   ============================================================ */
+
 :root {
-    --bg: #0b0f15;
+    --bg: #0d1117;
     --card: #161b22;
     --brand: #2dd4bf;
-    --text: #e6edf3;
+    --text: #c9d1d9;
     --border: #30363d;
 }
 
 body { 
     background-color: var(--bg); 
     color: var(--text); 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    margin: 0; padding: 0; 
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    margin: 0; font-size: 14px; /* Blocca la dimensione base */
 }
 
-/* Header Dashboard */
+/* Header */
 .dash-header {
-    background: #010409; padding: 15px 20px;
+    background: #010409; padding: 10px 20px;
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--border);
 }
-.user-info { display: flex; align-items: center; gap: 12px; }
-.avatar-main { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--brand); }
 
-/* Layout Contenitore */
-.container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+.avatar-main { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--brand); object-fit: cover; }
 
-/* Profile Cards */
+/* Contenitore */
+.container { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+
+/* Box Profilo */
 .profile-box {
-    background: var(--card); border-radius: 16px; border: 1px solid var(--border);
-    padding: 20px; margin-bottom: 20px; position: relative;
+    background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+    padding: 20px; margin-bottom: 20px;
 }
-.active-border { border-left: 5px solid var(--brand); }
+.active-border { border-left: 4px solid var(--brand); }
 
-.profile-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-.agente-meta { display: flex; align-items: center; gap: 15px; }
-.foto-agente { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; background: #0d1117; border: 1px solid var(--border); }
+.profile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 
-.agente-text h3 { margin: 0; font-size: 18px; color: white; }
-.agente-text span { font-size: 12px; color: #8b949e; }
+/* FIX FOTO AGENTE */
+.agente-meta { display: flex; align-items: center; gap: 12px; }
+.foto-agente { 
+    width: 55px !important; height: 55px !important; 
+    border-radius: 10px; object-fit: cover; 
+    border: 1px solid var(--border); background: #0d1117;
+}
 
-/* Bottoni */
-.btn-group { display: flex; gap: 10px; }
-.btn-edit { background: rgba(45, 212, 191, 0.1); color: var(--brand); border: 1px solid var(--brand); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-.btn-disable { background: transparent; color: #f85149; border: 1px solid #f85149; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
-.tag-main { background: #238636; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+.agente-text h3 { margin: 0; font-size: 16px; color: white; }
+.agente-text span { font-size: 11px; color: #8b949e; }
+
+/* Pulsanti Dashboard */
+.btn-edit { background: #21262d; color: #58a6ff; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.btn-edit:hover { background: #30363d; }
+.tag-main { color: var(--brand); font-size: 11px; font-weight: 800; border: 1px solid var(--brand); padding: 3px 8px; border-radius: 4px; }
 
 /* Media Sections */
-.media-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
-.media-section h4 { font-size: 13px; color: #8b949e; margin-bottom: 10px; text-transform: uppercase; }
-.media-flex { display: flex; gap: 10px; flex-wrap: wrap; }
+.media-section { margin-top: 15px; }
+.media-section h4 { font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; }
+.media-flex { display: flex; gap: 8px; }
+
 .add-square { 
-    width: 60px; height: 60px; border-radius: 10px; border: 2px dashed #484f58;
-    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b949e; font-size: 20px;
+    width: 45px; height: 45px; border-radius: 8px; border: 1px dashed #484f58;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b949e;
 }
-.add-square:hover { border-color: var(--brand); color: var(--brand); }
+.add-pdf-btn { 
+    width: 100%; border: 1px solid var(--border); padding: 8px; border-radius: 8px; 
+    text-align: center; font-size: 12px; cursor: pointer; background: #21262d; color: white;
+}
