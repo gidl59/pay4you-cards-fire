@@ -1,1 +1,33 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifica Profilo | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body style="background:#0b0f15; padding:20px; color:white;">
 
+    <div style="max-width:800px; margin:0 auto; background:#111; padding:30px; border-radius:15px; border:1px solid #333;">
+        <h2 style="color:var(--brand);">Modifica Profilo P{{ p_id }}</h2>
+        <p style="color:#888;">Qui potrai cambiare nome, azienda, colori e caricare la foto agente.</p>
+        
+        <form>
+            <div style="margin-bottom:15px;">
+                <label>Nome Completo</label>
+                <input type="text" class="input-rect" value="Giuseppe Di Lisio">
+            </div>
+            
+            <div style="margin-bottom:15px;">
+                <label>Professione</label>
+                <input type="text" class="input-rect" placeholder="Es. Agente Immobiliare">
+            </div>
+
+            <button type="button" class="btn-login" onclick="alert('Salvato!')">SALVA MODIFICHE</button>
+        </form>
+
+        <br>
+        <a href="/area" style="color:var(--blue);">← Torna alla Dashboard</a>
+    </div>
+
+</body>
+</html>
