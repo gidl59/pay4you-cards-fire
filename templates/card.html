@@ -79,7 +79,7 @@
               ('youtube','YouTube','#FF0000','yt'),
               ('spotify','Spotify','#1DB954','sp')
             ] %}
-              {% set url = ag[key] if ag is mapping else (getattr(ag, key, '') if ag else '') %}
+              {% set url = (ag[key] if ag is mapping else (ag|attr(key)|default(''))) %}
               {% if url and url.startswith('http') %}
                 {% set any_social = true %}
                 <a class="soc" href="{{ url }}" target="_blank" rel="noopener" aria-label="{{ label }}" style="--soc:{{ color }};">
