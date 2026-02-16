@@ -3,27 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Dashboard | Pay4You</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .nfc-selector { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; text-align: center; }
         .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
-        .nfc-btn { padding: 10px 20px; border-radius: 5px; border: 1px solid #444; background: #333; color: white; text-decoration: none; font-size:12px; font-weight:bold; }
-        .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; }
+        .nfc-btn { padding: 8px 15px; border-radius: 20px; border: 1px solid #444; background: transparent; color: white; text-decoration: none; font-size:12px; transition: 0.3s; }
+        .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold; }
         .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
-        
-        .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; }
+        .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
         .p-actions { display:flex; gap:10px; }
-        
-        .btn-rect { 
-            padding: 10px 15px; text-decoration: none; color: white; font-weight: bold; 
-            border-radius: 5px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;
-            display: inline-block; text-align: center; min-width:80px;
-        }
-        .b-open { background: #222; border: 1px solid #555; }
-        .b-edit { background: #0088cc; border: 1px solid #0088cc; }
-        .b-stop { background: #cc0000; border: 1px solid #cc0000; }
-        .b-act { background: #444; width: 100%; border: 1px solid #666; }
+        .btn-act { padding:10px; color:white; text-decoration:none; border-radius:5px; font-weight:bold; font-size:14px; }
     </style>
 </head>
 <body style="background:#0b0f15;">
@@ -38,7 +28,7 @@
     <div class="dash-container">
         
         <div class="nfc-selector">
-            <div style="color:#00ffc8; font-size:12px; margin-bottom:10px;">IMPOSTAZIONE CARTA</div>
+            <div style="color:#00ffc8; font-size:12px; margin-bottom:10px;">IMPOSTAZIONE CARTA / QR</div>
             <div class="nfc-btns">
                 {% for pid in ['1', '2', '3'] %}
                     {% set p_key = 'p' ~ pid %}
@@ -46,7 +36,7 @@
                         <a href="/area/set_default/p{{ pid }}" class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">PROFILO {{ pid }}</a>
                     {% endif %}
                 {% endfor %}
-                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">MENU</a>
+                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">📋 MODALITÀ MENU</a>
             </div>
         </div>
 
@@ -54,18 +44,14 @@
         {% for p_id in ['1', '2', '3'] %}
         {% set p = user['p' ~ p_id] %}
         <div class="profile-row">
-            <div class="p-left">
-                <h3 style="margin:0; color:white;">PROFILO {{ p_id }} <span style="font-size:12px; color:{{ '#0f0' if p.active else '#666' }};">●</span></h3>
-            </div>
+            <div class="p-left"><h3 style="margin:0; color:white;">{{ 'P' ~ p_id }} {{ '✅' if p.active else '⚫' }}</h3></div>
             <div class="p-actions">
                 {% if p.active %}
-                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-rect b-open">APRI</a>
-                    <a href="/area/edit/{{ p_id }}" class="btn-rect b-edit">MODIFICA</a>
-                    {% if p_id != '1' %}
-                        <a href="/area/deactivate/{{ p_id }}" class="btn-rect b-stop" onclick="return confirm('DISATTIVARE?')">ELIMINA</a>
-                    {% endif %}
+                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222;">🔗</a>
+                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc;">✏️</a>
+                    {% if p_id != '1' %}<a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000;" onclick="return confirm('Stop P{{p_id}}?')">⛔</a>{% endif %}
                 {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-rect b-act">ATTIVA</a>
+                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; width:100%; text-align:center;">➕ ATTIVA</a>
                 {% endif %}
             </div>
         </div>
