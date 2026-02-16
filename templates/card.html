@@ -21,7 +21,7 @@
 
     <div class="avatar-container">
         {% if ag.photo_url %}
-        <img src="{{ ag.photo_url }}" class="avatar-img" 
+        <img src="{{ ag.photo_url }}" class="avatar-img {% if ag.fx_rotate_agent=='on' %}spin-cw{% endif %}" 
              style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
         {% else %}<div class="avatar-img" style="background:#ccc;"></div>{% endif %}
     </div>
@@ -56,27 +56,27 @@
     </div>
 
     <div class="switcher-bar">
-        <div style="display:flex; gap:5px;">
+        <div style="display:flex; gap:10px;">
             {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
             {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
             {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
         </div>
-        <div style="display:flex; align-items:center;">
+        <div style="display:flex; align-items:center; margin-left:10px; padding-left:10px; border-left:1px solid #888;">
             <span onclick="setT('light')" class="theme-txt">CHIARO</span>
             <span onclick="setT('dark')" class="theme-txt">SCURO</span>
             <span onclick="setT('auto')" class="theme-txt">AUTO</span>
         </div>
     </div>
 
-    <div style="text-align:left; padding:0 20px; font-size:15px;">
-        {% for m in mobiles %}<div style="padding:10px; border-bottom:1px solid #eee;">📞 <a href="tel:{{m}}">{{m}}</a></div>{% endfor %}
-        {% if ag.office_phone %}<div style="padding:10px; border-bottom:1px solid #eee;">☎️ <a href="tel:{{ag.office_phone}}">{{ag.office_phone}}</a></div>{% endif %}
-        {% for e in emails %}<div style="padding:10px; border-bottom:1px solid #eee;">✉️ <a href="mailto:{{e}}">{{e}}</a></div>{% endfor %}
-        {% if ag.pec %}<div style="padding:10px; border-bottom:1px solid #eee;">⚖️ <a href="mailto:{{ag.pec}}">{{ag.pec}}</a></div>{% endif %}
+    <div class="data-list">
+        {% for m in mobiles %}<div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>{% endfor %}
+        {% if ag.office_phone %}<div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>{% endif %}
+        {% for e in emails %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e}}" class="d-link">{{e}}</a></div>{% endfor %}
+        {% if ag.pec %}<div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>{% endif %}
         
         {% for w in websites %}
-        <div style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="openSite('{{w}}')">
-            🌐 {{ w|truncate(30) }} <i class="fas fa-arrow-right" style="float:right; font-size:12px;"></i>
+        <div class="d-row" style="cursor:pointer;" onclick="openSite('{{w}}')">
+            <span class="d-icon">🌐</span> <span class="d-link">{{ w|truncate(30) }} <i class="fas fa-arrow-right" style="font-size:10px; margin-left:5px;"></i></span>
         </div>
         {% endfor %}
         
@@ -110,7 +110,7 @@
         <div class="pdf-grid">
             {% for pdf in p_data.gallery_pdf %}
             <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
-                <i class="fas fa-file-pdf" style="color:#f44;"></i> {{ pdf.name }}
+                <i class="fas fa-file-pdf" style="color:#f44;"></i> <span class="pdf-name">{{ pdf.name }}</span> <i class="fas fa-share-alt"></i>
             </div>
             {% endfor %}
         </div>
@@ -143,12 +143,14 @@
 
         if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
         else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-        else if(type=='pdf') { window.open(url, '_blank'); return; } // PDF apre tab
+        else if(type=='pdf') { window.open(url, '_blank'); } // PDF si apre in tab per ora
         else if(type=='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+fullUrl+'" style="background:white; padding:10px; border-radius:10px;">';
 
-        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
-        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
-        document.getElementById('shareModal').style.display = 'flex';
+        if(type != 'pdf') {
+            document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
+            document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
+            document.getElementById('shareModal').style.display = 'flex';
+        }
     }
 
     function openSite(url) {
