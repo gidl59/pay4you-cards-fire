@@ -2,47 +2,44 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Modifica Card Pro</title>
+    <title>Modifica Card</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
-        .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; position:relative;}
-        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; text-transform:uppercase; font-size:14px; letter-spacing:1px; }
+        .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; }
         .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
         .full-width { grid-column: span 2; }
         label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
-        input[type="text"], textarea, select { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-        .social-hint { font-size:10px; color:#666; margin-top:2px; font-style:italic; }
-        
-        /* CROP PREVIEW */
-        .circle-preview { 
-            width:120px; height:120px; border-radius:50%; border:3px solid #00ffc8; 
-            object-fit:cover; margin:10px auto; background:#000; display:block;
-        }
-        
+        input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
+        
+        /* CROP VISUALIZER */
+        .crop-container { text-align:center; background:#1a1a1a; padding:15px; border-radius:10px; }
+        .crop-circle { 
+            width:150px; height:150px; border-radius:50%; border:3px solid #00ffc8; 
+            overflow:hidden; margin:0 auto 10px auto; position:relative; background:#000;
+        }
+        .crop-circle img { width:100%; height:100%; object-fit:cover; }
     </style>
 </head>
 <body style="background:#050505; color:white; font-family:sans-serif;">
 
-    <div class="dash-head">
-        <a href="/area" style="color:white; text-decoration:none;">← Torna alla Dashboard</a>
-        <span style="color:#00ffc8; font-weight:bold;">MODIFICA P{{ p_id }}</span>
-    </div>
+    <div class="dash-head"><a href="/area" style="color:white;">← Torna Indietro</a> <span style="color:#00ffc8;">MODIFICA P{{ p_id }}</span></div>
 
     <form method="POST" enctype="multipart/form-data" class="edit-container" id="editForm">
         
         <div class="edit-box">
             <h3 class="box-title">👤 Dati & Business</h3>
             <div class="form-grid">
-                <div class="full-width"><label>Nome e Cognome</label><input type="text" name="name" value="{{ p.name }}" required></div>
-                <div><label>Ruolo / Qualifica</label><input type="text" name="role" value="{{ p.role }}"></div>
+                <div class="full-width"><label>Nome e Cognome</label><input type="text" name="name" value="{{ p.name }}"></div>
+                <div><label>Ruolo</label><input type="text" name="role" value="{{ p.role }}"></div>
                 <div><label>Azienda</label><input type="text" name="company" value="{{ p.company }}"></div>
                 <div><label>P. IVA</label><input type="text" name="piva" value="{{ p.piva }}"></div>
                 <div><label>Codice SDI</label><input type="text" name="cod_sdi" value="{{ p.cod_sdi }}"></div>
                 <div class="full-width"><label>PEC</label><input type="text" name="pec" value="{{ p.pec }}"></div>
-                <div class="full-width"><label>Bio (Italiano)</label><textarea name="bio" rows="3">{{ p.bio }}</textarea></div>
+                <div class="full-width"><label>Bio</label><textarea name="bio" rows="3">{{ p.bio }}</textarea></div>
             </div>
         </div>
 
@@ -51,6 +48,7 @@
             <div class="form-grid">
                 <div><label>Cellulare 1</label><input type="text" name="mobile1" value="{{ p.mobiles[0] if p.mobiles|length > 0 else '' }}"></div>
                 <div><label>Cellulare 2</label><input type="text" name="mobile2" value="{{ p.mobiles[1] if p.mobiles|length > 1 else '' }}"></div>
+                <div class="full-width"><label>Telefono Ufficio (Fisso)</label><input type="text" name="office_phone" value="{{ p.office_phone }}"></div>
                 <div><label>Email 1</label><input type="text" name="email1" value="{{ p.emails[0] if p.emails|length > 0 else '' }}"></div>
                 <div><label>Email 2</label><input type="text" name="email2" value="{{ p.emails[1] if p.emails|length > 1 else '' }}"></div>
                 <div class="full-width"><label>Sito Web</label><input type="text" name="website" value="{{ p.websites[0] if p.websites|length > 0 else '' }}"></div>
@@ -58,166 +56,81 @@
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title">📱 Social Network</h3>
-            {% set soc_map = {} %}
-            {% for s in p.socials %}{% do soc_map.update({s.label: s.url}) %}{% endfor %}
-
+            <h3 class="box-title">📸 Foto & Crop</h3>
             <div class="form-grid">
-                <div>
-                    <label>Facebook</label>
-                    <input type="text" name="facebook" value="{{ soc_map.get('Facebook','') }}">
-                    <div class="social-hint">Es: https://www.facebook.com/tuapagina</div>
-                </div>
-                <div>
-                    <label>Instagram</label>
-                    <input type="text" name="instagram" value="{{ soc_map.get('Instagram','') }}">
-                    <div class="social-hint">Es: https://instagram.com/tuoprofilo</div>
-                </div>
-                <div>
-                    <label>LinkedIn</label>
-                    <input type="text" name="linkedin" value="{{ soc_map.get('Linkedin','') }}">
-                    <div class="social-hint">Es: https://linkedin.com/in/tuonome</div>
-                </div>
-                <div>
-                    <label>TikTok</label>
-                    <input type="text" name="tiktok" value="{{ soc_map.get('TikTok','') }}">
-                    <div class="social-hint">Es: https://tiktok.com/@tuonome</div>
-                </div>
-                <div>
-                    <label>Spotify</label>
-                    <input type="text" name="spotify" value="{{ soc_map.get('Spotify','') }}">
-                    <div class="social-hint">Es: https://open.spotify.com/artist/...</div>
-                </div>
-                <div>
-                    <label>Telegram</label>
-                    <input type="text" name="telegram" value="{{ soc_map.get('Telegram','') }}">
-                    <div class="social-hint">Es: https://t.me/tuonome</div>
-                </div>
-                <div>
-                    <label>YouTube</label>
-                    <input type="text" name="youtube" value="{{ soc_map.get('YouTube','') }}">
-                    <div class="social-hint">Es: https://youtube.com/@canale</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="edit-box">
-            <h3 class="box-title">📸 Grafica & Effetti</h3>
-            <div class="form-grid">
-                <div style="text-align:center;">
-                    <label>Foto Agente (Cerchio)</label>
-                    <img id="prevAgent" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}" class="circle-preview">
-                    <input type="file" name="foto" accept="image/*" onchange="previewImage(this, 'prevAgent')">
-                    <label style="margin-top:10px;">Gira Agente?</label>
-                    <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent == 'on' %}checked{% endif %}>
+                <div class="crop-container">
+                    <label>Foto Agente (Anteprima Cerchio)</label>
+                    <div class="crop-circle"><img id="prevA" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"></div>
+                    <input type="file" name="foto" accept="image/*" onchange="preview(this, 'prevA')">
+                    <small style="color:#666;">Il sistema taglia automaticamente al centro.</small>
+                    <label style="margin-top:10px;">Rotazione?</label><input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
                 </div>
 
-                <div style="text-align:center;">
+                <div class="crop-container">
                     <label>Logo Aziendale</label>
-                    <img id="prevLogo" src="{{ p.logo if p.logo else 'https://via.placeholder.com/300x100?text=LOGO' }}" style="height:80px; width:auto; display:block; margin:10px auto;">
-                    <input type="file" name="logo" accept="image/*" onchange="previewImage(this, 'prevLogo')">
-                    <label style="margin-top:10px;">Gira Logo?</label>
-                    <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo == 'on' %}checked{% endif %}>
-                </div>
-
-                <div class="full-width" style="margin-top:20px; border-top:1px solid #333; padding-top:20px;">
-                    <label>Foto Retro (Opzionale)</label>
-                    <small style="color:#666;">Appare solo se usi l'effetto Specchio/Tap</small>
-                    <img id="prevPers" src="{{ p.personal_foto }}" style="height:60px; display:block; margin:5px 0;">
-                    <input type="file" name="personal_foto" accept="image/*" onchange="previewImage(this, 'prevPers')">
-                </div>
-
-                <div class="full-width" style="background:#222; padding:15px; border-radius:10px; margin-top:15px;">
-                    <label style="color:#00ffc8;">Effetto Movimento:</label>
-                    <div style="display:flex; gap:20px; margin-top:10px;">
-                        <label><input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction == 'tap' %}checked{% endif %}> TAP (Clicca)</label>
-                        <label><input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction == 'mirror' %}checked{% endif %}> SPECCHIO (Gira sempre)</label>
-                    </div>
-                    
-                    <label style="color:#00ffc8; margin-top:15px;">Cosa c'è dietro?</label>
-                    <div style="display:flex; gap:20px; margin-top:10px;">
-                        <label><input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content == 'logo' %}checked{% endif %}> Logo Azienda</label>
-                        <label><input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content == 'personal' %}checked{% endif %}> Foto Personale</label>
-                    </div>
+                    <img id="prevL" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:100px; object-fit:contain;">
+                    <input type="file" name="logo" accept="image/*" onchange="preview(this, 'prevL')">
+                    <label style="margin-top:10px;">Rotazione?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
                 </div>
             </div>
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title">📂 Gallerie (Max 60MB Totali)</h3>
-            
-            <label>Foto Gallery</label>
-            <input type="file" name="gallery_img" multiple accept="image/*">
-            <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;">
-                {% for img in p.gallery_img %}
-                    <div style="position:relative;"><img src="{{ img }}" style="width:50px; height:50px; object-fit:cover;">
-                    <input type="checkbox" name="delete_media" value="{{ img }}" style="position:absolute; top:0;"></div>
+            <h3 class="box-title">📱 Social</h3>
+            {% set soc_map = {} %}{% for s in p.socials %}{% do soc_map.update({s.label: s.url}) %}{% endfor %}
+            <div class="form-grid">
+                {% for sn in ['Facebook','Instagram','Linkedin','TikTok','Spotify','Telegram','YouTube'] %}
+                <div>
+                    <label>{{ sn }}</label>
+                    <input type="text" name="{{ sn|lower }}" value="{{ soc_map.get(sn,'') }}">
+                    <div style="font-size:10px; color:#666;">Es: https://{{ sn|lower }}.com/tuonome</div>
+                </div>
                 {% endfor %}
             </div>
-
-            <label>PDF</label>
-            <input type="file" name="gallery_pdf" multiple accept=".pdf">
-            
-            <label>Video</label>
-            <input type="file" name="gallery_vid" multiple accept="video/*">
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title">🌍 Traduzioni (Manuali)</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div><label>🇬🇧 Role</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
+            <h3 class="box-title">📂 Gallerie</h3>
+            <label>Foto</label><input type="file" name="gallery_img" multiple accept="image/*">
+            <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
+                {% for img in p.gallery_img %}
+                <div style="position:relative;"><img src="{{ img }}" style="width:50px; height:50px; object-fit:cover;">
+                <input type="checkbox" name="delete_media" value="{{ img }}" style="position:absolute; top:0;"></div>
+                {% endfor %}
+            </div>
+            <label>Video</label><input type="file" name="gallery_vid" multiple accept="video/*">
+            <label>PDF</label><input type="file" name="gallery_pdf" multiple accept=".pdf">
+        </div>
+
+        <div class="edit-box">
+            <h3 class="box-title">🌍 Traduzioni</h3>
+            <div class="form-grid">
+                <div><label>🇬🇧 Ruolo</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
                 <div><label>🇬🇧 Bio</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio }}</textarea></div>
-                
-                <div><label>🇫🇷 Role</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
+                <div><label>🇫🇷 Ruolo</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
                 <div><label>🇫🇷 Bio</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio }}</textarea></div>
-                
-                <div><label>🇪🇸 Role</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
+                <div><label>🇪🇸 Ruolo</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
                 <div><label>🇪🇸 Bio</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio }}</textarea></div>
-                
-                <div><label>🇩🇪 Role</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
+                <div><label>🇩🇪 Ruolo</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
                 <div><label>🇩🇪 Bio</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio }}</textarea></div>
             </div>
         </div>
 
-        <button type="submit" class="btn-save" id="saveBtn">💾 SALVA TUTTO</button>
+        <button type="submit" class="btn-save" id="btnSave">💾 SALVA TUTTO</button>
     </form>
 
     <script>
-        // ANTEPRIMA IMMAGINI
-        function previewImage(input, imgId) {
+        function preview(input, id) {
             if (input.files && input.files[0]) {
                 var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById(imgId).src = e.target.result;
-                }
+                reader.onload = function(e) { document.getElementById(id).src = e.target.result; }
                 reader.readAsDataURL(input.files[0]);
             }
         }
-
-        // CONTROLLO PESO FILE (EVITA CRASH)
-        document.getElementById('editForm').onsubmit = function(e) {
-            var totalSize = 0;
-            var inputs = document.querySelectorAll('input[type="file"]');
-            
-            inputs.forEach(input => {
-                if(input.files.length > 0) {
-                    for(var i=0; i<input.files.length; i++) {
-                        totalSize += input.files[i].size;
-                    }
-                }
-            });
-
-            // Limite 60MB (circa)
-            if(totalSize > 60 * 1024 * 1024) {
-                alert("ATTENZIONE: Stai caricando troppi file (totale " + (totalSize/1024/1024).toFixed(1) + "MB).\nIl limite è 60MB. Rimuovi qualche video o foto.");
-                e.preventDefault(); // Blocca l'invio
-                return false;
-            }
-            
-            document.getElementById('saveBtn').innerText = "⏳ CARICAMENTO...";
-            document.getElementById('saveBtn').style.opacity = "0.7";
-        };
+        document.getElementById('editForm').onsubmit = function() {
+            var btn = document.getElementById('btnSave');
+            btn.innerText = "⏳ CARICAMENTO..."; btn.style.opacity = "0.7";
+        }
     </script>
-
 </body>
 </html>
