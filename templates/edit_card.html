@@ -14,16 +14,11 @@
         input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
         
-        /* CROP */
         .crop-controls { margin-top:15px; padding:10px; background:#222; border-radius:8px; }
         .range-slider { width:100%; margin-bottom:10px; cursor:pointer; }
-        .crop-circle { 
-            width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; 
-            overflow:hidden; margin:0 auto; background:#000; position:relative;
-        }
+        .crop-circle { width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; overflow:hidden; margin:0 auto; background:#000; position:relative; }
         .crop-circle img { width:100%; height:100%; object-fit:cover; transition: none; }
         
-        /* GALLERIE BIG */
         .gal-big-grid { display:flex; flex-wrap:wrap; gap:10px; }
         .gal-big-item { width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid #444; }
     </style>
@@ -68,89 +63,84 @@
                         <img id="cropImg" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
                              style="object-position: {{ p.pos_x }}% {{ p.pos_y }}%; transform: scale({{ p.zoom }});">
                     </div>
-                    <input type="file" name="foto" accept="image/*" onchange="previewCrop(this, 'cropImg')">
+                    <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
                     
                     <div class="crop-controls">
-                        <label>↔️ Orizzontale (X)</label>
-                        <input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()">
-                        <label>↕️ Verticale (Y)</label>
-                        <input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()">
-                        <label>🔍 Zoom</label>
-                        <input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()">
+                        <label>↔️ X</label><input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()">
+                        <label>↕️ Y</label><input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()">
+                        <label>🔍 Zoom</label><input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()">
                     </div>
-                    <label>Rotazione?</label><input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
+                    <label>Gira?</label><input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
                 </div>
 
                 <div style="text-align:center;">
                     <label>LOGO AZIENDA</label>
                     <img id="prevLogo" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:100px; object-fit:contain; margin-bottom:10px;">
                     <input type="file" name="logo" accept="image/*" onchange="simplePreview(this, 'prevLogo')">
-                    <label>Rotazione?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
+                    <label>Gira?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
                     
                     <hr style="border-color:#333; margin:20px 0;">
-                    <label>FOTO RETRO (Optional)</label>
+                    <label>FOTO RETRO</label>
                     <img id="prevRetro" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:60px; object-fit:contain; display:block; margin:0 auto;">
                     <input type="file" name="personal_foto" accept="image/*" onchange="simplePreview(this, 'prevRetro')">
                 </div>
             </div>
             
             <div style="margin-top:20px; background:#222; padding:15px; border-radius:10px;">
-                <label>Effetto Movimento:</label>
+                <label>Effetto:</label>
                 <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %}> TAP 
                 <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %}> SPECCHIO
                 <br><br>
-                <label>Cosa c'è dietro?</label>
+                <label>Dietro:</label>
                 <input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content=='logo' %}checked{% endif %}> Logo
-                <input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content=='personal' %}checked{% endif %}> Foto Retro
+                <input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content=='personal' %}checked{% endif %}> Foto
+            </div>
+        </div>
+
+        <div class="edit-box">
+            <h3 class="box-title">📱 Social Network</h3>
+            {% set soc_map = {} %}{% for s in p.socials %}{% do soc_map.update({s.label: s.url}) %}{% endfor %}
+            <div class="form-grid">
+                {% for sn in ['Facebook','Instagram','Linkedin','TikTok','Spotify','Telegram','YouTube'] %}
+                <div><label>{{ sn }}</label><input type="text" name="{{ sn|lower }}" value="{{ soc_map.get(sn,'') }}"></div>
+                {% endfor %}
             </div>
         </div>
 
         <div class="edit-box">
             <h3 class="box-title">📂 Gallerie</h3>
-            
-            <label style="color:#00ffc8;">FOTO (Max 30)</label>
-            <input type="file" name="gallery_img" multiple accept="image/*">
+            <label style="color:#00ffc8;">FOTO</label><input type="file" name="gallery_img" multiple accept="image/*">
             <div class="gal-big-grid">
                 {% for img in p.gallery_img %}
-                <div style="position:relative;">
-                    <img src="{{ img }}" class="gal-big-item">
-                    <input type="checkbox" name="delete_media" value="{{ img }}" style="position:absolute; top:0; left:0; width:20px; height:20px;">
-                </div>
+                <div style="position:relative;"><img src="{{ img }}" class="gal-big-item"><input type="checkbox" name="delete_media" value="{{ img }}" style="position:absolute; top:0; left:0;"></div>
                 {% endfor %}
             </div>
             
             <hr style="border-color:#333;">
-            <label style="color:#00ffc8;">VIDEO (Max 10)</label>
-            <input type="file" name="gallery_vid" multiple accept="video/*">
+            <label style="color:#00ffc8;">VIDEO</label><input type="file" name="gallery_vid" multiple accept="video/*">
             <div class="gal-big-grid">
                 {% for vid in p.gallery_vid %}
-                <div style="position:relative; width:100px; height:100px; background:#000; border-radius:8px; overflow:hidden;">
-                    <video src="{{ vid }}#t=2.0" style="width:100%; height:100%; object-fit:cover;"></video>
-                    <input type="checkbox" name="delete_media" value="{{ vid }}" style="position:absolute; top:0; left:0; width:20px; height:20px; z-index:9;">
-                </div>
+                <div style="position:relative; width:100px; height:100px; background:#000;"><video src="{{ vid }}" style="width:100%; height:100%; object-fit:cover;"></video><input type="checkbox" name="delete_media" value="{{ vid }}" style="position:absolute; top:0; left:0; z-index:9;"></div>
                 {% endfor %}
             </div>
 
             <hr style="border-color:#333;">
-            <label style="color:#00ffc8;">PDF (Max 12)</label>
-            <input type="file" name="gallery_pdf" multiple accept=".pdf">
+            <label style="color:#00ffc8;">PDF</label><input type="file" name="gallery_pdf" multiple accept=".pdf">
             <div style="font-size:12px; margin-top:5px;">
-                {% for pdf in p.gallery_pdf %}
-                <div>📄 {{ pdf.name }} <input type="checkbox" name="delete_media" value="{{ pdf.path }}"> Elimina</div>
-                {% endfor %}
+                {% for pdf in p.gallery_pdf %}<div>📄 {{ pdf.name }} <input type="checkbox" name="delete_media" value="{{ pdf.path }}"> Del</div>{% endfor %}
             </div>
         </div>
 
         <div class="edit-box">
             <h3 class="box-title">🌍 Traduzioni</h3>
             <div class="form-grid">
-                <div><label>🇬🇧 Role</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
+                <div><label>🇬🇧 Ruolo</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
                 <div><label>🇬🇧 Bio</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio }}</textarea></div>
-                <div><label>🇫🇷 Role</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
+                <div><label>🇫🇷 Ruolo</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
                 <div><label>🇫🇷 Bio</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio }}</textarea></div>
-                <div><label>🇪🇸 Role</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
+                <div><label>🇪🇸 Ruolo</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
                 <div><label>🇪🇸 Bio</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio }}</textarea></div>
-                <div><label>🇩🇪 Role</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
+                <div><label>🇩🇪 Ruolo</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
                 <div><label>🇩🇪 Bio</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio }}</textarea></div>
             </div>
         </div>
@@ -166,15 +156,13 @@
                 reader.readAsDataURL(input.files[0]);
             }
         }
-        
-        function previewCrop(input, id) {
+        function previewCrop(input) {
             if(input.files && input.files[0]) {
                 var reader = new FileReader();
-                reader.onload = function(e){ document.getElementById(id).src = e.target.result; }
+                reader.onload = function(e){ document.getElementById('cropImg').src = e.target.result; }
                 reader.readAsDataURL(input.files[0]);
             }
         }
-
         function updateCrop() {
             var x = document.getElementsByName('pos_x')[0].value;
             var y = document.getElementsByName('pos_y')[0].value;
@@ -183,7 +171,6 @@
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
-
         document.getElementById('editForm').onsubmit = function() {
             document.getElementById('btnSave').innerText = "⏳ CARICAMENTO...";
         }
