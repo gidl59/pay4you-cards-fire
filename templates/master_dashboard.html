@@ -62,7 +62,8 @@
         function sendMail(u, p) {
             var sub = "Credenziali Pay4You";
             var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body));
+            // METODO STANDARD CHE FUNZIONA OVUNQUE
+            window.location.href = "mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
         }
     </script>
 </body>
