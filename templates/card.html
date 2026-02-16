@@ -63,14 +63,14 @@
     </div>
 
     <div class="switcher-bar">
-        <div class="sw-left">
-            {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
-            {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
-            {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
-        </div>
-        <div class="sw-right">
-            <span onclick="setT('light')">CHIARO</span> | <span onclick="setT('dark')">SCURO</span> | <span onclick="setT('auto')">AUTO</span>
-        </div>
+        {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
+        {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
+        {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
+        
+        <span class="sep">|</span>
+        <span onclick="setT('light')" class="theme-t">CHIARO</span>
+        <span onclick="setT('dark')" class="theme-t">SCURO</span>
+        <span onclick="setT('auto')" class="theme-t">AUTO</span>
     </div>
 
     <div class="scene-box">
@@ -147,11 +147,8 @@
     </div>
     {% endif %}
 
-    <div class="footer">
-        <a href="https://www.pay4you.store/card-nfc.php" target="_blank" style="text-decoration:none;">
-            <span class="f-brand">Pay4You Card</span>
-        </a> 
-        <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
+    <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
+        <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
     </div>
 
     <div id="shareModal" class="modal-overlay">
