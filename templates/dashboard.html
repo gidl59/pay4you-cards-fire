@@ -6,20 +6,14 @@
     <title>Dashboard | Pay4You</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        .nfc-selector {
-            background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px;
-            border: 1px solid #444; text-align: center;
-        }
+        .nfc-selector { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; text-align: center; }
         .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
-        .nfc-btn {
-            padding: 8px 15px; border-radius: 20px; border: 1px solid #444; 
-            background: transparent; color: white; text-decoration: none; font-size:12px;
-            transition: 0.3s;
-        }
-        .nfc-btn.active {
-            background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold;
-        }
+        .nfc-btn { padding: 8px 15px; border-radius: 20px; border: 1px solid #444; background: transparent; color: white; text-decoration: none; font-size:12px; transition: 0.3s; }
+        .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold; }
         .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
+        .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
+        .p-actions { display:flex; gap:10px; }
+        .btn-act { padding:10px; color:white; text-decoration:none; border-radius:5px; font-weight:bold; font-size:14px; }
     </style>
 </head>
 <body style="background:#0b0f15;">
@@ -39,31 +33,25 @@
                 {% for pid in ['1', '2', '3'] %}
                     {% set p_key = 'p' ~ pid %}
                     {% if user[p_key].active %}
-                        <a href="/area/set_default/p{{ pid }}" class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">
-                            PROFILO {{ pid }}
-                        </a>
+                        <a href="/area/set_default/p{{ pid }}" class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">PROFILO {{ pid }}</a>
                     {% endif %}
                 {% endfor %}
-                
-                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">
-                    📋 MODALITÀ MENU
-                </a>
+                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">📋 MODALITÀ MENU</a>
             </div>
-            <p style="font-size:10px; color:#666; margin-top:10px;">Se selezioni MENU, il cliente vedrà una pagina di scelta.</p>
         </div>
 
         <h2 style="color:white;">Gestione Profili</h2>
         {% for p_id in ['1', '2', '3'] %}
         {% set p = user['p' ~ p_id] %}
-        <div class="profile-row {{ 'active' if p.active else 'inactive' }}" style="background:#111; padding:20px; border-radius:15px; margin-bottom:15px;">
-            <div class="p-left"><h3 style="margin:0; color:white;">{{ 'P' ~ p_id ~ ' - ' ~ (p.name if p.name else 'Vuoto') if p.active else 'Profilo ' ~ p_id ~ ' (Libero)' }}</h3></div>
-            <div class="p-actions" style="margin-top:15px; display:flex; gap:10px;">
+        <div class="profile-row">
+            <div class="p-left"><h3 style="margin:0; color:white;">{{ 'P' ~ p_id }} {{ '✅' if p.active else '⚫' }}</h3></div>
+            <div class="p-actions">
                 {% if p.active %}
-                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222; color:#fff; padding:10px;">🔗 Apri</a>
-                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc; color:white; padding:10px;">✏️ Modifica</a>
-                    {% if p_id != '1' %}<a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000; color:white; padding:10px;" onclick="return confirm('Stop P{{p_id}}?')">⛔</a>{% endif %}
+                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222;">🔗</a>
+                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc;">✏️</a>
+                    {% if p_id != '1' %}<a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000;" onclick="return confirm('Stop P{{p_id}}?')">⛔</a>{% endif %}
                 {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; color:white; padding:10px; width:100%; text-align:center;">➕ ATTIVA</a>
+                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; width:100%; text-align:center;">➕ ATTIVA</a>
                 {% endif %}
             </div>
         </div>
