@@ -1,106 +1,203 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Master Control</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        body { background:#050505; color:white; font-family:sans-serif; padding:20px; }
-        .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-        .box { background:#111; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #333; }
-        table { width:100%; border-collapse:collapse; }
-        td, th { padding:10px; border-bottom:1px solid #222; text-align:left; }
-        .btn { padding:5px 10px; border-radius:5px; text-decoration:none; cursor:pointer; font-size:12px; border:none; color:white; margin-right:5px; }
-        .btn-wa { background:#25D366; } .btn-mail { background:#fff; color:black; }
-        .btn-qr { background:#FF9800; color:black; }
-        .btn-del { background:#cc0000; } .btn-view { background:#0088cc; }
-        .btn-out { background:transparent; border:1px solid #666; color:#ccc; }
-        input { background:#222; border:1px solid #444; color:white; padding:8px; border-radius:5px; }
-        
-        /* MODAL */
-        .m-over { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99; justify-content:center; align-items:center; }
-        .m-box { background:#222; padding:20px; border-radius:10px; text-align:center; max-width:300px; border:1px solid #444; }
-        .m-acts { display:flex; gap:10px; margin-top:15px; justify-content:center; }
-    </style>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Master Admin | Pay4You</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body{ background:#050505; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+    .wrap{ max-width:1100px; margin:18px auto; padding:0 14px; }
+
+    .topbar{ display:flex; justify-content:space-between; align-items:center; margin:10px 0 18px; }
+    .title{ font-size:22px; font-weight:900; display:flex; align-items:center; gap:10px; }
+    .logout{ color:#ff4444; text-decoration:none; font-weight:800; }
+
+    .card{ background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    .new-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .inp{
+      background:#121212; border:1px solid #2a2a2a; color:#fff; border-radius:10px;
+      padding:12px 12px; outline:none; min-width:180px;
+    }
+    .btn{
+      border:none; border-radius:10px; padding:10px 14px; font-weight:900; cursor:pointer;
+    }
+    .btn-green{ background:#00c853; color:#001b0a; }
+    .btn-blue{ background:#0088cc; color:#fff; }
+    .btn-red{ background:#cc0000; color:#fff; }
+    .btn-gray{ background:#222; color:#fff; border:1px solid #333; }
+
+    table{ width:100%; border-collapse:collapse; margin-top:14px; }
+    th,td{ padding:14px 12px; border-bottom:1px solid #1f1f1f; vertical-align:middle; }
+    th{ text-align:left; color:#bbb; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+
+    .client-link{ display:block; color:#00ffc8; font-weight:900; text-decoration:none; margin-top:6px; }
+    .cred{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; color:#ddd; font-size:13px; }
+    .send-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .pill{ padding:8px 12px; border-radius:12px; font-weight:900; cursor:pointer; border:none; }
+    .pill-wa{ background:#25D366; color:#041b0c; }
+    .pill-em{ background:#f2f2f2; color:#111; }
+    .pill-qr{ background:#ffb000; color:#111; }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .small{ font-size:12px; color:#777; }
+
+    /* Modal QR */
+    .modal{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
+      align-items:center; justify-content:center; z-index:9999; padding:18px;
+    }
+    .modal-box{
+      background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:18px; max-width:420px; width:100%;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .qrimg{ width:260px; height:260px; background:#fff; padding:14px; border-radius:18px; display:block; margin:10px auto; }
+    .modal-actions{ display:flex; gap:10px; justify-content:center; margin-top:14px; }
+  </style>
 </head>
+
 <body>
-    <div class="head">
-        <h1>MASTER CONTROL</h1>
-        <a href="/master/logout" class="btn btn-out">ESCI</a>
-    </div>
-    
-    <div class="box">
-        <h3>➕ Nuovo Cliente</h3>
-        <form action="/master/add" method="POST">
-            <input type="text" name="slug" placeholder="Slug (es. mario)" required>
-            <input type="text" name="username" placeholder="User">
-            <input type="text" name="password" placeholder="Pass (vuoto=auto)">
-            <input type="text" name="nome" placeholder="Nome">
-            <button class="btn btn-wa" style="font-size:14px;">CREA</button>
-        </form>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">➕ Nuovo Cliente</div>
+      <a class="logout" href="/master/logout">Esci</a>
     </div>
 
-    <div class="box">
-        <table>
-            <tr><th>Cliente</th><th>Credenziali</th><th>Invia</th><th>Azioni</th></tr>
-            {% for c in clienti %}
-            <tr>
-                <td>{{ c.nome }}<br><small style="color:#00ffc8;">/card/{{ c.slug }}</small></td>
-                <td style="font-family:monospace;">U: {{ c.username }}<br>P: {{ c.password }}</td>
-                <td>
-                    <button onclick="sendWa('{{c.username}}','{{c.password}}')" class="btn btn-wa">WA</button>
-                    <button onclick="sendMail('{{c.username}}','{{c.password}}')" class="btn btn-mail">@</button>
-                    <button onclick="openQr('{{c.slug}}')" class="btn btn-qr">QR</button>
-                </td>
-                <td>
-                    <a href="/master/impersonate/{{c.id}}" target="_blank" class="btn btn-view">Gestisci</a>
-                    <a href="/master/delete/{{c.id}}" class="btn btn-del" onclick="return confirm('Eliminare?')">X</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
+    <div class="card">
+      <form method="POST" action="/master/add" class="new-row">
+        <input class="inp" type="text" name="slug" placeholder="Slug (es. mario)">
+        <input class="inp" type="text" name="username" placeholder="User">
+        <input class="inp" type="text" name="password" placeholder="Pass (vuoto=auto)">
+        <input class="inp" type="text" name="nome" placeholder="Nome">
+        <button class="btn btn-green" type="submit">CREA</button>
+      </form>
 
-    <div id="qrModal" class="m-over">
-        <div class="m-box">
-            <h3 style="margin-top:0;">QR Code</h3>
-            <div id="qrImg"></div>
-            <div class="m-acts">
-                <button onclick="sendQrWa()" class="btn btn-wa">WA</button>
-                <button onclick="sendQrMail()" class="btn btn-mail">@</button>
-                <button onclick="closeQr()" class="btn btn-del">Chiudi</button>
-            </div>
-        </div>
-    </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Credenziali</th>
+            <th>Invia</th>
+            <th style="text-align:right;">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clienti %}
+          <tr>
+            <td>
+              <div style="font-weight:900;">{{ c.get('nome','') }}</div>
+              <a class="client-link" href="/card/{{ c.slug }}" target="_blank">/card/{{ c.slug }}</a>
+              <div class="small">slug: {{ c.slug }}</div>
+            </td>
 
-    <script>
-        var currentSlug = "";
-        function sendWa(u, p) {
-            var txt = "Credenziali Pay4You:\nUser: " + u + "\nPass: " + p + "\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            window.open("https://wa.me/?text=" + encodeURIComponent(txt));
-        }
-        function sendMail(u, p) {
-            var sub = "Credenziali Pay4You";
-            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            window.location.href = "mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
-        }
-        
-        function openQr(slug) {
-            currentSlug = slug;
-            var url = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://pay4you-cards-fire.onrender.com/card/" + slug;
-            document.getElementById('qrImg').innerHTML = '<img src="' + url + '" style="background:white; padding:10px; border-radius:10px;">';
-            document.getElementById('qrModal').style.display = 'flex';
-        }
-        function closeQr() { document.getElementById('qrModal').style.display = 'none'; }
-        
-        function sendQrWa() {
-            var link = "https://pay4you-cards-fire.onrender.com/card/" + currentSlug;
-            window.open("https://wa.me/?text=" + encodeURIComponent("Ecco la tua Card: " + link));
-        }
-        function sendQrMail() {
-            var link = "https://pay4you-cards-fire.onrender.com/card/" + currentSlug;
-            window.location.href = "mailto:?subject=La tua Card&body=" + encodeURIComponent("Ecco il link: " + link);
-        }
-    </script>
+            <td class="cred">
+              U: {{ c.username }}<br>
+              P: {{ c.password }}
+            </td>
+
+            <td>
+              <div class="send-row">
+                <button class="pill pill-wa" type="button"
+                        onclick="sendWA('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">WA</button>
+
+                <button class="pill pill-em" type="button"
+                        onclick="sendEmail('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">@</button>
+
+                <button class="pill pill-qr" type="button"
+                        onclick="showQR('{{ c.slug }}')">QR</button>
+              </div>
+              <div class="small">Email: testo forzato (iPhone OK)</div>
+            </td>
+
+            <td style="text-align:right;">
+              <div class="actions" style="justify-content:flex-end;">
+                <a class="btn btn-blue" href="/master/impersonate/{{ c.id }}">Gestisci</a>
+                <button class="btn btn-red" type="button" onclick="doubleDelete({{ c.id }}, '{{ c.slug }}')">ELIMINA</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QR MODAL -->
+  <div id="qrModal" class="modal" onclick="closeQR()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div style="font-weight:900; text-align:center;">QR Card</div>
+      <img id="qrImg" class="qrimg" src="" alt="QR">
+      <div class="small" style="text-align:center;" id="qrText"></div>
+      <div class="modal-actions">
+        <button class="btn btn-gray" type="button" onclick="closeQR()">CHIUDI</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function makeMailto(subject, body){
+      const b = (body || "").replace(/\n/g, "\r\n");
+      return "mailto:?subject=" + encodeURIComponent(subject) +
+             "&body=" + encodeURIComponent(b);
+    }
+
+    function cardUrl(slug){
+      return window.location.origin + "/card/" + slug;
+    }
+    function loginUrl(){
+      return window.location.origin + "/area/login";
+    }
+
+    // ✅ WA con testo sempre presente
+    function sendWA(slug, user, pass){
+      const url = cardUrl(slug);
+      const text =
+        "PAY4YOU - Credenziali Card\n\n" +
+        "Card: " + url + "\n" +
+        "Dashboard: " + loginUrl() + "\n\n" +
+        "USER: " + user + "\n" +
+        "PASS: " + pass + "\n\n" +
+        "Apri la card e poi fai login per modificarla.";
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    }
+
+    // ✅ EMAIL con testo sempre presente (iPhone OK)
+    function sendEmail(slug, user, pass){
+      const url = cardUrl(slug);
+      const subject = "Pay4You - Credenziali Card";
+      const body =
+        "Ciao!\n\n" +
+        "Ecco la tua Card Digitale Pay4You:\n" + url + "\n\n" +
+        "Accesso Dashboard per modifiche:\n" + loginUrl() + "\n\n" +
+        "CREDENZIALI:\n" +
+        "USER: " + user + "\n" +
+        "PASS: " + pass + "\n\n" +
+        "A presto,\nPay4You";
+      window.location.href = makeMailto(subject, body);
+    }
+
+    function showQR(slug){
+      const url = cardUrl(slug);
+      document.getElementById("qrImg").src =
+        "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(url);
+      document.getElementById("qrText").innerText = url;
+      document.getElementById("qrModal").style.display = "flex";
+    }
+    function closeQR(){
+      document.getElementById("qrModal").style.display = "none";
+      document.getElementById("qrImg").src = "";
+      document.getElementById("qrText").innerText = "";
+    }
+
+    // ✅ doppio controllo eliminazione cliente
+    function doubleDelete(id, slug){
+      if(!confirm("ATTENZIONE!\nVuoi eliminare definitivamente la card: " + slug + " ?")) return;
+      const second = prompt("Per confermare, scrivi ESATTO: ELIMINA " + slug);
+      if(second !== ("ELIMINA " + slug)) { alert("Conferma NON valida. Operazione annullata."); return; }
+      window.location.href = "/master/delete/" + id;
+    }
+  </script>
 </body>
 </html>
