@@ -55,9 +55,11 @@
             window.open("https://wa.me/?text=" + encodeURIComponent(txt));
         }
         function sendMail(u, p) {
-            var sub = "Credenziali Pay4You";
-            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPass: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body));
+            var email = "";
+            var subject = "Credenziali Pay4You";
+            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
+            // Usa window.open con _self per compatibilità massima
+            window.open("mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body), "_self");
         }
     </script>
 </body>
