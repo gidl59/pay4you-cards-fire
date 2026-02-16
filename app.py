@@ -6,11 +6,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# Estensione necessaria per la logica dei template
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_syntax_fixed_final"
+app.secret_key = "pay4you_2026_final_fix_v3"
 
-# --- CONFIGURAZIONE ---
+# CONFIG
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
 else:
@@ -23,12 +22,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# --- GESTIONE DB (CORRETTA ED ESPANSA) ---
+# DB GESTIONE
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
     try:
-        # SINTASSI CORRETTA: with a capo
         with open(DB_FILE, 'r') as f:
             return json.load(f)
     except:
@@ -36,7 +34,6 @@ def load_db():
 
 def save_db(data):
     try:
-        # SINTASSI CORRETTA: with a capo
         with open(DB_FILE, 'w') as f:
             json.dump(data, f, indent=4)
     except Exception as e:
@@ -54,7 +51,6 @@ def repair_user(user):
     if 'default_profile' not in user:
         user['default_profile'] = 'p1'
         dirty = True
-        
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
@@ -80,7 +76,7 @@ def repair_user(user):
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# --- VCF GENERATOR (SALVA CONTATTO) ---
+# VCF GENERATOR (SEMPLIFICATO PER COMPATIBILITÀ)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
@@ -92,44 +88,38 @@ def download_vcf(slug):
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    vcard = [
-        "BEGIN:VCARD", "VERSION:3.0",
-        f"N:{p.get('name')};;;;", f"FN:{p.get('name')}",
-        f"ORG:{p.get('company')}", f"TITLE:{p.get('role')}"
-    ]
+    # Costruzione stringa VCF manuale e sicura
+    vcf_content = "BEGIN:VCARD\nVERSION:3.0\n"
+    vcf_content += f"FN:{p.get('name')}\n"
+    vcf_content += f"N:;{p.get('name')};;;\n"
+    if p.get('company'): vcf_content += f"ORG:{p.get('company')}\n"
+    if p.get('role'): vcf_content += f"TITLE:{p.get('role')}\n"
     
-    # Gestione Liste e Virgole
     for m in p.get('mobiles', []):
-        vcard.append(f"TEL;TYPE=CELL:{m}")
-        
+        vcf_content += f"TEL;TYPE=CELL:{m}\n"
     if p.get('office_phone'):
-        vcard.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
+        vcf_content += f"TEL;TYPE=WORK:{p.get('office_phone')}\n"
         
-    for e_str in p.get('emails', []):
-        for e in e_str.split(','): 
-            if e.strip(): vcard.append(f"EMAIL;TYPE=WORK:{e.strip()}")
+    for e_list in p.get('emails', []):
+        for e in e_list.split(','):
+            if e.strip(): vcf_content += f"EMAIL;TYPE=WORK:{e.strip()}\n"
             
-    for w_str in p.get('websites', []):
-        for w in w_str.split(','): 
-            if w.strip(): vcard.append(f"URL:{w.strip()}")
+    for w_list in p.get('websites', []):
+        for w in w_list.split(','):
+            if w.strip(): vcf_content += f"URL:{w.strip()}\n"
             
     if p.get('address'):
-        # Le virgole nell'indirizzo VCF vanno escaped o sostituite con punto e virgola
-        addr_clean = p.get('address').replace(',', ';')
-        vcard.append(f"ADR;TYPE=WORK:;;{addr_clean};;;;")
+        addr = p.get('address').replace(',', ' ')
+        vcf_content += f"ADR;TYPE=WORK:;;{addr};;;\n"
         
-    if p.get('bio'): vcard.append(f"NOTE:{p.get('bio')}")
+    vcf_content += "END:VCARD"
     
-    vcard.append("END:VCARD")
-    
-    # Usa \r\n per massima compatibilità (Android/iOS)
-    response = make_response("\r\n".join(vcard))
+    response = make_response(vcf_content)
     response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
-    # Content type specifico per garantire il download
     response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     return response
 
-# --- STANDARD ROUTES ---
+# ROUTES
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
@@ -284,38 +274,28 @@ def master_add():
         new_id = 1
     else:
         new_id = max([c['id'] for c in clienti]) + 1
-        
     chars = string.ascii_letters + string.digits + "!@#"
     auto_pass = ''.join(random.choices(chars, k=10))
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     slug = request.form.get('slug') or f"card-{new_id}"
-    
     new_c = {"id": new_id, "username": request.form.get('username') or f"user{new_id}", "password": final_pass, "slug": slug, "nome": request.form.get('nome') or "Nuovo", "azienda": "New", "p1": {"active": True}, "p2": {"active": False}, "p3": {"active": False}, "default_profile": "p1"}
     repair_user(new_c)
     clienti.append(new_c)
     save_db(clienti)
     return redirect(url_for('master_login'))
 
-# --- VIEW CARD ---
-def dummy_t(k): return "SALVA"
-
 @app.route('/card/<slug>')
 def view_card(slug):
     clienti = load_db()
     user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
-    
     if repair_user(user): save_db(clienti)
-    
     default_p = user.get('default_profile', 'p1')
     p_req = request.args.get('p')
-    
     if not p_req: p_req = default_p
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
-    
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
-    
     ag = {
         "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
         "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
@@ -329,45 +309,23 @@ def view_card(slug):
     }
     return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
-# --- UTILS ---
 @app.route('/master/delete/<int:id>')
-def master_delete(id): 
-    save_db([c for c in load_db() if c['id'] != id])
-    return redirect(url_for('master_login'))
-
+def master_delete(id): save_db([c for c in load_db() if c['id'] != id]); return redirect(url_for('master_login'))
 @app.route('/master/impersonate/<int:id>')
-def master_impersonate(id): 
-    session['logged_in']=True
-    session['user_id']=id
-    return redirect(url_for('area'))
-
+def master_impersonate(id): session['logged_in']=True; session['user_id']=id; return redirect(url_for('area'))
 @app.route('/master/logout')
-def master_logout(): 
-    session.pop('is_master', None)
-    return redirect(url_for('master_login'))
-
+def master_logout(): session.pop('is_master', None); return redirect(url_for('master_login'))
 @app.route('/area/logout')
-def logout(): 
-    session.clear()
-    return redirect(url_for('login'))
-
+def logout(): session.clear(); return redirect(url_for('login'))
 @app.route('/uploads/<filename>')
-def uploaded_file(filename): 
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
+def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/favicon.ico')
-def favicon(): 
-    return send_from_directory('static', 'favicon.ico')
-
+def favicon(): return send_from_directory('static', 'favicon.ico')
 @app.route('/reset-tutto')
 def reset_db_emergency():
     if os.path.exists(DB_FILE):
-        try:
-            os.remove(DB_FILE)
-            return "DB CANCELLATO"
-        except:
-            pass
+        try: os.remove(DB_FILE); return "DB CANCELLATO"
+        except: pass
     return "DB PULITO"
 
-if __name__ == '__main__': 
-    app.run(debug=True)
+if __name__ == '__main__': app.run(debug=True)
