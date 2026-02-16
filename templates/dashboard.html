@@ -1,61 +1,131 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Pay4You</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .nfc-selector { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; text-align: center; }
-        .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
-        .nfc-btn { padding: 8px 15px; border-radius: 20px; border: 1px solid #444; background: transparent; color: white; text-decoration: none; font-size:12px; transition: 0.3s; }
-        .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold; }
-        .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
-        .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
-        .p-actions { display:flex; gap:10px; }
-        .btn-act { padding:10px; color:white; text-decoration:none; border-radius:5px; font-weight:bold; font-size:14px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Pay4You</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .nfc-selector { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; text-align: center; }
+    .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
+    .nfc-btn { padding: 8px 15px; border-radius: 20px; border: 1px solid #444; background: transparent; color: white; text-decoration: none; font-size:12px; transition: 0.3s; }
+    .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold; }
+    .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
+    .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; }
+    .p-actions { display:flex; gap:10px; }
+    .btn-act { padding:10px; color:white; text-decoration:none; border-radius:10px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; justify-content:center; min-width:42px; }
+    .qr-box { margin-top:16px; display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+    .qr-img { width:120px; height:120px; border-radius:14px; background:#fff; padding:10px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    .share-btn { background: linear-gradient(90deg,#0088cc,#00ffc8); color:#000; border:none; border-radius:14px; padding:12px 16px; font-weight:900; cursor:pointer; }
+    .share-btn:active { transform: scale(.98); }
+    .mini-note { color:#aaa; font-size:12px; margin-top:10px; }
+  </style>
 </head>
+
 <body style="background:#0b0f15;">
-    <div class="dash-head">
-        <div class="user-info">
-            <span style="color:white; font-weight:bold;">{{ user.nome }}</span>
-            <small style="color:#00ffc8;">{{ user.azienda }}</small>
-        </div>
-        <a href="/area/logout" style="color:#ff4444;">Esci</a>
+  <div class="dash-head">
+    <div class="user-info">
+      <span style="color:white; font-weight:bold;">{{ user.nome }}</span>
+      <small style="color:#00ffc8;">{{ user.azienda }}</small>
     </div>
+    <a href="/area/logout" style="color:#ff4444;">Esci</a>
+  </div>
 
-    <div class="dash-container">
-        
-        <div class="nfc-selector">
-            <div style="color:#00ffc8; font-size:12px; margin-bottom:10px;">IMPOSTAZIONE CARTA / QR</div>
-            <div class="nfc-btns">
-                {% for pid in ['1', '2', '3'] %}
-                    {% set p_key = 'p' ~ pid %}
-                    {% if user[p_key].active %}
-                        <a href="/area/set_default/p{{ pid }}" class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">PROFILO {{ pid }}</a>
-                    {% endif %}
-                {% endfor %}
-                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">📋 MODALITÀ MENU</a>
-            </div>
-        </div>
+  <div class="dash-container">
 
-        <h2 style="color:white;">Gestione Profili</h2>
-        {% for p_id in ['1', '2', '3'] %}
-        {% set p = user['p' ~ p_id] %}
-        <div class="profile-row">
-            <div class="p-left"><h3 style="margin:0; color:white;">{{ 'P' ~ p_id }} {{ '✅' if p.active else '⚫' }}</h3></div>
-            <div class="p-actions">
-                {% if p.active %}
-                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222;">🔗</a>
-                    <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc;">✏️</a>
-                    {% if p_id != '1' %}<a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000;" onclick="return confirm('Stop P{{p_id}}?')">⛔</a>{% endif %}
-                {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; width:100%; text-align:center;">➕ ATTIVA</a>
-                {% endif %}
-            </div>
-        </div>
+    <div class="nfc-selector">
+      <div style="color:#00ffc8; font-size:12px; margin-bottom:10px;">IMPOSTAZIONE CARTA / QR</div>
+
+      <div class="nfc-btns">
+        {% for pid in ['1', '2', '3'] %}
+          {% set p_key = 'p' ~ pid %}
+          {% if user[p_key].active %}
+            <a href="/area/set_default/p{{ pid }}"
+               class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">
+              PROFILO {{ pid }}
+            </a>
+          {% endif %}
         {% endfor %}
+        <a href="/area/set_default/menu"
+           class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}"
+           style="border-color:#9d00ff;">
+          📋 MODALITÀ MENU
+        </a>
+      </div>
+
+      {# ===== QR + CONDIVISIONE (FIX EMAIL TESTO) ===== #}
+      {% set dp = user.get('default_profile','p1') %}
+      {% if dp != 'menu' %}
+        {% set card_url = request.url_root.rstrip('/') ~ '/card/' ~ user.slug ~ '?p=' ~ dp %}
+      {% else %}
+        {% set card_url = request.url_root.rstrip('/') ~ '/card/' ~ user.slug %}
+      {% endif %}
+
+      <div class="qr-box">
+        <img class="qr-img"
+             src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ card_url }}"
+             alt="QR">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="share-btn" onclick="shareCardWhatsApp('{{ card_url }}')">📲 INVIA SU WHATSAPP</button>
+          <button class="share-btn" onclick="shareCardEmail('{{ card_url }}')">✉️ INVIA PER EMAIL</button>
+          <div class="mini-note">Il testo dell’email è forzato (iPhone OK).</div>
+        </div>
+      </div>
     </div>
+
+    <h2 style="color:white;">Gestione Profili</h2>
+
+    {% for p_id in ['1', '2', '3'] %}
+      {% set p = user['p' ~ p_id] %}
+      <div class="profile-row">
+        <div class="p-left">
+          <h3 style="margin:0; color:white;">{{ 'P' ~ p_id }} {{ '✅' if p.active else '⚫' }}</h3>
+        </div>
+
+        <div class="p-actions">
+          {% if p.active %}
+            <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222;">🔗</a>
+            <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc;">✏️</a>
+            {% if p_id != '1' %}
+              <a href="/area/deactivate/{{ p_id }}"
+                 class="btn-act"
+                 style="background:#cc0000;"
+                 onclick="return confirm('Stop P{{p_id}}?')">⛔</a>
+            {% endif %}
+          {% else %}
+            <a href="/area/activate/{{ p_id }}"
+               class="btn-act"
+               style="background:#444; width:100%; text-align:center;">➕ ATTIVA</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    function makeMailto(subject, body){
+      const b = (body || "").replace(/\n/g, "\r\n");
+      return "mailto:?subject=" + encodeURIComponent(subject) +
+             "&body=" + encodeURIComponent(b);
+    }
+
+    function shareCardWhatsApp(cardUrl){
+      const text = "Pay4You - Card Digitale:\n" + cardUrl;
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    }
+
+    // FIX: email con testo SEMPRE presente (anche su iPhone)
+    function shareCardEmail(cardUrl){
+      const subject = "Pay4You - Card Digitale";
+      const body =
+        "Ciao!\n" +
+        "Ti invio la mia Card Digitale Pay4You:\n\n" +
+        cardUrl + "\n\n" +
+        "Accesso Dashboard (per modifiche):\n" +
+        window.location.origin + "/area/login\n\n" +
+        "A presto!";
+      window.location.href = makeMailto(subject, body);
+    }
+  </script>
 </body>
 </html>
