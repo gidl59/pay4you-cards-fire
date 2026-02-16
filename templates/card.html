@@ -19,6 +19,7 @@
       {% endif %}
     </div>
 
+    {# ===== LOGICA EFFETTI (corretta) ===== #}
     {% set flip_class = 'tap-flip' %}
     {% if ag.fx_rotate_agent == 'on' %}
       {% set flip_class = 'spin-agent' %}
@@ -30,10 +31,12 @@
       <div class="flipper">
         <div class="front">
           {% if ag.photo_url %}
-          <img src="{{ ag.photo_url }}" class="avatar-img"
-               style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
+            {# FIX CROP DEFINITIVO: variabili CSS, no inline object-position #}
+            <img src="{{ ag.photo_url }}"
+                 class="avatar-img"
+                 style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
-          <div class="avatar-img" style="background:#ccc;"></div>
+            <div class="avatar-img" style="background:#ccc;"></div>
           {% endif %}
         </div>
 
@@ -212,7 +215,7 @@
       return window.location.origin + url;
     }
     function makeMailto(subject, body) {
-      const b = body.replace(/\n/g, "\r\n");
+      const b = (body || "").replace(/\n/g, "\r\n");
       return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
     }
 
