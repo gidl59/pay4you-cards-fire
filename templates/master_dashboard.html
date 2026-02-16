@@ -3,86 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <title>Master Control</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        .admin-box { background:#111; padding:20px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .btn-mini { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; color: white; text-decoration: none; font-size:12px; display:inline-block; margin-right:3px;}
-        .bg-blue { background: #0088cc; }
-        .bg-red { background: #cc0000; }
-        .bg-green { background: #00ffc8; color:black; font-weight:bold; }
-        .bg-wa { background: #25D366; }
-        .bg-mail { background: #fff; color:#000; }
-        .input-dark { background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 5px; width: 100%; box-sizing:border-box;}
+        body { background:#050505; color:white; font-family:sans-serif; padding:20px; }
+        .box { background:#111; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #333; }
+        table { width:100%; border-collapse:collapse; }
+        td, th { padding:10px; border-bottom:1px solid #222; text-align:left; }
+        .btn { padding:5px 10px; border-radius:5px; text-decoration:none; cursor:pointer; font-size:12px; border:none; color:white; margin-right:5px; }
+        .btn-wa { background:#25D366; } .btn-mail { background:#fff; color:black; }
+        .btn-del { background:#cc0000; } .btn-view { background:#0088cc; }
+        input { background:#222; border:1px solid #444; color:white; padding:8px; border-radius:5px; }
     </style>
 </head>
-<body style="background:#050505; padding:20px; font-family:sans-serif; color:white;">
+<body>
+    <h1>MASTER CONTROL</h1>
+    
+    <div class="box">
+        <h3>➕ Nuovo Cliente</h3>
+        <form action="/master/add" method="POST">
+            <input type="text" name="slug" placeholder="Slug (es. mario)" required>
+            <input type="text" name="username" placeholder="User">
+            <input type="text" name="password" placeholder="Pass (vuoto=auto)">
+            <input type="text" name="nome" placeholder="Nome">
+            <button class="btn btn-wa" style="font-size:14px;">CREA</button>
+        </form>
+    </div>
 
-    <div class="dash-container">
-        <div style="display:flex; justify-content:space-between; margin-bottom:30px; align-items:center;">
-            <h1 style="color:#ff4444; margin:0;">MASTER CONTROL</h1>
-            <a href="/master/logout" style="color:white; text-decoration:none; border:1px solid #444; padding:5px 10px; border-radius:5px;">Esci</a>
-        </div>
-
-        <div class="admin-box" style="border-top: 3px solid #00ffc8;">
-            <h3 style="color:#00ffc8; margin-top:0;">➕ Aggiungi Cliente</h3>
-            <form action="/master/add" method="POST" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end;">
-                <div><label style="font-size:11px; color:#888;">Slug (es: mario-rossi)</label><input type="text" name="slug" class="input-dark" placeholder="mario-rossi" required></div>
-                <div><label style="font-size:11px; color:#888;">Nome</label><input type="text" name="nome" class="input-dark" placeholder="Mario"></div>
-                <div><label style="font-size:11px; color:#888;">Username</label><input type="text" name="username" class="input-dark" placeholder="mario"></div>
-                <div><label style="font-size:11px; color:#888;">Password</label><input type="text" name="password" class="input-dark" placeholder="vuoto = auto"></div>
-                <button type="submit" class="btn-mini bg-green" style="height:38px;">CREA</button>
-            </form>
-        </div>
-
-        <div class="admin-box">
-            <h3 style="margin-top:0;">Clienti Attivi</h3>
-            <table style="width:100%; text-align:left; border-collapse: collapse;">
-                <thead style="background:#222; color:#888;">
-                    <tr>
-                        <th style="padding:10px;">Cliente</th>
-                        <th style="padding:10px;">Credenziali</th>
-                        <th style="padding:10px;">Invia</th>
-                        <th style="padding:10px; text-align:right;">Azioni</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in clienti %}
-                    <tr style="border-bottom:1px solid #222;">
-                        <td style="padding:15px;">
-                            <strong style="font-size:15px;">{{ c.nome }}</strong><br>
-                            <a href="/card/{{ c.slug }}" target="_blank" style="color:#0088cc; font-size:12px;">/card/{{ c.slug }}</a>
-                        </td>
-                        <td>
-                            <div style="background:#222; padding:5px; font-family:monospace; font-size:11px; display:inline-block; max-width:150px; word-wrap:break-word;">
-                                U: {{ c.username }}<br>P: {{ c.password }}
-                            </div>
-                        </td>
-                        <td>
-                            <button onclick="sendWa('{{ c.username }}', '{{ c.password }}')" class="btn-mini bg-wa">WA</button>
-                            <button onclick="sendMail('{{ c.username }}', '{{ c.password }}')" class="btn-mini bg-mail">✉️</button>
-                        </td>
-                        <td style="text-align:right;">
-                            <a href="/master/impersonate/{{ c.id }}" target="_blank" class="btn-mini bg-blue">👁️</a>
-                            <a href="/master/delete/{{ c.id }}" class="btn-mini bg-red" onclick="return confirm('Eliminare?')">🗑️</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="box">
+        <table>
+            <tr><th>Cliente</th><th>Credenziali</th><th>Invia</th><th>Azioni</th></tr>
+            {% for c in clienti %}
+            <tr>
+                <td>{{ c.nome }}<br><small style="color:#00ffc8;">/card/{{ c.slug }}</small></td>
+                <td style="font-family:monospace;">U: {{ c.username }}<br>P: {{ c.password }}</td>
+                <td>
+                    <button onclick="sendWa('{{c.username}}','{{c.password}}')" class="btn btn-wa">WA</button>
+                    <button onclick="sendMail('{{c.username}}','{{c.password}}')" class="btn btn-mail">@</button>
+                </td>
+                <td>
+                    <a href="/master/impersonate/{{c.id}}" target="_blank" class="btn btn-view">Gestisci</a>
+                    <a href="/master/delete/{{c.id}}" class="btn btn-del" onclick="return confirm('Eliminare?')">X</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
     </div>
 
     <script>
-        function sendWa(user, pass) {
-            var msg = "Pay4You - Ecco le tue credenziali:\nUser: " + user + "\nPassword: " + pass + "\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
-            window.open("https://wa.me/?text=" + encodeURIComponent(msg), '_blank');
+        function sendWa(u, p) {
+            var txt = "Credenziali Pay4You:\nUser: " + u + "\nPass: " + p + "\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
+            window.open("https://wa.me/?text=" + encodeURIComponent(txt));
         }
-
-        function sendMail(user, pass) {
-            var subject = "Credenziali Pay4You";
-            var body = "Ecco le tue credenziali:\n\nUser: " + user + "\nPassword: " + pass + "\n\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
-            window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+        function sendMail(u, p) {
+            var sub = "Credenziali Pay4You";
+            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPass: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
+            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body));
         }
     </script>
 </body>
