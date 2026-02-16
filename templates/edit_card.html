@@ -32,8 +32,9 @@
         .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
+        /* MODAL PREVIEW DASHBOARD */
         .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
-        .dash-modal-content { max-width:90%; max-height:60vh; margin-bottom:20px; border-radius:10px; }
+        .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:20px; border-radius:10px; }
         .dash-actions { display:flex; gap:15px; }
         .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
         .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:transparent; border:1px solid #aaa; }
@@ -95,17 +96,17 @@
                         <div class="slider-row"><label>↕️</label><input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()"></div>
                         <div class="slider-row"><label>🔍</label><input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()"></div>
                     </div>
-                    <label style="display:inline-block; margin-top:5px;">Gira Moneta?</label> <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
+                    <label style="display:inline-block; margin-top:5px;">Gira Agente?</label> <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
                 </div>
 
                 <div class="crop-area">
                     <label style="color:#00ffc8;">LOGO AZIENDA</label>
                     <img id="prevLogo" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
                     <input type="file" name="logo" accept="image/*" onchange="simplePreview(this, 'prevLogo')">
-                    <label>Gira Logo?</label> <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
+                    <label style="display:inline-block;">Gira Logo?</label> <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
                     
                     <hr style="border-color:#333; margin:15px 0;">
-                    <label style="color:#aaa;">FOTO RETRO (Per Effetto Specchio)</label>
+                    <label style="color:#aaa;">FOTO RETRO</label>
                     <img id="prevRetro" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:5px auto; display:block;">
                     <input type="file" name="personal_foto" accept="image/*" onchange="simplePreview(this, 'prevRetro')">
                 </div>
@@ -116,7 +117,7 @@
                 <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %}> TAP (Clicca e gira) 
                 <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %}> SPECCHIO (Gira sempre)
                 <span style="margin-left:20px;">|</span>
-                <label style="margin-left:20px;">Cosa c'è dietro?</label>
+                <label style="margin-left:20px;">Retro:</label>
                 <input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content=='logo' %}checked{% endif %}> Logo
                 <input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content=='personal' %}checked{% endif %}> Foto
             </div>
@@ -201,12 +202,13 @@
     <script>
         function previewCrop(input) { if(input.files && input.files[0]) { var r = new FileReader(); r.onload = function(e){ document.getElementById('cropImg').src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
         function simplePreview(input, id) { if(input.files && input.files[0]) { var r = new FileReader(); r.onload = function(e){ document.getElementById(id).src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
+        
         function updateCrop() {
             var x = document.getElementsByName('pos_x')[0].value;
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
-            img.style.objectPosition = x + "% " + y + "%"; // FIX CROP Y
+            img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
 
@@ -223,13 +225,13 @@
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; height:60vh; width:300px;"></iframe>';
+            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; height:80vh; width:90%;"></iframe>'; // PDF GRANDE
 
             modal.style.display = 'flex';
         }
         function closeDashModal() { document.getElementById('dashModal').style.display = 'none'; document.getElementById('dashMediaBox').innerHTML = ""; }
         function deleteCurrentItem() {
-            if(confirm("ELIMINARE? (Richiede Salvataggio)")) {
+            if(confirm("Eliminare?")) {
                 var chk = currentItemElement.querySelector('input[type="checkbox"]');
                 if(chk) chk.checked = true;
                 currentItemElement.style.display = 'none';
