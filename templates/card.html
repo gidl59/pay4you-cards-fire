@@ -29,14 +29,8 @@
     <div class="info-section">
         <div class="name">{{ ag.name }}</div>
         <div class="role">{{ ag.role }}</div>
-        
-        {% if ag.company %}
-        <div class="box-company">{{ ag.company }}</div>
-        {% endif %}
-
-        {% if ag.bio %}
-        <div class="box-bio">{{ ag.bio }}</div>
-        {% endif %}
+        {% if ag.company %}<div class="box-company">{{ ag.company }}</div>{% endif %}
+        {% if ag.bio %}<div class="box-bio">{{ ag.bio }}</div>{% endif %}
     </div>
 
     <div class="actions-row">
@@ -73,14 +67,9 @@
         {% if ag.office_phone %}<div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>{% endif %}
         {% for e in emails %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e}}" class="d-link">{{e}}</a></div>{% endfor %}
         {% if ag.pec %}<div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>{% endif %}
+        {% for w in websites %}<div class="d-row" style="cursor:pointer;" onclick="openSite('{{w}}')"><span class="d-icon">🌐</span> <span class="d-link">{{ w|truncate(30) }} <i class="fas fa-arrow-right" style="font-size:10px; margin-left:5px;"></i></span></div>{% endfor %}
         
-        {% for w in websites %}
-        <div class="d-row" style="cursor:pointer;" onclick="openSite('{{w}}')">
-            <span class="d-icon">🌐</span> <span class="d-link">{{ w|truncate(30) }} <i class="fas fa-arrow-right" style="font-size:10px; margin-left:5px;"></i></span>
-        </div>
-        {% endfor %}
-        
-        <div style="margin-top:15px; font-size:11px; opacity:0.6; display:flex; justify-content:space-between;">
+        <div class="fiscal-row">
             {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
             {% if ag.cod_sdi %}<span>SDI: {{ag.cod_sdi}}</span>{% endif %}
         </div>
@@ -99,7 +88,7 @@
         <div class="gal-grid-5">
             {% for vid in p_data.gallery_vid %}
             <div class="vid-box" onclick="openShare('vid', '{{ vid }}')">
-                <video src="{{ vid }}#t=0.5" preload="metadata"></video>
+                <video src="{{ vid }}#t=2.0" preload="metadata"></video>
                 <i class="fas fa-play vid-icon"></i>
             </div>
             {% endfor %}
@@ -143,14 +132,12 @@
 
         if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
         else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-        else if(type=='pdf') { window.open(url, '_blank'); } // PDF si apre in tab per ora
+        else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:60vh; width:300px; background:white;"></iframe>';
         else if(type=='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+fullUrl+'" style="background:white; padding:10px; border-radius:10px;">';
 
-        if(type != 'pdf') {
-            document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
-            document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
-            document.getElementById('shareModal').style.display = 'flex';
-        }
+        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
+        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
+        document.getElementById('shareModal').style.display = 'flex';
     }
 
     function openSite(url) {
@@ -159,18 +146,9 @@
         document.getElementById('webModal').style.display = 'flex';
     }
 
-    function closeModal() { 
-        document.getElementById('shareModal').style.display = 'none'; 
-        document.getElementById('mediaBox').innerHTML = "";
-    }
-    function closeWeb() {
-        document.getElementById('webModal').style.display = 'none';
-        document.getElementById('webFrame').src = "";
-    }
-    function setT(t) {
-        if(t=='auto') document.body.removeAttribute('data-theme');
-        else document.body.setAttribute('data-theme', t);
-    }
+    function closeModal() { document.getElementById('shareModal').style.display = 'none'; document.getElementById('mediaBox').innerHTML = ""; }
+    function closeWeb() { document.getElementById('webModal').style.display = 'none'; document.getElementById('webFrame').src = ""; }
+    function setT(t) { if(t=='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
   </script>
 </body>
 </html>
