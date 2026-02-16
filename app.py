@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_v10_ultimate"
+app.secret_key = "pay4you_2026_final_v11_stable"
 
 # CONFIG
 if os.path.exists('/var/data'):
@@ -20,14 +20,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# DB LOAD
+# DB
 def load_db():
     if not os.path.exists(DB_FILE): return []
     try:
         with open(DB_FILE, 'r') as f: return json.load(f)
     except: return []
 
-# DB SAVE
 def save_db(data):
     try:
         with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
@@ -59,76 +58,75 @@ def repair_user(user):
         }
         for k, v in defaults.items():
             if k not in p: p[k] = v; dirty = True
-        # Assicura tipi corretti
         if not isinstance(p.get('emails'), list): p['emails'] = []
         if not isinstance(p.get('websites'), list): p['websites'] = []
         if p.get('socials') is None: p['socials'] = []; dirty = True
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR (SENZA BLOCCHI)
+# VCF GENERATOR SICURO
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
-    clienti = load_db()
-    user = next((c for c in clienti if c['slug'] == slug), None)
-    if not user: return "Errore Utente", 404
-    
-    p_req = request.args.get('p', user.get('default_profile', 'p1'))
-    if p_req == 'menu': p_req = 'p1'
-    if not user.get(p_req, {}).get('active'): p_req = 'p1'
-    p = user[p_req]
-
-    # Costruzione stringa diretta
-    output = "BEGIN:VCARD\nVERSION:3.0\n"
-    
-    # Nome
-    fn = p.get('name', 'Contatto').strip()
-    output += f"FN:{fn}\n"
-    output += f"N:;{fn};;;\n"
-    
-    if p.get('company'): output += f"ORG:{p.get('company')}\n"
-    if p.get('role'): output += f"TITLE:{p.get('role')}\n"
-    
-    # Telefoni
-    for m in p.get('mobiles', []):
-        if m: output += f"TEL;TYPE=CELL:{m}\n"
-    if p.get('office_phone'):
-        output += f"TEL;TYPE=WORK:{p.get('office_phone')}\n"
+    try:
+        clienti = load_db()
+        user = next((c for c in clienti if c['slug'] == slug), None)
+        if not user: return "Utente non trovato", 404
         
-    # Email
-    emails = p.get('emails', [])
-    if isinstance(emails, list):
-        for e_item in emails:
-            for e in e_item.split(','):
-                if e.strip(): output += f"EMAIL;TYPE=WORK:{e.strip()}\n"
+        p_req = request.args.get('p', user.get('default_profile', 'p1'))
+        if p_req == 'menu': p_req = 'p1'
+        if not user.get(p_req, {}).get('active'): p_req = 'p1'
+        p = user[p_req]
+
+        # Se il profilo corrente non ha nome, prova il P1
+        if not p.get('name'): p = user['p1']
+
+        lines = ["BEGIN:VCARD", "VERSION:3.0"]
+        
+        fn = p.get('name', 'Contatto').strip()
+        lines.append(f"FN:{fn}")
+        lines.append(f"N:;{fn};;;")
+        
+        if p.get('company'): lines.append(f"ORG:{p.get('company')}")
+        if p.get('role'): lines.append(f"TITLE:{p.get('role')}")
+        
+        for m in p.get('mobiles', []):
+            if m: lines.append(f"TEL;type=CELL:{m}")
+        if p.get('office_phone'):
+            lines.append(f"TEL;type=WORK:{p.get('office_phone')}")
             
-    # Siti
-    webs = p.get('websites', [])
-    if isinstance(webs, list):
-        for w_item in webs:
-            for w in w_item.split(','):
-                if w.strip(): output += f"URL:{w.strip()}\n"
-    
-    # Indirizzo
-    if p.get('address'):
-        addr = p.get('address').replace(',', ' ').replace(';', ' ')
-        output += f"ADR;TYPE=WORK:;;{addr};;;\n"
+        for e_list in p.get('emails', []):
+            for e in e_list.split(','):
+                if e.strip(): lines.append(f"EMAIL;type=WORK:{e.strip()}")
+                
+        for w_list in p.get('websites', []):
+            for w in w_list.split(','):
+                if w.strip(): lines.append(f"URL;type=WORK:{w.strip()}")
+                
+        if p.get('address'):
+            addr = p.get('address').replace(',', ' ').strip()
+            lines.append(f"ADR;type=WORK:;;{addr};;;;")
+            
+        # Note (Social, PIVA, Bio)
+        notes = []
+        if p.get('piva'): notes.append(f"P.IVA: {p.get('piva')}")
+        if p.get('bio'): notes.append(str(p.get('bio')).replace('\n', ' '))
         
-    # Note (Bio + PIVA)
-    notes = []
-    if p.get('piva'): notes.append(f"P.IVA: {p.get('piva')}")
-    if p.get('cod_sdi'): notes.append(f"SDI: {p.get('cod_sdi')}")
-    if p.get('bio'): notes.append(str(p.get('bio')).replace('\n', ' '))
-    
-    if notes:
-        output += f"NOTE:{' - '.join(notes)}\n"
+        # Link Card
+        card_url = f"https://pay4you-cards-fire.onrender.com/card/{slug}"
+        notes.append(f"CARD DIGITALE: {card_url}")
+        
+        if notes:
+            lines.append(f"NOTE:{' | '.join(notes)}")
 
-    output += "END:VCARD"
-    
-    response = make_response(output)
-    response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
-    response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
-    return response
+        lines.append("END:VCARD")
+        
+        vcf_content = "\r\n".join(lines)
+        response = make_response(vcf_content)
+        response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
+        response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
+        return response
+    except Exception as e:
+        return f"Errore VCF: {str(e)}", 500
 
 # ROUTES
 @app.route('/')
@@ -136,22 +134,30 @@ def home(): return redirect(url_for('login'))
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        clienti = load_db(); user = next((c for c in clienti if c['username'] == request.form.get('username') and c['password'] == request.form.get('password')), None)
-        if user: session['logged_in']=True; session['user_id']=user['id']; repair_user(user); save_db(clienti); return redirect(url_for('area'))
+        clienti = load_db()
+        user = next((c for c in clienti if c['username'] == request.form.get('username') and c['password'] == request.form.get('password')), None)
+        if user:
+            session['logged_in']=True; session['user_id']=user['id']
+            repair_user(user); save_db(clienti)
+            return redirect(url_for('area'))
     return render_template('login.html')
+
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=next((c for c in load_db() if c['id'] == session.get('user_id')), None))
+
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p'+p_id]['active'] = True; save_db(clienti); return redirect(url_for('area'))
+
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
     if p_id == '1': return "No"; 
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p'+p_id]['active'] = False; save_db(clienti); return redirect(url_for('area'))
+
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
@@ -173,6 +179,7 @@ def edit_profile(p_id):
         p['company'] = request.form.get('company'); p['bio'] = request.form.get('bio')
         p['piva'] = request.form.get('piva'); p['cod_sdi'] = request.form.get('cod_sdi'); p['pec'] = request.form.get('pec')
         p['office_phone'] = request.form.get('office_phone'); p['address'] = request.form.get('address')
+        
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
         p['emails'] = [x for x in [request.form.get('email1')] if x]
         p['websites'] = [x for x in [request.form.get('website')] if x]
@@ -187,6 +194,7 @@ def edit_profile(p_id):
         p['fx_rotate_agent'] = 'on' if request.form.get('fx_rotate_agent') else 'off'
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
+        
         p['pos_x'] = request.form.get('pos_x', 50); p['pos_y'] = request.form.get('pos_y', 50); p['zoom'] = request.form.get('zoom', 1)
 
         p['trans'] = {
@@ -241,10 +249,13 @@ def view_card(slug):
     
     p_req = request.args.get('p', user.get('default_profile', 'p1'))
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
-    if not user.get(p_req, {}).get('active'): p_req = 'p1'
+    
+    # LOGICA DI SALVATAGGIO: Se il profilo richiesto non è attivo O non ha nome, usa P1
+    if not user.get(p_req, {}).get('active') or not user.get(p_req, {}).get('name'):
+        p_req = 'p1'
+    
     p = user[p_req]
     
-    # PASSAGGIO DATI SICURO (Evita None)
     ag = {
         "name": p.get('name') or '',
         "role": p.get('role') or '',
