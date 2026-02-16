@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_iphone_fix"
+app.secret_key = "pay4you_2026_final_stable_v9"
 
 # CONFIG
 if os.path.exists('/var/data'):
@@ -20,18 +20,23 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# DB LOAD
+# DB LOAD (Sintassi sicura)
 def load_db():
-    if not os.path.exists(DB_FILE): return []
+    if not os.path.exists(DB_FILE):
+        return []
     try:
-        with open(DB_FILE, 'r') as f: return json.load(f)
-    except: return []
+        with open(DB_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return []
 
-# DB SAVE
+# DB SAVE (Sintassi sicura)
 def save_db(data):
     try:
-        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
-    except: pass
+        with open(DB_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Errore DB: {e}")
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -42,9 +47,13 @@ def save_file(file, prefix):
 
 def repair_user(user):
     dirty = False
-    if 'default_profile' not in user: user['default_profile'] = 'p1'; dirty = True
+    if 'default_profile' not in user:
+        user['default_profile'] = 'p1'
+        dirty = True
     for pid in ['p1', 'p2', 'p3']:
-        if pid not in user: user[pid] = {'active': False}; dirty = True
+        if pid not in user:
+            user[pid] = {'active': False}
+            dirty = True
         p = user[pid]
         defaults = {
             'name':'', 'role':'', 'company':'', 'bio':'', 'foto':'', 'logo':'', 'personal_foto':'',
@@ -58,14 +67,16 @@ def repair_user(user):
             'trans': {'en':{}, 'fr':{}, 'es':{}, 'de':{}}
         }
         for k, v in defaults.items():
-            if k not in p: p[k] = v; dirty = True
+            if k not in p:
+                p[k] = v
+                dirty = True
         if not isinstance(p.get('emails'), list): p['emails'] = []
         if not isinstance(p.get('websites'), list): p['websites'] = []
         if p.get('socials') is None: p['socials'] = []; dirty = True
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR IPHONE OPTIMIZED
+# VCF GENERATOR (Apple Optimized)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
@@ -77,12 +88,11 @@ def download_vcf(slug):
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    # COSTRUZIONE VCF PER APPLE
+    # Costruzione Linea per Linea
     lines = []
     lines.append("BEGIN:VCARD")
     lines.append("VERSION:3.0")
     
-    # NOME
     n_val = p.get('name', 'Contatto').strip()
     lines.append(f"FN:{n_val}")
     lines.append(f"N:;{n_val};;;")
@@ -90,46 +100,33 @@ def download_vcf(slug):
     if p.get('company'): lines.append(f"ORG:{p.get('company')}")
     if p.get('role'): lines.append(f"TITLE:{p.get('role')}")
     
-    # TELEFONI
     for m in p.get('mobiles', []):
-        if m: lines.append(f"TEL;type=CELL;type=VOICE;type=pref:{m}")
+        if m: lines.append(f"TEL;type=CELL;type=VOICE:{m}")
     if p.get('office_phone'):
         lines.append(f"TEL;type=WORK;type=VOICE:{p.get('office_phone')}")
         
-    # EMAIL (Format corretto per Outlook/Apple)
     for e_list in p.get('emails', []):
         for e in e_list.split(','):
             if e.strip(): lines.append(f"EMAIL;type=INTERNET;type=WORK:{e.strip()}")
             
-    # SITI
     for w_list in p.get('websites', []):
         for w in w_list.split(','):
             if w.strip(): lines.append(f"URL;type=WORK:{w.strip()}")
             
-    # LINK CARD DIGITALE (TRUCCO APPLE)
+    # Link Card Digitale
     card_url = f"https://pay4you-cards-fire.onrender.com/card/{slug}"
     lines.append(f"item1.URL:{card_url}")
-    lines.append(f"item1.X-ABLabel:CARD DIGITALE PAY4YOU") # Etichetta personalizzata iPhone
-    
-    # NOTE (P.IVA, SDI, SOCIAL)
+    lines.append(f"item1.X-ABLabel:CARD DIGITALE PAY4YOU")
+
+    # Note
     notes = []
     if p.get('piva'): notes.append(f"P.IVA: {p.get('piva')}")
     if p.get('cod_sdi'): notes.append(f"SDI: {p.get('cod_sdi')}")
     if p.get('pec'): notes.append(f"PEC: {p.get('pec')}")
+    if p.get('bio'): notes.append(str(p.get('bio')).replace('\n', ' '))
     
-    # Aggiungo i social nelle note perché VCF non ha campi standard per TikTok/IG
-    if p.get('socials'):
-        notes.append("\nSOCIAL:")
-        for s in p['socials']:
-            notes.append(f"{s['label']}: {s['url']}")
-            
-    if p.get('bio'): 
-        notes.append("\nBIO:")
-        notes.append(p.get('bio'))
-
     if notes:
-        # Escape dei caratteri per VCF
-        note_str = "\\n".join(notes).replace(",", "\\,").replace(";", "\\;")
+        note_str = " - ".join(notes)
         lines.append(f"NOTE:{note_str}")
 
     lines.append("END:VCARD")
@@ -140,28 +137,36 @@ def download_vcf(slug):
     response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     return response
 
-# STANDARD ROUTES
+# ROUTES
 @app.route('/')
 def home(): return redirect(url_for('login'))
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        clienti = load_db(); user = next((c for c in clienti if c['username'] == request.form.get('username') and c['password'] == request.form.get('password')), None)
-        if user: session['logged_in']=True; session['user_id']=user['id']; repair_user(user); save_db(clienti); return redirect(url_for('area'))
+        clienti = load_db()
+        user = next((c for c in clienti if c['username'] == request.form.get('username') and c['password'] == request.form.get('password')), None)
+        if user:
+            session['logged_in']=True; session['user_id']=user['id']
+            repair_user(user); save_db(clienti)
+            return redirect(url_for('area'))
     return render_template('login.html')
+
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     return render_template('dashboard.html', user=next((c for c in load_db() if c['id'] == session.get('user_id')), None))
+
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p'+p_id]['active'] = True; save_db(clienti); return redirect(url_for('area'))
+
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
     if p_id == '1': return "No"; 
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p'+p_id]['active'] = False; save_db(clienti); return redirect(url_for('area'))
+
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
