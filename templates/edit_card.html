@@ -8,7 +8,7 @@
     <style>
         .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
         .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
         .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
         .full-width { grid-column: span 2; }
         label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
@@ -21,7 +21,8 @@
         .range-slider { flex:1; cursor:pointer; }
 
         .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
-        .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
+        .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; transition:0.2s; }
+        .dash-item:hover { transform:scale(1.05); border-color:#00ffc8; }
         .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
         .dash-item.deleted { display:none; }
         
@@ -29,7 +30,7 @@
         .pdf-row.deleted { display:none; }
 
         .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
-        .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; }
+        .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
         .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
         .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:10px; border-radius:10px; }
@@ -122,7 +123,7 @@
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title"><span>📸 FOTO</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
+            <h3 class="box-title"><span>📸 FOTO (Max 30)</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
             <input type="file" name="gallery_img" multiple accept="image/*">
             <div class="dash-gallery">
                 {% for img in p.gallery_img %}
@@ -132,7 +133,7 @@
                 {% endfor %}
             </div>
             <hr style="border-color:#333; margin:20px 0;">
-            <h3 class="box-title"><span>🎬 VIDEO</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>🎬 VIDEO (Max 10)</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_vid" multiple accept="video/*">
             <div class="dash-gallery">
                 {% for vid in p.gallery_vid %}
@@ -143,7 +144,7 @@
                 {% endfor %}
             </div>
             <hr style="border-color:#333; margin:20px 0;">
-            <h3 class="box-title"><span>📄 PDF</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>📄 PDF (Max 12)</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_pdf" multiple accept=".pdf">
             <div style="margin-top:10px;">
                 {% for pdf in p.gallery_pdf %}
@@ -170,9 +171,9 @@
         <button onclick="closeDashModal()" class="d-btn db-cl">CHIUDI X</button>
         <div id="dashMediaBox"></div>
         <div class="dash-actions">
-            <button onclick="shareItem('wa')" class="d-btn db-wa">WA</button>
-            <button onclick="shareItem('em')" class="d-btn db-em">Email</button>
-            <button onclick="deleteCurrentItem()" class="d-btn db-del">DEL</button>
+            <a id="dbWa" href="#" target="_blank" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</a>
+            <a id="dbEm" href="#" target="_blank" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</a>
+            <button onclick="deleteCurrentItem()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
         </div>
     </div>
 
@@ -193,10 +194,15 @@
         var currentUrl = "";
         function openPreview(url, type, element) {
             if(element.classList.contains('deleted')) return;
-            currentUrl = window.location.origin + url;
             var modal = document.getElementById('dashModal');
             var box = document.getElementById('dashMediaBox');
             currentItemElement = element;
+            currentUrl = window.location.origin + url;
+            
+            // FIX EMAIL TEXT (CODIFICA FORZATA)
+            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + currentUrl);
+            var mailBody = "Ecco il file: " + currentUrl;
+            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A");
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
@@ -204,17 +210,6 @@
 
             modal.style.display = 'flex';
         }
-        
-        function shareItem(mode) {
-            if(mode == 'wa') window.open("https://wa.me/?text=" + encodeURIComponent(currentUrl));
-            if(mode == 'em') {
-                // METODO EMAIL FORZATO (SIMULA CLICK)
-                let a = document.createElement('a');
-                a.href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + currentUrl);
-                a.click();
-            }
-        }
-        
         function closeDashModal() { document.getElementById('dashModal').style.display = 'none'; document.getElementById('dashMediaBox').innerHTML = ""; }
         function deleteCurrentItem() {
             if(confirm("ELIMINARE?")) {
