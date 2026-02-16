@@ -6,10 +6,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# ABILITA ESTENSIONI JINJA (Fondamentale)
+# ABILITA ESTENSIONI JINJA (Fondamentale per evitare errore 'do')
 app.jinja_env.add_extension('jinja2.ext.do')
 
-app.secret_key = "pay4you_2026_ultimate_edition"
+app.secret_key = "pay4you_2026_final_stable"
 
 # --- CONFIGURAZIONE ---
 if os.path.exists('/var/data'):
@@ -23,10 +23,10 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# ALZIAMO IL LIMITE A 64MB (Per gestire video e foto pesanti)
+# LIMITE 64MB (Gestione file pesanti)
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# --- GESTIONE DB ---
+# --- GESTIONE DB (SINTASSI CORRETTA) ---
 def load_db():
     if not os.path.exists(DB_FILE): return []
     try:
@@ -45,18 +45,18 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-# --- ROTTA RESET ---
+# --- ROTTA RESET (CANCELLA DB) ---
 @app.route('/reset-tutto')
 def reset_db_emergency():
     if os.path.exists(DB_FILE):
-        try: os.remove(DB_FILE); return "DB Cancellato."
+        try: os.remove(DB_FILE); return "<h1>DATABASE CANCELLATO.</h1><p>Vai su <a href='/master'>/master</a></p>"
         except: return "Errore cancellazione."
-    return "DB già pulito."
+    return "<h1>Database già pulito.</h1><p>Vai su <a href='/master'>/master</a></p>"
 
 # --- RIPARAZIONE UTENTE ---
 def repair_user(user):
     dirty = False
-    # Default profile può essere p1, p2, p3 o 'menu'
+    # Assicura il campo "default_profile"
     if 'default_profile' not in user: user['default_profile'] = 'p1'; dirty = True
 
     for pid in ['p1', 'p2', 'p3']:
@@ -133,7 +133,6 @@ def set_default_profile(mode):
     clienti = load_db()
     user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     
-    # Se è un profilo (p1, p2, p3), controlla che sia attivo
     if mode.startswith('p'):
         if user[mode]['active']:
             user['default_profile'] = mode
@@ -201,7 +200,7 @@ def edit_profile(p_id):
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
         
-        # Crop (salviamo solo i valori per ora, il crop visuale è lato client)
+        # Crop
         p['pos_x'] = request.form.get('pos_x', 50)
         p['pos_y'] = request.form.get('pos_y', 50)
         p['zoom'] = request.form.get('zoom', 1)
@@ -287,10 +286,7 @@ def view_card(slug):
 
     # Altrimenti decidi il profilo
     if not p_req: p_req = default_p
-
-    # Se siamo ancora su 'menu' (perché p_req era nullo e default è menu), ma siamo qui...
-    # significa che dobbiamo gestire il caso in cui p_req è esplicitamente p1,p2,p3
-    if p_req == 'menu': # Fallback di sicurezza
+    if p_req == 'menu': # Fallback
         return render_template('menu_card.html', user=user, slug=slug)
 
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
@@ -321,11 +317,5 @@ def logout(): session.clear(); return redirect(url_for('login'))
 def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/favicon.ico')
 def favicon(): return send_from_directory('static', 'favicon.ico')
-@app.route('/reset-tutto')
-def reset_db_emergency():
-    if os.path.exists(DB_FILE):
-        try: os.remove(DB_FILE); return "DB Cancellato."
-        except: return "Errore cancellazione."
-    return "DB già pulito."
 
 if __name__ == '__main__': app.run(debug=True)
