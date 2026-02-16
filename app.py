@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_v12_brutal"
+app.secret_key = "pay4you_final_fix_v8"
 
 # CONFIGURAZIONE
 if os.path.exists('/var/data'):
@@ -22,16 +22,21 @@ app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 
 # DB LOAD
 def load_db():
-    if not os.path.exists(DB_FILE): return []
+    if not os.path.exists(DB_FILE):
+        return []
     try:
-        with open(DB_FILE, 'r') as f: return json.load(f)
-    except: return []
+        with open(DB_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return []
 
 # DB SAVE
 def save_db(data):
     try:
-        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
-    except: pass
+        with open(DB_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Errore DB: {e}")
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -41,15 +46,16 @@ def save_file(file, prefix):
     return None
 
 def repair_user(user):
-    # Assicura che la struttura dati sia integra
     dirty = False
-    if 'default_profile' not in user: user['default_profile'] = 'p1'; dirty = True
-    
-    for pid in ['p1', 'p2', 'p3']:
-        if pid not in user: user[pid] = {'active': False}; dirty = True
-        p = user[pid]
+    if 'default_profile' not in user:
+        user['default_profile'] = 'p1'
+        dirty = True
         
-        # ELENCO CAMPI COMPLETO
+    for pid in ['p1', 'p2', 'p3']:
+        if pid not in user:
+            user[pid] = {'active': False}
+            dirty = True
+        p = user[pid]
         defaults = {
             'name':'', 'role':'', 'company':'', 'bio':'', 'foto':'', 'logo':'', 'personal_foto':'',
             'office_phone': '', 'address': '', 
@@ -61,72 +67,84 @@ def repair_user(user):
             'pos_x':50, 'pos_y':50, 'zoom':1,
             'trans': {'en':{}, 'fr':{}, 'es':{}, 'de':{}}
         }
-        
         for k, v in defaults.items():
-            if k not in p: p[k] = v; dirty = True
-            
-        # Forza i tipi liste
+            if k not in p:
+                p[k] = v
+                dirty = True
+        # Assicuriamoci che le liste siano liste
         if not isinstance(p.get('emails'), list): p['emails'] = []
         if not isinstance(p.get('websites'), list): p['websites'] = []
-        if p.get('socials') is None: p['socials'] = []; dirty = True
         
+        if p.get('socials') is None: p['socials'] = []; dirty = True
+        if p.get('trans') is None: p['trans'] = defaults['trans']; dirty = True
+        if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR
+# VCF GENERATOR (SENZA ERRORI)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
     user = next((c for c in clienti if c['slug'] == slug), None)
-    if not user: return "Errore", 404
+    if not user: return "Utente non trovato", 404
     
     p_req = request.args.get('p', user.get('default_profile', 'p1'))
     if p_req == 'menu': p_req = 'p1'
-    # Nessun controllo su active qui, scarica quello che c'è
+    if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    lines = ["BEGIN:VCARD", "VERSION:3.0"]
+    # Costruzione VCF Manuale Sicura
+    lines = []
+    lines.append("BEGIN:VCARD")
+    lines.append("VERSION:3.0")
     
-    fn = p.get('name', 'Contatto').strip()
-    if not fn: fn = "Contatto Pay4You"
-    
-    lines.append(f"FN:{fn}")
-    lines.append(f"N:;{fn};;;")
+    # Nome
+    n_val = p.get('name', 'Contatto').strip()
+    lines.append(f"FN:{n_val}")
+    lines.append(f"N:;{n_val};;;")
     
     if p.get('company'): lines.append(f"ORG:{p.get('company')}")
     if p.get('role'): lines.append(f"TITLE:{p.get('role')}")
     
+    # Telefoni
     for m in p.get('mobiles', []):
-        if m: lines.append(f"TEL;type=CELL:{m}")
+        if m: lines.append(f"TEL;TYPE=CELL:{m}")
     if p.get('office_phone'):
-        lines.append(f"TEL;type=WORK:{p.get('office_phone')}")
+        lines.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
         
-    for e_list in p.get('emails', []):
-        for e in e_list.split(','):
-            if e.strip(): lines.append(f"EMAIL;type=WORK:{e.strip()}")
-            
-    for w_list in p.get('websites', []):
-        for w in w_list.split(','):
-            if w.strip(): lines.append(f"URL;type=WORK:{w.strip()}")
-            
-    if p.get('address'):
-        # Pulizia indirizzo
-        addr = p.get('address').replace(',', ' ').strip()
-        lines.append(f"ADR;type=WORK:;;{addr};;;;")
+    # Email (Gestione lista sicura)
+    email_list = p.get('emails', [])
+    if isinstance(email_list, list):
+        for e_item in email_list:
+            # Se l'utente ha messo virgole nel campo input
+            for e in e_item.split(','):
+                if e.strip(): lines.append(f"EMAIL;TYPE=WORK:{e.strip()}")
     
-    # Note condensate
-    notes = []
-    if p.get('piva'): notes.append(f"P.IVA: {p.get('piva')}")
-    if p.get('bio'): notes.append(str(p.get('bio')).replace('\n', ' '))
-    if notes:
-        lines.append(f"NOTE:{' | '.join(notes)}")
+    # Siti
+    web_list = p.get('websites', [])
+    if isinstance(web_list, list):
+        for w_item in web_list:
+            for w in w_item.split(','):
+                if w.strip(): lines.append(f"URL:{w.strip()}")
+    
+    # Indirizzo
+    if p.get('address'):
+        addr = p.get('address').replace(',', ' ').strip()
+        lines.append(f"ADR;TYPE=WORK:;;{addr};;;;")
+        
+    if p.get('bio'):
+        # Rimuovi a capo che rompono il VCF
+        clean_bio = str(p.get('bio')).replace('\r', '').replace('\n', ' ')
+        lines.append(f"NOTE:{clean_bio}")
 
     lines.append("END:VCARD")
     
-    # VCF come testo semplice
-    return make_response("\n".join(lines), 200, {
-        'Content-Type': 'text/x-vcard; charset=utf-8',
-        'Content-Disposition': f'attachment; filename={slug}.vcf'
-    })
+    # Join con \r\n per compatibilità totale
+    vcf_content = "\r\n".join(lines)
+    
+    response = make_response(vcf_content)
+    response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
+    response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
+    return response
 
 # ROUTES
 @app.route('/')
@@ -135,10 +153,13 @@ def home(): return redirect(url_for('login'))
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        u = request.form.get('username')
+        p = request.form.get('password')
         clienti = load_db()
-        user = next((c for c in clienti if c['username'] == request.form.get('username') and c['password'] == request.form.get('password')), None)
+        user = next((c for c in clienti if c['username'] == u and c['password'] == p), None)
         if user:
-            session['logged_in']=True; session['user_id']=user['id']
+            session['logged_in'] = True
+            session['user_id'] = user['id']
             if repair_user(user): save_db(clienti)
             return redirect(url_for('area'))
     return render_template('login.html')
@@ -146,25 +167,37 @@ def login():
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    return render_template('dashboard.html', user=next((c for c in load_db() if c['id'] == session.get('user_id')), None))
+    user = next((c for c in load_db() if c['id'] == session.get('user_id')), None)
+    if not user: return redirect(url_for('logout'))
+    return render_template('dashboard.html', user=user)
 
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
-    clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    user['p'+p_id]['active'] = True; save_db(clienti); return redirect(url_for('area'))
+    clienti = load_db()
+    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    user['p' + p_id]['active'] = True
+    repair_user(user)
+    save_db(clienti)
+    return redirect(url_for('area'))
 
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
-    if p_id == '1': return "No"; 
-    clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
-    user['p'+p_id]['active'] = False; save_db(clienti); return redirect(url_for('area'))
+    if p_id == '1': return "Impossibile"
+    clienti = load_db()
+    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    user['p' + p_id]['active'] = False
+    if user.get('default_profile') == ('p' + p_id): user['default_profile'] = 'p1'
+    save_db(clienti)
+    return redirect(url_for('area'))
 
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
-    clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
+    clienti = load_db()
+    user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     if mode.startswith('p') and user[mode]['active']: user['default_profile'] = mode
     elif mode == 'menu': user['default_profile'] = 'menu'
-    save_db(clienti); return redirect(url_for('area'))
+    save_db(clienti)
+    return redirect(url_for('area'))
 
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
@@ -175,12 +208,14 @@ def edit_profile(p_id):
     if repair_user(user): save_db(clienti)
     
     p_key = 'p' + p_id
-    if not user[p_key].get('active'): user[p_key]['active'] = True; save_db(clienti)
+    if not user[p_key].get('active'): 
+        user[p_key]['active'] = True
+        save_db(clienti)
     
     if request.method == 'POST':
-        p = user[p_key]; prefix = f"u{user['id']}_{p_id}"
+        p = user[p_key]
+        prefix = f"u{user['id']}_{p_id}"
         
-        # DATI BASE
         p['name'] = request.form.get('name')
         p['role'] = request.form.get('role')
         p['company'] = request.form.get('company')
@@ -201,13 +236,11 @@ def edit_profile(p_id):
             if url: socials.append({'label': soc, 'url': url})
         p['socials'] = socials
 
-        # EFFETTI (Salvataggio Forzato)
         p['fx_rotate_logo'] = 'on' if request.form.get('fx_rotate_logo') else 'off'
         p['fx_rotate_agent'] = 'on' if request.form.get('fx_rotate_agent') else 'off'
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
         
-        # CROP
         p['pos_x'] = request.form.get('pos_x', 50)
         p['pos_y'] = request.form.get('pos_y', 50)
         p['zoom'] = request.form.get('zoom', 1)
@@ -219,25 +252,28 @@ def edit_profile(p_id):
             'de': {'role': request.form.get('role_de'), 'bio': request.form.get('bio_de')}
         }
 
-        if 'foto' in request.files: p['foto'] = save_file(request.files['foto'], f"{prefix}_foto") or p['foto']
-        if 'logo' in request.files: p['logo'] = save_file(request.files['logo'], f"{prefix}_logo") or p['logo']
-        if 'personal_foto' in request.files: p['personal_foto'] = save_file(request.files['personal_foto'], f"{prefix}_pers") or p['personal_foto']
+        if 'foto' in request.files: 
+            path = save_file(request.files['foto'], f"{prefix}_foto")
+            if path: p['foto'] = path
+        if 'logo' in request.files: 
+            path = save_file(request.files['logo'], f"{prefix}_logo")
+            if path: p['logo'] = path
+        if 'personal_foto' in request.files: 
+            path = save_file(request.files['personal_foto'], f"{prefix}_pers")
+            if path: p['personal_foto'] = path
 
-        # GALLERIE
         if 'gallery_img' in request.files:
             for f in request.files.getlist('gallery_img'):
                 path = save_file(f, f"{prefix}_gimg")
                 if path: p['gallery_img'].append(path)
-                
-        if 'gallery_vid' in request.files:
-            for f in request.files.getlist('gallery_vid'):
-                path = save_file(f, f"{prefix}_gvid")
-                if path: p['gallery_vid'].append(path)
-                
         if 'gallery_pdf' in request.files:
             for f in request.files.getlist('gallery_pdf'):
                 path = save_file(f, f"{prefix}_gpdf")
                 if path: p['gallery_pdf'].append({'path': path, 'name': f.filename})
+        if 'gallery_vid' in request.files:
+            for f in request.files.getlist('gallery_vid'):
+                path = save_file(f, f"{prefix}_gvid")
+                if path: p['gallery_vid'].append(path)
         
         if request.form.get('delete_media'):
             to_del = request.form.getlist('delete_media')
@@ -247,7 +283,6 @@ def edit_profile(p_id):
 
         save_db(clienti)
         return redirect(url_for('area'))
-        
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
 
 @app.route('/master', methods=['GET', 'POST'])
@@ -255,50 +290,41 @@ def master_login():
     if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db(), files=[])
     if request.method=='POST' and request.form.get('password')=="pay2026": session['is_master']=True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
+
 @app.route('/master/add', methods=['POST'])
 def master_add():
-    clienti = load_db(); new_id = max([c['id'] for c in clienti], default=0) + 1
-    chars = string.ascii_letters + string.digits + "!@#"; auto_pass = ''.join(random.choices(chars, k=10))
+    clienti = load_db()
+    new_id = max([c['id'] for c in clienti], default=0) + 1
+    chars = string.ascii_letters + string.digits + "!@#"
+    auto_pass = ''.join(random.choices(chars, k=10))
     final_pass = request.form.get('password') if request.form.get('password') else auto_pass
     slug = request.form.get('slug') or f"card-{new_id}"
     new_c = {"id": new_id, "username": request.form.get('username') or f"user{new_id}", "password": final_pass, "slug": slug, "nome": request.form.get('nome') or "Nuovo", "azienda": "New", "p1": {"active": True}, "p2": {"active": False}, "p3": {"active": False}, "default_profile": "p1"}
-    repair_user(new_c); clienti.append(new_c); save_db(clienti); return redirect(url_for('master_login'))
+    repair_user(new_c)
+    clienti.append(new_c)
+    save_db(clienti)
+    return redirect(url_for('master_login'))
 
 @app.route('/card/<slug>')
 def view_card(slug):
     clienti = load_db(); user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
-    
-    # REPAIR AL VOLO
     if repair_user(user): save_db(clienti)
-    
-    p_req = request.args.get('p', user.get('default_profile', 'p1'))
+    default_p = user.get('default_profile', 'p1')
+    p_req = request.args.get('p')
+    if not p_req: p_req = default_p
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
-    
+    if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
-    
-    # PASSAGGIO DATI SICURO (Niente None)
     ag = {
-        "name": p.get('name') or '',
-        "role": p.get('role') or '',
-        "company": p.get('company') or '',
-        "bio": p.get('bio') or '',
-        "photo_url": p.get('foto') or '',
-        "logo_url": p.get('logo') or '',
-        "personal_url": p.get('personal_foto') or '',
-        "slug": slug,
-        "piva": p.get('piva') or '',
-        "pec": p.get('pec') or '',
-        "cod_sdi": p.get('cod_sdi') or '',
-        "office_phone": p.get('office_phone') or '',
-        "address": p.get('address') or '',
-        "fx_rotate_logo": p.get('fx_rotate_logo', 'off'),
-        "fx_rotate_agent": p.get('fx_rotate_agent', 'off'),
-        "fx_interaction": p.get('fx_interaction', 'tap'),
-        "fx_back": p.get('fx_back_content', 'logo'),
-        "photo_pos_x": p.get('pos_x', 50),
-        "photo_pos_y": p.get('pos_y', 50),
-        "photo_zoom": p.get('zoom', 1),
+        "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
+        "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
+        "personal_url": p.get('personal_foto'), "slug": slug,
+        "piva": p.get('piva'), "pec": p.get('pec'), "cod_sdi": p.get('cod_sdi'),
+        "office_phone": p.get('office_phone'), "address": p.get('address'),
+        "fx_rotate_logo": p.get('fx_rotate_logo'), "fx_rotate_agent": p.get('fx_rotate_agent'),
+        "fx_interaction": p.get('fx_interaction'), "fx_back": p.get('fx_back_content'),
+        "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1),
         "trans": p.get('trans', {})
     }
     return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
