@@ -15,13 +15,13 @@
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
         
         /* CROP SLIDERS */
-        .crop-controls { margin-top:10px; padding:10px; background:#222; border-radius:8px; }
-        .range-slider { width:100%; margin-bottom:5px; cursor:pointer; }
+        .crop-controls { margin-top:15px; padding:10px; background:#222; border-radius:8px; }
+        .range-slider { width:100%; margin-bottom:10px; cursor:pointer; }
         .crop-circle { 
             width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; 
-            overflow:hidden; margin:0 auto; background:#000;
+            overflow:hidden; margin:0 auto; background:#000; position:relative;
         }
-        .crop-circle img { width:100%; height:100%; object-fit:cover; transition: transform 0.1s; }
+        .crop-circle img { width:100%; height:100%; object-fit:cover; transition: none; }
         
         /* GALLERIE BIG */
         .gal-big-grid { display:flex; flex-wrap:wrap; gap:10px; }
@@ -71,11 +71,13 @@
                     <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
                     
                     <div class="crop-controls">
-                        <label>Sposta Orizzontale (X)</label>
+                        <label>↔️ Sposta Orizzontale</label>
                         <input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()">
-                        <label>Sposta Verticale (Y)</label>
+                        
+                        <label>↕️ Sposta Verticale</label>
                         <input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()">
-                        <label>Zoom</label>
+                        
+                        <label>🔍 Zoom</label>
                         <input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()">
                     </div>
                     <label>Rotazione?</label><input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
