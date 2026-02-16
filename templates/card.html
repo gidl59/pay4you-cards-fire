@@ -1,123 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Modifica</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* CSS IDENTICO A PRIMA, SOLO SCRIPT FIX */
-        .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
-        .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; }
-        .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
-        .full-width { grid-column: span 2; }
-        label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
-        input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-        
-        .crop-area { text-align:center; background:#000; padding:10px; border-radius:10px; border:1px solid #333; }
-        .crop-circle { width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; overflow:hidden; margin:0 auto 10px auto; position:relative; background:#222; }
-        .crop-circle img { width:100%; height:100%; object-fit:cover; transition: none; transform-origin: center center; }
-        .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:5px; }
-        .range-slider { flex:1; cursor:pointer; }
-
-        .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
-        .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
-        .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
-        .dash-item.deleted { display:none; }
-        
-        .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:8px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
-        .pdf-row.deleted { display:none; }
-
-        .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
-        .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; }
-
-        .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
-        .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:10px; border-radius:10px; }
-        .dash-actions { display:flex; gap:15px; margin-bottom:10px; }
-        .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
-        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; color:white; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ ag.name }}</title>
+  <link rel="stylesheet" href="/static/card.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body style="background:#050505; color:white; font-family:sans-serif;">
+<body data-theme="auto">
 
-    <div class="dash-head"><a href="/area" style="color:white;">← Indietro</a> <span style="color:#00ffc8;">MODIFICA P{{ p_id }}</span></div>
-
-    <form method="POST" enctype="multipart/form-data" class="edit-container" id="editForm">
-        
-        <div class="edit-box">
-            <h3 class="box-title">👤 Dati</h3>
-            <div class="form-grid">
-                <div class="full-width"><label>Nome</label><input type="text" name="name" value="{{ p.name }}"></div>
-                </div>
+  <div class="card-wrap">
+    
+    <div class="hero">
+        {% if ag.logo_url %}
+        <div class="hero-logo-circle" style="{% if ag.fx_rotate_logo=='on' %}animation: spin 10s linear infinite;{% endif %}">
+            <img src="{{ ag.logo_url }}">
         </div>
+        {% endif %}
+    </div>
 
-        <div class="edit-box">
-            <h3 class="box-title">📸 FOTO</h3>
-            <div class="crop-area">
-                <label style="color:#00ffc8;">FOTO AGENTE</label>
-                <div class="crop-circle">
-                    <img id="cropImg" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
-                         style="object-position: {{ p.pos_x }}% {{ p.pos_y }}%; transform: scale({{ p.zoom }});">
-                </div>
-                <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
-                <div style="margin-top:10px;">
-                    <div class="slider-row"><label>↔️</label><input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()"></div>
-                    <div class="slider-row"><label>↕️</label><input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()"></div>
-                    <div class="slider-row"><label>🔍</label><input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()"></div>
-                </div>
-                <label>Gira?</label> <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
+    <div class="flip-container {% if ag.fx_rotate_agent=='on' %}spin-agent{% elif ag.fx_interaction=='mirror' %}mirror-flip{% else %}tap-flip{% endif %}" onclick="this.classList.toggle('flipped')">
+        <div class="flipper">
+            <div class="front">
+                {% if ag.photo_url %}
+                <img src="{{ ag.photo_url }}" class="avatar-img" 
+                     style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
+                {% else %}<div class="avatar-img" style="background:#ccc;"></div>{% endif %}
             </div>
-        </div>
-
-        <button type="submit" class="btn-save" id="btnSave">💾 SALVA</button>
-    </form>
-
-    <div id="dashModal" class="dash-modal">
-        <button onclick="closeDashModal()" class="d-btn db-cl">CHIUDI X</button>
-        <div id="dashMediaBox"></div>
-        <div class="dash-actions">
-            <button onclick="shareItem('wa')" class="d-btn db-wa">WA</button>
-            <button onclick="shareItem('em')" class="d-btn db-em">Email</button>
-            <button onclick="deleteCurrentItem()" class="d-btn db-del">DEL</button>
+            <div class="back">
+                {% if ag.fx_back == 'personal' and ag.personal_url %}
+                    <img src="{{ ag.personal_url }}" class="avatar-img">
+                {% elif ag.logo_url %}
+                    <img src="{{ ag.logo_url }}" class="back-img" style="padding:20px;">
+                {% else %}
+                    <div style="font-weight:bold;">LOGO</div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <script>
-        function previewCrop(input) { if(input.files && input.files[0]) { var r = new FileReader(); r.onload = function(e){ document.getElementById('cropImg').src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
-        
-        function updateCrop() {
-            var x = document.getElementsByName('pos_x')[0].value;
-            var y = document.getElementsByName('pos_y')[0].value;
-            var z = document.getElementsByName('zoom')[0].value;
-            var img = document.getElementById('cropImg');
-            // FIX CROP Y DEFINITIVO
-            img.style.objectPosition = x + "% " + y + "%";
-            img.style.transform = "scale(" + z + ")";
-        }
+    <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
+        <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
+    </div>
 
-        var currentUrl = "";
-        function openPreview(url, type, element) {
-            currentUrl = window.location.origin + url;
-            var box = document.getElementById('dashMediaBox');
-            if(type=='img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
-            else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-            else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:95vw; height:80vh;"></iframe>';
-            document.getElementById('dashModal').style.display = 'flex';
-        }
-        
-        function shareItem(mode) {
-            if(mode == 'wa') window.open("https://wa.me/?text=" + encodeURIComponent(currentUrl));
-            if(mode == 'em') {
-                // METODO EMAIL FORZATO (SIMULA CLICK)
+    <script>
+        function openShare(type, url) {
+            // ... (logica apertura)
+            
+            // EMAIL FIX ANCHE QUI
+            document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent(url);
+            document.getElementById('emLink').onclick = function() {
                 let a = document.createElement('a');
-                a.href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + currentUrl);
+                a.href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(url);
                 a.click();
-            }
+            };
+            document.getElementById('shareModal').style.display = 'flex';
         }
-        
-        function closeDashModal() { document.getElementById('dashModal').style.display = 'none'; }
-        document.getElementById('editForm').onsubmit = function() { document.getElementById('btnSave').innerText = "⏳ SALVA..."; }
+        // ...
     </script>
 </body>
 </html>
