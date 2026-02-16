@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_fix_v5"
+app.secret_key = "pay4you_2026_final_v6_ultra"
 
 # CONFIG
 if os.path.exists('/var/data'):
@@ -22,6 +22,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
+# DB
 def load_db():
     if not os.path.exists(DB_FILE): return []
     try:
@@ -64,43 +65,71 @@ def repair_user(user):
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR SEMPLIFICATO
+# VCF GENERATOR (BLINDATO)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
     user = next((c for c in clienti if c['slug'] == slug), None)
-    if not user: return "Errore", 404
+    if not user: return "Utente non trovato", 404
     
     p_req = request.args.get('p', user.get('default_profile', 'p1'))
     if p_req == 'menu': p_req = 'p1'
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    # Costruiamo il contenuto manualmente
-    vcf = "BEGIN:VCARD\nVERSION:3.0\n"
-    vcf += f"FN:{p.get('name', 'Contatto')}\n"
-    vcf += f"N:;{p.get('name', 'Contatto')};;;\n"
-    if p.get('company'): vcf += f"ORG:{p.get('company')}\n"
-    if p.get('role'): vcf += f"TITLE:{p.get('role')}\n"
+    # Costruzione VCF Manuale Sicura
+    lines = []
+    lines.append("BEGIN:VCARD")
+    lines.append("VERSION:3.0")
     
-    for m in p.get('mobiles', []): vcf += f"TEL;TYPE=CELL:{m}\n"
-    if p.get('office_phone'): vcf += f"TEL;TYPE=WORK:{p.get('office_phone')}\n"
+    # Nome
+    n_val = p.get('name', 'Contatto').strip()
+    lines.append(f"FN:{n_val}")
+    lines.append(f"N:;{n_val};;;")
     
-    for e_list in p.get('emails', []):
-        for e in e_list.split(','):
-            if e.strip(): vcf += f"EMAIL;TYPE=WORK:{e.strip()}\n"
-            
-    for w_list in p.get('websites', []):
-        for w in w_list.split(','):
-            if w.strip(): vcf += f"URL:{w.strip()}\n"
-            
-    vcf += "END:VCARD"
+    if p.get('company'): lines.append(f"ORG:{p.get('company')}")
+    if p.get('role'): lines.append(f"TITLE:{p.get('role')}")
     
-    response = make_response(vcf)
+    # Telefoni
+    for m in p.get('mobiles', []):
+        if m: lines.append(f"TEL;TYPE=CELL:{m}")
+    if p.get('office_phone'):
+        lines.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
+        
+    # Email
+    if p.get('emails'):
+        for e_list in p['emails']:
+            for e in e_list.split(','):
+                if e.strip(): lines.append(f"EMAIL;TYPE=WORK:{e.strip()}")
+    
+    # Siti
+    if p.get('websites'):
+        for w_list in p['websites']:
+            for w in w_list.split(','):
+                if w.strip(): lines.append(f"URL:{w.strip()}")
+    
+    # Indirizzo
+    if p.get('address'):
+        addr = p.get('address').replace(',', ' ').strip()
+        lines.append(f"ADR;TYPE=WORK:;;{addr};;;;")
+        
+    if p.get('bio'):
+        # Rimuovi a capo che rompono il VCF
+        clean_bio = p.get('bio').replace('\r', '').replace('\n', ' ')
+        lines.append(f"NOTE:{clean_bio}")
+
+    lines.append("END:VCARD")
+    
+    # Join con \r\n per compatibilità totale
+    vcf_content = "\r\n".join(lines)
+    
+    response = make_response(vcf_content)
     response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
-    response.headers["Content-Type"] = "text/x-vcard"
+    # Content type universale
+    response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     return response
 
+# STANDARD ROUTES
 @app.route('/')
 def home(): return redirect(url_for('login'))
 @app.route('/area/login', methods=['GET', 'POST'])
