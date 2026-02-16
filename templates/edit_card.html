@@ -186,7 +186,7 @@
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
-            // FIX CROP Y (Era typo)
+            // FIX CROP Y:
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
@@ -199,10 +199,10 @@
             currentItemElement = element;
             var fullUrl = window.location.origin + url;
             
-            // FIX EMAIL
+            // FIX EMAIL TEXT (CODIFICA FORZATA)
             document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent(fullUrl);
-            var mailBody = "Ecco il file: " + fullUrl;
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody);
+            // Uso %0D%0A esplicito per a capo
+            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file:\r\n" + fullUrl);
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
