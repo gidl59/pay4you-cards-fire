@@ -78,19 +78,14 @@
     <div style="margin-top:20px;">
         {% if p_data.gallery_img %}
         <div class="gal-grid-5">
-            {% for img in p_data.gallery_img %}
-            <img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">
-            {% endfor %}
+            {% for img in p_data.gallery_img %}<img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">{% endfor %}
         </div>
         {% endif %}
 
         {% if p_data.gallery_vid %}
         <div class="gal-grid-5">
             {% for vid in p_data.gallery_vid %}
-            <div class="vid-box" onclick="openShare('vid', '{{ vid }}')">
-                <video src="{{ vid }}#t=2.0" preload="metadata"></video>
-                <i class="fas fa-play vid-icon"></i>
-            </div>
+            <div class="vid-box" onclick="openShare('vid', '{{ vid }}')"><video src="{{ vid }}#t=2.0" preload="metadata"></video><i class="fas fa-play vid-icon"></i></div>
             {% endfor %}
         </div>
         {% endif %}
