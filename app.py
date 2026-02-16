@@ -2,27 +2,23 @@ import os
 import json
 import random
 import string
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, make_response
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_design_master"
+app.secret_key = "pay4you_2026_platinum"
 
-# --- CONFIGURAZIONE ---
-if os.path.exists('/var/data'):
-    BASE_DIR = '/var/data'
-else:
-    BASE_DIR = os.path.join(os.getcwd(), 'static')
-
+# CONFIG
+if os.path.exists('/var/data'): BASE_DIR = '/var/data'
+else: BASE_DIR = os.path.join(os.getcwd(), 'static')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 DB_FILE = os.path.join(BASE_DIR, 'clients.json')
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# --- DB ---
+# DB
 def load_db():
     if not os.path.exists(DB_FILE): return []
     try:
@@ -30,9 +26,8 @@ def load_db():
     except: return []
 
 def save_db(data):
-    try:
-        with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
-    except Exception as e: print(f"Errore DB: {e}")
+    try: with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
+    except: pass
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -49,13 +44,12 @@ def repair_user(user):
         p = user[pid]
         defaults = {
             'name':'', 'role':'', 'company':'', 'bio':'', 'foto':'', 'logo':'', 'personal_foto':'',
-            'office_phone': '', # NUOVO CAMPO
-            'mobiles':[], 'emails':[], 'websites':[], 'socials':[],
+            'office_phone': '', 'mobiles':[], 'emails':[], 'websites':[], 'socials':[],
             'gallery_img':[], 'gallery_vid':[], 'gallery_pdf':[],
             'piva':'', 'cod_sdi':'', 'pec':'',
             'fx_rotate_logo':'off', 'fx_rotate_agent':'off',
             'fx_interaction':'tap', 'fx_back_content':'logo',
-            'pos_x':50, 'pos_y':50, 'zoom':1,
+            'pos_x':50, 'pos_y':50, 'zoom':1, # CROP Dati
             'trans': {'en':{}, 'fr':{}, 'es':{}, 'de':{}}
         }
         for k, v in defaults.items():
@@ -65,10 +59,45 @@ def repair_user(user):
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# --- ROTTE ---
+# --- VCF GENERATOR (SALVA CONTATTO) ---
+@app.route('/vcf/<slug>')
+def download_vcf(slug):
+    clienti = load_db()
+    user = next((c for c in clienti if c['slug'] == slug), None)
+    if not user: return "Utente non trovato", 404
+    
+    # Prende il profilo attivo o di default
+    p_req = request.args.get('p', user.get('default_profile', 'p1'))
+    if p_req == 'menu': p_req = 'p1' # Fallback
+    if not user.get(p_req, {}).get('active'): p_req = 'p1'
+    p = user[p_req]
+
+    # Costruzione VCard 3.0
+    vcard = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"N:{p.get('name')};;;;",
+        f"FN:{p.get('name')}",
+        f"ORG:{p.get('company')}",
+        f"TITLE:{p.get('role')}"
+    ]
+    
+    for m in p.get('mobiles', []): vcard.append(f"TEL;TYPE=CELL:{m}")
+    if p.get('office_phone'): vcard.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
+    for e in p.get('emails', []): vcard.append(f"EMAIL;TYPE=WORK:{e}")
+    for w in p.get('websites', []): vcard.append(f"URL:{w}")
+    if p.get('bio'): vcard.append(f"NOTE:{p.get('bio')}")
+    
+    vcard.append("END:VCARD")
+    
+    response = make_response("\n".join(vcard))
+    response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
+    response.headers["Content-Type"] = "text/vcard"
+    return response
+
+# --- STANDARD ROUTES ---
 @app.route('/')
 def home(): return redirect(url_for('login'))
-
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -80,29 +109,24 @@ def login():
             if repair_user(user): save_db(clienti)
             return redirect(url_for('area'))
     return render_template('login.html')
-
 @app.route('/area')
 def area():
     if not session.get('logged_in'): return redirect(url_for('login'))
     user = next((c for c in load_db() if c['id'] == session.get('user_id')), None)
     if not user: return redirect(url_for('logout'))
     return render_template('dashboard.html', user=user)
-
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p' + p_id]['active'] = True; repair_user(user); save_db(clienti)
     return redirect(url_for('area'))
-
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
-    if p_id == '1': return "Impossibile disattivare P1"
+    if p_id == '1': return "Impossibile"
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     user['p' + p_id]['active'] = False
     if user.get('default_profile') == ('p' + p_id): user['default_profile'] = 'p1'
-    save_db(clienti)
-    return redirect(url_for('area'))
-
+    save_db(clienti); return redirect(url_for('area'))
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
     if not session.get('logged_in'): return redirect(url_for('login'))
@@ -117,24 +141,19 @@ def edit_profile(p_id):
     clienti = load_db(); user = next((c for c in clienti if c['id'] == session.get('user_id')), None)
     if not user: return redirect(url_for('logout'))
     if repair_user(user): save_db(clienti)
-
     p_key = 'p' + p_id
     if not user[p_key].get('active'): user[p_key]['active'] = True; save_db(clienti)
     
     if request.method == 'POST':
         p = user[p_key]; prefix = f"u{user['id']}_{p_id}"
-        
         p['name'] = request.form.get('name'); p['role'] = request.form.get('role')
         p['company'] = request.form.get('company'); p['bio'] = request.form.get('bio')
         p['piva'] = request.form.get('piva'); p['cod_sdi'] = request.form.get('cod_sdi'); p['pec'] = request.form.get('pec')
-        
-        # NUOVO: Telefono Ufficio
         p['office_phone'] = request.form.get('office_phone')
-
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
         p['emails'] = [x for x in [request.form.get('email1'), request.form.get('email2')] if x]
         p['websites'] = [x for x in [request.form.get('website')] if x]
-
+        
         socials = []
         for soc in ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']:
             url = request.form.get(soc.lower()); 
@@ -146,7 +165,10 @@ def edit_profile(p_id):
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
         
-        p['pos_x'] = request.form.get('pos_x', 50); p['pos_y'] = request.form.get('pos_y', 50); p['zoom'] = request.form.get('zoom', 1)
+        # CROP DATA
+        p['pos_x'] = request.form.get('pos_x', 50)
+        p['pos_y'] = request.form.get('pos_y', 50)
+        p['zoom'] = request.form.get('zoom', 1)
 
         p['trans'] = {
             'en': {'role': request.form.get('role_en'), 'bio': request.form.get('bio_en')},
@@ -155,17 +177,9 @@ def edit_profile(p_id):
             'de': {'role': request.form.get('role_de'), 'bio': request.form.get('bio_de')}
         }
 
-        if 'foto' in request.files: 
-            path = save_file(request.files['foto'], f"{prefix}_foto"); 
-            if path: p['foto'] = path
-        if request.form.get('foto_manual'): p['foto'] = request.form.get('foto_manual')
-
-        if 'logo' in request.files:
-            path = save_file(request.files['logo'], f"{prefix}_logo"); 
-            if path: p['logo'] = path
-        if 'personal_foto' in request.files:
-            path = save_file(request.files['personal_foto'], f"{prefix}_pers"); 
-            if path: p['personal_foto'] = path
+        if 'foto' in request.files: p['foto'] = save_file(request.files['foto'], f"{prefix}_foto") or p['foto']
+        if 'logo' in request.files: p['logo'] = save_file(request.files['logo'], f"{prefix}_logo") or p['logo']
+        if 'personal_foto' in request.files: p['personal_foto'] = save_file(request.files['personal_foto'], f"{prefix}_pers") or p['personal_foto']
 
         if 'gallery_img' in request.files:
             for f in request.files.getlist('gallery_img'):
@@ -194,7 +208,6 @@ def master_login():
     if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db(), files=[])
     if request.method=='POST' and request.form.get('password')=="pay2026": session['is_master']=True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
-
 @app.route('/master/add', methods=['POST'])
 def master_add():
     clienti = load_db(); new_id = max([c['id'] for c in clienti], default=0) + 1
@@ -210,20 +223,17 @@ def view_card(slug):
     clienti = load_db(); user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
     if repair_user(user): save_db(clienti)
-
     default_p = user.get('default_profile', 'p1'); p_req = request.args.get('p')
-    if not p_req and default_p == 'menu': return render_template('menu_card.html', user=user, slug=slug)
     if not p_req: p_req = default_p
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
-    
     ag = {
         "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
         "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
         "personal_url": p.get('personal_foto'), "slug": slug,
         "piva": p.get('piva'), "pec": p.get('pec'), "cod_sdi": p.get('cod_sdi'),
-        "office_phone": p.get('office_phone'), # PASSAGGIO DATO
+        "office_phone": p.get('office_phone'),
         "fx_rotate_logo": p.get('fx_rotate_logo'), "fx_rotate_agent": p.get('fx_rotate_agent'),
         "fx_interaction": p.get('fx_interaction'), "fx_back": p.get('fx_back_content'),
         "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1),
@@ -246,8 +256,8 @@ def favicon(): return send_from_directory('static', 'favicon.ico')
 @app.route('/reset-tutto')
 def reset_db_emergency():
     if os.path.exists(DB_FILE):
-        try: os.remove(DB_FILE); return "DB Cancellato."
-        except: return "Errore."
-    return "DB già pulito."
+        try: os.remove(DB_FILE); return "DB CANCELLATO"
+        except: return "Errore"
+    return "DB PULITO"
 
 if __name__ == '__main__': app.run(debug=True)
