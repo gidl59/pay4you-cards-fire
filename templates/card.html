@@ -19,11 +19,24 @@
         {% endif %}
     </div>
 
-    <div class="avatar-container">
-        {% if ag.photo_url %}
-        <img src="{{ ag.photo_url }}" class="avatar-img {% if ag.fx_rotate_agent=='on' %}spin-cw{% endif %}" 
-             style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
-        {% else %}<div class="avatar-img" style="background:#ccc;"></div>{% endif %}
+    <div class="flip-container {% if ag.fx_rotate_agent=='on' %}spin-agent{% elif ag.fx_interaction=='mirror' %}mirror-flip{% else %}tap-flip{% endif %}" onclick="this.classList.toggle('flipped')">
+        <div class="flipper">
+            <div class="front">
+                {% if ag.photo_url %}
+                <img src="{{ ag.photo_url }}" class="avatar-img" 
+                     style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
+                {% else %}<div class="avatar-img" style="background:#ccc;"></div>{% endif %}
+            </div>
+            <div class="back">
+                {% if ag.fx_back == 'personal' and ag.personal_url %}
+                    <img src="{{ ag.personal_url }}" class="avatar-img">
+                {% elif ag.logo_url %}
+                    <img src="{{ ag.logo_url }}" class="back-img" style="padding:20px;">
+                {% else %}
+                    <div style="font-weight:bold;">LOGO</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <div class="info-section">
@@ -87,7 +100,7 @@
         {% if ag.address %}
             {% for addr in ag.address.split(',') %}
                 {% if addr.strip() %}
-                <div class="d-row" style="cursor:pointer;" onclick="window.open('https://maps.google.com/?q={{ addr.strip() }}', '_blank')">
+                <div class="d-row" style="cursor:pointer;" onclick="window.open('https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}', '_blank')">
                     <span class="d-icon">📍</span> <span class="d-link">{{ addr.strip() }}</span> <i class="fas fa-map-marker-alt" style="font-size:12px; opacity:0.5;"></i>
                 </div>
                 {% endif %}
@@ -135,7 +148,10 @@
     {% endif %}
 
     <div class="footer">
-        <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
+        <a href="https://www.pay4you.store/card-nfc.php" target="_blank" style="text-decoration:none;">
+            <span class="f-brand">Pay4You Card</span>
+        </a> 
+        <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
     </div>
 
     <div id="shareModal" class="modal-overlay">
