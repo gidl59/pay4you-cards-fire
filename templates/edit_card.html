@@ -8,7 +8,7 @@
     <style>
         .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
         .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; cursor:pointer; }
         .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
         .full-width { grid-column: span 2; }
         label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
@@ -29,14 +29,15 @@
         .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:8px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
         .pdf-row.deleted { display:none; }
 
-        .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; }
+        .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
         .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
-        .dash-modal-content { max-width:90%; max-height:90vh; margin-bottom:20px; border-radius:10px; }
-        .dash-actions { display:flex; gap:15px; }
+        .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:10px; border-radius:10px; }
+        .dash-actions { display:flex; gap:15px; margin-bottom:10px; }
         .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
-        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:transparent; border:1px solid #aaa; }
+        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } 
+        .db-cl { background:#ff4444; color:white; font-weight:bold; width:100%; max-width:200px; text-align:center; justify-content:center; }
     </style>
 </head>
 <body style="background:#050505; color:white; font-family:sans-serif;">
@@ -64,19 +65,9 @@
                 <div><label>Cellulare 1</label><input type="text" name="mobile1" value="{{ p.mobiles[0] if p.mobiles|length > 0 else '' }}"></div>
                 <div><label>Cellulare 2</label><input type="text" name="mobile2" value="{{ p.mobiles[1] if p.mobiles|length > 1 else '' }}"></div>
                 <div><label>Tel. Ufficio</label><input type="text" name="office_phone" value="{{ p.office_phone }}"></div>
-                
-                <div class="full-width">
-                    <label>Email (Separa con virgola)</label>
-                    <input type="text" name="email1" value="{{ p.emails|join(',') }}">
-                </div>
-                <div class="full-width">
-                    <label>Siti Web (Separa con virgola)</label>
-                    <input type="text" name="website" value="{{ p.websites|join(',') }}">
-                </div>
-                <div class="full-width">
-                    <label>Indirizzi Maps (Separa con virgola)</label>
-                    <input type="text" name="address" value="{{ p.address }}">
-                </div>
+                <div class="full-width"><label>Email (Separa con virgola)</label><input type="text" name="email1" value="{{ p.emails|join(',') }}"></div>
+                <div class="full-width"><label>Siti Web (Separa con virgola)</label><input type="text" name="website" value="{{ p.websites|join(',') }}"></div>
+                <div class="full-width"><label>Indirizzi Maps (Separa con virgola)</label><input type="text" name="address" value="{{ p.address }}"></div>
             </div>
         </div>
 
@@ -189,13 +180,13 @@
     </form>
 
     <div id="dashModal" class="dash-modal">
+        <button onclick="closeDashModal()" class="d-btn db-cl">CHIUDI X</button>
         <div id="dashMediaBox"></div>
         <div class="dash-actions">
             <a id="dbWa" href="#" target="_blank" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</a>
             <a id="dbEm" href="#" target="_blank" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</a>
             <button onclick="deleteCurrentItem()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
         </div>
-        <button onclick="closeDashModal()" class="d-btn db-cl" style="margin-top:15px;">CHIUDI</button>
     </div>
 
     <script>
@@ -207,7 +198,7 @@
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
-            // FIX CROP Y (RISOLTO)
+            // FIX CROP Y (ORA FUNZIONA)
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
@@ -220,14 +211,12 @@
             currentItemElement = element;
             var fullUrl = window.location.origin + url;
             
-            // FIX EMAIL & WA
             document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent(fullUrl);
-            var mailBody = "Ecco il file: " + fullUrl;
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A"); // FIX
+            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + fullUrl);
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:95vw; height:90vh;"></iframe>'; // PDF GRANDE
+            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:95vw; height:80vh;"></iframe>';
 
             modal.style.display = 'flex';
         }
