@@ -1,203 +1,123 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ ag.name }}</title>
-  <link rel="stylesheet" href="/static/card.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <title>Modifica</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS IDENTICO A PRIMA, SOLO SCRIPT FIX */
+        .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
+        .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; }
+        .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
+        .full-width { grid-column: span 2; }
+        label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
+        input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
+        
+        .crop-area { text-align:center; background:#000; padding:10px; border-radius:10px; border:1px solid #333; }
+        .crop-circle { width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; overflow:hidden; margin:0 auto 10px auto; position:relative; background:#222; }
+        .crop-circle img { width:100%; height:100%; object-fit:cover; transition: none; transform-origin: center center; }
+        .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:5px; }
+        .range-slider { flex:1; cursor:pointer; }
+
+        .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+        .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
+        .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
+        .dash-item.deleted { display:none; }
+        
+        .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:8px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
+        .pdf-row.deleted { display:none; }
+
+        .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
+        .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; }
+
+        .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
+        .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:10px; border-radius:10px; }
+        .dash-actions { display:flex; gap:15px; margin-bottom:10px; }
+        .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
+        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; color:white; }
+    </style>
 </head>
-<body data-theme="auto">
+<body style="background:#050505; color:white; font-family:sans-serif;">
 
-  <div class="card-wrap">
-    
-    <div class="hero">
-        {% if ag.logo_url %}
-        <div class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
-            <img src="{{ ag.logo_url }}">
-        </div>
-        {% endif %}
-    </div>
+    <div class="dash-head"><a href="/area" style="color:white;">← Indietro</a> <span style="color:#00ffc8;">MODIFICA P{{ p_id }}</span></div>
 
-    {% set flip_class = 'tap-flip' %}
-    {% if ag.fx_rotate_agent == 'on' %}
-        {% set flip_class = 'spin-agent' %}
-    {% elif ag.fx_interaction == 'mirror' %}
-        {% set flip_class = 'mirror-flip' %}
-    {% endif %}
-
-    <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
-        <div class="flipper">
-            <div class="front">
-                {% if ag.photo_url %}
-                <img src="{{ ag.photo_url }}" class="avatar-img" 
-                     style="object-position:{{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform:scale({{ ag.photo_zoom }});">
-                {% else %}<div class="avatar-img" style="background:#ccc;"></div>{% endif %}
-            </div>
-            <div class="back">
-                {% if ag.fx_back == 'personal' and ag.personal_url %}
-                    <img src="{{ ag.personal_url }}" class="avatar-img">
-                {% elif ag.logo_url %}
-                    <img src="{{ ag.logo_url }}" class="back-img" style="padding:20px;">
-                {% else %}
-                    <div style="font-weight:bold;">LOGO</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="info-section">
-        <div class="name">{{ ag.name }}</div>
-        <div class="role">{{ ag.role }}</div>
-        {% if ag.company %}<div class="box-company">{{ ag.company }}</div>{% endif %}
-        {% if ag.bio %}<div class="box-bio">{{ ag.bio }}</div>{% endif %}
-    </div>
-
-    <div class="actions-row">
-        <a href="/vcf/{{ ag.slug }}" class="btn-save" download><i class="fas fa-user-plus"></i> SALVA CONTATTO</a>
-        <div class="btn-qr" onclick="openShare('qr', '')">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}">
-        </div>
-    </div>
-
-    <div class="social-grid">
-        {% for s in socials %}
-        <a href="{{ s.url }}" target="_blank" class="soc-btn 
-           {% if 'Facebook' in s.label %}soc-fb{% elif 'Instagram' in s.label %}soc-ig{% elif 'Linkedin' in s.label %}soc-li{% elif 'TikTok' in s.label %}soc-tk{% elif 'Spotify' in s.label %}soc-sp{% elif 'Telegram' in s.label %}soc-tg{% elif 'YouTube' in s.label %}soc-yt{% endif %}">
-           <i class="fab fa-{{ s.label|lower if s.label!='TikTok' else 'tiktok' }}"></i>
-        </a>
-        {% endfor %}
-    </div>
-
-    <div class="switcher-bar">
-        <div class="sw-left">
-            {% if profile!='p1' %}<a href="?p=p1" class="circle-p p1-btn">P1</a>{% endif %}
-            {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p p2-btn">P2</a>{% endif %}
-            {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p p3-btn">P3</a>{% endif %}
-        </div>
-        <div class="sw-right">
-            <span onclick="setT('light')" class="theme-btn t-light">CHIARO</span>
-            <span onclick="setT('dark')" class="theme-btn t-dark">SCURO</span>
-            <span onclick="setT('auto')" class="theme-btn t-auto">AUTO</span>
-        </div>
-    </div>
-
-    <div class="scene-box">
-        <div class="scene-label">CONTATTI</div>
-        {% for m in mobiles %}<div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>{% endfor %}
-        {% if ag.office_phone %}<div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>{% endif %}
+    <form method="POST" enctype="multipart/form-data" class="edit-container" id="editForm">
         
-        {% for e_str in emails %}
-            {% for e in e_str.split(',') %}
-                {% if e.strip() %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e.strip()}}" class="d-link">{{e.strip()}}</a></div>{% endif %}
-            {% endfor %}
-        {% endfor %}
-
-        {% if ag.pec %}<div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>{% endif %}
-        
-        {% for w_str in websites %}
-            {% for w in w_str.split(',') %}
-                {% if w.strip() %}
-                {% set full_w = w.strip() if w.strip().startswith('http') else 'https://' ~ w.strip() %}
-                <div class="d-row" style="cursor:pointer;" onclick="openSite('{{ full_w }}')">
-                    <span class="d-icon">🌐</span> <span class="d-link">{{ w.strip() }}</span> <i class="fas fa-chevron-right" style="font-size:12px; opacity:0.5;"></i>
+        <div class="edit-box">
+            <h3 class="box-title">👤 Dati</h3>
+            <div class="form-grid">
+                <div class="full-width"><label>Nome</label><input type="text" name="name" value="{{ p.name }}"></div>
                 </div>
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
+        </div>
 
-        {% if ag.address %}
-            {% for addr in ag.address.split(',') %}
-                {% if addr.strip() %}
-                <div class="d-row" style="cursor:pointer;" onclick="window.open('https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}', '_blank')">
-                    <span class="d-icon">📍</span> <span class="d-link">{{ addr.strip() }}</span> <i class="fas fa-map-marker-alt" style="font-size:12px; opacity:0.5;"></i>
+        <div class="edit-box">
+            <h3 class="box-title">📸 FOTO</h3>
+            <div class="crop-area">
+                <label style="color:#00ffc8;">FOTO AGENTE</label>
+                <div class="crop-circle">
+                    <img id="cropImg" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
+                         style="object-position: {{ p.pos_x }}% {{ p.pos_y }}%; transform: scale({{ p.zoom }});">
                 </div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-        
-        <div class="fiscal-row">
-            {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
-            {% if ag.cod_sdi %}<span>SDI: {{ag.cod_sdi}}</span>{% endif %}
-        </div>
-    </div>
-
-    {% if p_data.gallery_img %}
-    <div class="scene-box">
-        <div class="scene-label">FOTO</div>
-        <div class="gal-grid-5">
-            {% for img in p_data.gallery_img %}<img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">{% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_vid %}
-    <div class="scene-box">
-        <div class="scene-label">VIDEO</div>
-        <div class="gal-grid-5">
-            {% for vid in p_data.gallery_vid %}
-            <div class="vid-box" onclick="openShare('vid', '{{ vid }}')"><video src="{{ vid }}#t=2.0" preload="metadata"></video><i class="fas fa-play vid-icon"></i></div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_pdf %}
-    <div class="scene-box">
-        <div class="scene-label">DOCUMENTI</div>
-        <div class="pdf-grid">
-            {% for pdf in p_data.gallery_pdf %}
-            <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
-                <div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px;"></i><span class="pdf-name">{{ pdf.name }}</span></div>
-                <i class="fas fa-eye" style="color:var(--brand);"></i>
+                <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
+                <div style="margin-top:10px;">
+                    <div class="slider-row"><label>↔️</label><input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()"></div>
+                    <div class="slider-row"><label>↕️</label><input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()"></div>
+                    <div class="slider-row"><label>🔍</label><input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()"></div>
+                </div>
+                <label>Gira?</label> <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
             </div>
-            {% endfor %}
         </div>
-    </div>
-    {% endif %}
 
-    <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
-        <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
-    </div>
+        <button type="submit" class="btn-save" id="btnSave">💾 SALVA</button>
+    </form>
 
-    <div id="shareModal" class="modal-overlay">
-        <div id="mediaBox"></div>
-        <div class="modal-actions">
-            <a id="waLink" href="#" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
-            <a id="emLink" href="#" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
-            <div onclick="closeModal()" class="act-btn bg-cl"><i class="fas fa-times"></i></div>
+    <div id="dashModal" class="dash-modal">
+        <button onclick="closeDashModal()" class="d-btn db-cl">CHIUDI X</button>
+        <div id="dashMediaBox"></div>
+        <div class="dash-actions">
+            <button onclick="shareItem('wa')" class="d-btn db-wa">WA</button>
+            <button onclick="shareItem('em')" class="d-btn db-em">Email</button>
+            <button onclick="deleteCurrentItem()" class="d-btn db-del">DEL</button>
         </div>
     </div>
 
-    <div id="webModal" class="modal-overlay">
-        <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
-        <iframe id="webFrame" class="web-frame"></iframe>
-    </div>
+    <script>
+        function previewCrop(input) { if(input.files && input.files[0]) { var r = new FileReader(); r.onload = function(e){ document.getElementById('cropImg').src = e.target.result; }; r.readAsDataURL(input.files[0]); } }
+        
+        function updateCrop() {
+            var x = document.getElementsByName('pos_x')[0].value;
+            var y = document.getElementsByName('pos_y')[0].value;
+            var z = document.getElementsByName('zoom')[0].value;
+            var img = document.getElementById('cropImg');
+            // FIX CROP Y DEFINITIVO
+            img.style.objectPosition = x + "% " + y + "%";
+            img.style.transform = "scale(" + z + ")";
+        }
 
-  </div>
-
-  <script>
-    function openShare(type, url) {
-        var box = document.getElementById('mediaBox');
-        var fullUrl = window.location.origin + url;
-        if(type=='qr') fullUrl = window.location.href;
-
-        // FIX EMAIL TEXT (CODIFICA)
-        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
-        var mailBody = "Link: " + fullUrl;
-        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(mailBody);
-
-        if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
-        else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-        else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-        else if(type=='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+fullUrl+'" style="background:white; padding:15px; border-radius:15px;">';
-
-        document.getElementById('shareModal').style.display = 'flex';
-    }
-    function openSite(url) { document.getElementById('webFrame').src = url; document.getElementById('webModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('shareModal').style.display = 'none'; document.getElementById('mediaBox').innerHTML = ""; }
-    function closeWeb() { document.getElementById('webModal').style.display = 'none'; document.getElementById('webFrame').src = ""; }
-    function setT(t) { if(t=='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
-  </script>
+        var currentUrl = "";
+        function openPreview(url, type, element) {
+            currentUrl = window.location.origin + url;
+            var box = document.getElementById('dashMediaBox');
+            if(type=='img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
+            else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
+            else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:95vw; height:80vh;"></iframe>';
+            document.getElementById('dashModal').style.display = 'flex';
+        }
+        
+        function shareItem(mode) {
+            if(mode == 'wa') window.open("https://wa.me/?text=" + encodeURIComponent(currentUrl));
+            if(mode == 'em') {
+                // METODO EMAIL FORZATO (SIMULA CLICK)
+                let a = document.createElement('a');
+                a.href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + currentUrl);
+                a.click();
+            }
+        }
+        
+        function closeDashModal() { document.getElementById('dashModal').style.display = 'none'; }
+        document.getElementById('editForm').onsubmit = function() { document.getElementById('btnSave').innerText = "⏳ SALVA..."; }
+    </script>
 </body>
 </html>
