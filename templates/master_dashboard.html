@@ -12,6 +12,7 @@
         td, th { padding:10px; border-bottom:1px solid #222; text-align:left; }
         .btn { padding:5px 10px; border-radius:5px; text-decoration:none; cursor:pointer; font-size:12px; border:none; color:white; margin-right:5px; }
         .btn-wa { background:#25D366; } .btn-mail { background:#fff; color:black; }
+        .btn-qr { background:#FF9800; color:black; }
         .btn-del { background:#cc0000; } .btn-view { background:#0088cc; }
         .btn-out { background:transparent; border:1px solid #666; color:#ccc; }
         input { background:#222; border:1px solid #444; color:white; padding:8px; border-radius:5px; }
@@ -44,6 +45,7 @@
                 <td>
                     <button onclick="sendWa('{{c.username}}','{{c.password}}')" class="btn btn-wa">WA</button>
                     <button onclick="sendMail('{{c.username}}','{{c.password}}')" class="btn btn-mail">@</button>
+                    <button onclick="showQr('{{c.slug}}')" class="btn btn-qr">QR</button>
                 </td>
                 <td>
                     <a href="/master/impersonate/{{c.id}}" target="_blank" class="btn btn-view">Gestisci</a>
@@ -62,8 +64,13 @@
         function sendMail(u, p) {
             var sub = "Credenziali Pay4You";
             var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            // FIX EMAIL TEXT:
-            window.location.href = "mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body).replace(/%0A/g, "%0D%0A");
+            // METODO PIÙ ROBUSTO PER EMAIL
+            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body), "_blank");
+        }
+        function showQr(slug) {
+            var url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://pay4you-cards-fire.onrender.com/card/" + slug;
+            var win = window.open("", "QR Code", "width=400,height=400");
+            win.document.write('<img src="' + url + '" style="width:100%">');
         }
     </script>
 </body>
