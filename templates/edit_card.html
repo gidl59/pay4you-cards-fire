@@ -123,7 +123,7 @@
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title"><span>📸 FOTO (Max 30)</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
+            <h3 class="box-title"><span>📸 FOTO</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
             <input type="file" name="gallery_img" multiple accept="image/*">
             <div class="dash-gallery">
                 {% for img in p.gallery_img %}
@@ -133,7 +133,7 @@
                 {% endfor %}
             </div>
             <hr style="border-color:#333; margin:20px 0;">
-            <h3 class="box-title"><span>🎬 VIDEO (Max 10)</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>🎬 VIDEO</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_vid" multiple accept="video/*">
             <div class="dash-gallery">
                 {% for vid in p.gallery_vid %}
@@ -144,7 +144,7 @@
                 {% endfor %}
             </div>
             <hr style="border-color:#333; margin:20px 0;">
-            <h3 class="box-title"><span>📄 PDF (Max 12)</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>📄 PDF</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_pdf" multiple accept=".pdf">
             <div style="margin-top:10px;">
                 {% for pdf in p.gallery_pdf %}
@@ -186,23 +186,23 @@
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
-            // FIX CROP Y (ORA FUNZIONA)
+            // FIX CROP Y:
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
 
-        var currentUrl = "";
+        var currentItemElement = null;
         function openPreview(url, type, element) {
             if(element.classList.contains('deleted')) return;
             var modal = document.getElementById('dashModal');
             var box = document.getElementById('dashMediaBox');
             currentItemElement = element;
-            currentUrl = window.location.origin + url;
+            var fullUrl = window.location.origin + url;
             
             // FIX EMAIL TEXT (CODIFICA FORZATA)
-            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + currentUrl);
-            var mailBody = "Ecco il file: " + currentUrl;
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A");
+            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent(fullUrl);
+            // Uso %0D%0A esplicito per a capo
+            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file:\r\n" + fullUrl);
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
