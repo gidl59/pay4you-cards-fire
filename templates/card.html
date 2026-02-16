@@ -11,15 +11,13 @@
 
   <div class="card-wrap">
 
-    <div class="hero">
-      {% if ag.logo_url %}
-      <div class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
+    <!-- LOGO TOP-LEFT -->
+    {% if ag.logo_url %}
+      <div class="top-left-logo {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         <img src="{{ ag.logo_url }}" alt="logo">
       </div>
-      {% endif %}
-    </div>
+    {% endif %}
 
-    {# ===== LOGICA EFFETTI (corretta) ===== #}
     {% set flip_class = 'tap-flip' %}
     {% if ag.fx_rotate_agent == 'on' %}
       {% set flip_class = 'spin-agent' %}
@@ -29,14 +27,14 @@
 
     <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
       <div class="flipper">
+
         <div class="front">
           {% if ag.photo_url %}
-            {# FIX CROP DEFINITIVO: variabili CSS, no inline object-position #}
             <img src="{{ ag.photo_url }}"
                  class="avatar-img"
                  style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
-            <div class="avatar-img" style="background:#ccc;"></div>
+            <div class="avatar-img" style="background:#555;"></div>
           {% endif %}
         </div>
 
@@ -44,11 +42,12 @@
           {% if ag.fx_back == 'personal' and ag.personal_url %}
             <img src="{{ ag.personal_url }}" class="avatar-img" alt="retro">
           {% elif ag.logo_url %}
-            <img src="{{ ag.logo_url }}" class="back-img" style="padding:20px;" alt="logo retro">
+            <img src="{{ ag.logo_url }}" class="avatar-img" style="--ox:50%;--oy:50%;--z:1;" alt="logo retro">
           {% else %}
-            <div style="font-weight:bold;">LOGO</div>
+            <div style="font-weight:900;">LOGO</div>
           {% endif %}
         </div>
+
       </div>
     </div>
 
@@ -114,82 +113,10 @@
         <div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>
       {% endif %}
 
-      {% for w_str in websites %}
-        {% for w in w_str.split(',') %}
-          {% if w.strip() %}
-            {% set full_w = w.strip() if w.strip().startswith('http') else 'https://' ~ w.strip() %}
-            <div class="d-row" style="cursor:pointer;" onclick="openSite('{{ full_w }}')">
-              <span class="d-icon">🌐</span> <span class="d-link">{{ w.strip() }}</span>
-              <i class="fas fa-chevron-right" style="font-size:12px; opacity:0.5;"></i>
-            </div>
-          {% endif %}
-        {% endfor %}
-      {% endfor %}
-
-      {% if ag.address %}
-        {% for addr in ag.address.split(',') %}
-          {% if addr.strip() %}
-            <div class="d-row" style="cursor:pointer;"
-                 onclick="window.open('https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}', '_blank')">
-              <span class="d-icon">📍</span> <span class="d-link">{{ addr.strip() }}</span>
-              <i class="fas fa-map-marker-alt" style="font-size:12px; opacity:0.5;"></i>
-            </div>
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-
       <div class="fiscal-row">
         {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
         {% if ag.cod_sdi %}<span>SDI: {{ag.cod_sdi}}</span>{% endif %}
       </div>
-    </div>
-
-    {% if p_data.gallery_img %}
-    <div class="scene-box">
-      <div class="scene-label">FOTO</div>
-      <div class="gal-grid-5">
-        {% for img in p_data.gallery_img %}
-          <img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')" alt="img">
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_vid %}
-    <div class="scene-box">
-      <div class="scene-label">VIDEO</div>
-      <div class="gal-grid-5">
-        {% for vid in p_data.gallery_vid %}
-          <div class="vid-box" onclick="openShare('vid', '{{ vid }}')">
-            <video src="{{ vid }}#t=2.0" preload="metadata" playsinline></video>
-            <i class="fas fa-play vid-icon"></i>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_pdf %}
-    <div class="scene-box">
-      <div class="scene-label">DOCUMENTI</div>
-      <div class="pdf-grid">
-        {% for pdf in p_data.gallery_pdf %}
-          <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px;"></i>
-              <span class="pdf-name">{{ pdf.name }}</span>
-            </div>
-            <i class="fas fa-eye" style="color:var(--brand);"></i>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
-      <span class="f-brand">Pay4You Card</span>
-      <span class="f-copy">Copyright 2026</span>
-      <span class="f-name">Giuseppe Di Lisio</span>
     </div>
 
     <div id="shareModal" class="modal-overlay">
@@ -209,58 +136,32 @@
   </div>
 
   <script>
-    function buildFullUrl(url) {
-      if (!url) return window.location.href;
-      if (url.startsWith("http://") || url.startsWith("https://")) return url;
-      return window.location.origin + url;
-    }
-    function makeMailto(subject, body) {
+    function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
-      return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
+      return "mailto:?subject=" + encodeURIComponent(subject) +
+             "&body=" + encodeURIComponent(b);
     }
 
     function openShare(type, url) {
       const box = document.getElementById('mediaBox');
-      let fullUrl = (type === 'qr') ? window.location.href : buildFullUrl(url);
-
-      const subject = "Pay4You - Condivisione";
-      const body =
-        "Ciao!\n" +
-        "Ti condivido questo contenuto Pay4You:\n\n" +
-        fullUrl + "\n\n" +
-        "Card digitale:\n" +
-        window.location.href;
+      const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
 
       document.getElementById('waLink').href =
         "https://wa.me/?text=" + encodeURIComponent("Pay4You: " + fullUrl);
 
       document.getElementById('emLink').href =
-        makeMailto(subject, body);
+        makeMailto("Pay4You - Condivisione", "Link:\n" + fullUrl);
 
-      if (type === 'img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
-      else if (type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay playsinline class="modal-content"></video>';
-      else if (type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-      else if (type === 'qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:15px; border-radius:15px;">';
-
+      if(type==='qr'){
+        box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:14px; border-radius:18px;">';
+      }
       document.getElementById('shareModal').style.display = 'flex';
     }
 
-    function openSite(url) {
-      document.getElementById('webFrame').src = url;
-      document.getElementById('webModal').style.display = 'flex';
-    }
-    function closeModal() {
-      document.getElementById('shareModal').style.display = 'none';
-      document.getElementById('mediaBox').innerHTML = "";
-    }
-    function closeWeb() {
-      document.getElementById('webModal').style.display = 'none';
-      document.getElementById('webFrame').src = "";
-    }
-    function setT(t) {
-      if (t=='auto') document.body.removeAttribute('data-theme');
-      else document.body.setAttribute('data-theme', t);
-    }
+    function closeModal(){ document.getElementById('shareModal').style.display='none'; document.getElementById('mediaBox').innerHTML=""; }
+    function openSite(url){ document.getElementById('webFrame').src=url; document.getElementById('webModal').style.display='flex'; }
+    function closeWeb(){ document.getElementById('webModal').style.display='none'; document.getElementById('webFrame').src=""; }
+    function setT(t){ if(t==='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
   </script>
 </body>
 </html>
