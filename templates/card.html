@@ -19,7 +19,14 @@
         {% endif %}
     </div>
 
-    <div class="flip-container {% if ag.fx_rotate_agent=='on' %}spin-agent{% elif ag.fx_interaction=='mirror' %}mirror-flip{% else %}tap-flip{% endif %}" onclick="this.classList.toggle('flipped')">
+    {% set flip_class = 'tap-flip' %}
+    {% if ag.fx_rotate_agent == 'on' %}
+        {% set flip_class = 'spin-agent' %}
+    {% elif ag.fx_interaction == 'mirror' %}
+        {% set flip_class = 'mirror-flip' %}
+    {% endif %}
+
+    <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
         <div class="flipper">
             <div class="front">
                 {% if ag.photo_url %}
@@ -63,14 +70,14 @@
     </div>
 
     <div class="switcher-bar">
-        {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
-        {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
-        {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
-        
-        <span class="sep">|</span>
-        <span onclick="setT('light')" class="theme-t">CHIARO</span>
-        <span onclick="setT('dark')" class="theme-t">SCURO</span>
-        <span onclick="setT('auto')" class="theme-t">AUTO</span>
+        <div class="sw-left">
+            {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
+            {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
+            {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
+        </div>
+        <div class="sw-right">
+            <span onclick="setT('light')">CHIARO</span> | <span onclick="setT('dark')">SCURO</span> | <span onclick="setT('auto')">AUTO</span>
+        </div>
     </div>
 
     <div class="scene-box">
@@ -173,13 +180,16 @@
         var fullUrl = window.location.origin + url;
         if(type=='qr') fullUrl = window.location.href;
 
+        // FIX EMAIL TEXT:
+        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda questo: " + fullUrl);
+        var mailBody = "Ecco il link: " + fullUrl;
+        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A");
+
         if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
         else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
         else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
         else if(type=='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+fullUrl+'" style="background:white; padding:15px; border-radius:15px;">';
 
-        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda questo: " + fullUrl);
-        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
         document.getElementById('shareModal').style.display = 'flex';
     }
     function openSite(url) { document.getElementById('webFrame').src = url; document.getElementById('webModal').style.display = 'flex'; }
