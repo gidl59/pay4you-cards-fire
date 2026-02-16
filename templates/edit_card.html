@@ -32,9 +32,8 @@
         .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
-        /* MODAL PREVIEW DASHBOARD */
         .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
-        .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:20px; border-radius:10px; }
+        .dash-modal-content { max-width:90%; max-height:90vh; margin-bottom:20px; border-radius:10px; } /* 90VH PER PDF GRANDE */
         .dash-actions { display:flex; gap:15px; }
         .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
         .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:transparent; border:1px solid #aaa; }
@@ -208,6 +207,7 @@
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
+            // FIX CROP Y:
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
@@ -220,12 +220,15 @@
             currentItemElement = element;
             var fullUrl = window.location.origin + url;
             
-            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent(fullUrl);
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(fullUrl);
+            // FIX EMAIL TEXT:
+            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent("Ecco il file: " + fullUrl);
+            var mailBody = "Ecco il file che volevo condividere: " + fullUrl;
+            // Usa %0D%0A per andare a capo
+            document.getElementById('dbEm').href = "mailto:?subject=Condivisione File&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A");
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; height:80vh; width:90%;"></iframe>'; // PDF GRANDE
+            else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:85vh;"></iframe>';
 
             modal.style.display = 'flex';
         }
