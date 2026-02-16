@@ -4,21 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ ag.name }} | Pay4You</title>
-  
   <link rel="stylesheet" href="/static/card.css">
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <style>
-    /* Popup Immagini */
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center; }
-    .modal img { max-width:90%; max-height:80vh; border-radius:10px; }
-    .close { position:absolute; top:20px; right:20px; color:white; font-size:30px; cursor:pointer; }
-    
-    /* Popup QR */
-    .qr-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9990; justify-content:center; align-items:center; }
-    .qr-box { background: var(--bg-card); padding:20px; border-radius:15px; text-align:center; max-width:300px; width:90%; position:relative; }
-  </style>
 </head>
 <body data-theme="auto">
 
@@ -26,261 +13,130 @@
     
     <div class="hero">
         {% if ag.logo_url %}
-            <img src="{{ ag.logo_url }}" class="hero-logo {% if ag.fx_rotate_logo == 'on' %}spin-cw{% endif %}">
+            <img src="{{ ag.logo_url }}" class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         {% endif %}
     </div>
 
     <div class="avatar-container">
-        <div class="avatar-flipper {% if ag.fx_interaction == 'mirror' %}mirror-anim{% endif %}" 
-             onclick="flipAvatar()" id="avatarBox">
-            
-            <div class="avatar-front">
-                {% if ag.photo_url %}
-                    <img src="{{ ag.photo_url }}" 
-                         class="{% if ag.fx_rotate_agent == 'on' %}rotate-agent{% endif %}"
-                         style="object-position: {{ ag.photo_pos_x }}% {{ ag.photo_pos_y }}%; transform: scale({{ ag.photo_zoom }});">
-                {% else %}
-                    <div style="font-size:50px;">👤</div>
-                {% endif %}
-            </div>
-
-            <div class="avatar-back">
-                {% if ag.fx_back == 'personal' and ag.personal_url %}
-                    <img src="{{ ag.personal_url }}">
-                {% elif ag.logo_url %}
-                    <img src="{{ ag.logo_url }}" style="object-fit:contain; padding:10px;">
-                {% else %}
-                    <span style="font-weight:bold; color:#888;">Pay4You</span>
-                {% endif %}
-            </div>
-        </div>
+        {% if ag.photo_url %}
+            <img src="{{ ag.photo_url }}" class="avatar-img {% if ag.fx_rotate_agent=='on' %}spin-cw{% endif %}">
+        {% else %}
+            <div class="avatar-img" style="display:flex;align-items:center;justify-content:center;font-size:40px;">👤</div>
+        {% endif %}
     </div>
 
-    <div class="title">
-        <h1>{{ ag.name }}</h1>
+    <div class="info-section">
+        <h1 style="margin-bottom:5px;">{{ ag.name }}</h1>
+        <div style="opacity:0.8; margin-bottom:15px;" id="role-txt">{{ ag.role }}</div>
         
-        <div class="sub" id="txt-role" 
-             data-it="{{ ag.role }}" 
-             data-en="{{ ag.trans.en.role }}" 
-             data-fr="{{ ag.trans.fr.role }}" 
-             data-es="{{ ag.trans.es.role }}" 
-             data-de="{{ ag.trans.de.role }}">
-             {{ ag.role }}
-        </div>
-
         {% if ag.company %}
-            <div class="company-badge">{{ ag.company }}</div>
+        <div class="box-company">
+            <small style="color:var(--brand); font-weight:bold;">AZIENDA</small><br>
+            <span style="font-size:18px; font-weight:bold;">{{ ag.company }}</span>
+        </div>
         {% endif %}
 
-        <div class="lang-box">
-            <button class="lang-btn" onclick="setLang('it')">🇮🇹</button>
-            <button class="lang-btn" onclick="setLang('en')">🇬🇧</button>
-            <button class="lang-btn" onclick="setLang('fr')">🇫🇷</button>
-            <button class="lang-btn" onclick="setLang('es')">🇪🇸</button>
+        {% if ag.bio %}
+        <div class="box-bio" id="bio-txt">{{ ag.bio }}</div>
+        {% endif %}
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:center; align-items:center; margin-bottom:20px;">
+        <a href="/vcf/{{ ag.slug }}" class="btn-save" style="background:var(--brand-grad); color:black; padding:12px 30px; border-radius:30px; text-decoration:none; font-weight:bold;">SALVA CONTATTO</a>
+        
+        <div class="btn-qr-mini" onclick="openQrModal()">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}">
         </div>
     </div>
 
-    {% if ag.bio %}
-        <div class="bio" id="txt-bio"
-             data-it="{{ ag.bio }}" 
-             data-en="{{ ag.trans.en.bio }}" 
-             data-fr="{{ ag.trans.fr.bio }}" 
-             data-es="{{ ag.trans.es.bio }}" 
-             data-de="{{ ag.trans.de.bio }}">
-             {{ ag.bio }}
-        </div>
-    {% endif %}
-
-    {% if socials %}
     <div class="social-grid">
         {% for s in socials %}
-            <a href="{{ s.url }}" target="_blank" class="soc-btn 
-               {% if s.label=='Facebook' %}soc-fb{% elif s.label=='Instagram' %}soc-ig{% elif s.label=='Linkedin' %}soc-li{% elif s.label=='TikTok' %}soc-tk{% elif s.label=='Spotify' %}soc-sp{% elif s.label=='Telegram' %}soc-tg{% elif s.label=='YouTube' %}soc-yt{% endif %}">
-               
-               {% if s.label=='Facebook' %}<i class="fab fa-facebook-f"></i>
-               {% elif s.label=='Instagram' %}<i class="fab fa-instagram"></i>
-               {% elif s.label=='Linkedin' %}<i class="fab fa-linkedin-in"></i>
-               {% elif s.label=='TikTok' %}<i class="fab fa-tiktok"></i>
-               {% elif s.label=='Spotify' %}<i class="fab fa-spotify"></i>
-               {% elif s.label=='Telegram' %}<i class="fab fa-telegram-plane"></i>
-               {% elif s.label=='YouTube' %}<i class="fab fa-youtube"></i>
-               {% endif %}
-            </a>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="actions">
-        <a class="btn-save" href="/vcf/{{ ag.slug }}">
-            <i class="fas fa-user-plus"></i> <span id="txt-save">SALVA CONTATTO</span>
+        <a href="{{ s.url }}" target="_blank" class="soc-btn 
+           {% if 'Facebook' in s.label %}soc-fb{% elif 'Instagram' in s.label %}soc-ig{% elif 'Linkedin' in s.label %}soc-li{% elif 'TikTok' in s.label %}soc-tk{% elif 'Spotify' in s.label %}soc-sp{% elif 'Telegram' in s.label %}soc-tg{% elif 'YouTube' in s.label %}soc-yt{% endif %}">
+           <i class="fab fa-{{ s.label|lower if s.label!='TikTok' else 'tiktok' }}"></i>
         </a>
-        <button class="btn-qr" onclick="openQr()">
-            <i class="fas fa-qrcode"></i>
-        </button>
-    </div>
-
-    {% if ag.piva or ag.pec or ag.cod_sdi %}
-    <div class="fiscal-box">
-        {% if ag.piva %}<div class="f-row"><span class="f-label">P.IVA</span><span>{{ ag.piva }}</span></div>{% endif %}
-        {% if ag.cod_sdi %}<div class="f-row"><span class="f-label">SDI</span><span>{{ ag.cod_sdi }}</span></div>{% endif %}
-        {% if ag.pec %}<div class="f-row"><span class="f-label">PEC</span><span>{{ ag.pec }}</span></div>{% endif %}
-    </div>
-    {% endif %}
-
-    <div class="content">
-        {% for m in mobiles %}
-            <div class="row">
-                <div class="icon">📞</div>
-                <div class="v"><a href="tel:{{ m }}">{{ m }}</a></div>
-            </div>
         {% endfor %}
+    </div>
+
+    <div style="text-align:left; padding:0 20px;">
+        {% for m in mobiles %}<div style="padding:10px; border-bottom:1px solid #eee;">📞 <a href="tel:{{m}}">{{m}}</a></div>{% endfor %}
+        {% if ag.office_phone %}<div style="padding:10px; border-bottom:1px solid #eee;">☎️ Ufficio: <a href="tel:{{ag.office_phone}}">{{ag.office_phone}}</a></div>{% endif %}
+        {% for e in emails %}<div style="padding:10px; border-bottom:1px solid #eee;">✉️ <a href="mailto:{{e}}">{{e}}</a></div>{% endfor %}
+        {% for w in websites %}<div style="padding:10px; border-bottom:1px solid #eee;">🌐 <a href="{{w}}" target="_blank">{{w}}</a></div>{% endfor %}
         
-        {% for e in emails %}
-            <div class="row">
-                <div class="icon">✉️</div>
-                <div class="v"><a href="mailto:{{ e }}">{{ e }}</a></div>
-            </div>
-        {% endfor %}
-
-        {% for w in websites %}
-            <div class="row">
-                <div class="icon">🌐</div>
-                <div class="v"><a href="{{ w }}" target="_blank">{{ w }}</a></div>
-            </div>
-        {% endfor %}
+        <div style="margin-top:20px; font-size:12px; opacity:0.7;">
+            {% if ag.piva %}<div>P.IVA: {{ ag.piva }}</div>{% endif %}
+            {% if ag.cod_sdi %}<div>SDI: {{ ag.cod_sdi }}</div>{% endif %}
+            {% if ag.pec %}<div>PEC: {{ ag.pec }}</div>{% endif %}
+        </div>
     </div>
 
-    <div class="gallery-section">
-        
+    <div class="switcher-bar">
+        <div>
+            {% if p2_enabled and profile != 'p2' %}<a href="?p=p2" class="sw-link">VAI AL P2</a>{% endif %}
+            {% if p3_enabled and profile != 'p3' %}<a href="?p=p3" class="sw-link">VAI AL P3</a>{% endif %}
+            {% if profile != 'p1' %}<a href="?p=p1" class="sw-link">VAI AL P1</a>{% endif %}
+        </div>
+        <div>
+            <span onclick="setTheme('light')" class="sw-link" style="cursor:pointer;">CHIARO</span>
+            <span onclick="setTheme('dark')" class="sw-link" style="cursor:pointer;">SCURO</span>
+            <span onclick="setTheme('auto')" class="sw-link" style="cursor:pointer;">AUTO</span>
+        </div>
+    </div>
+
+    <div style="padding:0 20px; text-align:left;">
         {% if p_data.gallery_img %}
-            <div class="gal-title">📸 Foto Gallery</div>
-            <div class="img-grid">
-                {% for img in p_data.gallery_img %}
-                    <img src="{{ img }}" class="g-img" onclick="openModal('{{ img }}')">
-                {% endfor %}
-            </div>
+        <h4>FOTO</h4>
+        <div class="gal-grid">
+            {% for img in p_data.gallery_img %}<img src="{{ img }}" class="gal-item" onclick="openImg('{{ img }}')">{% endfor %}
+        </div>
         {% endif %}
 
         {% if p_data.gallery_vid %}
-            <div class="gal-title">🎬 Video Gallery</div>
-            <div class="file-list">
-                {% for vid in p_data.gallery_vid %}
-                    <video controls style="width:100%; border-radius:8px;">
-                        <source src="{{ vid }}" type="video/mp4">
-                    </video>
-                {% endfor %}
-            </div>
+        <h4>VIDEO</h4>
+        <div class="video-list" style="text-align:center;">
+            {% for vid in p_data.gallery_vid %}
+            <video controls><source src="{{ vid }}"></video>
+            {% endfor %}
+        </div>
         {% endif %}
-
+        
         {% if p_data.gallery_pdf %}
-            <div class="gal-title">📄 Documenti</div>
-            <div class="file-list">
-                {% for pdf in p_data.gallery_pdf %}
-                    <a href="{{ pdf.path }}" target="_blank" class="file-btn">
-                        <i class="fas fa-file-pdf" style="color:#ff4444; font-size:20px;"></i>
-                        {{ pdf.name }}
-                    </a>
-                {% endfor %}
-            </div>
+        <h4>DOC</h4>
+        {% for pdf in p_data.gallery_pdf %}
+            <a href="{{ pdf.path }}" target="_blank" style="display:block; padding:10px; background:#f9f9f9; border-radius:5px; margin-bottom:5px; text-decoration:none; color:#333;">📄 {{ pdf.name }}</a>
+        {% endfor %}
         {% endif %}
     </div>
 
-    <div class="switch-row">
-        <div class="grp">
-            <a class="tiny-btn {% if profile=='p1' %}active{% endif %}" href="?p=p1">P1</a>
-            {% if p2_enabled %}<a class="tiny-btn {% if profile=='p2' %}active{% endif %}" href="?p=p2">P2</a>{% endif %}
-            {% if p3_enabled %}<a class="tiny-btn {% if profile=='p3' %}active{% endif %}" href="?p=p3">P3</a>{% endif %}
-        </div>
-        <div class="grp">
-            <button class="tiny-btn" onclick="applyTheme('light')">☀️</button>
-            <button class="tiny-btn" onclick="applyTheme('dark')">🌙</button>
-            <button class="tiny-btn" onclick="applyTheme('auto')">⚙️</button>
+    <div class="footer">Pay4You Card Copyright 2026 Giuseppe Di Lisio</div>
+
+    <div id="qrModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Condividi Card</h3>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" style="margin-bottom:15px;">
+            <a href="mailto:?subject=La mia Card&body=Ecco il mio biglietto: https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" class="modal-btn btn-em">📧 Invia Email</a>
+            <a href="https://wa.me/?text=Ecco la mia card: https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" class="modal-btn btn-wa">💬 Invia WhatsApp</a>
+            <button onclick="document.getElementById('qrModal').style.display='none'" class="modal-btn btn-close">CHIUDI</button>
         </div>
     </div>
     
-    <div style="font-size:10px; color:#888; margin-top:10px; opacity:0.5;">
-        Pay4You Card
-    </div>
-
-    {% if mobiles %}
-        <a href="https://wa.me/{{ mobiles[0]|replace(' ','') }}" target="_blank" class="wa-float">
-            <i class="fab fa-whatsapp"></i>
-        </a>
-    {% endif %}
-
-    <div id="imgModal" class="modal" onclick="this.style.display='none'">
-        <span class="close">&times;</span>
-        <img id="modalImg" src="">
-    </div>
-
-    <div id="qrModal" class="qr-modal">
-        <div class="qr-box">
-            <h3>Condividi</h3>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ ag.slug }}" style="width:180px;">
-            <br><br>
-            <button onclick="document.getElementById('qrModal').style.display='none'" style="padding:10px 20px;">CHIUDI</button>
-        </div>
+    <div id="imgModal" class="modal-overlay" onclick="this.style.display='none'">
+        <img id="bigImg" style="max-width:90%; max-height:80vh; border-radius:10px;">
     </div>
 
   </div>
 
   <script>
-    // --- GESTIONE TEMA ---
-    const root = document.body;
-    function applyTheme(th) {
-      if (th === 'auto') {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-      } else {
-        root.setAttribute('data-theme', th);
-      }
-      localStorage.setItem('p4y_theme', th);
+    function openQrModal() { document.getElementById('qrModal').style.display = 'flex'; }
+    function openImg(src) { 
+        document.getElementById('bigImg').src = src; 
+        document.getElementById('imgModal').style.display = 'flex'; 
     }
-    const saved = localStorage.getItem('p4y_theme') || 'auto';
-    applyTheme(saved);
-
-    // --- GESTIONE TAP AVATAR ---
-    var fx_inter = "{{ ag.fx_interaction }}";
-    function flipAvatar() {
-        if(fx_inter === 'tap') {
-            document.querySelector('.avatar-flipper').classList.toggle('flipped');
-        }
+    function setTheme(t) {
+        if(t==='auto') document.body.removeAttribute('data-theme');
+        else document.body.setAttribute('data-theme', t);
     }
-
-    // --- GESTIONE GALLERIA ---
-    function openModal(src) {
-        document.getElementById('imgModal').style.display = 'flex';
-        document.getElementById('modalImg').src = src;
-    }
-    function openQr() {
-        document.getElementById('qrModal').style.display = 'flex';
-    }
-
-    // --- GESTIONE TRADUZIONI ---
-    // Legge la lingua del browser o usa quella impostata
-    function setLang(lang) {
-        var els = document.querySelectorAll('[data-' + lang + ']');
-        els.forEach(el => {
-            var text = el.getAttribute('data-' + lang);
-            if(text) el.innerText = text;
-        });
-        
-        // Traduzione Tasto Salva
-        var saveBtn = document.getElementById('txt-save');
-        if(lang == 'en') saveBtn.innerText = "SAVE CONTACT";
-        else if(lang == 'es') saveBtn.innerText = "GUARDAR CONTACTO";
-        else if(lang == 'fr') saveBtn.innerText = "ENREGISTRER";
-        else if(lang == 'de') saveBtn.innerText = "KONTAKT SPEICHERN";
-        else saveBtn.innerText = "SALVA CONTATTO";
-    }
-
-    // Auto-detect lingua all'avvio
-    var userLang = navigator.language || navigator.userLanguage; 
-    if(userLang.startsWith('en')) setLang('en');
-    if(userLang.startsWith('es')) setLang('es');
-    if(userLang.startsWith('fr')) setLang('fr');
-    if(userLang.startsWith('de')) setLang('de');
-
   </script>
 </body>
 </html>
