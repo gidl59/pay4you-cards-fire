@@ -1,14 +1,13 @@
 :root {
     --bg-body: #f0f2f5; --bg-card: #ffffff; 
-    --text: #000000; /* TESTO NERO ASSOLUTO */
-    --text-muted: #333333;
+    --text: #000000; /* TESTO NERO */
     --brand: #0088cc;
     --section-bg: #f7f8fa; --section-border: #e1e3e8;
     --link-color: #004466; --footer-col: #000; --fiscal-col: #000;
 }
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-body: #000000; --bg-card: #18191a; --text: #ffffff; --text-muted: #ccc;
+        --bg-body: #000000; --bg-card: #18191a; --text: #ffffff;
         --brand: #00ffc8; --section-bg: #242526; --section-border: #3e4042;
         --link-color: #4dd0e1; --footer-col: #fff; --fiscal-col: #ccc;
     }
@@ -20,12 +19,11 @@ body { margin:0; font-family:'Segoe UI', sans-serif; background:var(--bg-body); 
 .card-wrap { width:100%; max-width:420px; background:var(--bg-card); min-height:100vh; text-align:center; color:var(--text); padding-bottom:100px; box-shadow:0 0 20px rgba(0,0,0,0.1); position:relative; overflow-x:hidden; }
 a { text-decoration:none; color:var(--link-color); }
 
-/* HERO */
 .hero { width:100%; height:180px; background:#222; position:relative; margin-bottom:80px; }
 .hero-logo-circle { position:absolute; top:20px; left:20px; width:90px; height:90px; border-radius:50%; background:#fff; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.4); z-index:20; display:flex; align-items:center; justify-content:center; border:2px solid white; }
 .hero-logo-circle img { max-width:85%; max-height:85%; object-fit:contain; }
 
-/* 3D FLIP */
+/* 3D */
 .flip-container { width:160px; height:160px; position:absolute; top:100px; left:50%; margin-left:-80px; z-index:10; perspective:1000px; cursor:pointer; }
 .flipper { width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform 0.8s; border-radius:50%; border:6px solid var(--bg-card); box-shadow:0 5px 15px rgba(0,0,0,0.2); background:#eee; }
 .tap-flip.flipped .flipper { transform: rotateY(180deg); }
@@ -40,10 +38,9 @@ a { text-decoration:none; color:var(--link-color); }
 .avatar-img { width:100%; height:100%; object-fit:cover; }
 .back-img { width:100%; height:100%; object-fit:contain; }
 
-/* INFO */
 .info-section { padding:0 25px; margin-top:10px; }
 .name { font-size:28px; font-weight:800; margin:5px 0; color:var(--text); }
-.role { font-size:16px; color:var(--text-muted); margin-bottom:20px; font-weight:700; text-transform:uppercase; }
+.role { font-size:16px; color:var(--text); margin-bottom:20px; font-weight:700; text-transform:uppercase; }
 .box-company { background:#fff5f5; padding:8px 20px; border-radius:50px; margin-bottom:15px; border:2px solid #ff4444; display:inline-block; color:#000; font-weight:bold; text-transform:uppercase; font-size:14px; }
 .box-bio { background:#e0f7fa; padding:15px; border-radius:12px; font-weight:600; font-style:italic; margin:15px 0; border-left:4px solid var(--brand); text-align:left; font-size:14px; color:#000; }
 
@@ -56,23 +53,19 @@ a { text-decoration:none; color:var(--link-color); }
 .soc-btn { width:45px; height:45px; background:var(--bg-card); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 3px 8px rgba(0,0,0,0.1); border:1px solid var(--section-border); }
 .soc-fb { color:#1877F2; } .soc-ig { color:#E4405F; } .soc-li { color:#0A66C2; } .soc-tk { color:#000; } .soc-sp { color:#1DB954; } .soc-tg { color:#0088cc; } .soc-yt { color:#FF0000; }
 
-/* FIX SWITCHER P1/P2 IN LINEA */
+/* FIX P1/P2/P3 SU UNA RIGA */
 .switcher-bar { 
     display:flex; flex-direction:row; justify-content:center; align-items:center; gap:10px; 
     margin:20px; padding:10px; background:var(--section-bg); border-radius:30px; 
-    border:1px solid var(--section-border); flex-wrap:nowrap; 
+    border:1px solid var(--section-border); 
+    white-space: nowrap; flex-wrap:nowrap; /* BLINDATO */
 }
-/* P1 = BLU, P2 = VERDE, P3 = ARANCIO */
 .circle-p { width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:12px; flex-shrink:0; text-decoration:none; }
 .p1-btn { background: #0088cc; }
 .p2-btn { background: #00cc66; }
 .p3-btn { background: #ff9900; }
 
-/* TASTI TEMA ARROTONDATI E COLORATI */
-.theme-btn { 
-    padding:5px 12px; font-size:10px; font-weight:bold; cursor:pointer; 
-    text-transform:uppercase; border:1px solid #ccc; border-radius:15px; /* ARROTONDATI */
-}
+.theme-btn { padding:5px 12px; font-size:10px; font-weight:bold; cursor:pointer; text-transform:uppercase; border:1px solid #ccc; border-radius:15px; }
 .t-light { background: #ffffff; color: #000; }
 .t-dark { background: #000000; color: #fff; }
 .t-auto { background: #888888; color: #fff; }
