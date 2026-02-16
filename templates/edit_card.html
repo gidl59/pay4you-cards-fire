@@ -8,7 +8,7 @@
     <style>
         .edit-container { max-width:900px; margin:20px auto; padding-bottom:100px; }
         .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; cursor:pointer; }
+        .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
         .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
         .full-width { grid-column: span 2; }
         label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
@@ -36,8 +36,7 @@
         .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:10px; border-radius:10px; }
         .dash-actions { display:flex; gap:15px; margin-bottom:10px; }
         .d-btn { display:flex; align-items:center; gap:5px; padding:10px 20px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; }
-        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } 
-        .db-cl { background:#ff4444; color:white; font-weight:bold; width:100%; max-width:200px; text-align:center; justify-content:center; }
+        .db-wa { background:#25D366; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; color:white; }
     </style>
 </head>
 <body style="background:#050505; color:white; font-family:sans-serif;">
@@ -124,7 +123,7 @@
         </div>
 
         <div class="edit-box">
-            <h3 class="box-title"><span>📸 FOTO (Max 30)</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
+            <h3 class="box-title"><span>📸 FOTO</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
             <input type="file" name="gallery_img" multiple accept="image/*">
             <div class="dash-gallery">
                 {% for img in p.gallery_img %}
@@ -133,10 +132,8 @@
                 </div>
                 {% endfor %}
             </div>
-            
             <hr style="border-color:#333; margin:20px 0;">
-
-            <h3 class="box-title"><span>🎬 VIDEO (Max 10)</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>🎬 VIDEO</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_vid" multiple accept="video/*">
             <div class="dash-gallery">
                 {% for vid in p.gallery_vid %}
@@ -146,16 +143,13 @@
                 </div>
                 {% endfor %}
             </div>
-
             <hr style="border-color:#333; margin:20px 0;">
-
-            <h3 class="box-title"><span>📄 PDF (Max 12)</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
+            <h3 class="box-title"><span>📄 PDF</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
             <input type="file" name="gallery_pdf" multiple accept=".pdf">
             <div style="margin-top:10px;">
                 {% for pdf in p.gallery_pdf %}
                 <div class="pdf-row pdf-item" onclick="openPreview('{{ pdf.path }}', 'pdf', this)">
                     <span><i class="fas fa-file-pdf" style="color:#f44;"></i> {{ pdf.name }}</span>
-                    <i class="fas fa-chevron-right" style="color:#666;"></i>
                     <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;" class="del-chk-pdf">
                 </div>
                 {% endfor %}
@@ -163,17 +157,11 @@
         </div>
 
         <details class="edit-box">
-            <summary class="box-title">🌍 TRADUZIONI (Clicca per aprire) <i class="fas fa-chevron-down"></i></summary>
+            <summary class="box-title">🌍 TRADUZIONI <i class="fas fa-chevron-down"></i></summary>
             <div class="form-grid" style="margin-top:20px;">
                 <div><label>🇬🇧 Ruolo</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
                 <div><label>🇬🇧 Bio</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio }}</textarea></div>
-                <div><label>🇫🇷 Ruolo</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
-                <div><label>🇫🇷 Bio</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio }}</textarea></div>
-                <div><label>🇪🇸 Ruolo</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
-                <div><label>🇪🇸 Bio</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio }}</textarea></div>
-                <div><label>🇩🇪 Ruolo</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
-                <div><label>🇩🇪 Bio</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio }}</textarea></div>
-            </div>
+                </div>
         </details>
 
         <button type="submit" class="btn-save" id="btnSave">💾 SALVA MODIFICHE</button>
@@ -198,7 +186,7 @@
             var y = document.getElementsByName('pos_y')[0].value;
             var z = document.getElementsByName('zoom')[0].value;
             var img = document.getElementById('cropImg');
-            // FIX CROP Y (ORA FUNZIONA)
+            // FIX CROP Y (Era typo)
             img.style.objectPosition = x + "% " + y + "%";
             img.style.transform = "scale(" + z + ")";
         }
@@ -211,8 +199,10 @@
             currentItemElement = element;
             var fullUrl = window.location.origin + url;
             
+            // FIX EMAIL
             document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent(fullUrl);
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + fullUrl);
+            var mailBody = "Ecco il file: " + fullUrl;
+            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody);
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
