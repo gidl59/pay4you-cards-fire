@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Modifica</title>
+    <title>Modifica Card</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -101,7 +101,7 @@
             </div>
             
             <div style="margin-top:20px; background:#222; padding:15px; border-radius:10px;">
-                <label>Effetto:</label> 
+                <label>Effetto Moneta:</label> 
                 <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %}> TAP (Clicca e gira) 
                 <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %}> SPECCHIO (Gira sempre)
                 <span style="margin-left:20px;">|</span>
@@ -155,6 +155,14 @@
             </div>
         </div>
 
+        <details class="edit-box">
+            <summary class="box-title">🌍 TRADUZIONI <i class="fas fa-chevron-down"></i></summary>
+            <div class="form-grid" style="margin-top:20px;">
+                <div><label>🇬🇧 Ruolo</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
+                <div><label>🇬🇧 Bio</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio }}</textarea></div>
+                </div>
+        </details>
+
         <button type="submit" class="btn-save" id="btnSave">💾 SALVA MODIFICHE</button>
     </form>
 
@@ -162,9 +170,9 @@
         <button onclick="closeDashModal()" class="d-btn db-cl">CHIUDI X</button>
         <div id="dashMediaBox"></div>
         <div class="dash-actions">
-            <a id="dbWa" href="#" target="_blank" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</a>
-            <a id="dbEm" href="#" target="_blank" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</a>
-            <button onclick="deleteCurrentItem()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
+            <button onclick="shareItem('wa')" class="d-btn db-wa">WA</button>
+            <button onclick="shareItem('em')" class="d-btn db-em">Email</button>
+            <button onclick="deleteCurrentItem()" class="d-btn db-del">DEL</button>
         </div>
     </div>
 
@@ -182,18 +190,13 @@
             img.style.transform = "scale(" + z + ")";
         }
 
-        var currentItemElement = null;
+        var currentUrl = "";
         function openPreview(url, type, element) {
             if(element.classList.contains('deleted')) return;
+            currentUrl = window.location.origin + url;
             var modal = document.getElementById('dashModal');
             var box = document.getElementById('dashMediaBox');
             currentItemElement = element;
-            var fullUrl = window.location.origin + url;
-            
-            // FIX EMAIL TEXT (CODIFICA FORZATA)
-            document.getElementById('dbWa').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
-            var mailBody = "Ecco il file: " + fullUrl;
-            document.getElementById('dbEm').href = "mailto:?subject=File&body=" + encodeURIComponent(mailBody);
 
             if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
             else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
@@ -201,6 +204,17 @@
 
             modal.style.display = 'flex';
         }
+        
+        function shareItem(mode) {
+            if(mode == 'wa') window.open("https://wa.me/?text=" + encodeURIComponent(currentUrl));
+            if(mode == 'em') {
+                // METODO EMAIL FORZATO (SIMULA CLICK)
+                let a = document.createElement('a');
+                a.href = "mailto:?subject=File&body=" + encodeURIComponent("Ecco il file: " + currentUrl);
+                a.click();
+            }
+        }
+        
         function closeDashModal() { document.getElementById('dashModal').style.display = 'none'; document.getElementById('dashMediaBox').innerHTML = ""; }
         function deleteCurrentItem() {
             if(confirm("ELIMINARE?")) {
