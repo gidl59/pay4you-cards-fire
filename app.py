@@ -7,9 +7,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_syntax_v2"
+app.secret_key = "pay4you_2026_ultimate_pro"
 
-# CONFIGURAZIONE
+# CONFIG
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
 else:
@@ -22,7 +22,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 
 
-# DB LOAD (SCRITTO ESTESO PER EVITARE ERRORI)
+# DB LOAD
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
@@ -32,7 +32,7 @@ def load_db():
     except:
         return []
 
-# DB SAVE (SCRITTO ESTESO PER EVITARE ERRORI)
+# DB SAVE
 def save_db(data):
     try:
         with open(DB_FILE, 'w') as f:
@@ -60,7 +60,8 @@ def repair_user(user):
         p = user[pid]
         defaults = {
             'name':'', 'role':'', 'company':'', 'bio':'', 'foto':'', 'logo':'', 'personal_foto':'',
-            'office_phone': '', 'mobiles':[], 'emails':[], 'websites':[], 'socials':[],
+            'office_phone': '', 'address': '', # NUOVO CAMPO INDIRIZZI
+            'mobiles':[], 'emails':[], 'websites':[], 'socials':[],
             'gallery_img':[], 'gallery_vid':[], 'gallery_pdf':[],
             'piva':'', 'cod_sdi':'', 'pec':'',
             'fx_rotate_logo':'off', 'fx_rotate_agent':'off',
@@ -77,7 +78,7 @@ def repair_user(user):
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR
+# VCF GENERATOR (GESTIONE VIRGOLE)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
@@ -94,10 +95,29 @@ def download_vcf(slug):
         f"N:{p.get('name')};;;;", f"FN:{p.get('name')}",
         f"ORG:{p.get('company')}", f"TITLE:{p.get('role')}"
     ]
-    for m in p.get('mobiles', []): vcard.append(f"TEL;TYPE=CELL:{m}")
-    if p.get('office_phone'): vcard.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
-    for e in p.get('emails', []): vcard.append(f"EMAIL;TYPE=WORK:{e}")
-    for w in p.get('websites', []): vcard.append(f"URL:{w}")
+    
+    # Mobili (Lista)
+    for m in p.get('mobiles', []):
+        vcard.append(f"TEL;TYPE=CELL:{m}")
+    
+    # Ufficio (Singolo o virgola)
+    if p.get('office_phone'):
+        vcard.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
+
+    # Email (Lista di stringhe che possono contenere virgole)
+    for e_str in p.get('emails', []):
+        for e in e_str.split(','): # Splitto le virgole
+            if e.strip(): vcard.append(f"EMAIL;TYPE=WORK:{e.strip()}")
+
+    # Siti (Lista di stringhe che possono contenere virgole)
+    for w_str in p.get('websites', []):
+        for w in w_str.split(','):
+            if w.strip(): vcard.append(f"URL:{w.strip()}")
+            
+    # Indirizzo (Stringa con virgole)
+    if p.get('address'):
+        vcard.append(f"ADR;TYPE=WORK:;;{p.get('address').replace(',', ';')};;;;")
+
     if p.get('bio'): vcard.append(f"NOTE:{p.get('bio')}")
     vcard.append("END:VCARD")
     
@@ -106,7 +126,7 @@ def download_vcf(slug):
     response.headers["Content-Type"] = "text/vcard"
     return response
 
-# STANDARD ROUTES
+# ROUTES
 @app.route('/')
 def home(): return redirect(url_for('login'))
 
@@ -185,9 +205,10 @@ def edit_profile(p_id):
         p['cod_sdi'] = request.form.get('cod_sdi')
         p['pec'] = request.form.get('pec')
         p['office_phone'] = request.form.get('office_phone')
+        p['address'] = request.form.get('address') # NUOVO
         
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
-        p['emails'] = [x for x in [request.form.get('email1'), request.form.get('email2')] if x]
+        p['emails'] = [x for x in [request.form.get('email1')] if x] # Singolo campo multi-valore
         p['websites'] = [x for x in [request.form.get('website')] if x]
         
         socials = []
@@ -265,7 +286,6 @@ def master_add():
     save_db(clienti)
     return redirect(url_for('master_login'))
 
-def dummy_t(k): return "SALVA"
 @app.route('/card/<slug>')
 def view_card(slug):
     clienti = load_db(); user = next((c for c in clienti if c['slug'] == slug), None)
@@ -283,12 +303,13 @@ def view_card(slug):
         "personal_url": p.get('personal_foto'), "slug": slug,
         "piva": p.get('piva'), "pec": p.get('pec'), "cod_sdi": p.get('cod_sdi'),
         "office_phone": p.get('office_phone'),
+        "address": p.get('address'),
         "fx_rotate_logo": p.get('fx_rotate_logo'), "fx_rotate_agent": p.get('fx_rotate_agent'),
         "fx_interaction": p.get('fx_interaction'), "fx_back": p.get('fx_back_content'),
         "photo_pos_x": p.get('pos_x', 50), "photo_pos_y": p.get('pos_y', 50), "photo_zoom": p.get('zoom', 1),
         "trans": p.get('trans', {})
     }
-    return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, t_func=dummy_t, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
+    return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
 @app.route('/master/delete/<int:id>')
 def master_delete(id): save_db([c for c in load_db() if c['id'] != id]); return redirect(url_for('master_login'))
