@@ -7,9 +7,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_resolution"
+app.secret_key = "pay4you_2026_final_commit"
 
-# CONFIG
+# CONFIGURAZIONE
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
 else:
@@ -89,7 +89,7 @@ def download_vcf(slug):
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    # Costruzione sicura
+    # Costruzione VCF manuale
     lines = []
     lines.append("BEGIN:VCARD")
     lines.append("VERSION:3.0")
@@ -108,13 +108,14 @@ def download_vcf(slug):
     if p.get('office_phone'):
         lines.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
         
-    for e_list in p.get('emails', []):
-        if e_list:
+    # Gestione sicura liste
+    if isinstance(p.get('emails'), list):
+        for e_list in p['emails']:
             for e in e_list.split(','):
                 if e.strip(): lines.append(f"EMAIL;TYPE=WORK:{e.strip()}")
             
-    for w_list in p.get('websites', []):
-        if w_list:
+    if isinstance(p.get('websites'), list):
+        for w_list in p['websites']:
             for w in w_list.split(','):
                 if w.strip(): lines.append(f"URL:{w.strip()}")
             
@@ -272,8 +273,11 @@ def edit_profile(p_id):
 
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
-    if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db(), files=[])
-    if request.method=='POST' and request.form.get('password')=="pay2026": session['is_master']=True; return redirect(url_for('master_login'))
+    if session.get('is_master'): 
+        return render_template('master_dashboard.html', clienti=load_db(), files=[])
+    if request.method=='POST' and request.form.get('password')=="pay2026": 
+        session['is_master']=True
+        return redirect(url_for('master_login'))
     return render_template('master_login.html')
 
 @app.route('/master/add', methods=['POST'])
@@ -296,12 +300,12 @@ def view_card(slug):
     clienti = load_db(); user = next((c for c in clienti if c['slug'] == slug), None)
     if not user: return "<h1>Card non trovata</h1>", 404
     if repair_user(user): save_db(clienti)
-    
-    p_req = request.args.get('p', user.get('default_profile', 'p1'))
+    default_p = user.get('default_profile', 'p1')
+    p_req = request.args.get('p')
+    if not p_req: p_req = default_p
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
-    
     ag = {
         "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
         "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
