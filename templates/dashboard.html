@@ -2,42 +2,68 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Pay4You</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .nfc-selector {
+            background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px;
+            border: 1px solid #444; text-align: center;
+        }
+        .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
+        .nfc-btn {
+            padding: 8px 15px; border-radius: 20px; border: 1px solid #444; 
+            background: transparent; color: white; text-decoration: none; font-size:12px;
+            transition: 0.3s;
+        }
+        .nfc-btn.active {
+            background: #00ffc8; color: black; border-color: #00ffc8; font-weight:bold;
+        }
+        .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
+    </style>
 </head>
 <body style="background:#0b0f15;">
-
     <div class="dash-head">
         <div class="user-info">
-            <span style="color:white; font-weight:bold; display:block;">{{ user.nome }}</span>
+            <span style="color:white; font-weight:bold;">{{ user.nome }}</span>
             <small style="color:#00ffc8;">{{ user.azienda }}</small>
         </div>
         <a href="/area/logout" style="color:#ff4444;">Esci</a>
     </div>
 
     <div class="dash-container">
-        <h2 style="color:white; margin-bottom:20px;">Gestione Profili</h2>
-
-        {% for p_id in ['1', '2', '3'] %}
-        {% set p_key = 'p' ~ p_id %}
-        {% set p = user[p_key] %}
         
-        <div class="profile-row {{ 'active' if p.active else 'inactive' }}" style="background:#111; padding:20px; border-radius:15px; margin-bottom:15px; border:1px solid #333;">
-            <div class="p-left">
-                <h3 style="margin:0; color:white;">{{ 'Profilo ' ~ p_id ~ ' (Attivo)' if p.active else 'Profilo ' ~ p_id ~ ' (Vuoto)' }}</h3>
+        <div class="nfc-selector">
+            <div style="color:#00ffc8; font-size:12px; margin-bottom:10px;">IMPOSTAZIONE CARTA / QR</div>
+            <div class="nfc-btns">
+                {% for pid in ['1', '2', '3'] %}
+                    {% set p_key = 'p' ~ pid %}
+                    {% if user[p_key].active %}
+                        <a href="/area/set_default/p{{ pid }}" class="nfc-btn {{ 'active' if user.get('default_profile') == ('p' ~ pid) else '' }}">
+                            PROFILO {{ pid }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+                
+                <a href="/area/set_default/menu" class="nfc-btn menu-btn {{ 'active' if user.get('default_profile') == 'menu' else '' }}" style="border-color:#9d00ff;">
+                    📋 MODALITÀ MENU
+                </a>
             </div>
-            
+            <p style="font-size:10px; color:#666; margin-top:10px;">Se selezioni MENU, il cliente vedrà una pagina di scelta.</p>
+        </div>
+
+        <h2 style="color:white;">Gestione Profili</h2>
+        {% for p_id in ['1', '2', '3'] %}
+        {% set p = user['p' ~ p_id] %}
+        <div class="profile-row {{ 'active' if p.active else 'inactive' }}" style="background:#111; padding:20px; border-radius:15px; margin-bottom:15px;">
+            <div class="p-left"><h3 style="margin:0; color:white;">{{ 'P' ~ p_id ~ ' - ' ~ (p.name if p.name else 'Vuoto') if p.active else 'Profilo ' ~ p_id ~ ' (Libero)' }}</h3></div>
             <div class="p-actions" style="margin-top:15px; display:flex; gap:10px;">
                 {% if p.active %}
                     <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-act" style="background:#222; color:#fff; padding:10px;">🔗 Apri</a>
                     <a href="/area/edit/{{ p_id }}" class="btn-act" style="background:#0088cc; color:white; padding:10px;">✏️ Modifica</a>
-                    
-                    {% if p_id != '1' %}
-                        <a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000; color:white; padding:10px;" onclick="return confirm('Disattivare P{{ p_id }}?')">⛔ Stop</a>
-                    {% endif %}
+                    {% if p_id != '1' %}<a href="/area/deactivate/{{ p_id }}" class="btn-act" style="background:#cc0000; color:white; padding:10px;" onclick="return confirm('Stop P{{p_id}}?')">⛔</a>{% endif %}
                 {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; color:white; padding:10px; width:100%; text-align:center; border:1px dashed #666;">➕ ATTIVA ORA</a>
+                    <a href="/area/activate/{{ p_id }}" class="btn-act" style="background:#444; color:white; padding:10px; width:100%; text-align:center;">➕ ATTIVA</a>
                 {% endif %}
             </div>
         </div>
