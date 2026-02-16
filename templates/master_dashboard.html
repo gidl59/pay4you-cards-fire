@@ -16,6 +16,11 @@
         .btn-del { background:#cc0000; } .btn-view { background:#0088cc; }
         .btn-out { background:transparent; border:1px solid #666; color:#ccc; }
         input { background:#222; border:1px solid #444; color:white; padding:8px; border-radius:5px; }
+        
+        /* MODAL */
+        .m-over { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99; justify-content:center; align-items:center; }
+        .m-box { background:#222; padding:20px; border-radius:10px; text-align:center; max-width:300px; border:1px solid #444; }
+        .m-acts { display:flex; gap:10px; margin-top:15px; justify-content:center; }
     </style>
 </head>
 <body>
@@ -45,7 +50,7 @@
                 <td>
                     <button onclick="sendWa('{{c.username}}','{{c.password}}')" class="btn btn-wa">WA</button>
                     <button onclick="sendMail('{{c.username}}','{{c.password}}')" class="btn btn-mail">@</button>
-                    <button onclick="showQr('{{c.slug}}')" class="btn btn-qr">QR</button>
+                    <button onclick="openQr('{{c.slug}}')" class="btn btn-qr">QR</button>
                 </td>
                 <td>
                     <a href="/master/impersonate/{{c.id}}" target="_blank" class="btn btn-view">Gestisci</a>
@@ -56,7 +61,20 @@
         </table>
     </div>
 
+    <div id="qrModal" class="m-over">
+        <div class="m-box">
+            <h3 style="margin-top:0;">QR Code</h3>
+            <div id="qrImg"></div>
+            <div class="m-acts">
+                <button onclick="sendQrWa()" class="btn btn-wa">WA</button>
+                <button onclick="sendQrMail()" class="btn btn-mail">@</button>
+                <button onclick="closeQr()" class="btn btn-del">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        var currentSlug = "";
         function sendWa(u, p) {
             var txt = "Credenziali Pay4You:\nUser: " + u + "\nPass: " + p + "\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
             window.open("https://wa.me/?text=" + encodeURIComponent(txt));
@@ -64,13 +82,24 @@
         function sendMail(u, p) {
             var sub = "Credenziali Pay4You";
             var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
-            // METODO PIÙ ROBUSTO PER EMAIL
-            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body), "_blank");
+            window.location.href = "mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
         }
-        function showQr(slug) {
-            var url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://pay4you-cards-fire.onrender.com/card/" + slug;
-            var win = window.open("", "QR Code", "width=400,height=400");
-            win.document.write('<img src="' + url + '" style="width:100%">');
+        
+        function openQr(slug) {
+            currentSlug = slug;
+            var url = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://pay4you-cards-fire.onrender.com/card/" + slug;
+            document.getElementById('qrImg').innerHTML = '<img src="' + url + '" style="background:white; padding:10px; border-radius:10px;">';
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+        function closeQr() { document.getElementById('qrModal').style.display = 'none'; }
+        
+        function sendQrWa() {
+            var link = "https://pay4you-cards-fire.onrender.com/card/" + currentSlug;
+            window.open("https://wa.me/?text=" + encodeURIComponent("Ecco la tua Card: " + link));
+        }
+        function sendQrMail() {
+            var link = "https://pay4you-cards-fire.onrender.com/card/" + currentSlug;
+            window.location.href = "mailto:?subject=La tua Card&body=" + encodeURIComponent("Ecco il link: " + link);
         }
     </script>
 </body>
