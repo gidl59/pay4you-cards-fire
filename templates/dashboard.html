@@ -8,18 +8,17 @@
     <style>
         .nfc-selector { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; text-align: center; }
         .nfc-btns { display: flex; justify-content: center; gap: 8px; flex-wrap:wrap; }
-        .nfc-btn { padding: 8px 15px; border-radius: 5px; border: 1px solid #444; background: transparent; color: white; text-decoration: none; font-size:12px; font-weight:bold; }
+        .nfc-btn { padding: 10px 20px; border-radius: 5px; border: 1px solid #444; background: #333; color: white; text-decoration: none; font-size:12px; font-weight:bold; }
         .nfc-btn.active { background: #00ffc8; color: black; border-color: #00ffc8; }
         .menu-btn.active { background: #9d00ff; color: white; border-color: #9d00ff; }
         
         .profile-row { background:#111; padding:20px; border-radius:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; }
         .p-actions { display:flex; gap:10px; }
         
-        /* RETTANGOLI RICHIESTI */
         .btn-rect { 
-            padding: 10px 20px; text-decoration: none; color: white; font-weight: bold; 
+            padding: 10px 15px; text-decoration: none; color: white; font-weight: bold; 
             border-radius: 5px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;
-            display: inline-block; text-align: center; min-width: 80px;
+            display: inline-block; text-align: center;
         }
         .b-open { background: #222; border: 1px solid #555; }
         .b-edit { background: #0088cc; border: 1px solid #0088cc; }
@@ -60,13 +59,13 @@
             </div>
             <div class="p-actions">
                 {% if p.active %}
-                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-rect b-open">APRI CARD</a>
+                    <a href="/card/{{ user.slug }}?p=p{{p_id}}" target="_blank" class="btn-rect b-open">APRI</a>
                     <a href="/area/edit/{{ p_id }}" class="btn-rect b-edit">MODIFICA</a>
                     {% if p_id != '1' %}
-                        <a href="/area/deactivate/{{ p_id }}" class="btn-rect b-stop" onclick="return confirm('Sei sicuro di voler DISATTIVARE il Profilo {{p_id}}?')">ELIMINA</a>
+                        <a href="/area/deactivate/{{ p_id }}" class="btn-rect b-stop" onclick="return confirm('DISATTIVARE?')">DISATTIVA</a>
                     {% endif %}
                 {% else %}
-                    <a href="/area/activate/{{ p_id }}" class="btn-rect b-act">ATTIVA PROFILO</a>
+                    <a href="/area/activate/{{ p_id }}" class="btn-rect b-act">ATTIVA</a>
                 {% endif %}
             </div>
         </div>
