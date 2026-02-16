@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
-app.secret_key = "pay4you_2026_final_commit"
+app.secret_key = "pay4you_2026_final_fix_v4"
 
 # CONFIGURAZIONE
 if os.path.exists('/var/data'):
@@ -77,7 +77,7 @@ def repair_user(user):
         if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
     return dirty
 
-# VCF GENERATOR (SENZA ERRORI)
+# VCF GENERATOR (FIXED)
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
     clienti = load_db()
@@ -89,45 +89,40 @@ def download_vcf(slug):
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
 
-    # Costruzione VCF manuale
-    lines = []
-    lines.append("BEGIN:VCARD")
-    lines.append("VERSION:3.0")
+    # VCF 3.0 Standard
+    output = "BEGIN:VCARD\nVERSION:3.0\n"
+    output += f"FN:{p.get('name', 'Contatto')}\n"
+    output += f"N:;{p.get('name', 'Contatto')};;;\n"
     
-    name = p.get('name', '').strip()
-    if name:
-        lines.append(f"FN:{name}")
-        lines.append(f"N:;{name};;;")
-    
-    if p.get('company'): lines.append(f"ORG:{p.get('company')}")
-    if p.get('role'): lines.append(f"TITLE:{p.get('role')}")
+    if p.get('company'): output += f"ORG:{p.get('company')}\n"
+    if p.get('role'): output += f"TITLE:{p.get('role')}\n"
     
     for m in p.get('mobiles', []):
-        if m: lines.append(f"TEL;TYPE=CELL:{m}")
+        if m: output += f"TEL;TYPE=CELL:{m}\n"
         
     if p.get('office_phone'):
-        lines.append(f"TEL;TYPE=WORK:{p.get('office_phone')}")
+        output += f"TEL;TYPE=WORK:{p.get('office_phone')}\n"
         
-    # Gestione sicura liste
-    if isinstance(p.get('emails'), list):
-        for e_list in p['emails']:
-            for e in e_list.split(','):
-                if e.strip(): lines.append(f"EMAIL;TYPE=WORK:{e.strip()}")
+    for e_list in p.get('emails', []):
+        for e in e_list.split(','):
+            if e.strip(): output += f"EMAIL;TYPE=WORK:{e.strip()}\n"
             
-    if isinstance(p.get('websites'), list):
-        for w_list in p['websites']:
-            for w in w_list.split(','):
-                if w.strip(): lines.append(f"URL:{w.strip()}")
+    for w_list in p.get('websites', []):
+        for w in w_list.split(','):
+            if w.strip(): output += f"URL:{w.strip()}\n"
             
     if p.get('address'):
         addr = p.get('address').replace(',', ' ').strip()
-        lines.append(f"ADR;TYPE=WORK:;;{addr};;;;")
+        output += f"ADR;TYPE=WORK:;;{addr};;;\n"
         
-    lines.append("END:VCARD")
+    if p.get('bio'):
+        # Pulizia a capo per VCF
+        note = p.get('bio').replace('\n', ' ').replace('\r', '')
+        output += f"NOTE:{note}\n"
+
+    output += "END:VCARD"
     
-    vcf_str = "\r\n".join(lines)
-    
-    response = make_response(vcf_str)
+    response = make_response(output)
     response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
     response.headers["Content-Type"] = "text/x-vcard; charset=utf-8"
     return response
@@ -273,8 +268,7 @@ def edit_profile(p_id):
 
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
-    if session.get('is_master'): 
-        return render_template('master_dashboard.html', clienti=load_db(), files=[])
+    if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db(), files=[])
     if request.method=='POST' and request.form.get('password')=="pay2026": 
         session['is_master']=True
         return redirect(url_for('master_login'))
@@ -306,6 +300,7 @@ def view_card(slug):
     if p_req == 'menu': return render_template('menu_card.html', user=user, slug=slug)
     if not user.get(p_req, {}).get('active'): p_req = 'p1'
     p = user[p_req]
+    
     ag = {
         "name": p.get('name'), "role": p.get('role'), "company": p.get('company'),
         "bio": p.get('bio'), "photo_url": p.get('foto'), "logo_url": p.get('logo'),
