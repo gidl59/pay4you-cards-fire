@@ -6,17 +6,22 @@
     <link rel="stylesheet" href="/static/style.css">
     <style>
         body { background:#050505; color:white; font-family:sans-serif; padding:20px; }
+        .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
         .box { background:#111; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #333; }
         table { width:100%; border-collapse:collapse; }
         td, th { padding:10px; border-bottom:1px solid #222; text-align:left; }
         .btn { padding:5px 10px; border-radius:5px; text-decoration:none; cursor:pointer; font-size:12px; border:none; color:white; margin-right:5px; }
         .btn-wa { background:#25D366; } .btn-mail { background:#fff; color:black; }
         .btn-del { background:#cc0000; } .btn-view { background:#0088cc; }
+        .btn-out { background:transparent; border:1px solid #666; color:#ccc; }
         input { background:#222; border:1px solid #444; color:white; padding:8px; border-radius:5px; }
     </style>
 </head>
 <body>
-    <h1>MASTER CONTROL</h1>
+    <div class="head">
+        <h1>MASTER CONTROL</h1>
+        <a href="/master/logout" class="btn btn-out">ESCI</a>
+    </div>
     
     <div class="box">
         <h3>➕ Nuovo Cliente</h3>
@@ -55,11 +60,9 @@
             window.open("https://wa.me/?text=" + encodeURIComponent(txt));
         }
         function sendMail(u, p) {
-            var email = "";
-            var subject = "Credenziali Pay4You";
-            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin qui: https://pay4you-cards-fire.onrender.com/area/login";
-            // Usa window.open con _self per compatibilità massima
-            window.open("mailto:" + email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body), "_self");
+            var sub = "Credenziali Pay4You";
+            var body = "Ecco le tue credenziali:\n\nUser: " + u + "\nPassword: " + p + "\n\nLogin: https://pay4you-cards-fire.onrender.com/area/login";
+            window.open("mailto:?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body));
         }
     </script>
 </body>
