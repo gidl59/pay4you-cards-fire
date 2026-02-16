@@ -5,7 +5,10 @@
     --brand: #0088cc;
     --brand-grad: linear-gradient(135deg, #0088cc, #00ffc8);
     --company-bg: #ffebee; /* Rosso chiaro */
-    --company-border: #ff4444;
+    --company-border: #ff4444; /* Rosso */
+    --bio-bg: #f0fdf9;
+    --link-color: #006699;
+    --footer-col: #888;
 }
 [data-theme="dark"] {
     --bg-body: #000;
@@ -13,35 +16,42 @@
     --text: #fff;
     --brand: #00ffc8;
     --company-bg: #3a1010;
+    --bio-bg: #1a2622;
+    --link-color: #4dd0e1; /* Ciano leggibile */
+    --footer-col: #aaa;
 }
 
 body { margin:0; font-family:'Segoe UI', sans-serif; background:var(--bg-body); display:flex; justify-content:center; min-height:100vh; }
 .card-wrap { width:100%; max-width:420px; background:var(--bg-card); min-height:100vh; text-align:center; color:var(--text); padding-bottom:100px; box-shadow:0 0 20px rgba(0,0,0,0.1); position:relative; }
 
-/* LOGO TONDO PERFETTO */
+/* LOGO TONDO (NON ESCE FUORI) */
 .hero { width:100%; height:170px; background:#333; position:relative; margin-bottom:75px; }
 .hero-logo-circle {
-    position:absolute; top:15px; left:15px; width:90px; height:90px;
-    border-radius:50%; background:#fff; overflow:hidden;
-    box-shadow:0 4px 15px rgba(0,0,0,0.3); z-index:20;
+    position:absolute; top:15px; left:15px; width:90px; height:90px; /* 30% Più Grande */
+    border-radius:50%; background:#fff; overflow:hidden; /* IMPORTANTE: Taglia tutto */
+    box-shadow:0 4px 15px rgba(0,0,0,0.3); z-index:20; 
+    display:flex; align-items:center; justify-content:center;
 }
-.hero-logo-circle img { width:100%; height:100%; object-fit:contain; }
+.hero-logo-circle img { 
+    max-width:90%; max-height:90%; object-fit:contain; /* Non taglia il logo */
+}
 
 /* AVATAR */
 .avatar-container { width:150px; height:150px; position:absolute; top:95px; left:50%; margin-left:-75px; z-index:10; }
 .avatar-img { width:100%; height:100%; border-radius:50%; border:5px solid var(--bg-card); object-fit:cover; background:#eee; }
 
-/* TESTI */
+/* INFO */
 .info-section { padding:0 20px; margin-top:10px; }
 .name { font-size:26px; font-weight:800; margin:5px 0; }
-.role { opacity:0.8; margin-bottom:15px; font-weight:500; }
+.role { opacity:0.8; margin-bottom:15px; font-weight:bold; } /* Grassetto */
 
+/* BOX AZIENDA EVIDENTE */
 .box-company {
     background:var(--company-bg); padding:10px 20px; border-radius:50px; margin-bottom:15px;
     border:2px solid var(--company-border); display:inline-block;
     color:var(--text); font-weight:bold; text-transform:uppercase; letter-spacing:1px;
 }
-.box-bio { font-weight:bold; font-style:italic; padding:15px; opacity:0.9; }
+.box-bio { background:var(--bio-bg); padding:15px; border-radius:10px; font-weight:bold; font-style:italic; opacity:0.9; margin:15px 0; }
 
 /* AZIONI */
 .actions-row { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
@@ -55,31 +65,38 @@ body { margin:0; font-family:'Segoe UI', sans-serif; background:var(--bg-body); 
 .soc-fb { color:#1877F2; } .soc-ig { color:#E4405F; } .soc-li { color:#0A66C2; }
 .soc-tk { color:#000; } .soc-sp { color:#1DB954; } .soc-tg { color:#0088cc; } .soc-yt { color:#FF0000; }
 
-/* SWITCHER */
-.switcher-bar { display:flex; justify-content:center; gap:10px; margin:20px; padding:10px; background:rgba(128,128,128,0.1); border-radius:20px; }
-.circle-p { width:35px; height:35px; border-radius:50%; border:1px solid var(--text); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-size:12px; font-weight:bold; }
-.theme-txt { font-size:10px; font-weight:bold; padding:0 5px; cursor:pointer; opacity:0.7; }
+/* SELETTORE PROFILI */
+.switcher-bar { display:flex; justify-content:center; gap:15px; margin:20px; align-items:center; }
+.circle-p { width:40px; height:40px; border-radius:50%; border:2px solid var(--text); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-weight:bold; font-size:14px; opacity:0.7; }
+.circle-p:hover { opacity:1; background:var(--text); color:var(--bg-card); }
+.theme-txt { font-size:11px; font-weight:bold; padding:0 5px; cursor:pointer; opacity:0.7; text-transform:uppercase; }
 
-/* GALLERIE */
-.gal-grid-5 { display:grid; grid-template-columns:repeat(5, 1fr); gap:3px; padding:0 10px; margin-bottom:15px; }
+/* DATI LISTA */
+.data-list { text-align:left; padding:0 25px; margin-bottom:20px; }
+.d-row { padding:12px 0; border-bottom:1px solid rgba(128,128,128,0.15); display:flex; align-items:center; gap:15px; font-size:15px; }
+.d-icon { width:25px; text-align:center; }
+.d-link { text-decoration:none; font-weight:500; color:var(--link-color); }
+
+/* GALLERIE 5x */
+.gal-grid-5 { display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; padding:0 10px; margin-bottom:15px; }
 .thumb { width:100%; aspect-ratio:1; object-fit:cover; cursor:pointer; background:#000; border-radius:3px; }
 .vid-box { position:relative; width:100%; aspect-ratio:1; background:#000; cursor:pointer; border-radius:3px; overflow:hidden; }
 .vid-box video { width:100%; height:100%; object-fit:cover; opacity:0.7; }
 .vid-icon { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:14px; }
 
-/* PDF */
+/* PDF COMPATTI */
 .pdf-grid { display:flex; flex-wrap:wrap; gap:5px; padding:0 10px; }
-.pdf-item { background:rgba(128,128,128,0.1); padding:5px 10px; border-radius:4px; font-size:11px; display:flex; align-items:center; gap:5px; cursor:pointer; border:1px solid rgba(128,128,128,0.2); width:100%; box-sizing:border-box; }
+.pdf-item { background:var(--box-bg-1); padding:5px 10px; border-radius:4px; font-size:11px; display:flex; align-items:center; justify-content:space-between; gap:5px; cursor:pointer; border:1px solid rgba(128,128,128,0.2); width:100%; box-sizing:border-box; }
+.pdf-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; font-weight:bold; }
 
 /* FOOTER LEGGIBILE */
-.footer { padding:30px 20px; font-size:11px; color:#888; font-weight:bold; opacity:0.8; letter-spacing:0.5px; }
-[data-theme="dark"] .footer { color:#aaa; }
+.footer { padding:30px 20px; font-size:11px; color:var(--footer-col); font-weight:bold; opacity:0.8; letter-spacing:0.5px; }
 
 /* MODAL & IFRAME */
 .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; justify-content:center; align-items:center; flex-direction:column; }
-.modal-content { max-width:95%; max-height:70vh; margin-bottom:15px; }
+.modal-content { max-width:95%; max-height:70vh; margin-bottom:15px; border-radius:10px; }
 .web-frame { width:95%; height:80vh; background:white; border:none; border-radius:10px; }
 .modal-actions { display:flex; gap:15px; margin-top:10px; }
 .act-btn { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; color:white; text-decoration:none; }
 .bg-wa { background:#25D366; } .bg-em { background:#555; } .bg-cl { background:#ff4444; cursor:pointer; }
-.btn-back-card { background:#0088cc; color:white; padding:10px 20px; border-radius:20px; text-decoration:none; font-weight:bold; margin-bottom:10px; display:inline-block; }
+.btn-back-card { background:#0088cc; color:white; padding:10px 20px; border-radius:20px; text-decoration:none; font-weight:bold; margin-bottom:10px; display:inline-block; box-shadow:0 4px 10px rgba(0,0,0,0.5); }
