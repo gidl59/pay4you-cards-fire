@@ -13,13 +13,20 @@
     
     <div class="hero">
         {% if ag.logo_url %}
-        <div class="hero-logo-circle" style="{% if ag.fx_rotate_logo=='on' %}animation: spin 10s linear infinite;{% endif %}">
+        <div class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
             <img src="{{ ag.logo_url }}">
         </div>
         {% endif %}
     </div>
 
-    <div class="flip-container {% if ag.fx_rotate_agent=='on' %}spin-agent{% elif ag.fx_interaction=='mirror' %}mirror-flip{% else %}tap-flip{% endif %}" onclick="this.classList.toggle('flipped')">
+    {% set flip_class = 'tap-flip' %}
+    {% if ag.fx_rotate_agent == 'on' %}
+        {% set flip_class = 'spin-agent' %}
+    {% elif ag.fx_interaction == 'mirror' %}
+        {% set flip_class = 'mirror-flip' %}
+    {% endif %}
+
+    <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
         <div class="flipper">
             <div class="front">
                 {% if ag.photo_url %}
@@ -39,24 +46,158 @@
         </div>
     </div>
 
+    <div class="info-section">
+        <div class="name">{{ ag.name }}</div>
+        <div class="role">{{ ag.role }}</div>
+        {% if ag.company %}<div class="box-company">{{ ag.company }}</div>{% endif %}
+        {% if ag.bio %}<div class="box-bio">{{ ag.bio }}</div>{% endif %}
+    </div>
+
+    <div class="actions-row">
+        <a href="/vcf/{{ ag.slug }}" class="btn-save" download><i class="fas fa-user-plus"></i> SALVA CONTATTO</a>
+        <div class="btn-qr" onclick="openShare('qr', '')">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}">
+        </div>
+    </div>
+
+    <div class="social-grid">
+        {% for s in socials %}
+        <a href="{{ s.url }}" target="_blank" class="soc-btn 
+           {% if 'Facebook' in s.label %}soc-fb{% elif 'Instagram' in s.label %}soc-ig{% elif 'Linkedin' in s.label %}soc-li{% elif 'TikTok' in s.label %}soc-tk{% elif 'Spotify' in s.label %}soc-sp{% elif 'Telegram' in s.label %}soc-tg{% elif 'YouTube' in s.label %}soc-yt{% endif %}">
+           <i class="fab fa-{{ s.label|lower if s.label!='TikTok' else 'tiktok' }}"></i>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="switcher-bar">
+        <div class="sw-left">
+            {% if profile!='p1' %}<a href="?p=p1" class="circle-p p1-btn">P1</a>{% endif %}
+            {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p p2-btn">P2</a>{% endif %}
+            {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p p3-btn">P3</a>{% endif %}
+        </div>
+        <div class="sw-right">
+            <span onclick="setT('light')" class="theme-btn t-light">CHIARO</span>
+            <span onclick="setT('dark')" class="theme-btn t-dark">SCURO</span>
+            <span onclick="setT('auto')" class="theme-btn t-auto">AUTO</span>
+        </div>
+    </div>
+
+    <div class="scene-box">
+        <div class="scene-label">CONTATTI</div>
+        {% for m in mobiles %}<div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>{% endfor %}
+        {% if ag.office_phone %}<div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>{% endif %}
+        
+        {% for e_str in emails %}
+            {% for e in e_str.split(',') %}
+                {% if e.strip() %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e.strip()}}" class="d-link">{{e.strip()}}</a></div>{% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        {% if ag.pec %}<div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>{% endif %}
+        
+        {% for w_str in websites %}
+            {% for w in w_str.split(',') %}
+                {% if w.strip() %}
+                {% set full_w = w.strip() if w.strip().startswith('http') else 'https://' ~ w.strip() %}
+                <div class="d-row" style="cursor:pointer;" onclick="openSite('{{ full_w }}')">
+                    <span class="d-icon">🌐</span> <span class="d-link">{{ w.strip() }}</span> <i class="fas fa-chevron-right" style="font-size:12px; opacity:0.5;"></i>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        {% if ag.address %}
+            {% for addr in ag.address.split(',') %}
+                {% if addr.strip() %}
+                <div class="d-row" style="cursor:pointer;" onclick="window.open('https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}', '_blank')">
+                    <span class="d-icon">📍</span> <span class="d-link">{{ addr.strip() }}</span> <i class="fas fa-map-marker-alt" style="font-size:12px; opacity:0.5;"></i>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        
+        <div class="fiscal-row">
+            {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
+            {% if ag.cod_sdi %}<span>SDI: {{ag.cod_sdi}}</span>{% endif %}
+        </div>
+    </div>
+
+    {% if p_data.gallery_img %}
+    <div class="scene-box">
+        <div class="scene-label">FOTO</div>
+        <div class="gal-grid-5">
+            {% for img in p_data.gallery_img %}<img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if p_data.gallery_vid %}
+    <div class="scene-box">
+        <div class="scene-label">VIDEO</div>
+        <div class="gal-grid-5">
+            {% for vid in p_data.gallery_vid %}
+            <div class="vid-box" onclick="openShare('vid', '{{ vid }}')"><video src="{{ vid }}#t=2.0" preload="metadata"></video><i class="fas fa-play vid-icon"></i></div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if p_data.gallery_pdf %}
+    <div class="scene-box">
+        <div class="scene-label">DOCUMENTI</div>
+        <div class="pdf-grid">
+            {% for pdf in p_data.gallery_pdf %}
+            <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
+                <div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px;"></i><span class="pdf-name">{{ pdf.name }}</span></div>
+                <i class="fas fa-eye" style="color:var(--brand);"></i>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
         <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
     </div>
 
-    <script>
-        function openShare(type, url) {
-            // ... (logica apertura)
-            
-            // EMAIL FIX ANCHE QUI
-            document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent(url);
-            document.getElementById('emLink').onclick = function() {
-                let a = document.createElement('a');
-                a.href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(url);
-                a.click();
-            };
-            document.getElementById('shareModal').style.display = 'flex';
-        }
-        // ...
-    </script>
+    <div id="shareModal" class="modal-overlay">
+        <div id="mediaBox"></div>
+        <div class="modal-actions">
+            <a id="waLink" href="#" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
+            <a id="emLink" href="#" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
+            <div onclick="closeModal()" class="act-btn bg-cl"><i class="fas fa-times"></i></div>
+        </div>
+    </div>
+
+    <div id="webModal" class="modal-overlay">
+        <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
+        <iframe id="webFrame" class="web-frame"></iframe>
+    </div>
+
+  </div>
+
+  <script>
+    function openShare(type, url) {
+        var box = document.getElementById('mediaBox');
+        var fullUrl = window.location.origin + url;
+        if(type=='qr') fullUrl = window.location.href;
+
+        // FIX EMAIL TEXT (CODIFICA)
+        document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
+        var mailBody = "Link: " + fullUrl;
+        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(mailBody);
+
+        if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
+        else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
+        else if(type=='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
+        else if(type=='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+fullUrl+'" style="background:white; padding:15px; border-radius:15px;">';
+
+        document.getElementById('shareModal').style.display = 'flex';
+    }
+    function openSite(url) { document.getElementById('webFrame').src = url; document.getElementById('webModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('shareModal').style.display = 'none'; document.getElementById('mediaBox').innerHTML = ""; }
+    function closeWeb() { document.getElementById('webModal').style.display = 'none'; document.getElementById('webFrame').src = ""; }
+    function setT(t) { if(t=='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
+  </script>
 </body>
 </html>
