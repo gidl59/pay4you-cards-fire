@@ -13,7 +13,9 @@
     
     <div class="hero">
         {% if ag.logo_url %}
-            <img src="{{ ag.logo_url }}" class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
+            <div class="hero-logo-circle {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
+                <img src="{{ ag.logo_url }}" style="width:100%; height:100%; object-fit:cover;">
+            </div>
         {% endif %}
     </div>
 
@@ -27,24 +29,23 @@
 
     <div class="info-section">
         <h1 style="margin-bottom:5px;">{{ ag.name }}</h1>
-        <div style="opacity:0.8; margin-bottom:15px;" id="role-txt">{{ ag.role }}</div>
+        <div style="opacity:0.8; margin-bottom:15px; font-weight:500;">{{ ag.role }}</div>
         
         {% if ag.company %}
         <div class="box-company">
-            <small style="color:var(--brand); font-weight:bold;">AZIENDA</small><br>
-            <span style="font-size:18px; font-weight:bold;">{{ ag.company }}</span>
+            <div style="font-size:10px; color:var(--brand); font-weight:bold; letter-spacing:1px; margin-bottom:2px;">AZIENDA</div>
+            <div style="font-size:18px; font-weight:bold;">{{ ag.company }}</div>
         </div>
         {% endif %}
 
         {% if ag.bio %}
-        <div class="box-bio" id="bio-txt">{{ ag.bio }}</div>
+        <div class="box-bio">{{ ag.bio }}</div>
         {% endif %}
     </div>
 
-    <div style="display:flex; gap:10px; justify-content:center; align-items:center; margin-bottom:20px;">
-        <a href="/vcf/{{ ag.slug }}" class="btn-save" style="background:var(--brand-grad); color:black; padding:12px 30px; border-radius:30px; text-decoration:none; font-weight:bold;">SALVA CONTATTO</a>
-        
-        <div class="btn-qr-mini" onclick="openQrModal()">
+    <div class="actions-row">
+        <a href="/vcf/{{ ag.slug }}" class="btn-save">SALVA CONTATTO</a>
+        <div class="qr-square" onclick="openShareModal('', 'qr')">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}">
         </div>
     </div>
@@ -58,81 +59,133 @@
         {% endfor %}
     </div>
 
-    <div style="text-align:left; padding:0 20px;">
-        {% for m in mobiles %}<div style="padding:10px; border-bottom:1px solid #eee;">📞 <a href="tel:{{m}}">{{m}}</a></div>{% endfor %}
-        {% if ag.office_phone %}<div style="padding:10px; border-bottom:1px solid #eee;">☎️ Ufficio: <a href="tel:{{ag.office_phone}}">{{ag.office_phone}}</a></div>{% endif %}
-        {% for e in emails %}<div style="padding:10px; border-bottom:1px solid #eee;">✉️ <a href="mailto:{{e}}">{{e}}</a></div>{% endfor %}
-        {% for w in websites %}<div style="padding:10px; border-bottom:1px solid #eee;">🌐 <a href="{{w}}" target="_blank">{{w}}</a></div>{% endfor %}
+    <div class="switcher-circles">
+        {% if profile != 'p1' %}<a href="?p=p1" class="circle-btn">P1</a>{% endif %}
+        {% if p2_enabled and profile != 'p2' %}<a href="?p=p2" class="circle-btn">P2</a>{% endif %}
+        {% if p3_enabled and profile != 'p3' %}<a href="?p=p3" class="circle-btn">P3</a>{% endif %}
         
-        <div style="margin-top:20px; font-size:12px; opacity:0.7;">
-            {% if ag.piva %}<div>P.IVA: {{ ag.piva }}</div>{% endif %}
-            {% if ag.cod_sdi %}<div>SDI: {{ ag.cod_sdi }}</div>{% endif %}
-            {% if ag.pec %}<div>PEC: {{ ag.pec }}</div>{% endif %}
+        <div style="display:flex; flex-direction:column; justify-content:center; border-left:1px solid rgba(128,128,128,0.3); padding-left:10px; margin-left:5px;">
+            <span onclick="setTheme('light')" class="theme-txt-btn">CHIARO</span>
+            <span onclick="setTheme('dark')" class="theme-txt-btn">SCURO</span>
+            <span onclick="setTheme('auto')" class="theme-txt-btn">AUTO</span>
         </div>
     </div>
 
-    <div class="switcher-bar">
-        <div>
-            {% if p2_enabled and profile != 'p2' %}<a href="?p=p2" class="sw-link">VAI AL P2</a>{% endif %}
-            {% if p3_enabled and profile != 'p3' %}<a href="?p=p3" class="sw-link">VAI AL P3</a>{% endif %}
-            {% if profile != 'p1' %}<a href="?p=p1" class="sw-link">VAI AL P1</a>{% endif %}
+    <div class="data-list">
+        {% for m in mobiles %}<div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>{% endfor %}
+        {% if ag.office_phone %}<div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>{% endif %}
+        {% for e in emails %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e}}" class="d-link">{{e}}</a></div>{% endfor %}
+        {% if ag.pec %}<div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>{% endif %}
+        
+        {% for w in websites %}
+        <div class="d-row">
+            <span class="d-icon">🌐</span> 
+            <a href="{{w}}" target="_blank" class="d-link">Sito Web <i class="fas fa-external-link-alt" style="font-size:10px;"></i></a>
         </div>
-        <div>
-            <span onclick="setTheme('light')" class="sw-link" style="cursor:pointer;">CHIARO</span>
-            <span onclick="setTheme('dark')" class="sw-link" style="cursor:pointer;">SCURO</span>
-            <span onclick="setTheme('auto')" class="sw-link" style="cursor:pointer;">AUTO</span>
+        {% endfor %}
+
+        <div style="margin-top:15px; font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; opacity:0.6;">
+            {% if ag.piva %}<span>P.IVA: {{ ag.piva }}</span>{% endif %}
+            {% if ag.cod_sdi %}<span>SDI: {{ ag.cod_sdi }}</span>{% endif %}
         </div>
     </div>
 
-    <div style="padding:0 20px; text-align:left;">
+    <div class="gal-container">
+        
         {% if p_data.gallery_img %}
-        <h4>FOTO</h4>
-        <div class="gal-grid">
-            {% for img in p_data.gallery_img %}<img src="{{ img }}" class="gal-item" onclick="openImg('{{ img }}')">{% endfor %}
+        <div class="gal-title">FOTO</div>
+        <div class="grid-5">
+            {% for img in p_data.gallery_img %}
+            <img src="{{ img }}" class="thumb-sq" onclick="openShareModal('{{ img }}', 'img')">
+            {% endfor %}
         </div>
         {% endif %}
 
         {% if p_data.gallery_vid %}
-        <h4>VIDEO</h4>
-        <div class="video-list" style="text-align:center;">
+        <div class="gal-title" style="margin-top:15px;">VIDEO</div>
+        <div class="grid-5">
             {% for vid in p_data.gallery_vid %}
-            <video controls><source src="{{ vid }}"></video>
+            <div class="vid-thumb-box" onclick="openShareModal('{{ vid }}', 'vid')">
+                <video src="{{ vid }}#t=1.0" preload="metadata"></video>
+                <i class="fas fa-play play-icon"></i>
+            </div>
             {% endfor %}
         </div>
         {% endif %}
-        
+
         {% if p_data.gallery_pdf %}
-        <h4>DOC</h4>
-        {% for pdf in p_data.gallery_pdf %}
-            <a href="{{ pdf.path }}" target="_blank" style="display:block; padding:10px; background:#f9f9f9; border-radius:5px; margin-bottom:5px; text-decoration:none; color:#333;">📄 {{ pdf.name }}</a>
-        {% endfor %}
+        <div class="gal-title" style="margin-top:15px;">DOCUMENTI</div>
+        <div class="pdf-grid">
+            {% for pdf in p_data.gallery_pdf %}
+            <div class="pdf-chip" onclick="openShareModal('{{ pdf.path }}', 'pdf')">
+                <i class="fas fa-file-pdf" style="color:#ff4444;"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px;">{{ pdf.name }}</span>
+                <i class="fas fa-share-alt" style="font-size:10px;"></i>
+            </div>
+            {% endfor %}
+        </div>
         {% endif %}
+
     </div>
 
     <div class="footer">Pay4You Card Copyright 2026 Giuseppe Di Lisio</div>
 
-    <div id="qrModal" class="modal-overlay">
-        <div class="modal-box">
-            <h3>Condividi Card</h3>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" style="margin-bottom:15px;">
-            <a href="mailto:?subject=La mia Card&body=Ecco il mio biglietto: https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" class="modal-btn btn-em">📧 Invia Email</a>
-            <a href="https://wa.me/?text=Ecco la mia card: https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}" class="modal-btn btn-wa">💬 Invia WhatsApp</a>
-            <button onclick="document.getElementById('qrModal').style.display='none'" class="modal-btn btn-close">CHIUDI</button>
+    <div id="univModal" class="modal-overlay">
+        
+        <div id="mediaContainer" style="display:flex; justify-content:center; align-items:center; width:100%;"></div>
+        
+        <div id="qrContainer" style="background:white; padding:10px; border-radius:10px; display:none;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://pay4you-cards-fire.onrender.com/card/{{ ag.slug }}">
         </div>
-    </div>
-    
-    <div id="imgModal" class="modal-overlay" onclick="this.style.display='none'">
-        <img id="bigImg" style="max-width:90%; max-height:80vh; border-radius:10px;">
+
+        <div class="modal-actions" style="margin-top:20px;">
+            <a id="waBtn" href="#" class="action-btn ab-wa"><i class="fab fa-whatsapp"></i></a>
+            <a id="emBtn" href="#" class="action-btn ab-em"><i class="fas fa-envelope"></i></a>
+            <div onclick="closeModal()" class="action-btn ab-cl" style="cursor:pointer;"><i class="fas fa-times"></i></div>
+        </div>
     </div>
 
   </div>
 
   <script>
-    function openQrModal() { document.getElementById('qrModal').style.display = 'flex'; }
-    function openImg(src) { 
-        document.getElementById('bigImg').src = src; 
-        document.getElementById('imgModal').style.display = 'flex'; 
+    var currentUrl = "";
+
+    function openShareModal(url, type) {
+        var modal = document.getElementById('univModal');
+        var mediaBox = document.getElementById('mediaContainer');
+        var qrBox = document.getElementById('qrContainer');
+        
+        mediaBox.innerHTML = "";
+        qrBox.style.display = "none";
+        
+        // Costruisci link assoluto per condivisione
+        var fullUrl = window.location.origin + url;
+        if(type === 'qr') fullUrl = window.location.href; // Se QR, condividi la pagina
+
+        // Setup Buttons
+        document.getElementById('waBtn').href = "https://wa.me/?text=" + encodeURIComponent("Guarda questo: " + fullUrl);
+        document.getElementById('emBtn').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent("Ecco il file: " + fullUrl);
+
+        if(type === 'img') {
+            mediaBox.innerHTML = '<img src="'+url+'" class="modal-content">';
+        } else if(type === 'vid') {
+            mediaBox.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
+        } else if(type === 'pdf') {
+            // Per PDF apriamo direttamente il link, ma mostriamo i tasti share
+            window.open(url, '_blank');
+            return; // Non apro modale per PDF, si apre tab
+        } else if(type === 'qr') {
+            qrBox.style.display = "block";
+        }
+
+        modal.style.display = 'flex';
     }
+
+    function closeModal() {
+        document.getElementById('univModal').style.display = 'none';
+        document.getElementById('mediaContainer').innerHTML = ""; // Stop video
+    }
+
     function setTheme(t) {
         if(t==='auto') document.body.removeAttribute('data-theme');
         else document.body.setAttribute('data-theme', t);
