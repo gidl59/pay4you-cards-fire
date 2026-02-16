@@ -14,7 +14,7 @@
         input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
         .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
         
-        /* CROP SLIDERS */
+        /* CROP */
         .crop-controls { margin-top:15px; padding:10px; background:#222; border-radius:8px; }
         .range-slider { width:100%; margin-bottom:10px; cursor:pointer; }
         .crop-circle { 
@@ -68,15 +68,13 @@
                         <img id="cropImg" src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
                              style="object-position: {{ p.pos_x }}% {{ p.pos_y }}%; transform: scale({{ p.zoom }});">
                     </div>
-                    <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
+                    <input type="file" name="foto" accept="image/*" onchange="previewCrop(this, 'cropImg')">
                     
                     <div class="crop-controls">
-                        <label>↔️ Sposta Orizzontale</label>
+                        <label>↔️ Orizzontale (X)</label>
                         <input type="range" name="pos_x" class="range-slider" min="0" max="100" value="{{ p.pos_x }}" oninput="updateCrop()">
-                        
-                        <label>↕️ Sposta Verticale</label>
+                        <label>↕️ Verticale (Y)</label>
                         <input type="range" name="pos_y" class="range-slider" min="0" max="100" value="{{ p.pos_y }}" oninput="updateCrop()">
-                        
                         <label>🔍 Zoom</label>
                         <input type="range" name="zoom" class="range-slider" min="1" max="3" step="0.1" value="{{ p.zoom }}" oninput="updateCrop()">
                     </div>
@@ -91,7 +89,8 @@
                     
                     <hr style="border-color:#333; margin:20px 0;">
                     <label>FOTO RETRO (Optional)</label>
-                    <input type="file" name="personal_foto" accept="image/*">
+                    <img id="prevRetro" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:60px; object-fit:contain; display:block; margin:0 auto;">
+                    <input type="file" name="personal_foto" accept="image/*" onchange="simplePreview(this, 'prevRetro')">
                 </div>
             </div>
             
@@ -99,16 +98,10 @@
                 <label>Effetto Movimento:</label>
                 <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %}> TAP 
                 <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %}> SPECCHIO
-            </div>
-        </div>
-
-        <div class="edit-box">
-            <h3 class="box-title">📱 Social Network</h3>
-            {% set soc_map = {} %}{% for s in p.socials %}{% do soc_map.update({s.label: s.url}) %}{% endfor %}
-            <div class="form-grid">
-                {% for sn in ['Facebook','Instagram','Linkedin','TikTok','Spotify','Telegram','YouTube'] %}
-                <div><label>{{ sn }}</label><input type="text" name="{{ sn|lower }}" value="{{ soc_map.get(sn,'') }}"></div>
-                {% endfor %}
+                <br><br>
+                <label>Cosa c'è dietro?</label>
+                <input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content=='logo' %}checked{% endif %}> Logo
+                <input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content=='personal' %}checked{% endif %}> Foto Retro
             </div>
         </div>
 
@@ -131,8 +124,8 @@
             <input type="file" name="gallery_vid" multiple accept="video/*">
             <div class="gal-big-grid">
                 {% for vid in p.gallery_vid %}
-                <div style="position:relative; width:100px; height:100px; background:#000;">
-                    <video src="{{ vid }}" style="width:100%; height:100%; object-fit:cover;"></video>
+                <div style="position:relative; width:100px; height:100px; background:#000; border-radius:8px; overflow:hidden;">
+                    <video src="{{ vid }}#t=2.0" style="width:100%; height:100%; object-fit:cover;"></video>
                     <input type="checkbox" name="delete_media" value="{{ vid }}" style="position:absolute; top:0; left:0; width:20px; height:20px; z-index:9;">
                 </div>
                 {% endfor %}
@@ -153,7 +146,13 @@
             <div class="form-grid">
                 <div><label>🇬🇧 Role</label><input type="text" name="role_en" value="{{ p.trans.en.role }}"></div>
                 <div><label>🇬🇧 Bio</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio }}</textarea></div>
-                </div>
+                <div><label>🇫🇷 Role</label><input type="text" name="role_fr" value="{{ p.trans.fr.role }}"></div>
+                <div><label>🇫🇷 Bio</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio }}</textarea></div>
+                <div><label>🇪🇸 Role</label><input type="text" name="role_es" value="{{ p.trans.es.role }}"></div>
+                <div><label>🇪🇸 Bio</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio }}</textarea></div>
+                <div><label>🇩🇪 Role</label><input type="text" name="role_de" value="{{ p.trans.de.role }}"></div>
+                <div><label>🇩🇪 Bio</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio }}</textarea></div>
+            </div>
         </div>
 
         <button type="submit" class="btn-save" id="btnSave">💾 SALVA TUTTO</button>
@@ -168,10 +167,10 @@
             }
         }
         
-        function previewCrop(input) {
+        function previewCrop(input, id) {
             if(input.files && input.files[0]) {
                 var reader = new FileReader();
-                reader.onload = function(e){ document.getElementById('cropImg').src = e.target.result; }
+                reader.onload = function(e){ document.getElementById(id).src = e.target.result; }
                 reader.readAsDataURL(input.files[0]);
             }
         }
