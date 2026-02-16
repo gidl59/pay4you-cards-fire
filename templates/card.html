@@ -70,13 +70,15 @@
     </div>
 
     <div class="switcher-bar">
-        {% if profile!='p1' %}<a href="?p=p1" class="circle-p">P1</a>{% endif %}
-        {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p">P2</a>{% endif %}
-        {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p">P3</a>{% endif %}
-        <div style="width:1px; height:20px; background:#888;"></div>
-        <button onclick="setT('light')" class="theme-btn">CHIARO</button>
-        <button onclick="setT('dark')" class="theme-btn">SCURO</button>
-        <button onclick="setT('auto')" class="theme-btn">AUTO</button>
+        {% if profile!='p1' %}<a href="?p=p1" class="circle-p p1-btn">P1</a>{% endif %}
+        {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p p2-btn">P2</a>{% endif %}
+        {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p p3-btn">P3</a>{% endif %}
+        
+        <div style="width:1px; height:20px; background:#ccc;"></div>
+        
+        <button onclick="setT('light')" class="theme-btn t-light">CHIARO</button>
+        <button onclick="setT('dark')" class="theme-btn t-dark">SCURO</button>
+        <button onclick="setT('auto')" class="theme-btn t-auto">AUTO</button>
     </div>
 
     <div class="scene-box">
@@ -180,7 +182,8 @@
         if(type=='qr') fullUrl = window.location.href;
 
         document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Guarda: " + fullUrl);
-        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(fullUrl);
+        var mailBody = "Link: " + fullUrl;
+        document.getElementById('emLink').href = "mailto:?subject=Condivisione&body=" + encodeURIComponent(mailBody).replace(/%0A/g, "%0D%0A");
 
         if(type=='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
         else if(type=='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
