@@ -100,17 +100,38 @@ def repair_user(user):
                 dirty = True
 
         # Normalizza tipi
-        if not isinstance(p.get('emails'), list): p['emails'] = []
-        if not isinstance(p.get('websites'), list): p['websites'] = []
-        if p.get('socials') is None: p['socials'] = []; dirty = True
-        if p.get('trans') is None: p['trans'] = defaults['trans']; dirty = True
-        if p.get('gallery_img') is None: p['gallery_img'] = []; dirty = True
-        if p.get('gallery_vid') is None: p['gallery_vid'] = []; dirty = True
-        if p.get('gallery_pdf') is None: p['gallery_pdf'] = []; dirty = True
+        if not isinstance(p.get('emails'), list):
+            p['emails'] = []
+            dirty = True
+        if not isinstance(p.get('websites'), list):
+            p['websites'] = []
+            dirty = True
+        if p.get('socials') is None:
+            p['socials'] = []
+            dirty = True
+        if p.get('trans') is None or not isinstance(p.get('trans'), dict):
+            p['trans'] = defaults['trans']
+            dirty = True
 
+        if p.get('gallery_img') is None or not isinstance(p.get('gallery_img'), list):
+            p['gallery_img'] = []
+            dirty = True
+        if p.get('gallery_vid') is None or not isinstance(p.get('gallery_vid'), list):
+            p['gallery_vid'] = []
+            dirty = True
+        if p.get('gallery_pdf') is None or not isinstance(p.get('gallery_pdf'), list):
+            p['gallery_pdf'] = []
+            dirty = True
+
+        # Normalizza tipi numerici crop
         p['pos_x'] = to_int(p.get('pos_x', 50), 50)
         p['pos_y'] = to_int(p.get('pos_y', 50), 50)
         p['zoom'] = to_float(p.get('zoom', 1.0), 1.0)
+
+        # Se gira agente ON, l'effetto moneta non deve creare conflitti
+        if p.get('fx_rotate_agent') == 'on':
+            if p.get('fx_interaction') not in ('tap', 'mirror'):
+                p['fx_interaction'] = 'tap'
 
     return dirty
 
@@ -284,6 +305,8 @@ def area():
     user = next((c for c in load_db() if c.get('id') == session.get('user_id')), None)
     if not user:
         return redirect(url_for('logout'))
+    if repair_user(user):
+        save_db(load_db())
     return render_template('dashboard.html', user=user)
 
 @app.route('/area/activate/<p_id>')
@@ -295,10 +318,8 @@ def activate_profile(p_id):
     if not user:
         return redirect(url_for('logout'))
     user['p' + p_id]['active'] = True
-    if repair_user(user):
-        save_db(clienti)
-    else:
-        save_db(clienti)
+    repair_user(user)
+    save_db(clienti)
     return redirect(url_for('area'))
 
 @app.route('/area/deactivate/<p_id>')
@@ -379,11 +400,16 @@ def edit_profile(p_id):
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
 
+        # Se gira agente è ON, tap/specchio vengono ignorati (evito conflitti)
+        if p['fx_rotate_agent'] == 'on':
+            p['fx_interaction'] = 'tap'
+
         # ===== FIX CROP: salva numeri veri =====
         p['pos_x'] = to_int(request.form.get('pos_x', 50), 50)
         p['pos_y'] = to_int(request.form.get('pos_y', 50), 50)
         p['zoom'] = to_float(request.form.get('zoom', 1), 1.0)
 
+        # ===== TRADUZIONI 4 LINGUE =====
         p['trans'] = {
             'en': {'role': request.form.get('role_en', ''), 'bio': request.form.get('bio_en', '')},
             'fr': {'role': request.form.get('role_fr', ''), 'bio': request.form.get('bio_fr', '')},
@@ -429,6 +455,7 @@ def edit_profile(p_id):
             p['gallery_pdf'] = [x for x in p.get('gallery_pdf', []) if x.get('path') not in to_del]
             p['gallery_vid'] = [x for x in p.get('gallery_vid', []) if x not in to_del]
 
+        repair_user(user)
         save_db(clienti)
         return redirect(url_for('area'))
 
@@ -491,6 +518,8 @@ def view_card(slug):
         p_req = 'p1'
 
     p = user[p_req]
+
+    # (opzionale) qui in futuro puoi usare p['trans'] in base alla lingua
     ag = {
         "name": p.get('name'),
         "role": p.get('role'),
