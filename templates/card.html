@@ -11,7 +11,6 @@
 
   <div class="card-wrap">
 
-    <!-- LOGO TOP-LEFT -->
     {% if ag.logo_url %}
       <div class="top-left-logo {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         <img src="{{ ag.logo_url }}" alt="logo">
@@ -27,17 +26,14 @@
 
     <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
       <div class="flipper">
-
         <div class="front">
           {% if ag.photo_url %}
-            <img src="{{ ag.photo_url }}"
-                 class="avatar-img"
+            <img src="{{ ag.photo_url }}" class="avatar-img"
                  style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
             <div class="avatar-img" style="background:#555;"></div>
           {% endif %}
         </div>
-
         <div class="back">
           {% if ag.fx_back == 'personal' and ag.personal_url %}
             <img src="{{ ag.personal_url }}" class="avatar-img" alt="retro">
@@ -47,7 +43,6 @@
             <div style="font-weight:900;">LOGO</div>
           {% endif %}
         </div>
-
       </div>
     </div>
 
@@ -62,7 +57,6 @@
       <a href="/vcf/{{ ag.slug }}?p={{ profile }}" class="btn-save" download>
         <i class="fas fa-user-plus"></i> SALVA CONTATTO
       </a>
-
       <div class="btn-qr" onclick="openShare('qr', '')">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ request.url }}" alt="qr">
       </div>
@@ -92,25 +86,40 @@
 
     <div class="scene-box">
       <div class="scene-label">CONTATTI</div>
-
       {% for m in mobiles %}
         <div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>
       {% endfor %}
-
       {% if ag.office_phone %}
         <div class="d-row"><span class="d-icon">☎️</span> <a href="tel:{{ag.office_phone}}" class="d-link">{{ag.office_phone}}</a></div>
       {% endif %}
-
       {% for e_str in emails %}
         {% for e in e_str.split(',') %}
-          {% if e.strip() %}
-            <div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e.strip()}}" class="d-link">{{e.strip()}}</a></div>
+          {% if e.strip() %}<div class="d-row"><span class="d-icon">✉️</span> <a href="mailto:{{e.strip()}}" class="d-link">{{e.strip()}}</a></div>{% endif %}
+        {% endfor %}
+      {% endfor %}
+      {% if ag.pec %}
+        <div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>
+      {% endif %}
+
+      {% for w_str in websites %}
+        {% for w in w_str.split(',') %}
+          {% if w.strip() %}
+            {% set full_w = w.strip() if w.strip().startswith('http') else 'https://' ~ w.strip() %}
+            <div class="d-row">
+                <span class="d-icon">🌐</span> <a href="{{ full_w }}" target="_blank" class="d-link">{{ w.strip() }}</a>
+            </div>
           {% endif %}
         {% endfor %}
       {% endfor %}
 
-      {% if ag.pec %}
-        <div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>
+      {% if ag.address %}
+        {% for addr in ag.address.split(',') %}
+            {% if addr.strip() %}
+            <div class="d-row">
+                <span class="d-icon">📍</span> <a href="https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}" target="_blank" class="d-link">{{ addr.strip() }}</a>
+            </div>
+            {% endif %}
+        {% endfor %}
       {% endif %}
 
       <div class="fiscal-row">
@@ -150,16 +159,20 @@
       <div class="pdf-grid">
         {% for pdf in p_data.gallery_pdf %}
           <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px;"></i>
+            <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+              <i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px; flex-shrink:0;"></i>
               <span class="pdf-name">{{ pdf.name }}</span>
             </div>
-            <i class="fas fa-eye" style="color:var(--brand);"></i>
+            <i class="fas fa-eye" style="color:var(--brand); flex-shrink:0;"></i>
           </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
+
+    <div class="footer" onclick="openSite('https://www.pay4you.store/card-nfc.php')">
+      <span class="f-brand">Pay4You Card</span> <span class="f-copy">Copyright 2026</span> <span class="f-name">Giuseppe Di Lisio</span>
+    </div>
 
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
@@ -180,8 +193,7 @@
   <script>
     function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
-      return "mailto:?subject=" + encodeURIComponent(subject) +
-             "&body=" + encodeURIComponent(b);
+      return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
     }
 
     function buildEmailText(kind, link){
@@ -189,75 +201,22 @@
       const role = "{{ ag.role|default('', true) }}";
       const company = "{{ ag.company|default('', true) }}";
       const cardLink = window.location.href;
-
       let header = "Pay4You - Condivisione";
-      let body = "";
-
-      if(kind === "qr"){
-        header = "Pay4You - Link Card";
-        body =
-          "Ciao!\n" +
-          "Ti invio la mia Card digitale Pay4You.\n\n" +
-          (name ? ("Nome: " + name + "\n") : "") +
-          (role ? ("Ruolo: " + role + "\n") : "") +
-          (company ? ("Azienda: " + company + "\n") : "") +
-          "\nLink Card:\n" + cardLink + "\n";
-      } else if(kind === "img"){
-        header = "Pay4You - Foto";
-        body =
-          "Ciao!\n" +
-          "Ti invio una foto dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link foto:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else if(kind === "vid"){
-        header = "Pay4You - Video";
-        body =
-          "Ciao!\n" +
-          "Ti invio un video dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link video:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else if(kind === "pdf"){
-        header = "Pay4You - Documento";
-        body =
-          "Ciao!\n" +
-          "Ti invio un documento dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link documento:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else {
-        body = "Link:\n" + link + "\n";
-      }
-
+      let body = "Ciao!\nTi invio la mia Card digitale Pay4You.\n\n" + (name ? "Nome: "+name+"\n" : "") + (role ? "Ruolo: "+role+"\n" : "") + (company ? "Azienda: "+company+"\n" : "") + "\nLink:\n" + link + "\n\nCard:\n" + cardLink;
       return { subject: header, body: body };
     }
 
     function openShare(type, url) {
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
-
-      // WA sempre ok
-      document.getElementById('waLink').href =
-        "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
-
-      // ✅ EMAIL con testo completo
+      document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
       const mail = buildEmailText(type, fullUrl);
       document.getElementById('emLink').href = makeMailto(mail.subject, mail.body);
 
-      if(type==='img'){
-        box.innerHTML = '<img src="'+url+'" class="modal-content">';
-      } else if(type==='vid'){
-        box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-      } else if(type==='pdf'){
-        box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-      } else if(type==='qr'){
-        box.innerHTML =
-          '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+
-          encodeURIComponent(fullUrl)+
-          '" style="background:white; padding:14px; border-radius:18px;">';
-      }
-
+      if(type==='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
+      else if(type==='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
+      else if(type==='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
+      else if(type==='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:14px; border-radius:18px;">';
       document.getElementById('shareModal').style.display = 'flex';
     }
 
