@@ -1,76 +1,95 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Master Admin | Pay4You</title>
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    body{ background:#050505; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-    .wrap{ max-width:1100px; margin:18px auto; padding:0 14px; }
-    .topbar{ display:flex; justify-content:space-between; align-items:center; margin:10px 0 18px; }
-    .title{ font-size:22px; font-weight:900; display:flex; align-items:center; gap:10px; }
-    .logout{ color:#ff4444; text-decoration:none; font-weight:800; }
-
-    .card{ background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-    .new-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .inp{
-      background:#121212; border:1px solid #2a2a2a; color:#fff; border-radius:10px;
-      padding:12px 12px; outline:none; min-width:180px;
+    .wrap{ max-width:1200px; margin:0 auto; padding:18px; }
+    .box{
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:16px;
+      margin-bottom:14px;
     }
-    .btn{ border:none; border-radius:10px; padding:10px 14px; font-weight:900; cursor:pointer; }
-    .btn-green{ background:#00c853; color:#001b0a; }
-    .btn-blue{ background:#0088cc; color:#fff; }
-    .btn-red{ background:#cc0000; color:#fff; }
-    .btn-gray{ background:#222; color:#fff; border:1px solid #333; }
-
-    table{ width:100%; border-collapse:collapse; margin-top:14px; }
-    th,td{ padding:14px 12px; border-bottom:1px solid #1f1f1f; vertical-align:middle; }
-    th{ text-align:left; color:#bbb; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
-
-    .client-link{ display:block; color:#00ffc8; font-weight:900; text-decoration:none; margin-top:6px; }
-    .cred{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; color:#ddd; font-size:13px; }
-    .send-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-
-    .pill{ padding:8px 12px; border-radius:12px; font-weight:900; cursor:pointer; border:none; }
-    .pill-wa{ background:#25D366; color:#041b0c; }
-    .pill-em{ background:#f2f2f2; color:#111; }
-    .pill-qr{ background:#ffb000; color:#111; }
-
-    .actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
-    .small{ font-size:12px; color:#777; }
-
-    /* MODAL QR */
-    .modal{
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
-      align-items:center; justify-content:center; z-index:9999; padding:18px;
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:0; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 14px; border-radius:14px;
+      font-weight:900; cursor:pointer; text-decoration:none;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06); color:#fff;
     }
-    .modal-box{
-      background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:18px; max-width:460px; width:100%;
-      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    .btn-primary{ background:linear-gradient(90deg,#0088cc,#00ffc8); color:#000; border:none; }
+    .btn-danger{ background:#c70000; border:none; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:12px 10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:middle; }
+    th{ color:#aaa; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+    .small{ color:#aaa; font-size:12px; margin-top:6px; }
+    .pill{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:44px; height:36px;
+      border-radius:12px; font-weight:900;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.06);
+      cursor:pointer;
+      user-select:none;
     }
-    .qrimg{ width:260px; height:260px; background:#fff; padding:14px; border-radius:18px; display:block; margin:10px auto; }
-    .modal-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
-    .modal-actions .btn{ min-width:140px; }
+    .wa{ background:#25D366; color:#000; border:none; }
+    .em{ background:#fff; color:#000; border:none; }
+    .qr{ background:#f5a300; color:#000; border:none; }
+    .modal-overlay{
+      display:none;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.70);
+      backdrop-filter: blur(10px);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:14px;
+      padding:18px;
+    }
+    .modal-card{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:16px;
+      max-width:520px;
+      width:92vw;
+      text-align:center;
+    }
+    .modal-actions{ display:flex; gap:12px; justify-content:center; }
+    .act{ width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; }
+    .act-wa{ background:#25D366; color:#000; }
+    .act-em{ background:#fff; color:#000; }
+    .act-cl{ background:#0088cc; color:#000; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div class="title">➕ Nuovo Cliente</div>
-      <a class="logout" href="/master/logout">Esci</a>
+    <div class="box">
+      <div class="topbar">
+        <h2 class="title">➕ Nuovo Cliente</h2>
+        <a class="btn btn-danger" href="/master/logout">Esci</a>
+      </div>
+
+      <form class="row" method="POST" action="/master/add" style="margin-top:12px;">
+        <input class="input-rect" name="slug" placeholder="Slug (es. mario)" style="flex:1; min-width:220px;">
+        <input class="input-rect" name="username" placeholder="User" style="flex:1; min-width:180px;">
+        <input class="input-rect" name="password" placeholder="Pass (vuoto=auto)" style="flex:1; min-width:200px;">
+        <input class="input-rect" name="nome" placeholder="Nome" style="flex:1; min-width:200px;">
+        <button class="btn btn-primary" type="submit">CREA</button>
+      </form>
     </div>
 
-    <div class="card">
-      <form method="POST" action="/master/add" class="new-row">
-        <input class="inp" type="text" name="slug" placeholder="Slug (es. mario)">
-        <input class="inp" type="text" name="username" placeholder="User">
-        <input class="inp" type="text" name="password" placeholder="Pass (vuoto=auto)">
-        <input class="inp" type="text" name="nome" placeholder="Nome">
-        <button class="btn btn-green" type="submit">CREA</button>
-      </form>
+    <div class="box">
+      <h3 class="title" style="margin:0 0 10px;">Clienti</h3>
 
       <table>
         <thead>
@@ -85,35 +104,34 @@
           {% for c in clienti %}
           <tr>
             <td>
-              <div style="font-weight:900;">{{ c.get('nome','') }}</div>
-              <a class="client-link" href="/card/{{ c.slug }}" target="_blank">/card/{{ c.slug }}</a>
+              <div style="font-weight:900; font-size:16px;">{{ c.nome }}</div>
+              <div style="color:#00ffc8; font-weight:900;">
+                /card/{{ c.slug }}
+              </div>
               <div class="small">slug: {{ c.slug }}</div>
             </td>
 
-            <td class="cred">
-              U: {{ c.username }}<br>
-              P: {{ c.password }}
+            <td>
+              <div style="font-weight:900;">u: <span style="color:#fff;">{{ c.username }}</span></div>
+              <div style="font-weight:900;">p: <span style="color:#fff;">{{ c.password }}</span></div>
             </td>
 
             <td>
-              <div class="send-row">
-                <button class="pill pill-wa" type="button"
-                        onclick="sendWA('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">WA</button>
-
-                <button class="pill pill-em" type="button"
-                        onclick="sendEmail('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">@</button>
-
-                <button class="pill pill-qr" type="button"
-                        onclick="showQR('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">QR</button>
+              <div class="row">
+                <div class="pill wa" onclick="sendWA('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">WA</div>
+                <div class="pill em" onclick="sendEmailCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">@</div>
+                <div class="pill qr" onclick="openQR('{{ c.slug|e }}','{{ c.username|e }}','{{ c.password|e }}')">QR</div>
               </div>
-              <div class="small">Email: testo forzato (iPhone/Windows OK)</div>
+              <div class="small">✅ Email: testo completo (no vuoto)</div>
             </td>
 
             <td style="text-align:right;">
-              <div class="actions">
-                <a class="btn btn-blue" href="/master/impersonate/{{ c.id }}">Gestisci</a>
-                <button class="btn btn-red" type="button" onclick="doubleDelete({{ c.id }}, '{{ c.slug }}')">ELIMINA</button>
-              </div>
+              <a class="btn" href="/master/impersonate/{{ c.id }}">Gestisci</a>
+              {% if c.id != 1 %}
+                <a class="btn btn-danger" href="/master/delete/{{ c.id }}" onclick="return confirm('Confermi ELIMINA questo cliente?')">ELIMINA</a>
+              {% else %}
+                <span class="small">P1 non eliminabile</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -122,101 +140,88 @@
     </div>
   </div>
 
-  <!-- QR MODAL -->
-  <div id="qrModal" class="modal" onclick="closeQR()">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div style="font-weight:900; text-align:center;">QR Card</div>
-      <img id="qrImg" class="qrimg" src="" alt="QR">
-      <div class="small" style="text-align:center;" id="qrText"></div>
-
-      <div class="modal-actions">
-        <button class="btn btn-green" type="button" onclick="qrSendWA()">INVIA WHATSAPP</button>
-        <button class="btn btn-blue" type="button" onclick="qrSendEmail()">INVIA EMAIL</button>
-        <button class="btn btn-gray" type="button" onclick="closeQR()">CHIUDI</button>
-      </div>
+  <!-- MODAL QR -->
+  <div id="qrModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font-weight:900; color:#00ffc8; letter-spacing:.06em;">QR + INVIO CREDENZIALI</div>
+      <div id="qrBox" style="margin-top:12px;"></div>
+      <div class="small" id="qrInfo"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="act act-wa" onclick="modalWA()">🟢</div>
+      <div class="act act-em" onclick="modalEmail()">✉️</div>
+      <div class="act act-cl" onclick="closeQR()">✖</div>
     </div>
   </div>
 
   <script>
-    // stato QR corrente (così WA/Email nel modal sanno cosa inviare)
-    let QR_STATE = { slug:"", user:"", pass:"" };
+    let MOD_SLUG="", MOD_U="", MOD_P="";
 
     function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
-      return "mailto:?subject=" + encodeURIComponent(subject) +
-             "&body=" + encodeURIComponent(b);
+      return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
     }
 
-    function cardUrl(slug){ return window.location.origin + "/card/" + slug; }
-    function loginUrl(){ return window.location.origin + "/area/login"; }
+    function credBody(u,p,slug){
+      const base = window.location.origin;
+      const login = base + "/area/login";
+      const card  = base + "/card/" + slug;
 
-    function buildCredText(slug, user, pass){
-      const url = cardUrl(slug);
       return (
-        "PAY4YOU - Credenziali Card\n\n" +
-        "Card: " + url + "\n" +
-        "Dashboard: " + loginUrl() + "\n\n" +
-        "USER: " + user + "\n" +
-        "PASS: " + pass + "\n\n" +
-        "Apri la card e poi fai login per modificarla."
+        "Ciao!\n\n" +
+        "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
+        "LOGIN: " + login + "\n" +
+        "USER: " + u + "\n" +
+        "PASSWORD: " + p + "\n\n" +
+        "La tua Card:\n" + card + "\n\n" +
+        "Consiglio: al primo accesso salva questi dati.\n\n" +
+        "— Pay4You"
       );
     }
 
-    // ✅ WA credenziali
-    function sendWA(slug, user, pass){
-      window.open("https://wa.me/?text=" + encodeURIComponent(buildCredText(slug,user,pass)), "_blank");
-    }
-
-    // ✅ EMAIL credenziali (FIX: sempre testo)
-    function sendEmail(slug, user, pass){
-      const subject = "Pay4You - Credenziali Card";
-      const url = cardUrl(slug);
-      const body =
-        "Ciao!\n\n" +
-        "Ecco la tua Card Digitale Pay4You:\n" + url + "\n\n" +
-        "Accesso Dashboard per modifiche:\n" + loginUrl() + "\n\n" +
-        "CREDENZIALI:\n" +
-        "USER: " + user + "\n" +
-        "PASS: " + pass + "\n\n" +
-        "A presto,\nPay4You";
-      // FIX: usare window.location (iPhone non “svuota” il body)
+    function sendEmailCred(u,p,slug){
+      const subject = "Pay4You - Credenziali Accesso";
+      const body = credBody(u,p,slug);
       window.location.href = makeMailto(subject, body);
     }
 
-    // QR modal con WA/Email
-    function showQR(slug, user, pass){
-      QR_STATE = { slug, user, pass };
-      const url = cardUrl(slug);
-      document.getElementById("qrImg").src =
-        "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(url);
-      document.getElementById("qrText").innerText = url;
-      document.getElementById("qrModal").style.display = "flex";
+    function sendWA(u,p,slug){
+      const base = window.location.origin;
+      const login = base + "/area/login";
+      const card  = base + "/card/" + slug;
+
+      const txt =
+        "Pay4You - Credenziali\n\n" +
+        "Login: " + login + "\n" +
+        "User: " + u + "\n" +
+        "Pass: " + p + "\n\n" +
+        "Card: " + card;
+
+      window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
     }
 
-    function qrSendWA(){
-      if(!QR_STATE.slug) return;
-      sendWA(QR_STATE.slug, QR_STATE.user, QR_STATE.pass);
-    }
+    function openQR(slug,u,p){
+      MOD_SLUG=slug; MOD_U=u; MOD_P=p;
 
-    function qrSendEmail(){
-      if(!QR_STATE.slug) return;
-      sendEmail(QR_STATE.slug, QR_STATE.user, QR_STATE.pass);
+      const url = window.location.origin + "/card/" + slug;
+      document.getElementById("qrBox").innerHTML =
+        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) +
+        '" style="background:white; padding:14px; border-radius:18px;">';
+
+      document.getElementById("qrInfo").innerText =
+        "User: " + u + "  |  Pass: " + p;
+
+      document.getElementById("qrModal").style.display="flex";
     }
 
     function closeQR(){
-      document.getElementById("qrModal").style.display = "none";
-      document.getElementById("qrImg").src = "";
-      document.getElementById("qrText").innerText = "";
-      QR_STATE = { slug:"", user:"", pass:"" };
+      document.getElementById("qrModal").style.display="none";
+      document.getElementById("qrBox").innerHTML="";
+      MOD_SLUG=""; MOD_U=""; MOD_P="";
     }
 
-    // ✅ doppio controllo eliminazione cliente
-    function doubleDelete(id, slug){
-      if(!confirm("ATTENZIONE!\nVuoi eliminare definitivamente la card: " + slug + " ?")) return;
-      const second = prompt("Per confermare, scrivi ESATTO: ELIMINA " + slug);
-      if(second !== ("ELIMINA " + slug)) { alert("Conferma NON valida. Operazione annullata."); return; }
-      window.location.href = "/master/delete/" + id;
-    }
+    function modalWA(){ sendWA(MOD_U, MOD_P, MOD_SLUG); }
+    function modalEmail(){ sendEmailCred(MOD_U, MOD_P, MOD_SLUG); }
   </script>
 </body>
 </html>
