@@ -18,18 +18,13 @@
 
     /* CROP AREA */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
-
     .crop-circle-box {
       width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8;
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
     /* Stage per crop (stabile su iPhone/Safari) */
-    #AGENT_STAGE{
-      width:100%;
-      height:100%;
-      position:relative;
-    }
+    #AGENT_STAGE{ width:100%; height:100%; position:relative; }
 
     #PREVIEW_IMG_AGENT{
       position:absolute;
@@ -214,13 +209,13 @@
     <div class="dash-actions">
       <button onclick="invioWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
 
-      <!-- EMAIL: lascia Gmail come ora (NON cambiamo) -->
+      <!-- EMAIL: Gmail web (come ora) -->
       <button onclick="invioEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
 
-      <!-- EXTRA: apre mailto per Thunderbird/Outlook/Apple Mail -->
+      <!-- EXTRA: mailto per Thunderbird/Outlook/Apple Mail -->
       <button onclick="invioEmailApp()" class="d-btn db-app"><i class="fas fa-paper-plane"></i> EMAIL (APP)</button>
 
-      <!-- NUOVO: copia testo email -->
+      <!-- Copia testo -->
       <button onclick="copiaTestoEmail()" class="d-btn db-copy"><i class="fas fa-copy"></i> COPIA TESTO</button>
 
       <button onclick="cancellaMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
@@ -243,21 +238,30 @@
         "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
-    // 2) Anteprima + reset SOLO per foto agente
+    // 2) Anteprima + reset SOLO foto agente (1:1)
     function cambiaFotoAnteprima(input, id, isAgentPhoto) {
       if (input.files && input.files[0]) {
         var reader = new FileReader();
         reader.onload = function(e){
           var el = document.getElementById(id);
-          el.src = e.target.result;
 
+          // reset immediato per evitare effetto "gigante"
           if (isAgentPhoto) {
             document.getElementById('valX').value = 0;
             document.getElementById('valY').value = 0;
             document.getElementById('valZ').value = 1;
+
+            // Applico subito un transform pulito 1:1
+            el.style.transform = "translate(-50%, -50%) translate(0%, 0%) scale(1)";
           }
 
-          setTimeout(function(){ aggiornaCrop(); }, 30);
+          // quando la nuova immagine è caricata davvero, applico crop
+          el.onload = function() {
+            aggiornaCrop();
+            el.onload = null;
+          };
+
+          el.src = e.target.result;
         };
         reader.readAsDataURL(input.files[0]);
       }
@@ -304,7 +308,6 @@
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
-    // Costruisce oggetto + corpo sempre uguali
     function buildEmailPayload() {
       var nomeInput = document.getElementById('inputNomeAgente').value;
       var nome = nomeInput ? nomeInput : "Agente Pay4You";
@@ -319,41 +322,37 @@
       return { subject: ogg, body: corpo };
     }
 
-    // EMAIL (Gmail web come ora: NON cambiamo)
+    // Gmail web (come prima)
     function invioEmail() {
       if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var p = buildEmailPayload();
 
-      // Desktop: Gmail compose (come già ti funziona)
       var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
                      "&su=" + encodeURIComponent(p.subject) +
                      "&body=" + encodeURIComponent(p.body);
       window.open(gmailUrl, "_blank");
     }
 
-    // EMAIL (APP): mailto per Thunderbird/Outlook/Apple Mail
+    // mailto per app email (Thunderbird/Outlook/Apple Mail)
     function invioEmailApp() {
       if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var p = buildEmailPayload();
 
       var mailto = "mailto:?subject=" + encodeURIComponent(p.subject) +
                    "&body=" + encodeURIComponent(p.body);
-
       window.location.href = mailto;
     }
 
-    // COPIA TESTO EMAIL (per Aruba webmail o qualsiasi client)
+    // Copia testo email
     async function copiaTestoEmail() {
       if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var p = buildEmailPayload();
-
       var testo = "OGGETTO:\n" + p.subject + "\n\nTESTO:\n" + p.body;
 
       try {
         await navigator.clipboard.writeText(testo);
         alert("Testo email copiato ✅\nOra incollalo dove vuoi (Gmail/Aruba/Thunderbird).");
       } catch (e) {
-        // Fallback per browser vecchi
         var ta = document.createElement("textarea");
         ta.value = testo;
         ta.style.position = "fixed";
