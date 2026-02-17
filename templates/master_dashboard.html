@@ -6,63 +6,30 @@
   <title>Master Admin | Pay4You</title>
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    /* ===== FIX COMPATTEZZA (senza toccare style.css) ===== */
-    .wrap{ max-width:1200px; margin:0 auto; padding:12px; }
-
+    .wrap{ max-width:1200px; margin:0 auto; padding:18px; }
     .box{
       background:rgba(255,255,255,.03);
       border:1px solid rgba(255,255,255,.10);
       border-radius:18px;
-      padding:12px;
-      margin-bottom:12px;
+      padding:16px;
+      margin-bottom:14px;
     }
-
-    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-    .title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:0; font-size:16px; }
-
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-
-    /* override input-rect SOLO qui (per non avere mega input) */
-    .wrap .input-rect{
-      padding:10px 12px !important;
-      height:44px !important;
-      border-radius:12px !important;
-      font-size:14px !important;
-    }
-
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:0; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn{
       display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 14px; border-radius:12px;
+      padding:10px 14px; border-radius:14px;
       font-weight:900; cursor:pointer; text-decoration:none;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.06); color:#fff;
-      height:44px;
-      white-space:nowrap;
     }
     .btn-primary{ background:linear-gradient(90deg,#0088cc,#00ffc8); color:#000; border:none; }
     .btn-danger{ background:#c70000; border:none; }
-
-    /* form in griglia (più ordinato e basso) */
-    .create-grid{
-      display:grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1.2fr auto;
-      gap:10px;
-      margin-top:10px;
-      align-items:center;
-    }
-    .create-grid .btn{ height:44px; padding:0 18px; }
-
-    @media (max-width: 980px){
-      .create-grid{ grid-template-columns: 1fr 1fr; }
-      .create-grid .btn{ grid-column: span 2; }
-    }
-
-    /* tabella più compatta */
     table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:middle; }
-    th{ color:#aaa; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+    th,td{ padding:12px 10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:middle; }
+    th{ color:#aaa; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
     .small{ color:#aaa; font-size:12px; margin-top:6px; }
-
     .pill{
       display:inline-flex; align-items:center; justify-content:center;
       width:44px; height:36px;
@@ -76,7 +43,6 @@
     .em{ background:#fff; color:#000; border:none; }
     .qr{ background:#f5a300; color:#000; border:none; }
 
-    /* MODAL */
     .modal-overlay{
       display:none;
       position:fixed; inset:0;
@@ -108,18 +74,17 @@
 
 <body>
   <div class="wrap">
-
     <div class="box">
       <div class="topbar">
         <h2 class="title">➕ Nuovo Cliente</h2>
         <a class="btn btn-danger" href="/master/logout">Esci</a>
       </div>
 
-      <form class="create-grid" method="POST" action="/master/add">
-        <input class="input-rect" name="slug" placeholder="Slug (es. mario)">
-        <input class="input-rect" name="username" placeholder="User">
-        <input class="input-rect" name="password" placeholder="Pass (vuoto=auto)">
-        <input class="input-rect" name="nome" placeholder="Nome">
+      <form class="row" method="POST" action="/master/add" style="margin-top:12px;">
+        <input class="input-rect" name="slug" placeholder="Slug (es. mario)" style="flex:1; min-width:220px;">
+        <input class="input-rect" name="username" placeholder="User" style="flex:1; min-width:180px;">
+        <input class="input-rect" name="password" placeholder="Pass (vuoto=auto)" style="flex:1; min-width:200px;">
+        <input class="input-rect" name="nome" placeholder="Nome" style="flex:1; min-width:200px;">
         <button class="btn btn-primary" type="submit">CREA</button>
       </form>
     </div>
@@ -140,8 +105,10 @@
           {% for c in clienti %}
           <tr>
             <td>
-              <div style="font-weight:900; font-size:15px;">{{ c.nome }}</div>
-              <div style="color:#00ffc8; font-weight:900;">/card/{{ c.slug }}</div>
+              <div style="font-weight:900; font-size:16px;">{{ c.nome }}</div>
+              <div style="color:#00ffc8; font-weight:900;">
+                <a href="/card/{{ c.slug }}" target="_blank" style="color:#00ffc8; text-decoration:none;">/card/{{ c.slug }}</a>
+              </div>
               <div class="small">slug: {{ c.slug }}</div>
             </td>
 
@@ -156,7 +123,7 @@
                 <div class="pill em" onclick="sendEmailCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">@</div>
                 <div class="pill qr" onclick="openQR('{{ c.slug|e }}','{{ c.username|e }}','{{ c.password|e }}')">QR</div>
               </div>
-              <div class="small">✅ Email: testo completo (no vuoto)</div>
+              <div class="small">✅ Email: testo completo</div>
             </td>
 
             <td style="text-align:right;">
@@ -172,7 +139,6 @@
         </tbody>
       </table>
     </div>
-
   </div>
 
   <!-- MODAL QR -->
@@ -183,7 +149,7 @@
       <div class="small" id="qrInfo"></div>
     </div>
     <div class="modal-actions">
-      <div class="act act-wa" onclick="modalWA()">🟢</div>
+      <div class="act act-wa act-wa" onclick="modalWA()">🟢</div>
       <div class="act act-em" onclick="modalEmail()">✉️</div>
       <div class="act act-cl" onclick="closeQR()">✖</div>
     </div>
@@ -241,7 +207,7 @@
       const url = window.location.origin + "/card/" + slug;
       document.getElementById("qrBox").innerHTML =
         '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) +
-        '" style="background:white; padding:14px; border-radius:18px;">';
+        '" style="background:white; padding:14px; border-radius:18px; width:260px; height:260px;">';
 
       document.getElementById("qrInfo").innerText =
         "User: " + u + "  |  Pass: " + p;
