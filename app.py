@@ -397,8 +397,19 @@ def master_delete(id): save_db([c for c in load_db() if c.get('id') != id]); ret
 def master_impersonate(id): session['logged_in'] = True; session['user_id'] = id; return redirect(url_for('area'))
 @app.route('/master/logout')
 def master_logout(): session.pop('is_master', None); return redirect(url_for('master_login'))
+
+# === LOGOUT INTELLIGENTE ===
 @app.route('/area/logout')
-def logout(): session.clear(); return redirect(url_for('login'))
+def logout():
+    # Se è Master che sta impersonando, torna alla dashboard master
+    if session.get('is_master'):
+        session.pop('user_id', None)
+        return redirect(url_for('master_login'))
+    
+    # Se è un cliente normale, esce del tutto
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename): return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/favicon.ico')
