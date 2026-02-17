@@ -98,7 +98,9 @@
       </div>
     </div>
 
-    <!-- CONTATTI -->
+    <!-- =======================
+         CONTATTI (come prima)
+         ======================= -->
     <div class="scene-box">
       <div class="scene-label">CONTATTI</div>
 
@@ -128,7 +130,9 @@
       </div>
     </div>
 
-    <!-- SITI WEB (APRILI IN MODAL TRASPARENTE) -->
+    <!-- =======================
+         SITI WEB (RIPRISTINATO)
+         ======================= -->
     {% if websites and websites|length > 0 %}
     <div class="scene-box">
       <div class="scene-label">SITI WEB</div>
@@ -141,7 +145,7 @@
             {% endif %}
             <div class="d-row">
               <span class="d-icon">🌐</span>
-              <a href="javascript:void(0)" onclick="openSite('{{ ww }}')" class="d-link">{{ ww }}</a>
+              <a href="{{ ww }}" target="_blank" class="d-link">{{ ww }}</a>
             </div>
           {% endif %}
         {% endfor %}
@@ -149,20 +153,24 @@
     </div>
     {% endif %}
 
-    <!-- MAPPE -->
+    <!-- =======================
+         MAPPE / INDIRIZZO
+         ======================= -->
     {% if ag.address %}
     <div class="scene-box">
       <div class="scene-label">MAPPE</div>
       <div class="d-row">
         <span class="d-icon">📍</span>
-        <a href="javascript:void(0)" onclick="openSite('https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}')" class="d-link">
+        <a href="https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}" target="_blank" class="d-link">
           {{ ag.address }}
         </a>
       </div>
     </div>
     {% endif %}
 
-    <!-- FOTO -->
+    <!-- =======================
+         GALLERY FOTO (RIPRISTINATA)
+         ======================= -->
     {% if p_data.gallery_img and p_data.gallery_img|length > 0 %}
     <div class="scene-box">
       <div class="scene-label">FOTO</div>
@@ -174,7 +182,9 @@
     </div>
     {% endif %}
 
-    <!-- VIDEO -->
+    <!-- =======================
+         VIDEO (RIPRISTINATI)
+         ======================= -->
     {% if p_data.gallery_vid and p_data.gallery_vid|length > 0 %}
     <div class="scene-box">
       <div class="scene-label">VIDEO</div>
@@ -189,13 +199,15 @@
     </div>
     {% endif %}
 
-    <!-- PDF -->
+    <!-- =======================
+         PDF (RIPRISTINATI)
+         ======================= -->
     {% if p_data.gallery_pdf and p_data.gallery_pdf|length > 0 %}
     <div class="scene-box">
       <div class="scene-label">PDF</div>
       <div class="pdf-grid">
         {% for pdf in p_data.gallery_pdf %}
-          <div class="pdf-item" onclick="openShare('pdf','{{ pdf.path }}','{{ pdf.name|e }}')">
+          <div class="pdf-item" onclick="openShare('pdf','{{ pdf.path }}')">
             <span><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}</span>
             <span style="opacity:.8;"><i class="fas fa-share-nodes"></i></span>
           </div>
@@ -204,6 +216,7 @@
     </div>
     {% endif %}
 
+    <!-- FOOTER (RIPRISTINATO) -->
     <div class="footer" onclick="openShare('qr','')">
       Card Digitale Pay4You • Tocca qui per condividere il QR
     </div>
@@ -218,8 +231,8 @@
       </div>
     </div>
 
-    <!-- WEB MODAL TRASPARENTE -->
-    <div id="webModal" class="modal-overlay modal-web">
+    <!-- WEB MODAL (se vuoi aprire PDF/link dentro) -->
+    <div id="webModal" class="modal-overlay">
       <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
       <iframe id="webFrame" class="web-frame"></iframe>
     </div>
@@ -227,7 +240,7 @@
   </div>
 
   <script>
-    // TAP SOLO SE tap-flip
+    // ✅ TAP SOLO SE tap-flip (mirror/spin NON devono toggle)
     (function(){
       const box = document.getElementById('flipBox');
       if(!box) return;
@@ -239,8 +252,6 @@
     })();
 
     let LAST_SHARE_URL = "";
-    let LAST_SHARE_TYPE = "";
-    let LAST_SHARE_NAME = "";
 
     function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
@@ -248,89 +259,15 @@
              "&body=" + encodeURIComponent(b);
     }
 
-    function buildEmailText(type, url, name){
-      const who = "{{ ag.name|e }}";
-      const company = "{{ (ag.company or '')|e }}";
-      const head = company ? (who + " • " + company) : who;
-
-      if(type === "qr"){
-        return {
-          subject: "Pay4You - Card Digitale",
-          body:
-            "Ciao!\n\n" +
-            "Ti condivido la mia Card Digitale Pay4You.\n" +
-            "Apri questo link:\n" + url + "\n\n" +
-            "Da lì puoi:\n" +
-            "• salvare il contatto\n" +
-            "• vedere foto/video/PDF\n" +
-            "• contattarmi subito\n\n" +
-            head + "\n" +
-            "— Inviato da Pay4You"
-        };
-      }
-
-      if(type === "img"){
-        return {
-          subject: "Pay4You - Foto dalla Card",
-          body:
-            "Ciao!\n\n" +
-            "Ti condivido una FOTO dalla mia Card Pay4You.\n" +
-            "Link diretto:\n" + url + "\n\n" +
-            "Se non si apre, copia e incolla il link nel browser.\n\n" +
-            head + "\n" +
-            "— Inviato da Pay4You"
-        };
-      }
-
-      if(type === "vid"){
-        return {
-          subject: "Pay4You - Video dalla Card",
-          body:
-            "Ciao!\n\n" +
-            "Ti condivido un VIDEO dalla mia Card Pay4You.\n" +
-            "Link diretto:\n" + url + "\n\n" +
-            "Se non si apre, copia e incolla il link nel browser.\n\n" +
-            head + "\n" +
-            "— Inviato da Pay4You"
-        };
-      }
-
-      if(type === "pdf"){
-        const n = name ? ("\"" + name + "\"") : "un PDF";
-        return {
-          subject: "Pay4You - PDF dalla Card",
-          body:
-            "Ciao!\n\n" +
-            "Ti condivido " + n + " dalla mia Card Pay4You.\n" +
-            "Link diretto:\n" + url + "\n\n" +
-            "Se non si apre, copia e incolla il link nel browser.\n\n" +
-            head + "\n" +
-            "— Inviato da Pay4You"
-        };
-      }
-
-      // fallback
-      return {
-        subject: "Pay4You - Condivisione",
-        body:
-          "Ciao!\n\n" +
-          "Ti condivido questo link dalla Card Pay4You:\n" + url + "\n\n" +
-          head + "\n" +
-          "— Inviato da Pay4You"
-      };
-    }
-
-    function openShare(type, url, name) {
+    function openShare(type, url) {
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
-
       LAST_SHARE_URL = fullUrl;
-      LAST_SHARE_TYPE = type || "";
-      LAST_SHARE_NAME = name || "";
 
       document.getElementById('waLink').href =
         "https://wa.me/?text=" + encodeURIComponent("Pay4You: " + fullUrl);
 
+      // contenuto modal
       if(type==='qr'){
         box.innerHTML = '<img class="modal-content" src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='
           + encodeURIComponent(fullUrl)
@@ -346,28 +283,26 @@
       document.getElementById('shareModal').style.display = 'flex';
     }
 
-    // EMAIL: testo sempre presente e completo
+    // ✅ FIX EMAIL: uso window.location (iPhone non perde il testo)
     function sendEmailFromModal(){
-      const pack = buildEmailText(LAST_SHARE_TYPE, (LAST_SHARE_URL || window.location.href), LAST_SHARE_NAME);
-      window.location.href = makeMailto(pack.subject, pack.body);
+      const subject = "Pay4You - Condivisione";
+      const body = "Link:\n" + (LAST_SHARE_URL || window.location.href);
+      window.location.href = makeMailto(subject, body);
     }
 
     function closeModal(){
       document.getElementById('shareModal').style.display='none';
       document.getElementById('mediaBox').innerHTML="";
       LAST_SHARE_URL = "";
-      LAST_SHARE_TYPE = "";
-      LAST_SHARE_NAME = "";
     }
 
-    // WEB MODAL (finestra trasparente con chiudi)
     function openSite(url){
-      document.getElementById('webFrame').src = url;
-      document.getElementById('webModal').style.display = 'flex';
+      document.getElementById('webFrame').src=url;
+      document.getElementById('webModal').style.display='flex';
     }
     function closeWeb(){
-      document.getElementById('webModal').style.display = 'none';
-      document.getElementById('webFrame').src = "";
+      document.getElementById('webModal').style.display='none';
+      document.getElementById('webFrame').src="";
     }
 
     function setT(t){
