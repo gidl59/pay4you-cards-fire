@@ -6,97 +6,153 @@
   <title>Dashboard | Pay4You</title>
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
-    .box{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.10);
+    /* =========================
+       FIX QR TROPPO GRANDE (solo dashboard)
+       ========================= */
+    .qr-panel{
+      max-width: 980px;
+      margin: 18px auto;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .qr-grid{
+      display:flex;
+      gap:18px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .qr-box{
+      background:#fff;
+      padding:12px;
       border-radius:18px;
-      padding:16px;
-      margin-bottom:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      max-width: 320px;
     }
-    .title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:0 0 12px; text-align:center; }
-    .row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:12px 16px; border-radius:16px;
-      font-weight:900; cursor:pointer; text-decoration:none;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06); color:#fff;
-      min-width:220px;
+    .qr-box img{
+      width: 240px;   /* <<< QUI il fix */
+      height: 240px;  /* <<< QUI il fix */
+      max-width: 70vw;
+      max-height: 70vw;
+      display:block;
     }
-    .btn-wa{ background:linear-gradient(90deg,#1ea85b,#25D366); color:#000; border:none; }
-    .btn-em{ background:linear-gradient(90deg,#00a3ff,#00ffc8); color:#000; border:none; }
-    .qrbox{ display:flex; justify-content:center; margin-top:10px; }
-    .small{ color:#aaa; font-size:12px; text-align:center; margin-top:8px; }
+    .qr-actions{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width: 260px;
+      align-items:stretch;
+    }
+    .qr-note{
+      margin-top:10px;
+      color:#cfcfcf;
+      font-size:13px;
+      opacity:.9;
+    }
+
+    @media (max-width: 520px){
+      .qr-box img{ width: 210px; height:210px; }
+      .qr-actions{ min-width: 100%; }
+    }
   </style>
 </head>
+
 <body>
+  <div class="dash-head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;">
+    <div style="font-weight:900;color:#fff;">Ciao, {{ user.nome }}</div>
+    <a href="/area/logout" style="color:#ff4444;font-weight:900;text-decoration:none;">Esci</a>
+  </div>
 
-  <div class="wrap">
-    <div class="box">
-      <div class="row" style="justify-content:space-between;">
-        <div style="font-weight:900;">Ciao, {{ user.nome }}</div>
-        <a href="/area/logout" style="color:#ff5555; font-weight:900; text-decoration:none;">Esci</a>
-      </div>
+  <!-- =======================
+       IMPOSTAZIONE CARTA / QR
+       ======================= -->
+  <div class="qr-panel">
+    <div style="text-align:center;color:#00ffc8;font-weight:900;letter-spacing:.08em;margin-bottom:12px;">
+      IMPOSTAZIONE CARTA / QR
     </div>
 
-    <div class="box">
-      <div class="title">IMPOSTAZIONE CARTA / QR</div>
-
-      <div class="qrbox">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data={{ request.url_root.rstrip('/') }}/card/{{ user.slug }}"
-             style="background:white; padding:14px; border-radius:18px;">
-      </div>
-
-      <div class="row" style="margin-top:14px;">
-        <div class="btn btn-wa" onclick="sendWA()">📲 INVIA SU WHATSAPP</div>
-        <div class="btn btn-em" onclick="sendEmail()">✉️ INVIA PER EMAIL</div>
-      </div>
-
-      <div class="small">
-        ✅ L’impostazione carta serve per definire quale profilo viene aperto per primo quando qualcuno usa NFC/QR.
-        In base al profilo selezionato, quello sarà il primo che la persona vede.
-      </div>
+    <!-- BOTTONI PROFILI / MENU -->
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;">
+      <a class="btn" href="/area/set_default/p1" style="text-decoration:none;">PROFILO 1</a>
+      {% if user.p2.active %}<a class="btn" href="/area/set_default/p2" style="text-decoration:none;">PROFILO 2</a>{% endif %}
+      {% if user.p3.active %}<a class="btn" href="/area/set_default/p3" style="text-decoration:none;">PROFILO 3</a>{% endif %}
+      <a class="btn" href="/area/set_default/menu" style="text-decoration:none;">📋 MODALITÀ MENU</a>
     </div>
 
-    <div class="box">
-      <div class="title">GESTIONE PROFILI</div>
+    <div class="qr-grid">
+      <div class="qr-box">
+        <img
+          src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data={{ request.url_root.rstrip('/') }}/card/{{ user.slug }}"
+          alt="QR">
+      </div>
 
-      <div class="row" style="justify-content:space-between;">
+      <div class="qr-actions">
+        <a class="btn btn-primary" href="#" onclick="sendCardWA();return false;" style="text-decoration:none;">
+          📲 INVIA SU WHATSAPP
+        </a>
+        <a class="btn btn-primary" href="#" onclick="sendCardEmail();return false;" style="text-decoration:none;">
+          ✉️ INVIA PER EMAIL
+        </a>
+
+        <div class="qr-note">
+          ✅ L’impostazione carta serve per scegliere quale profilo si apre per primo quando qualcuno usa NFC/QR.
+          In base a quello selezionato, quello sarà il primo profilo che la persona vede.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================
+       GESTIONE PROFILI (qui lasci come già ce l’hai)
+       ======================= -->
+  <div style="max-width:980px;margin:18px auto;padding:0 10px;">
+    <div style="text-align:center;color:#00ffc8;font-weight:900;letter-spacing:.08em;margin:18px 0 10px;">
+      GESTIONE PROFILI
+    </div>
+
+    <!-- Esempio righe profili: mantieni la tua logica e i tuoi bottoni -->
+    <div class="box" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div style="font-weight:900;">P1</div>
-        <div class="row">
-          <a class="btn" style="min-width:180px;" href="/area/edit/1">MODIFICA CARD</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a class="btn" href="/card/{{ user.slug }}?p=p1" target="_blank" style="text-decoration:none;">APRI CARD</a>
+          <a class="btn" href="/area/edit/1" style="text-decoration:none;">MODIFICA CARD</a>
+          <!-- P1 non disattivabile / eliminabile -->
         </div>
       </div>
+    </div>
 
-      <div class="row" style="justify-content:space-between; margin-top:10px;">
-        <div style="font-weight:900;">P2</div>
-        <div class="row">
+    <div class="box" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="font-weight:900;">P2 {% if user.p2.active %}✅{% endif %}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a class="btn" href="/card/{{ user.slug }}?p=p2" target="_blank" style="text-decoration:none;">APRI CARD</a>
+          <a class="btn" href="/area/edit/2" style="text-decoration:none;">MODIFICA CARD</a>
           {% if user.p2.active %}
-            <a class="btn" style="min-width:180px;" href="/card/{{ user.slug }}?p=p2" target="_blank">APRI CARD</a>
-            <a class="btn" style="min-width:180px;" href="/area/edit/2">MODIFICA CARD</a>
-            <a class="btn" style="min-width:180px; background:#c70000; border:none;" href="/area/deactivate/2" onclick="return confirm('Disattivare P2?')">DISATTIVA CARD</a>
+            <a class="btn btn-danger" href="/area/deactivate/2" style="text-decoration:none;" onclick="return confirm('Disattivare P2?')">DISATTIVA CARD</a>
           {% else %}
-            <a class="btn" style="min-width:180px;" href="/area/activate/2">ATTIVA CARD</a>
+            <a class="btn btn-primary" href="/area/activate/2" style="text-decoration:none;">ATTIVA CARD</a>
           {% endif %}
         </div>
       </div>
+    </div>
 
-      <div class="row" style="justify-content:space-between; margin-top:10px;">
-        <div style="font-weight:900;">P3</div>
-        <div class="row">
+    <div class="box" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="font-weight:900;">P3 {% if user.p3.active %}✅{% endif %}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a class="btn" href="/card/{{ user.slug }}?p=p3" target="_blank" style="text-decoration:none;">APRI CARD</a>
+          <a class="btn" href="/area/edit/3" style="text-decoration:none;">MODIFICA CARD</a>
           {% if user.p3.active %}
-            <a class="btn" style="min-width:180px;" href="/card/{{ user.slug }}?p=p3" target="_blank">APRI CARD</a>
-            <a class="btn" style="min-width:180px;" href="/area/edit/3">MODIFICA CARD</a>
-            <a class="btn" style="min-width:180px; background:#c70000; border:none;" href="/area/deactivate/3" onclick="return confirm('Disattivare P3?')">DISATTIVA CARD</a>
+            <a class="btn btn-danger" href="/area/deactivate/3" style="text-decoration:none;" onclick="return confirm('Disattivare P3?')">DISATTIVA CARD</a>
           {% else %}
-            <a class="btn" style="min-width:180px;" href="/area/activate/3">ATTIVA CARD</a>
+            <a class="btn btn-primary" href="/area/activate/3" style="text-decoration:none;">ATTIVA CARD</a>
           {% endif %}
         </div>
-      </div>
-
-      <div class="small">
-        Nota: P1 non è eliminabile.
       </div>
     </div>
   </div>
@@ -107,39 +163,27 @@
       return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
     }
 
-    function sendWA(){
-      const base = window.location.origin;
-      const login = base + "/area/login";
-      const card = base + "/card/{{ user.slug }}";
+    function cardLink(){
+      return window.location.origin + "/card/{{ user.slug }}";
+    }
 
+    function sendCardWA(){
       const txt =
-        "Pay4You - Accesso Dashboard\n\n" +
-        "Login: " + login + "\n" +
-        "User: {{ user.username }}\n" +
-        "Pass: {{ user.password }}\n\n" +
-        "Card: " + card;
-
+        "Pay4You - Link Card\n\n" +
+        "Ecco il link della tua Card:\n" + cardLink() + "\n\n" +
+        "Se hai NFC/QR, questo è il link che verrà aperto.";
       window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
     }
 
-    function sendEmail(){
-      const base = window.location.origin;
-      const login = base + "/area/login";
-      const card = base + "/card/{{ user.slug }}";
-
-      const subject = "Pay4You - Credenziali Accesso";
+    function sendCardEmail(){
+      const subject = "Pay4You - Link Card / QR";
       const body =
         "Ciao!\n\n" +
-        "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
-        "LOGIN: " + login + "\n" +
-        "USER: {{ user.username }}\n" +
-        "PASSWORD: {{ user.password }}\n\n" +
-        "La tua Card:\n" + card + "\n\n" +
+        "Ecco il link della tua Card Pay4You:\n" + cardLink() + "\n\n" +
+        "Nota: questo è il link che si apre quando qualcuno usa NFC/QR.\n\n" +
         "— Pay4You";
-
       window.location.href = makeMailto(subject, body);
     }
   </script>
-
 </body>
 </html>
