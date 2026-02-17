@@ -12,21 +12,38 @@
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
-    
+
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
     input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-    
+
     /* CROP AREA */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
-    .crop-circle-box { 
-        width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; 
-        overflow:hidden; margin:0 auto 15px; position:relative; background:#222; 
+
+    .crop-circle-box {
+      width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8;
+      overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
-    #PREVIEW_IMG_AGENT { 
-        width:100% !important; height:100% !important; 
-        object-fit:cover !important; display:block; 
-        transition: none; /* Toglie ritardi nel movimento */
+
+    /* Stage per crop (stabile su iPhone/Safari) */
+    #AGENT_STAGE{
+      width:100%;
+      height:100%;
+      position:relative;
     }
+
+    #PREVIEW_IMG_AGENT{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:auto;
+      height:auto;
+      min-width:100%;
+      min-height:100%;
+      display:block;
+      transition:none;
+      will-change: transform;
+    }
+
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
     .slider-row label { width:30px; font-size:18px; text-align:center; }
     input[type="range"] { width: 100%; cursor: pointer; }
@@ -36,7 +53,7 @@
     .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
     .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
     .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
-    
+
     .btn-save-float { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
     /* MODALE */
@@ -86,21 +103,32 @@
       <div class="form-grid">
         <div class="crop-area">
           <label style="color:#00ffc8;">FOTO AGENTE</label>
+
           <div class="crop-circle-box">
-            <img id="PREVIEW_IMG_AGENT" 
-                 src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
-                 style="object-position: {{ p.pos_x|int }}% {{ p.pos_y|int }}%; transform: scale({{ p.zoom|float }});">
+            <div id="AGENT_STAGE">
+              <img
+                id="PREVIEW_IMG_AGENT"
+                src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
+                data-x="{{ p.pos_x|int }}"
+                data-y="{{ p.pos_y|int }}"
+                data-z="{{ p.zoom|float }}"
+                alt="Foto Agente"
+              >
+            </div>
           </div>
+
           <input type="file" name="foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREVIEW_IMG_AGENT')">
 
           <div style="margin-top:20px;">
             <div class="slider-row">
               <label>↔️</label>
-              <input type="range" id="valX" name="pos_x" min="0" max="100" value="{{ p.pos_x|int }}" oninput="aggiornaCrop()">
+              <!-- X: -50..50 (molto più naturale e stabile) -->
+              <input type="range" id="valX" name="pos_x" min="-50" max="50" value="{{ p.pos_x|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>↕️</label>
-              <input type="range" id="valY" name="pos_y" min="0" max="100" value="{{ p.pos_y|int }}" oninput="aggiornaCrop()">
+              <!-- Y: -50..50 -->
+              <input type="range" id="valY" name="pos_y" min="-50" max="50" value="{{ p.pos_y|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>🔍</label>
@@ -188,97 +216,120 @@
   </div>
 
   <script>
-    // 1. CROP FUNZIONANTE
+    // 1) CROP STABILE (Safari/iPhone) con translate + scale
     function aggiornaCrop() {
-        var x = document.getElementById('valX').value;
-        var y = document.getElementById('valY').value;
-        var z = document.getElementById('valZ').value;
-        var img = document.getElementById('PREVIEW_IMG_AGENT');
-        
-        img.style.objectPosition = x + "% " + y + "%";
-        img.style.transform = "scale(" + z + ")";
+      var x = parseInt(document.getElementById('valX').value || "0", 10);
+      var y = parseInt(document.getElementById('valY').value || "0", 10);
+      var z = parseFloat(document.getElementById('valZ').value || "1");
+
+      var img = document.getElementById('PREVIEW_IMG_AGENT');
+
+      // Salvo valori anche nei dataset (utile)
+      img.dataset.x = x;
+      img.dataset.y = y;
+      img.dataset.z = z;
+
+      // Crop: centro + spostamento + zoom
+      img.style.transform =
+        "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
     function cambiaFotoAnteprima(input, id) {
-        if(input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e){ document.getElementById(id).src = e.target.result; };
-            reader.readAsDataURL(input.files[0]);
-        }
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e){
+          var el = document.getElementById(id);
+          el.src = e.target.result;
+
+          // quando cambia immagine, riapplico crop subito
+          setTimeout(function(){ aggiornaCrop(); }, 30);
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
     }
 
-    // 2. GESTIONE EFFETTI (Mutuamente Esclusivi)
-    // Se clicchi "Gira Foto" -> Spegne "Moneta"
-    // Se clicchi "Moneta" -> Spegne "Gira Foto"
+    // 2) EFFETTI (mutuamente esclusivi)
     function gestisciEffetti(azione) {
-        var checkGira = document.getElementById('checkGira');
-        var radTap = document.getElementById('radTap');
-        var radMirror = document.getElementById('radMirror');
+      var checkGira = document.getElementById('checkGira');
+      var radTap = document.getElementById('radTap');
+      var radMirror = document.getElementById('radMirror');
 
-        if (azione === 'gira') {
-            if (checkGira.checked) {
-                // Se attivo Gira, disattivo i radio moneta
-                radTap.checked = false;
-                radMirror.checked = false;
-            }
-        } else if (azione === 'moneta') {
-            // Se attivo Moneta, disattivo Gira
-            checkGira.checked = false;
+      if (azione === 'gira') {
+        if (checkGira.checked) {
+          radTap.checked = false;
+          radMirror.checked = false;
         }
+      } else if (azione === 'moneta') {
+        checkGira.checked = false;
+      }
     }
 
-    // 3. EMAIL CON TESTO (FIX: Legge il nome dall'input visibile, non dal server)
+    // 3) MODALE + INVIO
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
     function apriMedia(url, type, el) {
-        ELEMENTO_ATTUALE = el;
-        FILE_ATTUALE.url = window.location.origin + url;
-        FILE_ATTUALE.type = type;
-        var viewer = document.getElementById('modalViewer');
-        viewer.innerHTML = "";
-        if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
-        else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-        else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
-        document.getElementById('modalDash').style.display = 'flex';
+      ELEMENTO_ATTUALE = el;
+      FILE_ATTUALE.url = window.location.origin + url;
+      FILE_ATTUALE.type = type;
+      var viewer = document.getElementById('modalViewer');
+      viewer.innerHTML = "";
+
+      if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
+      else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
+      else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
+
+      document.getElementById('modalDash').style.display = 'flex';
     }
 
     function invioWA() {
-        var msg = "Pay4You - Ecco un file per te:\n" + FILE_ATTUALE.url;
-        window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+      var msg = "Pay4You - Ecco un file per te:\n" + FILE_ATTUALE.url;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
+    // EMAIL CON TESTO (CRLF corretti)
     function invioEmail() {
-        // PRENDIAMO IL NOME DIRETTAMENTE DALLA CASELLA INPUT
-        // Questo risolve i problemi di caratteri speciali o cache
-        var nomeInput = document.getElementById('inputNomeAgente').value;
-        var nome = nomeInput ? nomeInput : "Agente Pay4You";
-        
-        var ogg = "Condivisione file da Card Pay4You";
-        var corpo = "Ciao!\nTi invio un contenuto dalla mia Card Digitale Pay4You.\n\nLink al file:\n" + FILE_ATTUALE.url + "\n\nInviato da: " + nome;
-        
-        window.location.href = "mailto:?subject=" + encodeURIComponent(ogg) + "&body=" + encodeURIComponent(corpo).replace(/%0A/g, "%0D%0A");
+      var nomeInput = document.getElementById('inputNomeAgente').value;
+      var nome = nomeInput ? nomeInput : "Agente Pay4You";
+
+      var ogg = "Condivisione file da Card Pay4You";
+
+      var corpo =
+        "Ciao!\r\n" +
+        "Ti invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\n" +
+        "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" +
+        "Inviato da: " + nome + "\r\n";
+
+      window.location.href =
+        "mailto:?subject=" + encodeURIComponent(ogg) +
+        "&body=" + encodeURIComponent(corpo);
     }
 
     function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
+
     function cancellaMedia() {
-        if(confirm("Eliminare?")) {
-            var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
-            if(chk) chk.checked = true;
-            ELEMENTO_ATTUALE.style.display = 'none';
-            chiudiMedia();
-        }
+      if(confirm("Eliminare?")) {
+        var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
+        if(chk) chk.checked = true;
+        ELEMENTO_ATTUALE.style.display = 'none';
+        chiudiMedia();
+      }
     }
 
     window.onload = function() {
-        aggiornaCrop();
-        // Controllo iniziale per coerenza visiva
-        var checkGira = document.getElementById('checkGira');
-        if(checkGira.checked) {
-             document.getElementById('radTap').checked = false;
-             document.getElementById('radMirror').checked = false;
-        }
-        document.getElementById('formModifica').onsubmit = function(){ document.getElementById('btnSalva').innerText="⏳ SALVATAGGIO..."; };
+      // Applica crop iniziale dai valori server
+      aggiornaCrop();
+
+      // Coerenza effetti
+      var checkGira = document.getElementById('checkGira');
+      if(checkGira && checkGira.checked) {
+        document.getElementById('radTap').checked = false;
+        document.getElementById('radMirror').checked = false;
+      }
+
+      document.getElementById('formModifica').onsubmit = function(){
+        document.getElementById('btnSalva').innerText="⏳ SALVATAGGIO...";
+      };
     };
   </script>
 </body>
