@@ -1,38 +1,31 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
     <meta charset="UTF-8">
-    <title>Master Admin | Pay4You</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Master Login</title>
     <style>
-        /* Stile specifico per distinguere l'admin dal cliente */
-        .master-bg { background: radial-gradient(#330000, #000); } /* Rosso scuro */
-        .btn-master { background: linear-gradient(90deg, #ff4444, #cc0000); color: white; border: none; }
+        body { background:#050505; color:white; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+        form { background:#111; padding:40px; border-radius:15px; border:1px solid #333; text-align:center; width: 300px; }
+        h2 { color:#00ffc8; margin-top:0; }
+        input { 
+            display:block; width:100%; padding:15px; margin-bottom:15px; 
+            background:#222; border:1px solid #444; color:white; border-radius:5px; box-sizing: border-box;
+        }
+        button { 
+            width:100%; padding:15px; background:#00ffc8; color:black; 
+            border:none; font-weight:bold; cursor:pointer; border-radius:5px; font-size:16px; 
+        }
+        button:hover { background:#00cc99; }
     </style>
 </head>
 <body>
-    <div class="login-wrap master-bg">
-        <img src="/static/pay4you-logo.png" class="logo-login">
+    <form method="POST">
+        <h2>MASTER ACCESS 🔒</h2>
         
-        <div class="login-box" style="border-color:#ff4444;">
-            <h2 style="color:#ff4444; margin-top:0;">MASTER ADMIN</h2>
-            <p style="color:#aaa; font-size:12px;">Accesso consentito solo all'amministratore</p>
-            
-            {% if error %}
-                <div style="color:#ff4444; padding:10px; border:1px solid red; margin-bottom:10px;">{{ error }}</div>
-            {% endif %}
-
-            <form method="POST" action="/master">
-                <input type="text" name="username" class="input-rect" placeholder="Master User" required>
-                <input type="password" name="password" class="input-rect" placeholder="Master Password" required>
-                <button type="submit" class="btn-login btn-master">ENTRA NEL SISTEMA</button>
-            </form>
-        </div>
+        <input type="text" name="username" placeholder="Username" required autofocus>
         
-        <div style="margin-top:20px;">
-            <a href="/area/login" style="color:#666; font-size:12px;">← Vai al login clienti</a>
-        </div>
-    </div>
+        <input type="password" name="password" placeholder="Password" required>
+        <button>ENTRA</button>
+    </form>
 </body>
 </html>
