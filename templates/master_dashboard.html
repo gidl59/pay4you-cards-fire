@@ -128,11 +128,7 @@
 
             <td style="text-align:right;">
               <a class="btn" href="/master/impersonate/{{ c.id }}">Gestisci</a>
-              {% if c.id != 1 %}
-                <a class="btn btn-danger" href="/master/delete/{{ c.id }}" onclick="return confirm('Confermi ELIMINA questo cliente?')">ELIMINA</a>
-              {% else %}
-                <span class="small">P1 non eliminabile</span>
-              {% endif %}
+              <a class="btn btn-danger" href="/master/delete/{{ c.id }}" onclick="return confirm('Confermi ELIMINA questo cliente?')">ELIMINA</a>
             </td>
           </tr>
           {% endfor %}
@@ -141,7 +137,6 @@
     </div>
   </div>
 
-  <!-- MODAL QR -->
   <div id="qrModal" class="modal-overlay">
     <div class="modal-card">
       <div style="font-weight:900; color:#00ffc8; letter-spacing:.06em;">QR + INVIO CREDENZIALI</div>
