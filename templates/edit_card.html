@@ -24,7 +24,6 @@
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
-    /* Stage per crop (stabile su iPhone/Safari) */
     #AGENT_STAGE{
       width:100%;
       height:100%;
@@ -117,17 +116,15 @@
             </div>
           </div>
 
-          <input type="file" name="foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREVIEW_IMG_AGENT')">
+          <input type="file" name="foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREVIEW_IMG_AGENT', true)">
 
           <div style="margin-top:20px;">
             <div class="slider-row">
               <label>↔️</label>
-              <!-- X: -50..50 (molto più naturale e stabile) -->
               <input type="range" id="valX" name="pos_x" min="-50" max="50" value="{{ p.pos_x|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>↕️</label>
-              <!-- Y: -50..50 -->
               <input type="range" id="valY" name="pos_y" min="-50" max="50" value="{{ p.pos_y|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
@@ -145,12 +142,12 @@
         <div class="crop-area">
           <label style="color:#00ffc8;">LOGO</label>
           <img id="PREV_LOGO" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="logo" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_LOGO')">
+          <input type="file" name="logo" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_LOGO', false)">
           <label>Gira Logo?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
           <hr style="border-color:#333; margin:20px 0;">
           <label>FOTO RETRO</label>
           <img id="PREV_RETRO" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="personal_foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_RETRO')">
+          <input type="file" name="personal_foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_RETRO', false)">
         </div>
       </div>
 
@@ -216,39 +213,43 @@
   </div>
 
   <script>
-    // 1) CROP STABILE (Safari/iPhone) con translate + scale
+    // Crop stabile
     function aggiornaCrop() {
       var x = parseInt(document.getElementById('valX').value || "0", 10);
       var y = parseInt(document.getElementById('valY').value || "0", 10);
       var z = parseFloat(document.getElementById('valZ').value || "1");
 
       var img = document.getElementById('PREVIEW_IMG_AGENT');
-
-      // Salvo valori anche nei dataset (utile)
       img.dataset.x = x;
       img.dataset.y = y;
       img.dataset.z = z;
 
-      // Crop: centro + spostamento + zoom
       img.style.transform =
         "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
-    function cambiaFotoAnteprima(input, id) {
+    // Caricamento anteprima + RESET (solo per foto agente)
+    function cambiaFotoAnteprima(input, id, isAgentPhoto) {
       if (input.files && input.files[0]) {
         var reader = new FileReader();
         reader.onload = function(e){
           var el = document.getElementById(id);
           el.src = e.target.result;
 
-          // quando cambia immagine, riapplico crop subito
+          // Reset crop solo quando carichi la FOTO AGENTE
+          if (isAgentPhoto) {
+            document.getElementById('valX').value = 0;
+            document.getElementById('valY').value = 0;
+            document.getElementById('valZ').value = 1;
+          }
+
           setTimeout(function(){ aggiornaCrop(); }, 30);
         };
         reader.readAsDataURL(input.files[0]);
       }
     }
 
-    // 2) EFFETTI (mutuamente esclusivi)
+    // Effetti
     function gestisciEffetti(azione) {
       var checkGira = document.getElementById('checkGira');
       var radTap = document.getElementById('radTap');
@@ -264,7 +265,7 @@
       }
     }
 
-    // 3) MODALE + INVIO
+    // Modale + invio
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
@@ -272,6 +273,7 @@
       ELEMENTO_ATTUALE = el;
       FILE_ATTUALE.url = window.location.origin + url;
       FILE_ATTUALE.type = type;
+
       var viewer = document.getElementById('modalViewer');
       viewer.innerHTML = "";
 
@@ -283,15 +285,17 @@
     }
 
     function invioWA() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var msg = "Pay4You - Ecco un file per te:\n" + FILE_ATTUALE.url;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
-    // EMAIL CON TESTO (CRLF corretti)
+    // Gmail web spesso ignora mailto body: usiamo compose su desktop
     function invioEmail() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+
       var nomeInput = document.getElementById('inputNomeAgente').value;
       var nome = nomeInput ? nomeInput : "Agente Pay4You";
-
       var ogg = "Condivisione file da Card Pay4You";
 
       var corpo =
@@ -300,9 +304,22 @@
         "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" +
         "Inviato da: " + nome + "\r\n";
 
-      window.location.href =
-        "mailto:?subject=" + encodeURIComponent(ogg) +
-        "&body=" + encodeURIComponent(corpo);
+      var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // Desktop: prova Gmail compose (molto più affidabile)
+      if (!isMobile) {
+        var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
+                       "&su=" + encodeURIComponent(ogg) +
+                       "&body=" + encodeURIComponent(corpo);
+        window.open(gmailUrl, "_blank");
+        return;
+      }
+
+      // Mobile: mailto va bene (apre app mail)
+      var mailto = "mailto:?subject=" + encodeURIComponent(ogg) +
+                   "&body=" + encodeURIComponent(corpo);
+
+      window.open(mailto, "_self");
     }
 
     function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
@@ -317,10 +334,8 @@
     }
 
     window.onload = function() {
-      // Applica crop iniziale dai valori server
       aggiornaCrop();
 
-      // Coerenza effetti
       var checkGira = document.getElementById('checkGira');
       if(checkGira && checkGira.checked) {
         document.getElementById('radTap').checked = false;
