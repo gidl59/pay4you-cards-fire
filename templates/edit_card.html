@@ -12,38 +12,56 @@
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
+
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
     input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-    
-    /* AREA CROP */
+
+    /* CROP AREA */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
-    .crop-circle-box { 
-        width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; 
-        overflow:hidden; margin:0 auto 15px; position:relative; background:#222; 
+    .crop-circle-box {
+      width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8;
+      overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
-    #FINAL_IMG_AGENT { 
-        width:100% !important; height:100% !important; 
-        object-fit:cover !important; display:block; 
-        transition: none !important; 
+
+    /* Stage per crop */
+    #AGENT_STAGE{ width:100%; height:100%; position:relative; }
+
+    #PREVIEW_IMG_AGENT{
+      position:absolute;
+      left:50%;
+      top:50%;
+      /* MODIFICA FONDAMENTALE: Forza l'immagine a stare nel box 160x160 di base */
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      display:block;
+      transition:none;
+      will-change: transform;
     }
+
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
     .slider-row label { width:30px; font-size:18px; text-align:center; }
     input[type="range"] { width: 100%; cursor: pointer; }
 
-    /* MEDIA */
+    /* MEDIA GALLERY */
     .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
     .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
     .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
-    
+
     .btn-save-float { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
     /* MODALE */
     .dash-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
     .dash-modal-content { max-width:90%; max-height:75vh; border-radius:10px; margin-bottom:15px; }
-    .dash-actions { display:flex; gap:15px; }
-    .d-btn { padding:12px 24px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
-    .db-wa { background:#25D366; color:#041b0c; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; }
+    .dash-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+    .d-btn { padding:12px 18px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
+    .db-wa { background:#25D366; color:#041b0c; }
+    .db-em { background:#666; }
+    .db-app { background:#444; }
+    .db-copy { background:#00ffc8; color:#00120e; }
+    .db-del { background:#ff4444; }
+    .db-cl { background:#0088cc; }
   </style>
 </head>
 <body>
@@ -58,7 +76,7 @@
     <div class="edit-box">
       <h3 class="box-title">👤 Dati Business</h3>
       <div class="form-grid">
-        <div class="full-width"><label>Nome</label><input type="text" name="name" id="nome_input" value="{{ p.name }}"></div>
+        <div class="full-width"><label>Nome</label><input type="text" name="name" id="inputNomeAgente" value="{{ p.name }}"></div>
         <div><label>Ruolo</label><input type="text" name="role" value="{{ p.role }}"></div>
         <div><label>Azienda</label><input type="text" name="company" value="{{ p.company }}"></div>
         <div><label>P. IVA</label><input type="text" name="piva" value="{{ p.piva }}"></div>
@@ -85,52 +103,61 @@
       <div class="form-grid">
         <div class="crop-area">
           <label style="color:#00ffc8;">FOTO AGENTE</label>
+
           <div class="crop-circle-box">
-            <img id="FINAL_IMG_AGENT" 
-                 src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
-                 style="object-position: {{ p.pos_x|int }}% {{ p.pos_y|int }}%; transform: scale({{ p.zoom|float }});">
+            <div id="AGENT_STAGE">
+              <img
+                id="PREVIEW_IMG_AGENT"
+                src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
+                data-x="{{ p.pos_x|int }}"
+                data-y="{{ p.pos_y|int }}"
+                data-z="{{ p.zoom|float }}"
+                alt="Foto Agente"
+              >
+            </div>
           </div>
-          <input type="file" name="foto" accept="image/*" onchange="loadPreview(this, 'FINAL_IMG_AGENT')">
+
+          <input type="file" name="foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREVIEW_IMG_AGENT', true)">
 
           <div style="margin-top:20px;">
             <div class="slider-row">
               <label>↔️</label>
-              <input type="range" id="axisX" name="pos_x" min="0" max="100" value="{{ p.pos_x|int }}" oninput="updateCropLive()">
+              <input type="range" id="valX" name="pos_x" min="-50" max="50" value="{{ p.pos_x|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>↕️</label>
-              <input type="range" id="axisY" name="pos_y" min="0" max="100" value="{{ p.pos_y|int }}" oninput="updateCropLive()">
+              <input type="range" id="valY" name="pos_y" min="-50" max="50" value="{{ p.pos_y|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>🔍</label>
-              <input type="range" id="axisZ" name="zoom" min="0.1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="updateCropLive()">
+              <input type="range" id="valZ" name="zoom" min="0.5" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="aggiornaCrop()">
             </div>
           </div>
 
           <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
             <label style="display:inline-block; cursor:pointer; color:#00ffc8;"><b>GIRA FOTO AGENTE?</b></label>
-            <input type="checkbox" id="checkGira" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="toggleExclusive('gira')">
+            <input type="checkbox" id="checkGira" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="gestisciEffetti('gira')">
           </div>
         </div>
 
         <div class="crop-area">
           <label style="color:#00ffc8;">LOGO</label>
           <img id="PREV_LOGO" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="logo" accept="image/*" onchange="loadPreview(this, 'PREV_LOGO')">
+          <input type="file" name="logo" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_LOGO', false)">
           <label>Gira Logo?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
           <hr style="border-color:#333; margin:20px 0;">
           <label>FOTO RETRO</label>
           <img id="PREV_RETRO" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="personal_foto" accept="image/*" onchange="loadPreview(this, 'PREV_RETRO')">
+          <input type="file" name="personal_foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_RETRO', false)">
         </div>
       </div>
 
       <div style="margin-top:20px; background:#222; padding:15px; border-radius:15px;">
         <label>EFFETTO MONETA (Se Gira Agente è spento):</label>
         <div style="margin:10px 0;">
-          <input type="radio" name="fx_interaction" value="tap" id="radTap" {% if p.fx_interaction=='tap' %}checked{% endif %} onchange="toggleExclusive('moneta')"> TAP
+          <input type="radio" name="fx_interaction" value="tap" id="radTap" {% if p.fx_interaction=='tap' %}checked{% endif %} onchange="gestisciEffetti('moneta')"> TAP
           <span style="margin:0 10px;"></span>
-          <input type="radio" name="fx_interaction" value="mirror" id="radMirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} onchange="toggleExclusive('moneta')"> SPECCHIO
+          <input type="radio" name="fx_interaction" value="mirror" id="radMirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} onchange="gestisciEffetti('moneta')"> SPECCHIO
         </div>
         <label>RETRO CARD:</label>
         <div style="margin-top:10px;">
@@ -146,7 +173,7 @@
       <input type="file" name="gallery_img" multiple accept="image/*">
       <div class="dash-gallery">
         {% for img in p.gallery_img %}
-        <div class="dash-item" onclick="openMedia('{{ img }}', 'img', this)">
+        <div class="dash-item" onclick="apriMedia('{{ img }}', 'img', this)">
           <img src="{{ img }}"><input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
         </div>
         {% endfor %}
@@ -155,7 +182,7 @@
       <input type="file" name="gallery_vid" multiple accept="video/*">
       <div class="dash-gallery">
         {% for vid in p.gallery_vid %}
-        <div class="dash-item" onclick="openMedia('{{ vid }}', 'vid', this)">
+        <div class="dash-item" onclick="apriMedia('{{ vid }}', 'vid', this)">
           <video src="{{ vid }}#t=2.0"></video>
           <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;">
         </div>
@@ -165,7 +192,7 @@
       <input type="file" name="gallery_pdf" multiple accept=".pdf">
       <div style="margin-top:10px;">
         {% for pdf in p.gallery_pdf %}
-        <div class="pdf-row" onclick="openMedia('{{ pdf.path }}', 'pdf', this)">
+        <div class="pdf-row" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
           <span><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}</span>
           <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;">
         </div>
@@ -177,101 +204,178 @@
   </form>
 
   <div id="modalDash" class="dash-modal">
-    <button onclick="closeMedia()" class="d-btn db-cl" style="margin-bottom:15px;">CHIUDI X</button>
+    <button onclick="chiudiMedia()" class="d-btn db-cl" style="margin-bottom:15px;">CHIUDI X</button>
     <div id="modalViewer"></div>
     <div class="dash-actions">
-      <button onclick="sendWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
-      <button onclick="sendEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
-      <button onclick="delMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
+      <button onclick="invioWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
+      <button onclick="invioEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
+      <button onclick="invioEmailApp()" class="d-btn db-app"><i class="fas fa-paper-plane"></i> EMAIL (APP)</button>
+      <button onclick="copiaTestoEmail()" class="d-btn db-copy"><i class="fas fa-copy"></i> COPIA TESTO</button>
+      <button onclick="cancellaMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
     </div>
   </div>
 
   <script>
-    // 1. CROP FUNZIONANTE (Nuovi nomi ID per evitare cache)
-    function updateCropLive() {
-        var x = document.getElementById('axisX').value;
-        var y = document.getElementById('axisY').value;
-        var z = document.getElementById('axisZ').value;
-        var img = document.getElementById('FINAL_IMG_AGENT');
-        
-        // Applica le coordinate e lo zoom
-        img.style.objectPosition = x + "% " + y + "%";
-        img.style.transform = "scale(" + z + ")";
+    // ---- FIX FOTO GIGANTE: La logica è semplificata ----
+    // Forziamo sempre le dimensioni base a 100% del cerchio.
+    // L'effetto zoom/spostamento avviene tramite TRANSFORM, non tramite width/height.
+    function setAgentFitMode(mode){
+      var img = document.getElementById('PREVIEW_IMG_AGENT');
+      if(!img) return;
+
+      // In ogni caso, base size = 100% del container (160px).
+      // Il "Cover" si ottiene con object-fit: cover
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
     }
 
-    function loadPreview(input, id) {
-        if(input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e){ document.getElementById(id).src = e.target.result; };
-            reader.readAsDataURL(input.files[0]);
+    // 1) CROP FUNZIONANTE
+    function aggiornaCrop() {
+      // Assicura che la base sia corretta
+      setAgentFitMode('cover');
+
+      var x = parseInt(document.getElementById('valX').value || "0", 10);
+      var y = parseInt(document.getElementById('valY').value || "0", 10);
+      var z = parseFloat(document.getElementById('valZ').value || "1");
+
+      var img = document.getElementById('PREVIEW_IMG_AGENT');
+      
+      // Applica trasformazione
+      img.style.transform = "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
+    }
+
+    // 2) Anteprima
+    function cambiaFotoAnteprima(input, id, isAgentPhoto) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e){
+          var el = document.getElementById(id);
+          el.src = e.target.result;
+          
+          if (isAgentPhoto) {
+            // Reset slider per nuova foto
+            document.getElementById('valX').value = 0;
+            document.getElementById('valY').value = 0;
+            document.getElementById('valZ').value = 1; 
+            aggiornaCrop(); // Applica subito il reset
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    // 3) Effetti
+    function gestisciEffetti(azione) {
+      var checkGira = document.getElementById('checkGira');
+      var radTap = document.getElementById('radTap');
+      var radMirror = document.getElementById('radMirror');
+
+      if (azione === 'gira') {
+        if (checkGira.checked) {
+          radTap.checked = false;
+          radMirror.checked = false;
         }
+      } else if (azione === 'moneta') {
+        checkGira.checked = false;
+      }
     }
 
-    // 2. GESTIONE EFFETTI (Uno esclude l'altro)
-    function toggleExclusive(source) {
-        var checkGira = document.getElementById('checkGira');
-        var radTap = document.getElementById('radTap');
-        var radMirror = document.getElementById('radMirror');
+    // 4) Modale + invio (MAIL E TUTTO IL RESTO INVARIATO)
+    var FILE_ATTUALE = { url:"", type:"" };
+    var ELEMENTO_ATTUALE = null;
 
-        if (source === 'gira') {
-            if (checkGira.checked) {
-                radTap.checked = false;
-                radMirror.checked = false;
-            }
-        } else if (source === 'moneta') {
-            checkGira.checked = false;
-        }
+    function apriMedia(url, type, el) {
+      ELEMENTO_ATTUALE = el;
+      FILE_ATTUALE.url = window.location.origin + url;
+      FILE_ATTUALE.type = type;
+
+      var viewer = document.getElementById('modalViewer');
+      viewer.innerHTML = "";
+
+      if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
+      else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
+      else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
+
+      document.getElementById('modalDash').style.display = 'flex';
     }
 
-    // 3. EMAIL FUNZIONANTE (Prende nome da input)
-    var FILE_NOW = { url:"", type:"" };
-    var EL_NOW = null;
-
-    function openMedia(url, type, el) {
-        EL_NOW = el;
-        FILE_NOW.url = window.location.origin + url;
-        FILE_NOW.type = type;
-        var viewer = document.getElementById('modalViewer');
-        viewer.innerHTML = "";
-        if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
-        else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-        else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
-        document.getElementById('modalDash').style.display = 'flex';
+    function invioWA() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var msg = "Pay4You - Ecco un file per te:\n" + FILE_ATTUALE.url;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
-    function sendWA() {
-        var msg = "Pay4You - Ecco un file per te:\n" + FILE_NOW.url;
-        window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+    function buildEmailPayload() {
+      var nomeInput = document.getElementById('inputNomeAgente').value;
+      var nome = nomeInput ? nomeInput : "Agente Pay4You";
+      var ogg = "Condivisione file da Card Pay4You";
+
+      var corpo =
+        "Ciao!\r\n" +
+        "Ti invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\n" +
+        "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" +
+        "Inviato da: " + nome + "\r\n";
+
+      return { subject: ogg, body: corpo };
     }
 
-    function sendEmail() {
-        var nomeInput = document.getElementById('nome_input').value;
-        var nome = nomeInput ? nomeInput : "Agente Pay4You";
-        
-        var ogg = "Condivisione file da Card Pay4You";
-        var corpo = "Ciao!\nTi invio un contenuto dalla mia Card Digitale Pay4You.\n\nLink al file:\n" + FILE_NOW.url + "\n\nInviato da: " + nome;
-        
-        window.location.href = "mailto:?subject=" + encodeURIComponent(ogg) + "&body=" + encodeURIComponent(corpo).replace(/%0A/g, "%0D%0A");
+    function invioEmail() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+      var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
+                     "&su=" + encodeURIComponent(p.subject) +
+                     "&body=" + encodeURIComponent(p.body);
+      window.open(gmailUrl, "_blank");
     }
 
-    function closeMedia() { document.getElementById('modalDash').style.display='none'; }
-    function delMedia() {
-        if(confirm("Eliminare?")) {
-            var chk = EL_NOW.querySelector('input[type="checkbox"]');
-            if(chk) chk.checked = true;
-            EL_NOW.style.display = 'none';
-            closeMedia();
-        }
+    function invioEmailApp() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+      var mailto = "mailto:?subject=" + encodeURIComponent(p.subject) +
+                   "&body=" + encodeURIComponent(p.body);
+      window.location.href = mailto;
+    }
+
+    async function copiaTestoEmail() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+      var testo = "OGGETTO:\n" + p.subject + "\n\nTESTO:\n" + p.body;
+      try {
+        await navigator.clipboard.writeText(testo);
+        alert("Testo email copiato ✅");
+      } catch (e) {
+        var ta = document.createElement("textarea");
+        ta.value = testo;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        alert("Testo email copiato ✅");
+      }
+    }
+
+    function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
+
+    function cancellaMedia() {
+      if(confirm("Eliminare?")) {
+        var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
+        if(chk) chk.checked = true;
+        ELEMENTO_ATTUALE.style.display = 'none';
+        chiudiMedia();
+      }
     }
 
     window.onload = function() {
-        updateCropLive();
-        var checkGira = document.getElementById('checkGira');
-        if(checkGira.checked) {
-             document.getElementById('radTap').checked = false;
-             document.getElementById('radMirror').checked = false;
-        }
-        document.getElementById('formModifica').onsubmit = function(){ document.getElementById('btnSalva').innerText="⏳ SALVATAGGIO..."; };
+      aggiornaCrop();
+      var checkGira = document.getElementById('checkGira');
+      if(checkGira && checkGira.checked) {
+        document.getElementById('radTap').checked = false;
+        document.getElementById('radMirror').checked = false;
+      }
+      document.getElementById('formModifica').onsubmit = function(){
+        document.getElementById('btnSalva').innerText="⏳ SALVATAGGIO...";
+      };
     };
   </script>
 </body>
