@@ -196,7 +196,7 @@
         {% endfor %}
       </div>
       <div class="hint">
-        In anteprima puoi inviare il file via WhatsApp/Email. <b>Fix Email</b>: il testo ora viene sempre inserito.
+        In anteprima puoi inviare il file via WhatsApp/Email. ✅ Ora l’email contiene sempre un testo completo.
       </div>
     </div>
 
@@ -264,6 +264,36 @@
              "&body=" + encodeURIComponent(b);
     }
 
+    function mediaEmailText(type, fullUrl){
+      const name = "{{ p.name|default('', true) }}";
+      const role = "{{ p.role|default('', true) }}";
+      const company = "{{ p.company|default('', true) }}";
+
+      let subject = "Pay4You - File";
+      let body =
+        "Ciao!\n" +
+        "Ti invio un contenuto dalla mia Pay4You Card.\n\n" +
+        (name ? ("Nome: " + name + "\n") : "") +
+        (role ? ("Ruolo: " + role + "\n") : "") +
+        (company ? ("Azienda: " + company + "\n") : "") +
+        "\n";
+
+      if(type === "img"){
+        subject = "Pay4You - Foto";
+        body += "Link foto:\n" + fullUrl + "\n";
+      } else if(type === "vid"){
+        subject = "Pay4You - Video";
+        body += "Link video:\n" + fullUrl + "\n";
+      } else if(type === "pdf"){
+        subject = "Pay4You - Documento";
+        body += "Link documento:\n" + fullUrl + "\n";
+      } else {
+        body += "Link:\n" + fullUrl + "\n";
+      }
+
+      return { subject, body };
+    }
+
     function previewCrop(input){
       if(input.files && input.files[0]){
         const r = new FileReader();
@@ -279,7 +309,6 @@
       }
     }
 
-    // ✅ CROP FIX ROBUSTO
     function updateCrop(){
       const x = parseInt(document.getElementsByName('pos_x')[0].value || "50", 10);
       const y = parseInt(document.getElementsByName('pos_y')[0].value || "50", 10);
@@ -321,15 +350,16 @@
 
     function sendMediaWA(){
       const fullUrl = window.location.origin + CURRENT_MEDIA.url;
-      window.open("https://wa.me/?text=" + encodeURIComponent("Pay4You - File:\n" + fullUrl), "_blank");
+      const label = (CURRENT_MEDIA.type === "img") ? "Foto" :
+                    (CURRENT_MEDIA.type === "vid") ? "Video" :
+                    (CURRENT_MEDIA.type === "pdf") ? "Documento" : "File";
+      window.open("https://wa.me/?text=" + encodeURIComponent("Pay4You - " + label + ":\n" + fullUrl), "_blank");
     }
 
-    // ✅ FIX EMAIL MEDIA: uso window.location e body sempre pieno
     function sendMediaEmail(){
       const fullUrl = window.location.origin + CURRENT_MEDIA.url;
-      const subject = "Pay4You - File";
-      const body = "Ecco il file:\n" + fullUrl;
-      window.location.href = makeMailto(subject, body);
+      const mail = mediaEmailText(CURRENT_MEDIA.type, fullUrl);
+      window.location.href = makeMailto(mail.subject, mail.body);
     }
 
     function closeDashModal(){
@@ -358,7 +388,6 @@
       document.getElementById('btnSave').innerText = "⏳ SALVATAGGIO...";
     }
 
-    // init
     updateCrop();
     toggleRotateAgentWarning();
   </script>
