@@ -7,113 +7,165 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; padding:20px; }
+    
+    /* HEADER */
     .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; }
     .dash-title { color:#00ffc8; margin:0; font-size:24px; text-transform:uppercase; letter-spacing:1px; }
     .btn-logout { color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s; }
     .btn-logout:hover { background:#330000; }
 
-    /* --- LAYOUT A LISTA (RIGHE ORIZZONTALI) --- */
-    .profile-list {
+    /* --- SEZIONE SUPERIORE: QR + SELETTORE APERTURA --- */
+    .top-control-panel {
         display: flex;
-        flex-direction: column; /* Uno sopra l'altro */
-        gap: 20px;
+        flex-wrap: wrap;
+        gap: 30px;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 40px;
+        align-items: center;
     }
+
+    /* QR CODE SINISTRA */
+    .qr-area { text-align:center; min-width: 150px; border-right: 1px solid #333; padding-right: 30px; }
+    .qr-area img { width:120px; height:120px; border-radius: 10px; background: white; padding: 5px; }
+    .qr-link { color:white; font-size:12px; display:block; margin-top:10px; text-decoration:none; font-weight:bold; }
+    .qr-link:hover { color:#00ffc8; }
+
+    /* SELETTORE DESTRA */
+    .opener-area { flex-grow: 1; }
+    .opener-title { color:#00ffc8; margin:0 0 15px 0; font-size:18px; text-transform:uppercase; }
+    .opener-desc { color:#aaa; font-size:13px; margin-bottom:15px; }
     
-    /* BOX PROFILO A STRISCIA */
+    .opener-buttons { display:flex; gap:15px; flex-wrap:wrap; }
+    
+    /* BOTTONI SCELTA APERTURA */
+    .btn-opener {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        width: 100px; height: 80px;
+        background: #222; border: 2px solid #444; border-radius: 10px;
+        cursor: pointer; text-decoration:none; transition: 0.2s;
+    }
+    .btn-opener:hover { background:#333; border-color:#666; transform:translateY(-3px); }
+    .btn-opener span { font-size: 18px; font-weight:900; color:white; }
+    .btn-opener small { font-size: 10px; color:#888; text-transform:uppercase; margin-top:4px; }
+    
+    /* STATO ATTIVO */
+    .btn-opener.active { background: #004400; border-color: #00ffc8; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
+    .btn-opener.active span { color:#00ffc8; }
+    .btn-opener.active small { color:#fff; }
+
+    /* STATO DISABILITATO (Se profilo spento) */
+    .btn-opener.disabled { opacity:0.3; pointer-events:none; border-color:#222; }
+
+
+    /* --- LAYOUT PROFILI (LISTA) --- */
+    .profile-list { display: flex; flex-direction: column; gap: 20px; }
+    
     .profile-row { 
         background:#111; border:1px solid #333; border-radius:15px; padding:20px; 
         position:relative; transition:0.3s;
-        display: flex; /* Layout orizzontale interno */
-        align-items: center; /* Centrato verticalmente */
-        justify-content: space-between;
-        flex-wrap: wrap; /* Su mobile va a capo */
-        gap: 20px;
+        display: flex; flex-wrap: wrap; gap: 20px;
     }
-    .profile-row:hover { border-color:#555; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-    .profile-row.active { border:2px solid #00ffc8; box-shadow:0 0 15px rgba(0,255,200,0.1); }
+    .profile-row.active { border-left: 5px solid #00ffc8; }
     .profile-row.inactive { opacity:0.6; filter:grayscale(100%); }
 
-    /* COLONNA 1: INFO E FOTO */
-    .pr-info-col { display:flex; align-items:center; gap:15px; flex: 1; min-width: 250px; }
-    .pr-avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #444; background:#000; flex-shrink: 0; }
-    .pr-details h3 { font-size:18px; font-weight:bold; color:white; margin:0 0 5px 0; }
-    .pr-role { font-size:13px; color:#aaa; display:block; }
-    .pr-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:bold; text-transform:uppercase; display:inline-block; margin-top:5px; }
-    .st-on { background:#004400; color:#00ffc8; }
-    .st-off { background:#330000; color:#ff4444; }
+    /* COL 1: INFO */
+    .pr-info-col { width: 220px; flex-shrink: 0; border-right: 1px solid #333; padding-right: 20px; }
+    .pr-header { display:flex; align-items:center; gap:15px; margin-bottom:10px; }
+    .pr-avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #444; background:#000; }
+    .pr-title { font-size:20px; font-weight:bold; color:white; margin:0; }
+    .pr-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; }
+    .st-on { color:#00ffc8; border:1px solid #00ffc8; }
 
-    /* COLONNA 2: MEDIA (CENTRO) */
-    .pr-media-col { flex: 2; min-width: 200px; border-left: 1px solid #333; border-right: 1px solid #333; padding: 0 20px; }
-    .media-strip { display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; align-items: center; }
-    .media-thumb { width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #444; flex-shrink:0; }
-    .media-label { font-size:10px; color:#666; text-transform:uppercase; margin-bottom:5px; display:block; }
-    .pdf-info { font-size:11px; color:#aaa; margin-top:5px; display:block; }
-
-    /* COLONNA 3: AZIONI (DESTRA) */
-    .pr-actions-col { display:flex; flex-direction: column; gap:8px; min-width: 160px; }
-    .btn { display:block; text-align:center; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s; border:none; cursor: pointer; }
-    .btn-edit { background:#333; color:white; border:1px solid #555; }
-    .btn-edit:hover { background:#444; border-color:white; }
-    .btn-main { background:#222; color:#aaa; border:1px solid #333; font-size:11px; }
-    .btn-main:hover { color:white; border-color: #555; }
-    .btn-view { background:linear-gradient(90deg, #0088cc, #00ffc8); color:black; }
-    .btn-view:hover { opacity:0.9; }
+    /* COL 2: MEDIA (DIVISO IN 3 RIQUADRI) */
+    .pr-media-col { flex-grow: 1; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; }
     
-    /* MENU OPZIONE IN ALTO */
-    .menu-box { 
-        background:#1a1a1a; border:1px solid #444; border-radius:15px; 
-        padding:20px; margin-bottom:30px; 
-        display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;
-    }
-    .menu-txt h3 { margin:0 0 5px 0; color:#00ffc8; font-size:18px; }
-    .menu-txt p { margin:0; font-size:13px; color:#aaa; }
+    .media-box { background:#000; border:1px solid #333; border-radius:10px; padding:10px; height:100px; overflow:hidden; display:flex; flex-direction:column; }
+    .mb-title { font-size:10px; color:#00ffc8; text-transform:uppercase; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #222; padding-bottom:4px; }
+    
+    .mb-content-img, .mb-content-vid { display:flex; gap:5px; overflow-x:auto; height:100%; align-items:center; }
+    .mb-thumb { width:45px; height:45px; object-fit:cover; border-radius:5px; border:1px solid #444; flex-shrink:0; }
+    .mb-pdf-list { font-size:11px; color:#ccc; overflow-y:auto; }
+    .mb-empty { font-size:10px; color:#444; font-style:italic; margin:auto; }
 
-    /* QR CODE FISSO */
-    .main-qr { background:white; padding:10px; border-radius:10px; width:fit-content; margin:0 auto 20px auto; text-align:center; }
-    .main-qr img { width:120px; height:120px; display:block; }
-    .qr-link { color:black; font-weight:bold; margin-top:4px; display:block; text-decoration:none; font-size:11px; }
+    /* COL 3: AZIONI */
+    .pr-actions-col { width: 140px; display:flex; flex-direction: column; gap:10px; justify-content:center; padding-left:10px; border-left:1px solid #333; }
+    
+    .btn { display:block; text-align:center; padding:12px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s; border:none; cursor: pointer; }
+    .btn-edit { background:#222; color:white; border:1px solid #555; }
+    .btn-edit:hover { background:#444; border-color:white; }
+    
+    .btn-power { background:#330000; color:#ff4444; border:1px solid #550000; }
+    .btn-power:hover { background:#550000; }
+    
+    .btn-on { background:#003300; color:#00ffc8; border:1px solid #005500; }
+    .btn-on:hover { background:#005500; }
 
     /* TOAST */
     .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,255,200,0.9); color:black; padding:10px 20px; border-radius:30px; font-weight:bold; display:none; z-index:9999; }
 
-    /* MOBILE ADJUSTMENTS */
-    @media (max-width: 768px) {
-        .profile-row { flex-direction: column; text-align: center; }
-        .pr-info-col { flex-direction: column; }
-        .pr-media-col { border: none; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 15px 0; width: 100%; }
-        .media-strip { justify-content: center; }
-        .pr-actions-col { width: 100%; flex-direction: row; flex-wrap: wrap; }
-        .btn { flex: 1; }
+    /* MOBILE */
+    @media (max-width: 900px) {
+        .top-control-panel { flex-direction: column; text-align: center; }
+        .qr-area { border-right: none; border-bottom: 1px solid #333; padding-right: 0; padding-bottom: 20px; width:100%; }
+        .opener-buttons { justify-content: center; }
+        
+        .profile-row { flex-direction: column; }
+        .pr-info-col, .pr-actions-col { width: 100%; border: none; padding: 0; text-align: center; }
+        .pr-header { justify-content: center; }
     }
   </style>
 </head>
 <body>
 
-  <div id="toast" class="toast">Azione completata!</div>
+  <div id="toast" class="toast">Impostazione Salvata!</div>
 
   <div class="dash-header">
-    <h1 class="dash-title">Benvenuto, {{ user.nome }}</h1>
+    <h1 class="dash-title">Ciao, {{ user.nome }}</h1>
     <a href="/area/logout" class="btn-logout">ESCI</a>
   </div>
 
-  <div class="main-qr">
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR Code">
-    <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
-  </div>
-
-  <div class="menu-box">
-    <div class="menu-txt">
-      <h3><i class="fas fa-list"></i> Menu di Scelta (Link Unico)</h3>
-      <p>
-        Mostra ai clienti una pagina dove possono scegliere tra P1, P2 e P3 (se attivi).
-      </p>
+  <div class="top-control-panel">
+    
+    <div class="qr-area">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR">
+        <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
     </div>
-    <div>
-      {% if user.default_profile == 'menu' %}
-        <span style="color:#00ffc8; font-weight:bold; border:2px solid #00ffc8; padding:8px 20px; border-radius:30px; display:inline-block;">✅ MENU ATTIVO</span>
-      {% else %}
-        <a href="/area/set_default/menu" class="btn btn-edit" style="background: linear-gradient(45deg, #333, #555); padding:12px 25px; border:none;">IMPOSTA COME PRINCIPALE</a>
-      {% endif %}
+
+    <div class="opener-area">
+        <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
+        <p class="opener-desc">
+            Cosa deve succedere quando un cliente scansiona il tuo QR Code o apre il tuo link?<br>
+            Scegli se aprire direttamente un profilo specifico (P1, P2, P3) o mostrare il Menu di Scelta.
+        </p>
+
+        <div class="opener-buttons">
+            <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}">
+                <span>P1</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}">
+                <span>P2</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}">
+                <span>P3</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;">
+                <span style="font-size:24px;"><i class="fas fa-list"></i></span>
+                <small>MENU SCELTA</small>
+            </a>
+        </div>
+        
+        {% if user.default_profile != 'menu' and user.default_profile != 'p1' and not user[user.default_profile].active %}
+            <div style="color:#ff4444; font-size:12px; margin-top:10px;">⚠️ Attenzione: Il profilo principale selezionato è spento. La card mostrerà il P1 di default.</div>
+        {% endif %}
     </div>
   </div>
 
@@ -123,67 +175,85 @@
       {% set p_key = 'p' + pid %}
       {% set p_data = user[p_key] %}
       {% set is_active = p_data.active %}
-      {% set is_default = (user.default_profile == p_key) %}
       
       <div class="profile-row {% if is_active %}active{% else %}inactive{% endif %}">
         
         <div class="pr-info-col">
-          {% if p_data.foto %}
-            <img src="{{ p_data.foto }}" class="pr-avatar">
-          {% else %}
-            <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;"><i class="fas fa-user"></i></div>
-          {% endif %}
-          
-          <div class="pr-details">
-            <h3>Profilo P{{ pid }} 
-                {% if is_default %}<span style="color:#00ffc8; font-size:12px;">★</span>{% endif %}
-            </h3>
-            <span class="pr-role">{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</span>
-            <span class="pr-status {% if is_active %}st-on{% else %}st-off{% endif %}">
-              {{ "ATTIVO" if is_active else "SPENTO" }}
-            </span>
+          <div class="pr-header">
+            {% if p_data.foto %}
+                <img src="{{ p_data.foto }}" class="pr-avatar">
+            {% else %}
+                <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;"><i class="fas fa-user"></i></div>
+            {% endif %}
+            <div>
+                <h3 class="pr-title">Profilo P{{ pid }}</h3>
+                <span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span>
+            </div>
+          </div>
+          <div style="font-size:12px; color:#aaa;">
+            <div>{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</div>
+            <div>{{ p_data.company if p_data.company else 'Azienda non impostata' }}</div>
           </div>
         </div>
 
         <div class="pr-media-col">
-          <span class="media-label">GALLERIA MEDIA</span>
-          
-          <div class="media-strip">
-            {% if p_data.gallery_img|length == 0 and p_data.gallery_vid|length == 0 %}
-                <span style="color:#444; font-size:12px; font-style:italic;">Nessun media</span>
-            {% endif %}
-
-            {% for img in p_data.gallery_img[:4] %}
-              <img src="{{ img }}" class="media-thumb">
-            {% endfor %}
             
-            {% for vid in p_data.gallery_vid[:3] %}
-              <video src="{{ vid }}#t=1.0" class="media-thumb" style="background:#000;"></video>
-            {% endfor %}
-            
-            {% if (p_data.gallery_img|length + p_data.gallery_vid|length) > 7 %}
-               <span style="font-size:11px; color:#666;">...</span>
-            {% endif %}
-          </div>
+            <div class="media-box">
+                <div class="mb-title">📸 FOTO ({{ p_data.gallery_img|length }})</div>
+                <div class="mb-content-img">
+                    {% if p_data.gallery_img|length == 0 %}
+                        <div class="mb-empty">Nessuna foto</div>
+                    {% else %}
+                        {% for img in p_data.gallery_img[:4] %}
+                            <img src="{{ img }}" class="mb-thumb">
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
 
-          {% if p_data.gallery_pdf|length > 0 %}
-            <span class="pdf-info"><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ p_data.gallery_pdf|length }} PDF presenti</span>
-          {% endif %}
+            <div class="media-box">
+                <div class="mb-title">🎬 VIDEO ({{ p_data.gallery_vid|length }})</div>
+                <div class="mb-content-vid">
+                    {% if p_data.gallery_vid|length == 0 %}
+                        <div class="mb-empty">Nessun video</div>
+                    {% else %}
+                        {% for vid in p_data.gallery_vid[:3] %}
+                            <video src="{{ vid }}#t=1.0" class="mb-thumb" style="background:#000;"></video>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="media-box">
+                <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
+                <div class="mb-pdf-list">
+                    {% if p_data.gallery_pdf|length == 0 %}
+                        <div class="mb-empty">Nessun PDF</div>
+                    {% else %}
+                        {% for pdf in p_data.gallery_pdf[:2] %}
+                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                <i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}
+                            </div>
+                        {% endfor %}
+                        {% if p_data.gallery_pdf|length > 2 %}
+                            <div style="font-size:10px; color:#666;">...e altri</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
 
         <div class="pr-actions-col">
           <a href="/area/edit/{{ pid }}" class="btn btn-edit">✏️ MODIFICA</a>
           
           {% if is_active %}
-            {% if not is_default %}
-              <a href="/area/set_default/p{{ pid }}" class="btn btn-main">USA COME PRINCIPALE</a>
-            {% endif %}
-            <a href="/area/deactivate/{{ pid }}" class="btn btn-edit" style="color:#ff4444; border-color:#ff4444;" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
+            <a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
           {% else %}
-            <a href="/area/activate/{{ pid }}" class="btn btn-edit" style="color:#00ffc8; border-color:#00ffc8;">ACCENDI</a>
+            <a href="/area/activate/{{ pid }}" class="btn btn-on">ACCENDI</a>
           {% endif %}
-
-          <a href="/card/{{ user.slug }}?p=p{{ pid }}" target="_blank" class="btn btn-view">👁️ VEDI</a>
+          
+          <a href="/card/{{ user.slug }}?p=p{{ pid }}" target="_blank" style="color:#00ffc8; text-decoration:none; font-size:11px; text-align:center; margin-top:5px;">Anteprima ></a>
         </div>
 
       </div>
@@ -192,11 +262,12 @@
   </div>
 
   <script>
-    const btns = document.querySelectorAll('.btn');
+    const btns = document.querySelectorAll('.btn-opener, .btn');
     btns.forEach(btn => {
       btn.addEventListener('click', function() {
-        if(!this.href.includes('delete') && !this.href.includes('deactivate') && !this.getAttribute('onclick')) {
-           this.innerHTML = "⏳...";
+        if(!this.classList.contains('disabled') && !this.href.includes('delete') && !this.href.includes('deactivate') && !this.getAttribute('onclick')) {
+           // Piccola animazione caricamento
+           this.style.opacity = "0.7";
         }
       });
     });
