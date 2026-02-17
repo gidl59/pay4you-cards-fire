@@ -11,7 +11,6 @@
 
   <div class="card-wrap">
 
-    <!-- LOGO TOP-LEFT -->
     {% if ag.logo_url %}
       <div class="top-left-logo {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         <img src="{{ ag.logo_url }}" alt="logo">
@@ -27,11 +26,9 @@
 
     <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
       <div class="flipper">
-
         <div class="front">
           {% if ag.photo_url %}
-            <img src="{{ ag.photo_url }}"
-                 class="avatar-img"
+            <img src="{{ ag.photo_url }}" class="avatar-img"
                  style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
             <div class="avatar-img" style="background:#555;"></div>
@@ -47,7 +44,6 @@
             <div style="font-weight:900;">LOGO</div>
           {% endif %}
         </div>
-
       </div>
     </div>
 
@@ -65,28 +61,6 @@
 
       <div class="btn-qr" onclick="openShare('qr', '')">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ request.url }}" alt="qr">
-      </div>
-    </div>
-
-    <div class="social-grid">
-      {% for s in socials %}
-      <a href="{{ s.url }}" target="_blank" class="soc-btn
-        {% if 'Facebook' in s.label %}soc-fb{% elif 'Instagram' in s.label %}soc-ig{% elif 'Linkedin' in s.label %}soc-li{% elif 'TikTok' in s.label %}soc-tk{% elif 'Spotify' in s.label %}soc-sp{% elif 'Telegram' in s.label %}soc-tg{% elif 'YouTube' in s.label %}soc-yt{% endif %}">
-        <i class="fab fa-{{ s.label|lower if s.label!='TikTok' else 'tiktok' }}"></i>
-      </a>
-      {% endfor %}
-    </div>
-
-    <div class="switcher-bar">
-      <div class="sw-left">
-        {% if profile!='p1' %}<a href="?p=p1" class="circle-p p1-btn">P1</a>{% endif %}
-        {% if p2_enabled and profile!='p2' %}<a href="?p=p2" class="circle-p p2-btn">P2</a>{% endif %}
-        {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p p3-btn">P3</a>{% endif %}
-      </div>
-      <div class="sw-right">
-        <span onclick="setT('light')" class="theme-btn t-light">CHIARO</span>
-        <span onclick="setT('dark')" class="theme-btn t-dark">SCURO</span>
-        <span onclick="setT('auto')" class="theme-btn t-auto">AUTO</span>
       </div>
     </div>
 
@@ -119,48 +93,7 @@
       </div>
     </div>
 
-    {% if p_data.gallery_img %}
-    <div class="scene-box">
-      <div class="scene-label">FOTO</div>
-      <div class="gal-grid-5">
-        {% for img in p_data.gallery_img %}
-          <img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_vid %}
-    <div class="scene-box">
-      <div class="scene-label">VIDEO</div>
-      <div class="gal-grid-5">
-        {% for vid in p_data.gallery_vid %}
-          <div class="vid-box" onclick="openShare('vid', '{{ vid }}')">
-            <video src="{{ vid }}#t=2.0" preload="metadata"></video>
-            <i class="fas fa-play vid-icon"></i>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {% if p_data.gallery_pdf %}
-    <div class="scene-box">
-      <div class="scene-label">DOCUMENTI</div>
-      <div class="pdf-grid">
-        {% for pdf in p_data.gallery_pdf %}
-          <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <i class="fas fa-file-pdf" style="color:#ff4444; font-size:18px;"></i>
-              <span class="pdf-name">{{ pdf.name }}</span>
-            </div>
-            <i class="fas fa-eye" style="color:var(--brand);"></i>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
+    <!-- SHARE MODAL -->
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
       <div class="modal-actions">
@@ -170,6 +103,7 @@
       </div>
     </div>
 
+    <!-- WEB MODAL (sito dentro finestra) -->
     <div id="webModal" class="modal-overlay">
       <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
       <iframe id="webFrame" class="web-frame"></iframe>
@@ -184,87 +118,41 @@
              "&body=" + encodeURIComponent(b);
     }
 
-    function buildEmailText(kind, link){
-      const name = "{{ ag.name|default('', true) }}";
-      const role = "{{ ag.role|default('', true) }}";
-      const company = "{{ ag.company|default('', true) }}";
-      const cardLink = window.location.href;
-
-      let header = "Pay4You - Condivisione";
-      let body = "";
-
-      if(kind === "qr"){
-        header = "Pay4You - Link Card";
-        body =
-          "Ciao!\n" +
-          "Ti invio la mia Card digitale Pay4You.\n\n" +
-          (name ? ("Nome: " + name + "\n") : "") +
-          (role ? ("Ruolo: " + role + "\n") : "") +
-          (company ? ("Azienda: " + company + "\n") : "") +
-          "\nLink Card:\n" + cardLink + "\n";
-      } else if(kind === "img"){
-        header = "Pay4You - Foto";
-        body =
-          "Ciao!\n" +
-          "Ti invio una foto dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link foto:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else if(kind === "vid"){
-        header = "Pay4You - Video";
-        body =
-          "Ciao!\n" +
-          "Ti invio un video dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link video:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else if(kind === "pdf"){
-        header = "Pay4You - Documento";
-        body =
-          "Ciao!\n" +
-          "Ti invio un documento dalla mia Card Pay4You.\n\n" +
-          (name ? ("Da: " + name + "\n\n") : "") +
-          "Link documento:\n" + link + "\n\n" +
-          "Card:\n" + cardLink + "\n";
-      } else {
-        body = "Link:\n" + link + "\n";
-      }
-
-      return { subject: header, body: body };
-    }
-
     function openShare(type, url) {
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
 
-      // WA sempre ok
       document.getElementById('waLink').href =
-        "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
+        "https://wa.me/?text=" + encodeURIComponent("Pay4You - Link:\n" + fullUrl + "\n\n— Pay4You");
 
-      // ✅ EMAIL con testo completo
-      const mail = buildEmailText(type, fullUrl);
-      document.getElementById('emLink').href = makeMailto(mail.subject, mail.body);
+      document.getElementById('emLink').href =
+        makeMailto("Pay4You - Condivisione", "Ciao!\n\nEcco il link Pay4You:\n" + fullUrl + "\n\n— Pay4You");
 
-      if(type==='img'){
-        box.innerHTML = '<img src="'+url+'" class="modal-content">';
-      } else if(type==='vid'){
-        box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-      } else if(type==='pdf'){
-        box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-      } else if(type==='qr'){
-        box.innerHTML =
-          '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+
-          encodeURIComponent(fullUrl)+
-          '" style="background:white; padding:14px; border-radius:18px;">';
+      if(type==='qr'){
+        box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:14px; border-radius:18px;">';
       }
-
       document.getElementById('shareModal').style.display = 'flex';
     }
 
-    function closeModal(){ document.getElementById('shareModal').style.display='none'; document.getElementById('mediaBox').innerHTML=""; }
-    function openSite(url){ document.getElementById('webFrame').src=url; document.getElementById('webModal').style.display='flex'; }
-    function closeWeb(){ document.getElementById('webModal').style.display='none'; document.getElementById('webFrame').src=""; }
-    function setT(t){ if(t==='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
+    function closeModal(){
+      document.getElementById('shareModal').style.display='none';
+      document.getElementById('mediaBox').innerHTML="";
+    }
+
+    // apertura siti dentro overlay (se in futuro vuoi usarla)
+    function openSite(url){
+      document.getElementById('webFrame').src=url;
+      document.getElementById('webModal').style.display='flex';
+    }
+    function closeWeb(){
+      document.getElementById('webModal').style.display='none';
+      document.getElementById('webFrame').src="";
+    }
+
+    function setT(t){
+      if(t==='auto') document.body.removeAttribute('data-theme');
+      else document.body.setAttribute('data-theme', t);
+    }
   </script>
 </body>
 </html>
