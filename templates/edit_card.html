@@ -23,14 +23,13 @@
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
-    /* Stage per crop */
+    /* Stage per crop (stabile su iPhone/Safari) */
     #AGENT_STAGE{ width:100%; height:100%; position:relative; }
 
     #PREVIEW_IMG_AGENT{
       position:absolute;
       left:50%;
       top:50%;
-      /* MODIFICA FONDAMENTALE: Forza l'immagine a stare nel box 160x160 di base */
       width:100% !important;
       height:100% !important;
       object-fit:cover !important;
@@ -62,6 +61,9 @@
     .db-copy { background:#00ffc8; color:#00120e; }
     .db-del { background:#ff4444; }
     .db-cl { background:#0088cc; }
+    
+    details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
+    .hint { color:#777; font-size:12px; margin-top:5px; }
   </style>
 </head>
 <body>
@@ -200,6 +202,43 @@
       </div>
     </div>
 
+    <details class="edit-box">
+      <summary class="box-title">🌍 TRADUZIONI (4 lingue) <i class="fas fa-chevron-down"></i></summary>
+      <div class="hint">Testi alternativi per le altre lingue.</div>
+      
+      <details style="margin-top:14px;">
+        <summary class="box-title" style="margin-bottom:10px;">🇬🇧 Inglese</summary>
+        <div class="form-grid">
+          <div><label>Role (EN)</label><input type="text" name="role_en" value="{{ p.trans.en.role if p.trans and p.trans.en else '' }}"></div>
+          <div class="full-width"><label>Bio (EN)</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio if p.trans and p.trans.en else '' }}</textarea></div>
+        </div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary class="box-title" style="margin-bottom:10px;">🇫🇷 Francese</summary>
+        <div class="form-grid">
+          <div><label>Rôle (FR)</label><input type="text" name="role_fr" value="{{ p.trans.fr.role if p.trans and p.trans.fr else '' }}"></div>
+          <div class="full-width"><label>Bio (FR)</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio if p.trans and p.trans.fr else '' }}</textarea></div>
+        </div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary class="box-title" style="margin-bottom:10px;">🇪🇸 Spagnolo</summary>
+        <div class="form-grid">
+          <div><label>Rol (ES)</label><input type="text" name="role_es" value="{{ p.trans.es.role if p.trans and p.trans.es else '' }}"></div>
+          <div class="full-width"><label>Bio (ES)</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio if p.trans and p.trans.es else '' }}</textarea></div>
+        </div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary class="box-title" style="margin-bottom:10px;">🇩🇪 Tedesco</summary>
+        <div class="form-grid">
+          <div><label>Rolle (DE)</label><input type="text" name="role_de" value="{{ p.trans.de.role if p.trans and p.trans.de else '' }}"></div>
+          <div class="full-width"><label>Bio (DE)</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio if p.trans and p.trans.de else '' }}</textarea></div>
+        </div>
+      </details>
+    </details>
+
     <button type="submit" class="btn-save-float" id="btnSalva">💾 SALVA TUTTO</button>
   </form>
 
@@ -217,14 +256,9 @@
 
   <script>
     // ---- FIX FOTO GIGANTE: La logica è semplificata ----
-    // Forziamo sempre le dimensioni base a 100% del cerchio.
-    // L'effetto zoom/spostamento avviene tramite TRANSFORM, non tramite width/height.
     function setAgentFitMode(mode){
       var img = document.getElementById('PREVIEW_IMG_AGENT');
       if(!img) return;
-
-      // In ogni caso, base size = 100% del container (160px).
-      // Il "Cover" si ottiene con object-fit: cover
       img.style.width = "100%";
       img.style.height = "100%";
       img.style.objectFit = "cover";
@@ -232,16 +266,11 @@
 
     // 1) CROP FUNZIONANTE
     function aggiornaCrop() {
-      // Assicura che la base sia corretta
       setAgentFitMode('cover');
-
       var x = parseInt(document.getElementById('valX').value || "0", 10);
       var y = parseInt(document.getElementById('valY').value || "0", 10);
       var z = parseFloat(document.getElementById('valZ').value || "1");
-
       var img = document.getElementById('PREVIEW_IMG_AGENT');
-      
-      // Applica trasformazione
       img.style.transform = "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
@@ -252,13 +281,11 @@
         reader.onload = function(e){
           var el = document.getElementById(id);
           el.src = e.target.result;
-          
           if (isAgentPhoto) {
-            // Reset slider per nuova foto
             document.getElementById('valX').value = 0;
             document.getElementById('valY').value = 0;
             document.getElementById('valZ').value = 1; 
-            aggiornaCrop(); // Applica subito il reset
+            aggiornaCrop(); 
           }
         };
         reader.readAsDataURL(input.files[0]);
@@ -270,7 +297,6 @@
       var checkGira = document.getElementById('checkGira');
       var radTap = document.getElementById('radTap');
       var radMirror = document.getElementById('radMirror');
-
       if (azione === 'gira') {
         if (checkGira.checked) {
           radTap.checked = false;
@@ -281,7 +307,7 @@
       }
     }
 
-    // 4) Modale + invio (MAIL E TUTTO IL RESTO INVARIATO)
+    // 4) Modale + invio
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
@@ -289,14 +315,11 @@
       ELEMENTO_ATTUALE = el;
       FILE_ATTUALE.url = window.location.origin + url;
       FILE_ATTUALE.type = type;
-
       var viewer = document.getElementById('modalViewer');
       viewer.innerHTML = "";
-
       if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
       else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
       else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
-
       document.getElementById('modalDash').style.display = 'flex';
     }
 
@@ -310,30 +333,21 @@
       var nomeInput = document.getElementById('inputNomeAgente').value;
       var nome = nomeInput ? nomeInput : "Agente Pay4You";
       var ogg = "Condivisione file da Card Pay4You";
-
-      var corpo =
-        "Ciao!\r\n" +
-        "Ti invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\n" +
-        "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" +
-        "Inviato da: " + nome + "\r\n";
-
+      var corpo = "Ciao!\r\n" + "Ti invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\n" + "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" + "Inviato da: " + nome + "\r\n";
       return { subject: ogg, body: corpo };
     }
 
     function invioEmail() {
       if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var p = buildEmailPayload();
-      var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
-                     "&su=" + encodeURIComponent(p.subject) +
-                     "&body=" + encodeURIComponent(p.body);
+      var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" + "&su=" + encodeURIComponent(p.subject) + "&body=" + encodeURIComponent(p.body);
       window.open(gmailUrl, "_blank");
     }
 
     function invioEmailApp() {
       if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
       var p = buildEmailPayload();
-      var mailto = "mailto:?subject=" + encodeURIComponent(p.subject) +
-                   "&body=" + encodeURIComponent(p.body);
+      var mailto = "mailto:?subject=" + encodeURIComponent(p.subject) + "&body=" + encodeURIComponent(p.body);
       window.location.href = mailto;
     }
 
