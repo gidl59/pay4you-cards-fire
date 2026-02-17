@@ -69,8 +69,8 @@ def repair_user(user):
     dirty = False
     if 'default_profile' not in user: user['default_profile'] = 'p1'; dirty = True
     
-    # Assicuriamoci che ci sia la sezione per i contatti admin
-    if 'admin_contact' not in user:
+    # === FIX ERRORE 500: Assicura che admin_contact esista sempre ===
+    if 'admin_contact' not in user or not isinstance(user['admin_contact'], dict):
         user['admin_contact'] = {'email': '', 'whatsapp': ''}
         dirty = True
 
@@ -107,7 +107,7 @@ def repair_user(user):
     return dirty
 
 
-# ===== VCF (iPhone friendly) =====
+# ===== VCF =====
 def vcf_escape(s: str) -> str:
     s = str(s or "").replace("\\", "\\\\").replace("\r", " ").replace("\n", " ").replace(";", r"\;").replace(",", r"\,")
     return s.strip()
@@ -353,12 +353,22 @@ def edit_profile(p_id):
 
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
-    if session.get('is_master'): return render_template('master_dashboard.html', clienti=load_db(), files=[])
+    if session.get('is_master'):
+        # === FIX AUTOMATICO DATABASE ===
+        clienti = load_db()
+        dirty = False
+        for c in clienti:
+            if repair_user(c):
+                dirty = True
+        if dirty:
+            save_db(clienti)
+        # ===============================
+        return render_template('master_dashboard.html', clienti=clienti, files=[])
+        
     if request.method == 'POST' and request.form.get('password') == "pay2026":
         session['is_master'] = True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
 
-# ===== NUOVA FUNZIONE DI CREAZIONE AUTOMATICA =====
 @app.route('/master/add', methods=['POST'])
 def master_add():
     if not session.get('is_master'): return redirect(url_for('master_login'))
@@ -372,40 +382,34 @@ def master_add():
         flash("Errore: Tutti i campi (Slug, Email, WhatsApp) sono obbligatori.", "error")
         return redirect(url_for('master_login'))
 
-    # Controlla se lo slug esiste già
     if any(c.get('slug') == slug for c in clienti):
         flash(f"Errore: Lo slug '{slug}' è già in uso. Scegline un altro.", "error")
         return redirect(url_for('master_login'))
 
-    # Genera password casuale sicura (12 caratteri: lettere, numeri, simboli)
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     password = ''.join(random.choice(chars) for i in range(12))
-
     new_id = max([c['id'] for c in clienti], default=0) + 1
 
-    # Crea la struttura del nuovo cliente (CARD VUOTA, contatti admin separati)
     new_client = {
         "id": new_id,
         "slug": slug,
-        "username": slug, # User = Slug per semplicità
+        "username": slug,
         "password": password,
-        # Contatti salvati SOLO per l'admin, non visibili sulla card
         "admin_contact": {
             "email": admin_email,
             "whatsapp": admin_whatsapp
         },
-        # Profili pubblici inizializzati VUOTI
-        "p1": {"active": True}, # repair_user riempirà i campi con stringhe vuote ""
+        "p1": {"active": True},
         "p2": {"active": False},
         "p3": {"active": False},
         "default_profile": "p1"
     }
 
-    repair_user(new_client) # Riempie i campi mancanti di p1 con valori di default vuoti
+    repair_user(new_client)
     clienti.append(new_client)
     save_db(clienti)
 
-    flash(f"Card '{slug}' creata con successo! Password generata: {password}", "success")
+    flash(f"Card '{slug}' creata con successo!", "success")
     return redirect(url_for('master_login'))
 
 @app.route('/card/<slug>')
@@ -447,7 +451,6 @@ def master_impersonate(id): session['logged_in'] = True; session['user_id'] = id
 @app.route('/master/logout')
 def master_logout(): session.pop('is_master', None); return redirect(url_for('master_login'))
 
-# === LOGOUT INTELLIGENTE ===
 @app.route('/area/logout')
 def logout():
     if session.get('is_master'):
