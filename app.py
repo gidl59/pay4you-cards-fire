@@ -365,7 +365,7 @@ def master_login():
         # ===============================
         return render_template('master_dashboard.html', clienti=clienti, files=[])
         
-    if request.method == 'POST' and request.form.get('password') == "pay2026":
+    if request.method == 'POST' and request.form.get('password') == "Peppone16@":
         session['is_master'] = True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
 
