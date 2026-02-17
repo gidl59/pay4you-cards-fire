@@ -9,7 +9,6 @@
   <style>
     body{ background:#050505; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
     .wrap{ max-width:1100px; margin:18px auto; padding:0 14px; }
-
     .topbar{ display:flex; justify-content:space-between; align-items:center; margin:10px 0 18px; }
     .title{ font-size:22px; font-weight:900; display:flex; align-items:center; gap:10px; }
     .logout{ color:#ff4444; text-decoration:none; font-weight:800; }
@@ -20,9 +19,7 @@
       background:#121212; border:1px solid #2a2a2a; color:#fff; border-radius:10px;
       padding:12px 12px; outline:none; min-width:180px;
     }
-    .btn{
-      border:none; border-radius:10px; padding:10px 14px; font-weight:900; cursor:pointer;
-    }
+    .btn{ border:none; border-radius:10px; padding:10px 14px; font-weight:900; cursor:pointer; }
     .btn-green{ background:#00c853; color:#001b0a; }
     .btn-blue{ background:#0088cc; color:#fff; }
     .btn-red{ background:#cc0000; color:#fff; }
@@ -41,20 +38,21 @@
     .pill-em{ background:#f2f2f2; color:#111; }
     .pill-qr{ background:#ffb000; color:#111; }
 
-    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .small{ font-size:12px; color:#777; }
 
-    /* Modal QR */
+    /* MODAL QR */
     .modal{
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
       align-items:center; justify-content:center; z-index:9999; padding:18px;
     }
     .modal-box{
-      background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:18px; max-width:420px; width:100%;
+      background:#0c0c0c; border:1px solid #222; border-radius:18px; padding:18px; max-width:460px; width:100%;
       box-shadow:0 20px 60px rgba(0,0,0,.6);
     }
     .qrimg{ width:260px; height:260px; background:#fff; padding:14px; border-radius:18px; display:block; margin:10px auto; }
-    .modal-actions{ display:flex; gap:10px; justify-content:center; margin-top:14px; }
+    .modal-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+    .modal-actions .btn{ min-width:140px; }
   </style>
 </head>
 
@@ -106,13 +104,13 @@
                         onclick="sendEmail('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">@</button>
 
                 <button class="pill pill-qr" type="button"
-                        onclick="showQR('{{ c.slug }}')">QR</button>
+                        onclick="showQR('{{ c.slug }}','{{ c.username }}','{{ c.password }}')">QR</button>
               </div>
-              <div class="small">Email: testo forzato (iPhone OK)</div>
+              <div class="small">Email: testo forzato (iPhone/Windows OK)</div>
             </td>
 
             <td style="text-align:right;">
-              <div class="actions" style="justify-content:flex-end;">
+              <div class="actions">
                 <a class="btn btn-blue" href="/master/impersonate/{{ c.id }}">Gestisci</a>
                 <button class="btn btn-red" type="button" onclick="doubleDelete({{ c.id }}, '{{ c.slug }}')">ELIMINA</button>
               </div>
@@ -130,43 +128,49 @@
       <div style="font-weight:900; text-align:center;">QR Card</div>
       <img id="qrImg" class="qrimg" src="" alt="QR">
       <div class="small" style="text-align:center;" id="qrText"></div>
+
       <div class="modal-actions">
+        <button class="btn btn-green" type="button" onclick="qrSendWA()">INVIA WHATSAPP</button>
+        <button class="btn btn-blue" type="button" onclick="qrSendEmail()">INVIA EMAIL</button>
         <button class="btn btn-gray" type="button" onclick="closeQR()">CHIUDI</button>
       </div>
     </div>
   </div>
 
   <script>
+    // stato QR corrente (così WA/Email nel modal sanno cosa inviare)
+    let QR_STATE = { slug:"", user:"", pass:"" };
+
     function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
       return "mailto:?subject=" + encodeURIComponent(subject) +
              "&body=" + encodeURIComponent(b);
     }
 
-    function cardUrl(slug){
-      return window.location.origin + "/card/" + slug;
-    }
-    function loginUrl(){
-      return window.location.origin + "/area/login";
-    }
+    function cardUrl(slug){ return window.location.origin + "/card/" + slug; }
+    function loginUrl(){ return window.location.origin + "/area/login"; }
 
-    // ✅ WA con testo sempre presente
-    function sendWA(slug, user, pass){
+    function buildCredText(slug, user, pass){
       const url = cardUrl(slug);
-      const text =
+      return (
         "PAY4YOU - Credenziali Card\n\n" +
         "Card: " + url + "\n" +
         "Dashboard: " + loginUrl() + "\n\n" +
         "USER: " + user + "\n" +
         "PASS: " + pass + "\n\n" +
-        "Apri la card e poi fai login per modificarla.";
-      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+        "Apri la card e poi fai login per modificarla."
+      );
     }
 
-    // ✅ EMAIL con testo sempre presente (iPhone OK)
+    // ✅ WA credenziali
+    function sendWA(slug, user, pass){
+      window.open("https://wa.me/?text=" + encodeURIComponent(buildCredText(slug,user,pass)), "_blank");
+    }
+
+    // ✅ EMAIL credenziali (FIX: sempre testo)
     function sendEmail(slug, user, pass){
-      const url = cardUrl(slug);
       const subject = "Pay4You - Credenziali Card";
+      const url = cardUrl(slug);
       const body =
         "Ciao!\n\n" +
         "Ecco la tua Card Digitale Pay4You:\n" + url + "\n\n" +
@@ -175,20 +179,35 @@
         "USER: " + user + "\n" +
         "PASS: " + pass + "\n\n" +
         "A presto,\nPay4You";
+      // FIX: usare window.location (iPhone non “svuota” il body)
       window.location.href = makeMailto(subject, body);
     }
 
-    function showQR(slug){
+    // QR modal con WA/Email
+    function showQR(slug, user, pass){
+      QR_STATE = { slug, user, pass };
       const url = cardUrl(slug);
       document.getElementById("qrImg").src =
         "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(url);
       document.getElementById("qrText").innerText = url;
       document.getElementById("qrModal").style.display = "flex";
     }
+
+    function qrSendWA(){
+      if(!QR_STATE.slug) return;
+      sendWA(QR_STATE.slug, QR_STATE.user, QR_STATE.pass);
+    }
+
+    function qrSendEmail(){
+      if(!QR_STATE.slug) return;
+      sendEmail(QR_STATE.slug, QR_STATE.user, QR_STATE.pass);
+    }
+
     function closeQR(){
       document.getElementById("qrModal").style.display = "none";
       document.getElementById("qrImg").src = "";
       document.getElementById("qrText").innerText = "";
+      QR_STATE = { slug:"", user:"", pass:"" };
     }
 
     // ✅ doppio controllo eliminazione cliente
