@@ -3,222 +3,349 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Modifica Profilo P{{ p_id }} | Pay4You</title>
+  <title>Modifica Card | Pay4You</title>
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    .crop-wrap{ display:flex; gap:16px; flex-wrap:wrap; }
-    .crop-preview{
-      width:220px; height:220px; border-radius:20px; overflow:hidden;
-      background:#000; border:1px solid rgba(255,255,255,.12);
+    .wrap{ max-width:1050px; margin:0 auto; padding:18px; }
+    .panel{
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:16px;
+      margin-bottom:14px;
     }
-    .crop-preview img{ width:100%; height:100%; object-fit:cover; }
-    .crop-tools{
-      flex:1; min-width:260px;
-      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.10);
-      border-radius:16px; padding:12px;
+    .title{
+      font-weight:900; letter-spacing:.06em;
+      color:#00ffc8; margin:0 0 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
     }
-    .tool-row{ display:flex; gap:10px; flex-wrap:wrap; margin:8px 0; }
-    .mini-btn{
-      padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:900;
-      border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); color:#fff;
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+    label{ display:block; font-size:12px; color:#aaa; margin:6px 0 6px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .box{ flex:1; min-width:240px; }
+    textarea{ width:100%; min-height:90px; resize:vertical; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:11px 14px; border-radius:14px;
+      font-weight:900; cursor:pointer; text-decoration:none;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06); color:#fff;
     }
-    .mini-btn:active{ transform:scale(.98); }
+    .btn-primary{
+      background:linear-gradient(90deg,#0088cc,#00ffc8);
+      color:#000; border:none;
+    }
+    .btn-danger{ background:#c70000; border:none; }
+    .mini{
+      padding:10px 12px; border-radius:12px;
+      font-weight:900; cursor:pointer;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      user-select:none;
+    }
+    .mini:active{ transform:scale(.98); }
+    .crop-wrap{ display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+    .preview{
+      width:240px; height:240px;
+      border-radius:22px; overflow:hidden;
+      background:#000;
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    .preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .tools{ flex:1; min-width:280px; }
+    .hint{ font-size:12px; color:#aaa; margin-top:6px; }
     .range{ width:100%; }
-    .hint{ color:#aaa; font-size:12px; }
-    .section-title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:12px 0 6px; }
-    input[type="text"], textarea{ width:100%; }
+    .sep{ height:1px; background:rgba(255,255,255,.08); margin:12px 0; }
+    .pill{
+      display:inline-flex; gap:10px; align-items:center;
+      padding:10px 12px; border-radius:14px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      margin:6px 0;
+    }
   </style>
 </head>
+
 <body>
-
-  <div class="page-wrap" style="max-width:980px; margin:0 auto; padding:18px;">
-    <h2 style="margin:0 0 10px;">MODIFICA PROFILO P{{ p_id }}</h2>
-
-    <form method="POST" enctype="multipart/form-data">
-
-      <div class="section-title">Dati</div>
-      <div class="tool-row">
-        <div style="flex:1; min-width:220px;">
-          <label>Nome</label>
-          <input type="text" name="name" value="{{ p.name }}">
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <label>Ruolo</label>
-          <input type="text" name="role" value="{{ p.role }}">
-        </div>
+  <div class="wrap">
+    <div class="panel">
+      <div class="title">
+        <span>MODIFICA PROFILO P{{ p_id }}</span>
+        <a class="btn" href="/area">← Torna alla Dashboard</a>
       </div>
 
-      <div class="tool-row">
-        <div style="flex:1; min-width:220px;">
-          <label>Azienda</label>
-          <input type="text" name="company" value="{{ p.company }}">
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <label>Telefono ufficio</label>
-          <input type="text" name="office_phone" value="{{ p.office_phone }}">
-        </div>
-      </div>
+      <form method="POST" enctype="multipart/form-data">
 
-      <label>Bio</label>
-      <textarea name="bio" rows="3">{{ p.bio }}</textarea>
-
-      <div class="section-title">Foto / Logo</div>
-      <div class="tool-row">
-        <div style="flex:1; min-width:220px;">
-          <label>Foto agente</label>
-          <input type="file" name="foto" accept="image/*">
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <label>Logo</label>
-          <input type="file" name="logo" accept="image/*">
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <label>Foto retro (personale)</label>
-          <input type="file" name="personal_foto" accept="image/*">
-        </div>
-      </div>
-
-      <div class="section-title">Crop (posizione / zoom)</div>
-
-      <div class="crop-wrap">
-        <div class="crop-preview">
-          {% if p.foto %}
-            <img id="prevImg" src="{{ p.foto }}"
-                 style="object-position: {{ p.pos_x|default(50) }}% {{ p.pos_y|default(50) }}%;
-                        transform: scale({{ p.zoom|default(1.0) }}); transform-origin:center center;">
-          {% else %}
-            <img id="prevImg" src="https://dummyimage.com/600x600/222/aaa&text=FOTO" style="object-fit:cover;">
-          {% endif %}
-        </div>
-
-        <div class="crop-tools">
-          <div class="hint">Usa ↑ ↓ ← → per spostare. Zoom + / - per ingrandire.</div>
-
-          <div class="tool-row">
-            <div class="mini-btn" onclick="move(0,-2);return false;">⬆️ SU</div>
-            <div class="mini-btn" onclick="move(0, 2);return false;">⬇️ GIÙ</div>
-            <div class="mini-btn" onclick="move(-2,0);return false;">⬅️ SX</div>
-            <div class="mini-btn" onclick="move( 2,0);return false;">➡️ DX</div>
+        <div class="grid">
+          <div>
+            <label>Nome</label>
+            <input class="input-rect" type="text" name="name" value="{{ p.name }}">
+          </div>
+          <div>
+            <label>Ruolo</label>
+            <input class="input-rect" type="text" name="role" value="{{ p.role }}">
           </div>
 
-          <div class="tool-row">
-            <div class="mini-btn" onclick="zoomBy(0.05);return false;">➕ ZOOM</div>
-            <div class="mini-btn" onclick="zoomBy(-0.05);return false;">➖ ZOOM</div>
-            <div class="mini-btn" onclick="resetCrop();return false;">🔄 RESET</div>
+          <div>
+            <label>Azienda</label>
+            <input class="input-rect" type="text" name="company" value="{{ p.company }}">
+          </div>
+          <div>
+            <label>Telefono Ufficio</label>
+            <input class="input-rect" type="text" name="office_phone" value="{{ p.office_phone }}">
           </div>
 
-          <div class="tool-row">
-            <div style="flex:1;">
-              <label>X (sinistra/destra)</label>
-              <input class="range" type="range" min="0" max="100" step="1" id="rx" value="{{ p.pos_x|default(50) }}" oninput="setX(this.value)">
+          <div>
+            <label>Indirizzo</label>
+            <input class="input-rect" type="text" name="address" value="{{ p.address }}">
+          </div>
+          <div>
+            <label>PEC</label>
+            <input class="input-rect" type="text" name="pec" value="{{ p.pec }}">
+          </div>
+
+          <div>
+            <label>P.IVA</label>
+            <input class="input-rect" type="text" name="piva" value="{{ p.piva }}">
+          </div>
+          <div>
+            <label>Codice SDI</label>
+            <input class="input-rect" type="text" name="cod_sdi" value="{{ p.cod_sdi }}">
+          </div>
+        </div>
+
+        <label>Bio</label>
+        <textarea class="input-rect" name="bio">{{ p.bio }}</textarea>
+
+        <div class="sep"></div>
+
+        <div class="grid">
+          <div>
+            <label>Mobile 1</label>
+            <input class="input-rect" type="text" name="mobile1" value="{{ (p.mobiles[0] if p.mobiles and p.mobiles|length>0 else '') }}">
+          </div>
+          <div>
+            <label>Mobile 2</label>
+            <input class="input-rect" type="text" name="mobile2" value="{{ (p.mobiles[1] if p.mobiles and p.mobiles|length>1 else '') }}">
+          </div>
+
+          <div>
+            <label>Email</label>
+            <input class="input-rect" type="text" name="email1" value="{{ (p.emails[0] if p.emails and p.emails|length>0 else '') }}">
+          </div>
+          <div>
+            <label>Sito Web</label>
+            <input class="input-rect" type="text" name="website" value="{{ (p.websites[0] if p.websites and p.websites|length>0 else '') }}">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="grid">
+          <div>
+            <label>Facebook</label>
+            <input class="input-rect" type="text" name="facebook" value="{% for s in p.socials %}{% if s.label=='Facebook' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            <label>Instagram</label>
+            <input class="input-rect" type="text" name="instagram" value="{% for s in p.socials %}{% if s.label=='Instagram' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            <label>Linkedin</label>
+            <input class="input-rect" type="text" name="linkedin" value="{% for s in p.socials %}{% if s.label=='Linkedin' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            <label>TikTok</label>
+            <input class="input-rect" type="text" name="tiktok" value="{% for s in p.socials %}{% if s.label=='TikTok' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            <label>Spotify</label>
+            <input class="input-rect" type="text" name="spotify" value="{% for s in p.socials %}{% if s.label=='Spotify' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            <label>Telegram</label>
+            <input class="input-rect" type="text" name="telegram" value="{% for s in p.socials %}{% if s.label=='Telegram' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>YouTube</label>
+            <input class="input-rect" type="text" name="youtube" value="{% for s in p.socials %}{% if s.label=='YouTube' %}{{ s.url }}{% endif %}{% endfor %}">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="title"><span>FOTO / LOGO</span></div>
+        <div class="grid">
+          <div>
+            <label>Foto agente</label>
+            <input class="input-rect" type="file" name="foto" accept="image/*">
+          </div>
+          <div>
+            <label>Logo</label>
+            <input class="input-rect" type="file" name="logo" accept="image/*">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Foto retro (personale)</label>
+            <input class="input-rect" type="file" name="personal_foto" accept="image/*">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="title"><span>CROP FOTO (SU/GIÙ + SX/DX + ZOOM)</span></div>
+
+        <div class="crop-wrap">
+          <div class="preview">
+            {% if p.foto %}
+              <img id="prevImg" src="{{ p.foto }}"
+                   style="object-position: {{ p.pos_x|default(50) }}% {{ p.pos_y|default(50) }}%;
+                          transform: scale({{ p.zoom|default(1.0) }}); transform-origin:center center;">
+            {% else %}
+              <img id="prevImg" src="https://dummyimage.com/800x800/111/888&text=CARICA+FOTO"
+                   style="object-fit:cover;">
+            {% endif %}
+          </div>
+
+          <div class="tools">
+            <div class="row">
+              <div class="mini" onclick="move(0,-3);return false;">⬆️ SU</div>
+              <div class="mini" onclick="move(0, 3);return false;">⬇️ GIÙ</div>
+              <div class="mini" onclick="move(-3,0);return false;">⬅️ SX</div>
+              <div class="mini" onclick="move( 3,0);return false;">➡️ DX</div>
+              <div class="mini" onclick="zoomBy(0.06);return false;">➕ ZOOM</div>
+              <div class="mini" onclick="zoomBy(-0.06);return false;">➖ ZOOM</div>
+              <div class="mini" onclick="resetCrop();return false;">🔄 RESET</div>
             </div>
-          </div>
 
-          <div class="tool-row">
-            <div style="flex:1;">
-              <label>Y (su/giù)</label>
-              <input class="range" type="range" min="0" max="100" step="1" id="ry" value="{{ p.pos_y|default(50) }}" oninput="setY(this.value)">
+            <div class="hint">✅ Fix definitivo: SU/GIÙ salva davvero il valore `pos_y` (non solo grafica).</div>
+
+            <div style="margin-top:10px;">
+              <label>X (SX/DX)</label>
+              <input id="rx" class="range" type="range" min="0" max="100" step="1"
+                     value="{{ p.pos_x|default(50) }}" oninput="setX(this.value)">
             </div>
-          </div>
 
-          <div class="tool-row">
-            <div style="flex:1;">
+            <div style="margin-top:10px;">
+              <label>Y (SU/GIÙ)</label>
+              <input id="ry" class="range" type="range" min="0" max="100" step="1"
+                     value="{{ p.pos_y|default(50) }}" oninput="setY(this.value)">
+            </div>
+
+            <div style="margin-top:10px;">
               <label>Zoom</label>
-              <input class="range" type="range" min="1" max="2.2" step="0.01" id="rz" value="{{ p.zoom|default(1.0) }}" oninput="setZ(this.value)">
+              <input id="rz" class="range" type="range" min="1" max="2.2" step="0.01"
+                     value="{{ p.zoom|default(1.0) }}" oninput="setZ(this.value)">
             </div>
+
+            <!-- ✅ VALORI CHE IL BACKEND SALVA -->
+            <input type="hidden" name="pos_x" id="pos_x" value="{{ p.pos_x|default(50) }}">
+            <input type="hidden" name="pos_y" id="pos_y" value="{{ p.pos_y|default(50) }}">
+            <input type="hidden" name="zoom"  id="zoom"  value="{{ p.zoom|default(1.0) }}">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="title"><span>EFFETTI</span></div>
+        <div class="row">
+          <label class="pill">
+            <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
+            Gira logo (orario)
+          </label>
+
+          <label class="pill">
+            <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
+            Gira foto agente (NO moneta)
+          </label>
+
+          <div class="pill" style="flex:1; min-width:240px;">
+            <span style="color:#aaa; font-size:12px;">Interazione</span>
+            <select name="fx_interaction" class="input-rect" style="margin:0;">
+              <option value="tap" {% if p.fx_interaction=='tap' %}selected{% endif %}>Tap (click)</option>
+              <option value="mirror" {% if p.fx_interaction=='mirror' %}selected{% endif %}>Specchio (sempre)</option>
+            </select>
           </div>
 
-          <!-- ✅ questi sono quelli che il backend salva -->
-          <input type="hidden" name="pos_x" id="pos_x" value="{{ p.pos_x|default(50) }}">
-          <input type="hidden" name="pos_y" id="pos_y" value="{{ p.pos_y|default(50) }}">
-          <input type="hidden" name="zoom" id="zoom" value="{{ p.zoom|default(1.0) }}">
-        </div>
-      </div>
-
-      <div class="section-title">Effetti</div>
-      <div class="tool-row">
-        <label style="display:flex; gap:8px; align-items:center;">
-          <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
-          Gira logo (orario)
-        </label>
-        <label style="display:flex; gap:8px; align-items:center;">
-          <input type="checkbox" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %}>
-          Gira foto agente (NO moneta)
-        </label>
-      </div>
-
-      <div class="tool-row">
-        <div style="flex:1; min-width:240px;">
-          <label>Interazione</label>
-          <select name="fx_interaction">
-            <option value="tap" {% if p.fx_interaction=='tap' %}selected{% endif %}>Tap (gira al click)</option>
-            <option value="mirror" {% if p.fx_interaction=='mirror' %}selected{% endif %}>Specchio (gira sempre)</option>
-          </select>
+          <div class="pill" style="flex:1; min-width:240px;">
+            <span style="color:#aaa; font-size:12px;">Retro</span>
+            <select name="fx_back_content" class="input-rect" style="margin:0;">
+              <option value="logo" {% if p.fx_back_content=='logo' %}selected{% endif %}>Logo</option>
+              <option value="personal" {% if p.fx_back_content=='personal' %}selected{% endif %}>Foto personale</option>
+            </select>
+          </div>
         </div>
 
-        <div style="flex:1; min-width:240px;">
-          <label>Retro</label>
-          <select name="fx_back_content">
-            <option value="logo" {% if p.fx_back_content=='logo' %}selected{% endif %}>Logo</option>
-            <option value="personal" {% if p.fx_back_content=='personal' %}selected{% endif %}>Foto personale</option>
-          </select>
+        <div class="sep"></div>
+
+        <div class="title"><span>GALLERY</span></div>
+        <div class="grid">
+          <div>
+            <label>Foto (multiplo)</label>
+            <input class="input-rect" type="file" name="gallery_img" accept="image/*" multiple>
+          </div>
+          <div>
+            <label>Video (multiplo)</label>
+            <input class="input-rect" type="file" name="gallery_vid" accept="video/*" multiple>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>PDF (multiplo)</label>
+            <input class="input-rect" type="file" name="gallery_pdf" accept="application/pdf" multiple>
+          </div>
         </div>
-      </div>
 
-      <div class="tool-row" style="margin-top:14px;">
-        <button class="mini-btn" type="submit" style="background:linear-gradient(90deg,#0088cc,#00ffc8); color:#000;">
-          SALVA MODIFICHE
-        </button>
-      </div>
+        <div style="margin-top:14px;" class="row">
+          <button class="btn btn-primary" type="submit">SALVA MODIFICHE</button>
+          <a class="btn" href="/area">ANNULLA</a>
+        </div>
 
-    </form>
+      </form>
+    </div>
   </div>
 
   <script>
+    // ===== CROP FIX DEFINITIVO =====
     let x = parseInt(document.getElementById('pos_x').value || "50", 10);
     let y = parseInt(document.getElementById('pos_y').value || "50", 10);
     let z = parseFloat(document.getElementById('zoom').value || "1.0");
 
     const img = document.getElementById('prevImg');
-    const rx = document.getElementById('rx');
-    const ry = document.getElementById('ry');
-    const rz = document.getElementById('rz');
+    const rx  = document.getElementById('rx');
+    const ry  = document.getElementById('ry');
+    const rz  = document.getElementById('rz');
 
-    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
     function apply(){
       if(!img) return;
+      x = clamp(x, 0, 100);
+      y = clamp(y, 0, 100);
+      z = clamp(z, 1.0, 2.2);
+
       img.style.objectPosition = x + "% " + y + "%";
       img.style.transform = "scale(" + z.toFixed(2) + ")";
+
+      // ✅ SALVATAGGIO REALE
       document.getElementById('pos_x').value = x;
       document.getElementById('pos_y').value = y;
-      document.getElementById('zoom').value = z.toFixed(2);
+      document.getElementById('zoom').value  = z.toFixed(2);
+
+      // sync slider
       if(rx) rx.value = x;
       if(ry) ry.value = y;
       if(rz) rz.value = z.toFixed(2);
     }
 
-    // ✅ bottoni
-    function move(dx, dy){
-      x = clamp(x + dx, 0, 100);
-      y = clamp(y + dy, 0, 100);
-      apply();
-    }
-    function zoomBy(dz){
-      z = clamp(z + dz, 1.0, 2.2);
-      apply();
-    }
-    function resetCrop(){
-      x = 50; y = 50; z = 1.0;
-      apply();
-    }
+    function move(dx,dy){ x += dx; y += dy; apply(); }
+    function zoomBy(dz){ z += dz; apply(); }
+    function resetCrop(){ x=50; y=50; z=1.0; apply(); }
 
-    // ✅ slider
-    function setX(v){ x = clamp(parseInt(v,10), 0, 100); apply(); }
-    function setY(v){ y = clamp(parseInt(v,10), 0, 100); apply(); }
-    function setZ(v){ z = clamp(parseFloat(v), 1.0, 2.2); apply(); }
+    function setX(v){ x = parseInt(v,10); apply(); }
+    function setY(v){ y = parseInt(v,10); apply(); }
+    function setZ(v){ z = parseFloat(v); apply(); }
 
-    // init
     apply();
   </script>
 </body>
