@@ -69,7 +69,6 @@ def repair_user(user):
     dirty = False
     if 'default_profile' not in user: user['default_profile'] = 'p1'; dirty = True
     
-    # === FIX ERRORE 500: Assicura che admin_contact esista sempre ===
     if 'admin_contact' not in user or not isinstance(user['admin_contact'], dict):
         user['admin_contact'] = {'email': '', 'whatsapp': ''}
         dirty = True
@@ -354,7 +353,6 @@ def edit_profile(p_id):
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
     if session.get('is_master'):
-        # === FIX AUTOMATICO DATABASE ===
         clienti = load_db()
         dirty = False
         for c in clienti:
@@ -362,10 +360,10 @@ def master_login():
                 dirty = True
         if dirty:
             save_db(clienti)
-        # ===============================
         return render_template('master_dashboard.html', clienti=clienti, files=[])
         
-    if request.method == 'POST' and request.form.get('password') == "Peppone16@":
+    # MODIFICA LOGIN: Check User "admin" e Password "Peppone16@"
+    if request.method == 'POST' and request.form.get('username') == "admin" and request.form.get('password') == "Peppone16@":
         session['is_master'] = True; return redirect(url_for('master_login'))
     return render_template('master_login.html')
 
