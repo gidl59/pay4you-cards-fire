@@ -13,7 +13,6 @@
       const r = new FileReader();
       r.onload = function(e){
         document.getElementById('cropImg').src = e.target.result;
-        // dopo preview aggiorno anche posizione/zoom
         requestAnimationFrame(updateCrop);
       };
       r.readAsDataURL(input.files[0]);
@@ -28,7 +27,7 @@
     }
   }
 
-  // ✅ CROP FIX ROBUSTO (su/giù sempre funzionante)
+  // ✅ CROP FIX ROBUSTO: su/giù SEMPRE ok (input + change + touchend)
   function updateCrop(){
     const xEl = document.getElementsByName('pos_x')[0];
     const yEl = document.getElementsByName('pos_y')[0];
@@ -96,7 +95,7 @@
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
   }
 
-  // ✅ TESTO EMAIL COMPLETO (foto/video/pdf)
+  // ✅ EMAIL TESTO COMPLETO (foto/video/pdf) - mai vuoto
   function sendMediaEmail(){
     const fullUrl = window.location.origin + CURRENT_MEDIA.url;
 
@@ -110,7 +109,6 @@
       "Ciao!\n\n" +
       "Ti invio questo contenuto Pay4You (" + tipo + "):\n" +
       fullUrl + "\n\n" +
-      "Se apri da iPhone: tocca il link per visualizzarlo.\n\n" +
       "— Pay4You";
 
     window.location.href = makeMailto(subject, body);
