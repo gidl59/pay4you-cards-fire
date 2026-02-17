@@ -1,320 +1,250 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Master Admin | Pay4You</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    .wrap{ max-width:1200px; margin:0 auto; padding:18px; }
-    .box{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:18px;
-      padding:16px;
-      margin-bottom:14px;
-    }
-    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .title{ font-weight:900; letter-spacing:.06em; color:#00ffc8; margin:0; }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 14px; border-radius:14px;
-      font-weight:900; cursor:pointer; text-decoration:none;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06); color:#fff;
-    }
-    .btn-primary{ background:linear-gradient(90deg,#0088cc,#00ffc8); color:#000; border:none; }
-    .btn-danger{ background:#c70000; border:none; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:12px 10px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:middle; }
-    th{ color:#aaa; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
-    .small{ color:#aaa; font-size:12px; margin-top:6px; }
-    .pill{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:44px; height:36px;
-      border-radius:12px; font-weight:900;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.06);
-      cursor:pointer;
-      user-select:none;
-    }
-    .wa{ background:#25D366; color:#000; border:none; }
-    .em{ background:#fff; color:#000; border:none; }
-    .qr{ background:#f5a300; color:#000; border:none; }
-
-    .modal-overlay{
-      display:none;
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.70);
-      backdrop-filter: blur(10px);
-      z-index:9999;
-      align-items:center;
-      justify-content:center;
-      flex-direction:column;
-      gap:14px;
-      padding:18px;
-    }
-    .modal-card{
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      padding:16px;
-      max-width:520px;
-      width:92vw;
-      text-align:center;
-    }
-    .modal-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-    .act{ width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; user-select:none; }
-    .act-wa{ background:#25D366; color:#000; }
-    .act-em{ background:#fff; color:#000; }
-    .act-app{ background:#444; color:#fff; }
-    .act-copy{ background:#00ffc8; color:#00120e; }
-    .act-cl{ background:#0088cc; color:#000; }
-
-    /* mini toast */
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:18px;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,.75);
-      border:1px solid rgba(255,255,255,.18);
-      color:#fff;
-      padding:10px 14px;
-      border-radius:14px;
-      font-weight:900;
-      display:none;
-      z-index:10000;
-      backdrop-filter: blur(8px);
-    }
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-    <div class="box">
-      <div class="topbar">
-        <h2 class="title">➕ Nuovo Cliente</h2>
-        <a class="btn btn-danger" href="/master/logout">Esci</a>
-      </div>
-
-      <form class="row" method="POST" action="/master/add" style="margin-top:12px;">
-        <input class="input-rect" name="slug" placeholder="Slug (es. mario)" style="flex:1; min-width:220px;">
-        <input class="input-rect" name="username" placeholder="User" style="flex:1; min-width:180px;">
-        <input class="input-rect" name="password" placeholder="Pass (vuoto=auto)" style="flex:1; min-width:200px;">
-        <input class="input-rect" name="nome" placeholder="Nome" style="flex:1; min-width:200px;">
-        <button class="btn btn-primary" type="submit">CREA</button>
-      </form>
-    </div>
-
-    <div class="box">
-      <h3 class="title" style="margin:0 0 10px;">Clienti</h3>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Credenziali</th>
-            <th>Invia</th>
-            <th style="text-align:right;">Azioni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in clienti %}
-          <tr>
-            <td>
-              <div style="font-weight:900; font-size:16px;">{{ c.nome }}</div>
-              <div style="color:#00ffc8; font-weight:900;">
-                <a href="/card/{{ c.slug }}" target="_blank" style="color:#00ffc8; text-decoration:none;">/card/{{ c.slug }}</a>
-              </div>
-              <div class="small">slug: {{ c.slug }}</div>
-            </td>
-
-            <td>
-              <div style="font-weight:900;">u: <span style="color:#fff;">{{ c.username }}</span></div>
-              <div style="font-weight:900;">p: <span style="color:#fff;">{{ c.password }}</span></div>
-            </td>
-
-            <td>
-              <div class="row">
-                <div class="pill wa" onclick="sendWA('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">WA</div>
-
-                <!-- EMAIL come quello che ti funziona (Gmail compose) -->
-                <div class="pill em" onclick="sendEmailCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">@</div>
-
-                <div class="pill qr" onclick="openQR('{{ c.slug|e }}','{{ c.username|e }}','{{ c.password|e }}')">QR</div>
-
-                <!-- Copia testo credenziali -->
-                <div class="pill" onclick="copyCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')" title="Copia testo">📋</div>
-              </div>
-              <div class="small">✅ Gmail + Copia testo + Email(APP)</div>
-            </td>
-
-            <td style="text-align:right;">
-              <a class="btn" href="/master/impersonate/{{ c.id }}">Gestisci</a>
-              <a class="btn btn-danger" href="/master/delete/{{ c.id }}" onclick="return confirm('Confermi ELIMINA questo cliente?')">ELIMINA</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="qrModal" class="modal-overlay">
-    <div class="modal-card">
-      <div style="font-weight:900; color:#00ffc8; letter-spacing:.06em;">QR + INVIO CREDENZIALI</div>
-      <div id="qrBox" style="margin-top:12px;"></div>
-      <div class="small" id="qrInfo"></div>
-    </div>
-
-    <div class="modal-actions">
-      <div class="act act-wa" onclick="modalWA()" title="WhatsApp">🟢</div>
-
-      <!-- Gmail web compose (come nella dashboard file) -->
-      <div class="act act-em" onclick="modalEmail()" title="Gmail">✉️</div>
-
-      <!-- Mailto per Thunderbird/Outlook/Apple Mail -->
-      <div class="act act-app" onclick="modalEmailApp()" title="Email (APP)">📨</div>
-
-      <!-- Copia testo credenziali -->
-      <div class="act act-copy" onclick="modalCopy()" title="Copia testo">📋</div>
-
-      <div class="act act-cl" onclick="closeQR()" title="Chiudi">✖</div>
-    </div>
-  </div>
-
-  <div id="toast" class="toast">Copiato ✅</div>
-
-  <script>
-    let MOD_SLUG="", MOD_U="", MOD_P="";
-
-    // ===== helper base =====
-    function baseUrls(slug){
-      const base  = window.location.origin;
-      const login = base + "/area/login";
-      const card  = base + "/card/" + slug;
-      return { base, login, card };
-    }
-
-    function credSubject(){
-      return "Pay4You - Credenziali Accesso";
-    }
-
-    function credBody(u,p,slug){
-      const { login, card } = baseUrls(slug);
-      return (
-        "Ciao!\n\n" +
-        "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
-        "LOGIN: " + login + "\n" +
-        "USER: " + u + "\n" +
-        "PASSWORD: " + p + "\n\n" +
-        "La tua Card:\n" + card + "\n\n" +
-        "Consiglio: al primo accesso salva questi dati.\n\n" +
-        "— Pay4You"
-      );
-    }
-
-    function showToast(msg){
-      const t = document.getElementById("toast");
-      if(!t) return;
-      t.textContent = msg || "Copiato ✅";
-      t.style.display = "block";
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(()=>{ t.style.display="none"; }, 1600);
-    }
-
-    async function copyText(text){
-      try{
-        await navigator.clipboard.writeText(text);
-        showToast("Copiato ✅");
-      }catch(e){
-        // fallback
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try{
-          document.execCommand("copy");
-          showToast("Copiato ✅");
-        }catch(err){
-          alert("Non riesco a copiare automaticamente. Copia manualmente:\n\n" + text);
+    <meta charset="UTF-8">
+    <title>Master Control | Pay4You</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background:#050505; color:white; font-family:sans-serif; padding:20px; }
+        .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; }
+        .box { background:#111; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #333; }
+        
+        table { width:100%; border-collapse:collapse; margin-top:10px; }
+        td, th { padding:12px; border-bottom:1px solid #222; text-align:left; vertical-align:middle; }
+        th { color:#888; font-size:12px; text-transform:uppercase; }
+        
+        /* BOTTONI AZIONE STILE "PILLOLA" */
+        .row-btns { display:flex; gap:5px; flex-wrap:wrap; }
+        .pill {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:36px; height:36px; border-radius:10px; font-weight:bold; font-size:18px;
+            border:1px solid rgba(255,255,255,.1); cursor:pointer; user-select:none;
+            transition: transform 0.2s;
         }
-        document.body.removeChild(ta);
-      }
-    }
+        .pill:hover { transform: scale(1.1); }
+        
+        .wa { background:#25D366; color:#000; }
+        .gm { background:#ffffff; color:#c71610; }
+        .em { background:#444; color:#fff; }
+        .cp { background:#00ffc8; color:#000; }
+        .qr { background:#f5a300; color:#000; }
+        
+        .btn-gest { background:#0088cc; color:#fff; font-size:13px; padding:0 10px; width:auto; text-decoration:none; }
+        .btn-del { background:#330000; color:#ff4444; border:1px solid #550000; font-size:16px; }
 
-    // ===== EMAIL: stessi comportamenti del file dashboard =====
-    function sendEmailCred(u,p,slug){
-      // Gmail web compose (risolve il problema: in Gmail c'è solo oggetto se usi mailto)
-      const subject = credSubject();
-      const body = credBody(u,p,slug);
+        .credenziali { font-family:monospace; color:#00ffc8; background:rgba(0,255,200,0.1); padding:5px 8px; border-radius:5px; font-size:13px; }
+        
+        /* NUOVO FORM CREAZIONE AUTOMATICA */
+        .form-row { display:flex; gap:15px; flex-wrap:wrap; align-items: flex-end; }
+        .input-group { display:flex; flex-direction:column; flex:1; min-width: 200px; }
+        .input-group label { font-size:12px; color:#aaa; margin-bottom:5px; font-weight:bold; }
+        input { background:#222; border:1px solid #444; color:white; padding:10px; border-radius:5px; width:100%; box-sizing: border-box; }
+        input:focus { border-color:#00ffc8; outline:none; }
+        
+        .btn-crea { background:#00ffc8; color:black; border:none; padding:10px 25px; font-weight:bold; border-radius:5px; cursor:pointer; height: 38px; }
 
-      const gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
-                       "&su=" + encodeURIComponent(subject) +
-                       "&body=" + encodeURIComponent(body);
+        /* MODALE QR */
+        .qr-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; justify-content:center; align-items:center; flex-direction:column; }
+        .qr-box { background:white; padding:20px; border-radius:15px; text-align:center; }
+        .close-qr { margin-top:15px; color:white; cursor:pointer; font-weight:bold; font-size:18px; }
+        
+        /* TOAST */
+        .toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:rgba(0,0,0,.8); border:1px solid #444; color:#fff; padding:10px 20px; border-radius:20px; display:none; z-index:10000; }
 
-      window.open(gmailUrl, "_blank");
-    }
+        /* FLASH MESSAGES */
+        .flashes { list-style:none; padding:0; margin-bottom:20px; }
+        .flash { padding:15px; border-radius:10px; margin-bottom:10px; font-weight:bold; }
+        .flash.success { background:rgba(0,255,200,0.2); border:1px solid #00ffc8; color:#00ffc8; }
+    </style>
+</head>
+<body>
+    <div class="head">
+        <h1>MASTER CONTROL 🎛️</h1>
+        <a href="/master/logout" style="color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 15px; border-radius:5px;">ESCI DAL PORTALE</a>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
 
-    function sendEmailApp(u,p,slug){
-      // per Thunderbird/Outlook/Apple Mail
-      const subject = credSubject();
-      const body = credBody(u,p,slug).replace(/\n/g, "\r\n");
-      const mailto = "mailto:?subject=" + encodeURIComponent(subject) +
-                     "&body=" + encodeURIComponent(body);
-      window.location.href = mailto;
-    }
+    <div class="box" style="border-color:#00ffc8;">
+        <h3 style="color:#00ffc8; margin-top:0;">➕ Crea Nuova Card (Automatico)</h3>
+        <p style="color:#aaa; font-size:13px; margin-bottom:15px;">Inserisci i dati per le credenziali. La password verrà generata automaticamente e la card sarà creata vuota.</p>
+        <form action="/master/add" method="POST" class="form-row">
+            
+            <div class="input-group">
+                <label>SLUG / LINK (es. mario-rossi)</label>
+                <input type="text" name="slug" placeholder="es. card-cliente" required style="color:#00ffc8; font-weight:bold; border-color:#555;">
+            </div>
+            
+            <div class="input-group">
+                <label>EMAIL (Per invio credenziali)</label>
+                <input type="email" name="admin_email" placeholder="email@cliente.com" required>
+            </div>
 
-    function copyCred(u,p,slug){
-      const subject = credSubject();
-      const body = credBody(u,p,slug);
-      const text = "OGGETTO:\n" + subject + "\n\nTESTO:\n" + body;
-      copyText(text);
-    }
+            <div class="input-group">
+                <label>WHATSAPP (Per invio credenziali)</label>
+                <input type="text" name="admin_whatsapp" placeholder="+39 333..." required>
+            </div>
+            
+            <div class="input-group" style="flex:0;">
+                <label>&nbsp;</label>
+                <button class="btn-crea">CREA AUTO 🚀</button>
+            </div>
+        </form>
+    </div>
 
-    // ===== WhatsApp (come prima) =====
-    function sendWA(u,p,slug){
-      const { login, card } = baseUrls(slug);
-      const txt =
-        "Pay4You - Credenziali\n\n" +
-        "Login: " + login + "\n" +
-        "User: " + u + "\n" +
-        "Pass: " + p + "\n\n" +
-        "Card: " + card;
+    <div class="box">
+        <h3>Lista Clienti ({{ clienti|length }})</h3>
+        <table>
+            <tr>
+                <th>Cliente / Link</th>
+                <th>Credenziali & Contatti Admin</th>
+                <th>Invia Dati (Privato)</th>
+                <th style="text-align:right;">Azioni</th>
+            </tr>
+            {% for c in clienti %}
+            <tr>
+                <td>
+                    <strong style="font-size:16px;">{{ c.p1.name if c.p1.name else 'Card Vuota (' + c.slug + ')' }}</strong><br>
+                    <a href="/card/{{ c.slug }}" target="_blank" style="color:#666; font-size:12px; text-decoration:none;">/card/{{ c.slug }}</a>
+                </td>
+                <td>
+                    <div class="credenziali">
+                        U: {{ c.username }}<br>
+                        P: {{ c.password }}
+                    </div>
+                    <div style="font-size:11px; color:#888; margin-top:5px;">
+                        ✉️ {{ c.admin_contact.email }}<br>
+                        📱 {{ c.admin_contact.whatsapp }}
+                    </div>
+                </td>
+                <td>
+                    <div class="row-btns">
+                        <div class="pill wa" onclick="sendWA('{{c.admin_contact.whatsapp}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="WhatsApp a {{c.admin_contact.whatsapp}}">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div class="pill gm" onclick="sendGmail('{{c.admin_contact.email}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Gmail a {{c.admin_contact.email}}">
+                            ✉️
+                        </div>
+                        <div class="pill em" onclick="sendEmailApp('{{c.admin_contact.email}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Email App a {{c.admin_contact.email}}">
+                            📨
+                        </div>
+                        <div class="pill cp" onclick="copyCred('{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Copia Testo">
+                            📋
+                        </div>
+                        <div class="pill qr" onclick="mostraQR('{{c.slug}}')" title="QR Link">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                    </div>
+                </td>
+                <td style="text-align:right;">
+                    <div class="row-btns" style="justify-content: flex-end;">
+                        <a href="/master/impersonate/{{c.id}}" class="pill btn-gest">Gestisci</a>
+                        <a href="/master/delete/{{c.id}}" class="pill btn-del" onclick="return confirm('Sei sicuro di voler eliminare {{c.slug}}?')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
-      window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
-    }
+    <div id="boxQR" class="qr-modal">
+        <div class="qr-box">
+            <img id="imgQR" src="" width="250" height="250">
+            <div style="color:black; margin-top:10px; font-weight:bold;">LINK CARD</div>
+        </div>
+        <div class="close-qr" onclick="chiudiQR()">CHIUDI X</div>
+    </div>
 
-    // ===== QR MODAL =====
-    function openQR(slug,u,p){
-      MOD_SLUG=slug; MOD_U=u; MOD_P=p;
+    <div id="toast" class="toast">Testo Copiato! ✅</div>
 
-      const url = window.location.origin + "/card/" + slug;
-      document.getElementById("qrBox").innerHTML =
-        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) +
-        '" style="background:white; padding:14px; border-radius:18px; width:260px; height:260px;">';
+    <script>
+        var baseUrl = window.location.origin;
 
-      document.getElementById("qrInfo").innerText =
-        "User: " + u + "  |  Pass: " + p;
+        // --- FUNZIONI DI COSTRUZIONE TESTO ---
+        function getCredSubject() { return "Pay4You - Credenziali Accesso"; }
+        
+        function getCredBody(user, pass, slug) {
+            var linkLogin = baseUrl + "/area/login";
+            var linkCard = baseUrl + "/card/" + slug;
+            
+            return "Ciao!\n\n" +
+                   "Ecco le tue credenziali per gestire la tua nuova Card Digitale Pay4You.\n\n" +
+                   "Ti preghiamo di accedere e compilare i tuoi dati.\n\n" +
+                   "LOGIN (Per modificare):\n" + linkLogin + "\n" +
+                   "USER: " + user + "\n" +
+                   "PASSWORD: " + pass + "\n\n" +
+                   "IL TUO LINK PUBBLICO:\n" + linkCard + "\n\n" +
+                   "Consiglio: salva questi dati e cambia la password al primo accesso.";
+        }
 
-      document.getElementById("qrModal").style.display="flex";
-    }
+        // 1. WHATSAPP (Apre la chat con il numero salvato)
+        function sendWA(phone, user, pass, slug) {
+            // Pulisce il numero da spazi o caratteri extra
+            var cleanPhone = phone.replace(/[^0-9]/g, '');
+            var txt = getCredBody(user, pass, slug);
+            window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(txt), '_blank');
+        }
 
-    function closeQR(){
-      document.getElementById("qrModal").style.display="none";
-      document.getElementById("qrBox").innerHTML="";
-      MOD_SLUG=""; MOD_U=""; MOD_P="";
-    }
+        // 2. GMAIL (Web, con destinatario salvato)
+        function sendGmail(email, user, pass, slug) {
+            var sub = getCredSubject();
+            var body = getCredBody(user, pass, slug);
+            var url = "https://mail.google.com/mail/?view=cm&fs=1&to=" + email + "&su=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
+            window.open(url, '_blank');
+        }
 
-    function modalWA(){ sendWA(MOD_U, MOD_P, MOD_SLUG); }
-    function modalEmail(){ sendEmailCred(MOD_U, MOD_P, MOD_SLUG); }
-    function modalEmailApp(){ sendEmailApp(MOD_U, MOD_P, MOD_SLUG); }
-    function modalCopy(){ copyCred(MOD_U, MOD_P, MOD_SLUG); }
-  </script>
+        // 3. EMAIL APP (Con destinatario salvato)
+        function sendEmailApp(email, user, pass, slug) {
+            var sub = getCredSubject();
+            var body = getCredBody(user, pass, slug);
+            window.location.href = "mailto:" + email + "?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
+        }
+
+        // 4. COPIA TESTO
+        async function copyCred(user, pass, slug) {
+            var txt = "OGGETTO: " + getCredSubject() + "\n\n" + getCredBody(user, pass, slug);
+            try {
+                await navigator.clipboard.writeText(txt);
+                showToast();
+            } catch (err) {
+                var ta = document.createElement("textarea");
+                ta.value = txt;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+                showToast();
+            }
+        }
+
+        function showToast() {
+            var t = document.getElementById("toast");
+            t.style.display = "block";
+            setTimeout(function(){ t.style.display = "none"; }, 2000);
+        }
+
+        // 5. QR CODE
+        function mostraQR(slug) {
+            var linkCard = baseUrl + "/card/" + slug;
+            var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(linkCard);
+            document.getElementById('imgQR').src = qrUrl;
+            document.getElementById('boxQR').style.display = 'flex';
+        }
+
+        function chiudiQR() {
+            document.getElementById('boxQR').style.display = 'none';
+        }
+    </script>
 </body>
 </html>
