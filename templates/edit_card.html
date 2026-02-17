@@ -37,6 +37,7 @@
       display:block;
       transition:none;
       will-change: transform;
+      object-fit: initial; /* non usato in cover-mode */
     }
 
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
@@ -208,23 +209,43 @@
     <div id="modalViewer"></div>
     <div class="dash-actions">
       <button onclick="invioWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
-
-      <!-- EMAIL: Gmail web (come ora) -->
       <button onclick="invioEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
-
-      <!-- EXTRA: mailto per Thunderbird/Outlook/Apple Mail -->
       <button onclick="invioEmailApp()" class="d-btn db-app"><i class="fas fa-paper-plane"></i> EMAIL (APP)</button>
-
-      <!-- Copia testo -->
       <button onclick="copiaTestoEmail()" class="d-btn db-copy"><i class="fas fa-copy"></i> COPIA TESTO</button>
-
       <button onclick="cancellaMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
     </div>
   </div>
 
   <script>
-    // 1) CROP STABILE
+    // ---- FIX SOLO "FOTO INIZIA GRANDE" DOPO UPLOAD ----
+    // Modalità "contain" SOLO subito dopo caricamento: mostra 1:1 senza effetto gigante.
+    // Appena tocchi uno slider (aggiornaCrop) torna in modalità crop "cover" (quella che già ti funziona).
+    function setAgentFitMode(mode){
+      var img = document.getElementById('PREVIEW_IMG_AGENT');
+      if(!img) return;
+
+      if(mode === 'contain'){
+        // 1:1 visivo, niente "sparata"
+        img.style.minWidth = "0";
+        img.style.minHeight = "0";
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = "contain";
+      } else {
+        // modalità crop (quella che già funziona)
+        img.style.width = "auto";
+        img.style.height = "auto";
+        img.style.objectFit = "initial";
+        img.style.minWidth = "100%";
+        img.style.minHeight = "100%";
+      }
+    }
+
+    // 1) CROP (NON TOCCATO nella logica: solo aggiunta riga per tornare in cover)
     function aggiornaCrop() {
+      // quando l'utente usa i controlli, torno alla modalità crop
+      setAgentFitMode('cover');
+
       var x = parseInt(document.getElementById('valX').value || "0", 10);
       var y = parseInt(document.getElementById('valY').value || "0", 10);
       var z = parseFloat(document.getElementById('valZ').value || "1");
@@ -238,26 +259,26 @@
         "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
-    // 2) Anteprima + reset SOLO foto agente (1:1)
+    // 2) Anteprima + reset SOLO foto agente (mostra subito 1:1 senza "gigante")
     function cambiaFotoAnteprima(input, id, isAgentPhoto) {
       if (input.files && input.files[0]) {
         var reader = new FileReader();
         reader.onload = function(e){
           var el = document.getElementById(id);
 
-          // reset immediato per evitare effetto "gigante"
           if (isAgentPhoto) {
             document.getElementById('valX').value = 0;
             document.getElementById('valY').value = 0;
             document.getElementById('valZ').value = 1;
 
-            // Applico subito un transform pulito 1:1
+            // subito: 1:1 (contain) + transform pulito
+            setAgentFitMode('contain');
             el.style.transform = "translate(-50%, -50%) translate(0%, 0%) scale(1)";
           }
 
-          // quando la nuova immagine è caricata davvero, applico crop
           el.onload = function() {
-            aggiornaCrop();
+            // NON applico aggiornaCrop qui, altrimenti torna "grande" subito.
+            // Il crop parte quando tocchi gli slider (aggiornaCrop).
             el.onload = null;
           };
 
@@ -382,6 +403,8 @@
     }
 
     window.onload = function() {
+      // Stato iniziale: lasciamo crop come prima (cover) e applichiamo crop salvato
+      // (non cambia nulla per chi già ha valori salvati)
       aggiornaCrop();
 
       var checkGira = document.getElementById('checkGira');
