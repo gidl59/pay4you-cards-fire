@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Pay4You - Editor Finale</title>
+  <title>Pay4You - Modifica Card</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -15,114 +15,151 @@
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
     input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
     
-    /* FIX CROP: AREA ANTEPRIMA AGENTE */
+    /* FIX CROP: CSS PER ANTEPRIMA */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
-    .crop-circle-frame { 
+    .crop-circle-box { 
         width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8; 
         overflow:hidden; margin:0 auto 15px; position:relative; background:#222; 
     }
-    #PREVIEW_IMG_FINAL { 
+    #PREVIEW_IMG_AGENT { 
         width:100% !important; height:100% !important; 
         object-fit:cover !important; display:block; 
-        transition: none !important; /* Rende il movimento istantaneo */
     }
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
     .slider-row label { width:30px; font-size:18px; text-align:center; }
     input[type="range"] { width: 100%; cursor: pointer; }
 
     /* EFFETTI */
-    #AVVISO_GIALLO { background:#2a1c00; border:1px solid #ffb000; color:#ffd58a; padding:12px; border-radius:8px; font-size:12px; font-weight:bold; margin-top:10px; display:none; text-align:left; }
+    #AVVISO_EFFETTI { background:#2a1c00; border:1px solid #ffb000; color:#ffd58a; padding:12px; border-radius:8px; font-size:12px; font-weight:bold; margin-top:10px; display:none; text-align:left; }
 
-    /* MODALE DASHBOARD */
+    /* DASHBOARD MEDIA */
+    .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
+    .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
+    .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
+    .btn-save-float { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
+
+    /* MODALE */
     .dash-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
     .dash-modal-content { max-width:90%; max-height:75vh; border-radius:10px; margin-bottom:15px; }
     .dash-actions { display:flex; gap:15px; }
     .d-btn { padding:12px 24px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
     .db-wa { background:#25D366; color:#041b0c; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; }
-    
-    .btn-save-fixed { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
   </style>
 </head>
 <body>
 
   <div class="dash-head">
     <a href="/area" style="color:white; font-weight:900; text-decoration:none;">← Indietro</a>
-    <span style="color:#00ffc8; font-weight:900;">DASHBOARD MODIFICA P{{ p_id }}</span>
+    <span style="color:#00ffc8; font-weight:900;">MODIFICA P{{ p_id }}</span>
   </div>
 
-  <form method="POST" enctype="multipart/form-data" class="edit-container" id="formMaster">
+  <form method="POST" enctype="multipart/form-data" class="edit-container" id="formModifica">
 
     <div class="edit-box">
-      <h3 class="box-title">👤 Dati Personali</h3>
+      <h3 class="box-title">👤 Dati Business</h3>
       <div class="form-grid">
-        <div class="full-width"><label>Nome</label><input type="text" name="name" id="nomeAgente" value="{{ p.name }}"></div>
+        <div class="full-width"><label>Nome</label><input type="text" name="name" value="{{ p.name }}"></div>
         <div><label>Ruolo</label><input type="text" name="role" value="{{ p.role }}"></div>
         <div><label>Azienda</label><input type="text" name="company" value="{{ p.company }}"></div>
+        <div><label>P. IVA</label><input type="text" name="piva" value="{{ p.piva }}"></div>
+        <div><label>SDI</label><input type="text" name="cod_sdi" value="{{ p.cod_sdi }}"></div>
+        <div class="full-width"><label>PEC</label><input type="text" name="pec" value="{{ p.pec }}"></div>
         <div class="full-width"><label>Bio</label><textarea name="bio" rows="3">{{ p.bio }}</textarea></div>
       </div>
     </div>
 
     <div class="edit-box">
-      <h3 class="box-title">📞 Recapiti e Mappe</h3>
+      <h3 class="box-title">📞 Contatti e Mappe</h3>
       <div class="form-grid">
-        <div><label>Cellulare</label><input type="text" name="mobile1" value="{{ p.mobiles[0] if p.mobiles|length > 0 else '' }}"></div>
-        <div><label>Ufficio</label><input type="text" name="office_phone" value="{{ p.office_phone }}"></div>
-        <div class="full-width"><label>Email</label><input type="text" name="email1" value="{{ p.emails|join(',') }}"></div>
-        <div class="full-width"><label>Sito Web</label><input type="text" name="website" value="{{ p.websites|join(',') }}"></div>
-        <div class="full-width"><label>Indirizzo Google Maps</label><input type="text" name="address" value="{{ p.address }}"></div>
+        <div><label>Cellulare 1</label><input type="text" name="mobile1" value="{{ p.mobiles[0] if p.mobiles|length > 0 else '' }}"></div>
+        <div><label>Cellulare 2</label><input type="text" name="mobile2" value="{{ p.mobiles[1] if p.mobiles|length > 1 else '' }}"></div>
+        <div><label>Tel. Ufficio</label><input type="text" name="office_phone" value="{{ p.office_phone }}"></div>
+        <div class="full-width"><label>Email (virgola)</label><input type="text" name="email1" value="{{ p.emails|join(',') }}"></div>
+        <div class="full-width"><label>Siti Web (virgola)</label><input type="text" name="website" value="{{ p.websites|join(',') }}"></div>
+        <div class="full-width"><label>Indirizzo (Google Maps)</label><input type="text" name="address" value="{{ p.address }}"></div>
       </div>
     </div>
 
     <div class="edit-box">
-      <h3 class="box-title">📸 Crop Foto Agente</h3>
+      <h3 class="box-title">📸 Immagine e Animazione</h3>
       <div class="form-grid">
         <div class="crop-area">
-          <div class="crop-circle-frame">
-            <img id="PREVIEW_IMG_FINAL" 
+          <label style="color:#00ffc8;">FOTO AGENTE</label>
+          <div class="crop-circle-box">
+            <img id="PREVIEW_IMG_AGENT" 
                  src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
                  style="object-position: {{ p.pos_x|int }}% {{ p.pos_y|int }}%; transform: scale({{ p.zoom|float }});">
           </div>
-          <input type="file" name="foto" accept="image/*" onchange="previewUpdate(this, 'PREVIEW_IMG_FINAL')">
+          <input type="file" name="foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREVIEW_IMG_AGENT')">
 
           <div style="margin-top:20px;">
             <div class="slider-row">
               <label>↔️</label>
-              <input type="range" id="cropX" name="pos_x" min="0" max="100" value="{{ p.pos_x|int }}" oninput="applyCrop()">
+              <input type="range" id="valX" name="pos_x" min="0" max="100" value="{{ p.pos_x|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>↕️</label>
-              <input type="range" id="cropY" name="pos_y" min="0" max="100" value="{{ p.pos_y|int }}" oninput="applyCrop()">
+              <input type="range" id="valY" name="pos_y" min="0" max="100" value="{{ p.pos_y|int }}" oninput="aggiornaCrop()">
             </div>
             <div class="slider-row">
               <label>🔍</label>
-              <input type="range" id="cropZ" name="zoom" min="1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="applyCrop()">
+              <input type="range" id="valZ" name="zoom" min="1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="aggiornaCrop()">
             </div>
           </div>
 
-          <div style="margin-top:15px;">
-            <label style="display:inline-block; cursor:pointer;"><b>GIRA AGENTE?</b></label>
-            <input type="checkbox" id="giraCheck" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="toggleEffetto()">
-            <div id="AVVISO_GIALLO">⚠️ Gira Agente attivo: Tap e Specchio disabilitati.</div>
+          <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
+            <label style="display:inline-block; cursor:pointer;"><b>GIRA FOTO AGENTE?</b></label>
+            <input type="checkbox" id="checkGira" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="sceltaEffetto()">
+            <div id="AVVISO_EFFETTI">⚠️ Gira Foto Attivo: Effetto Moneta Disattivato.</div>
           </div>
         </div>
 
         <div class="crop-area">
-          <label style="color:#00ffc8;">LOGO AZIENDA</label>
-          <img id="PREV_L" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="logo" accept="image/*" onchange="previewUpdate(this, 'PREV_L')">
+          <label style="color:#00ffc8;">LOGO</label>
+          <img id="PREV_LOGO" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
+          <input type="file" name="logo" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_LOGO')">
           <label>Gira Logo?</label><input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
+          <hr style="border-color:#333; margin:20px 0;">
+          <label>FOTO RETRO</label>
+          <img id="PREV_RETRO" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:10px auto; display:block;">
+          <input type="file" name="personal_foto" accept="image/*" onchange="cambiaFotoAnteprima(this, 'PREV_RETRO')">
+        </div>
+      </div>
+
+      <div style="margin-top:20px; background:#222; padding:15px; border-radius:15px;">
+        <label>EFFETTO MONETA:</label>
+        <div style="margin:10px 0;">
+          <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %} class="radioEff"> TAP
+          <span style="margin:0 10px;"></span>
+          <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} class="radioEff"> SPECCHIO
+        </div>
+        <label>RETRO CARD:</label>
+        <div style="margin-top:10px;">
+          <input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content=='logo' %}checked{% endif %}> Logo Aziendale
+          <span style="margin:0 10px;"></span>
+          <input type="radio" name="fx_back_content" value="personal" {% if p.fx_back_content=='personal' %}checked{% endif %}> Foto Retro
         </div>
       </div>
     </div>
 
     <div class="edit-box">
-      <h3 class="box-title">📁 Galleria File</h3>
+      <h3 class="box-title">📂 Galleria File</h3>
       <input type="file" name="gallery_img" multiple accept="image/*">
       <div class="dash-gallery">
         {% for img in p.gallery_img %}
-        <div onclick="openDashMedia('{{ img }}', 'img', this)">
-          <img src="{{ img }}" style="width:80px; height:80px; border-radius:8px; object-fit:cover; margin:5px; border:1px solid #444;">
-          <input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
+        <div class="dash-item" onclick="apriMedia('{{ img }}', 'img', this)">
+          <img src="{{ img }}"><input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
+        </div>
+        {% endfor %}
+      </div>
+      <hr style="border-color:#333; margin:20px 0;">
+      <input type="file" name="gallery_vid" multiple accept="video/*">
+      <div class="dash-gallery">
+        {% for vid in p.gallery_vid %}
+        <div class="dash-item" onclick="apriMedia('{{ vid }}', 'vid', this)">
+          <video src="{{ vid }}#t=2.0"></video>
+          <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;">
         </div>
         {% endfor %}
       </div>
@@ -130,7 +167,7 @@
       <input type="file" name="gallery_pdf" multiple accept=".pdf">
       <div style="margin-top:10px;">
         {% for pdf in p.gallery_pdf %}
-        <div class="pdf-row" onclick="openDashMedia('{{ pdf.path }}', 'pdf', this)">
+        <div class="pdf-row" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
           <span><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}</span>
           <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;">
         </div>
@@ -138,33 +175,33 @@
       </div>
     </div>
 
-    <button type="submit" class="btn-save-fixed" id="btnSalva">💾 SALVA TUTTO</button>
+    <button type="submit" class="btn-save-float" id="btnSalva">💾 SALVA TUTTO</button>
   </form>
 
   <div id="modalDash" class="dash-modal">
-    <button onclick="closeDashMedia()" class="d-btn db-cl" style="margin-bottom:15px;">CHIUDI X</button>
+    <button onclick="chiudiMedia()" class="d-btn db-cl" style="margin-bottom:15px;">CHIUDI X</button>
     <div id="modalViewer"></div>
     <div class="dash-actions">
-      <button onclick="dashInviaWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
-      <button onclick="dashInviaEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
-      <button onclick="dashCancella()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
+      <button onclick="invioWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
+      <button onclick="invioEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
+      <button onclick="cancellaMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
     </div>
   </div>
 
   <script>
-    // 1. CROP X e Y (ID UNIVOCI E CALCOLO SEPARATO)
-    function applyCrop() {
-        var x = document.getElementById('cropX').value;
-        var y = document.getElementById('cropY').value;
-        var z = document.getElementById('cropZ').value;
-        var target = document.getElementById('PREVIEW_IMG_FINAL');
+    // 1. CROP FUNZIONANTE (X e Y separati)
+    function aggiornaCrop() {
+        var x = document.getElementById('valX').value;
+        var y = document.getElementById('valY').value;
+        var z = document.getElementById('valZ').value;
+        var img = document.getElementById('PREVIEW_IMG_AGENT');
         
-        // Applica i valori agli stili CSS dell'immagine
-        target.style.objectPosition = x + "% " + y + "%";
-        target.style.transform = "scale(" + z + ")";
+        // Applica X e Y separatamente
+        img.style.objectPosition = x + "% " + y + "%";
+        img.style.transform = "scale(" + z + ")";
     }
 
-    function previewUpdate(input, id) {
+    function cambiaFotoAnteprima(input, id) {
         if(input.files && input.files[0]) {
             var reader = new FileReader();
             reader.onload = function(e){ document.getElementById(id).src = e.target.result; };
@@ -172,51 +209,64 @@
         }
     }
 
-    function toggleEffetto() {
-        var gira = document.getElementById('giraCheck').checked;
-        document.getElementById('AVVISO_GIALLO').style.display = gira ? 'block' : 'none';
+    // 2. SCELTA EFFETTO ESCLUSIVO
+    function sceltaEffetto() {
+        var gira = document.getElementById('checkGira').checked;
+        var avviso = document.getElementById('AVVISO_EFFETTI');
+        var radios = document.querySelectorAll('.radioEff');
+        if(gira) {
+            avviso.style.display = 'block';
+            radios.forEach(function(r){ r.disabled = true; });
+        } else {
+            avviso.style.display = 'none';
+            radios.forEach(function(r){ r.disabled = false; });
+        }
     }
 
-    // 2. EMAIL CON TESTO (DA DASHBOARD)
-    var DASH_FILE = { url:"", type:"" };
-    var DASH_EL = null;
+    // 3. EMAIL CON TESTO (DA DASHBOARD)
+    var FILE_ATTUALE = { url:"", type:"" };
+    var ELEMENTO_ATTUALE = null;
 
-    function openDashMedia(url, type, el) {
-        DASH_EL = el;
-        DASH_FILE.url = window.location.origin + url;
-        DASH_FILE.type = type;
+    function apriMedia(url, type, el) {
+        ELEMENTO_ATTUALE = el;
+        FILE_ATTUALE.url = window.location.origin + url;
+        FILE_ATTUALE.type = type;
         var viewer = document.getElementById('modalViewer');
         viewer.innerHTML = "";
         if(type==='img') viewer.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
+        else if(type==='vid') viewer.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
         else if(type==='pdf') viewer.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:90vw; height:70vh;"></iframe>';
         document.getElementById('modalDash').style.display = 'flex';
     }
 
-    function dashInviaWA() {
-        window.open("https://wa.me/?text=" + encodeURIComponent("Ecco il file dalla mia Card:\n" + DASH_FILE.url), "_blank");
+    function invioWA() {
+        var msg = "Pay4You - Ecco un file per te:\n" + FILE_ATTUALE.url;
+        window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
-    function dashInviaEmail() {
-        var nome = document.getElementById('nomeAgente').value || "Agente Pay4You";
-        var ogg = "Condivisione file da Card Digitale";
-        var corpo = "Ciao!\nTi invio un contenuto dalla mia Card Digitale Pay4You.\n\nLink al file:\n" + DASH_FILE.url + "\n\nInviato da: " + nome;
+    function invioEmail() {
+        var nome = "{{ p.name|default('Agente Pay4You', true) }}";
+        var ogg = "Condivisione file da Card Pay4You";
+        var corpo = "Ciao!\nTi invio un contenuto dalla mia Card Digitale Pay4You.\n\nLink al file:\n" + FILE_ATTUALE.url + "\n\nInviato da: " + nome;
         
-        // Genera il link mailto con testo codificato
+        // Costruiamo il mailto codificato correttamente
         window.location.href = "mailto:?subject=" + encodeURIComponent(ogg) + "&body=" + encodeURIComponent(corpo).replace(/%0A/g, "%0D%0A");
     }
 
-    function closeDashMedia() { document.getElementById('modalDash').style.display='none'; }
-    function dashCancella() {
+    function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
+    function cancellaMedia() {
         if(confirm("Eliminare?")) {
-            DASH_EL.querySelector('input[type="checkbox"]').checked = true;
-            DASH_EL.style.display = 'none';
-            closeDashMedia();
+            var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
+            if(chk) chk.checked = true;
+            ELEMENTO_ATTUALE.style.display = 'none';
+            chiudiMedia();
         }
     }
 
     window.onload = function() {
-        applyCrop();
-        toggleEffetto();
+        aggiornaCrop();
+        sceltaEffetto();
+        document.getElementById('formModifica').onsubmit = function(){ document.getElementById('btnSalva').innerText="⏳ SALVATAGGIO..."; };
     };
   </script>
 </body>
