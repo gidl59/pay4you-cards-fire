@@ -2,47 +2,53 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Modifica Card</title>
+  <title>Modifica Card PRO</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    /* STILI GENERALI DASHBOARD */
+    /* STILI AGGIORNATI E FORZATI */
+    body { background:#050505; color:white; font-family:sans-serif; }
     .edit-container { max-width:900px; margin:20px auto; padding-bottom:110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
+    
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
     
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
     input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-    input[type="range"] { width: 100%; cursor: pointer; margin: 5px 0; }
     
-    /* CROP STYLES */
+    /* SLIDER E CROP */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
     .crop-circle { 
         width:160px; height:160px; 
         border-radius:50%; border:3px solid #00ffc8; 
         overflow:hidden; margin:0 auto 15px auto; 
         position:relative; background:#222; 
-        /* Importante per vedere i movimenti */
         display: flex; align-items: center; justify-content: center;
     }
     .crop-circle img { 
         width:100%; height:100%; 
         object-fit:cover; 
-        /* La posizione viene gestita da JS */
         transform-origin: center center;
         display:block;
     }
     
-    .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    .slider-row label { margin:0; width:30px; text-align:center; font-size:16px; }
+    .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
+    .slider-row label { margin:0; width:30px; text-align:center; font-size:18px; }
+    input[type="range"] { width: 100%; cursor: pointer; }
 
-    /* AVVISO GIALLO (Stile forzato) */
-    #warnBox { 
-        background:#2a1c00; border:1px solid #ffb000; color:#ffd58a; 
-        padding:12px; border-radius:8px; font-size:13px; font-weight:bold; 
-        margin-top:15px; text-align:left; line-height:1.4;
+    /* AVVISO GIALLO (Stile forzato con !important per essere visibile) */
+    #boxAvvisoGiallo { 
+        background-color: #382800 !important; 
+        border: 2px solid #ffb000 !important; 
+        color: #ffd58a !important; 
+        padding: 15px !important; 
+        border-radius: 8px !important; 
+        font-size: 13px !important; 
+        font-weight: bold !important; 
+        margin-top: 15px !important; 
+        text-align: left !important; 
         display: none; /* Gestito da JS */
     }
 
@@ -56,21 +62,20 @@
     .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
     .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
     
-    /* TASTO SALVA FLOTTANTE */
     .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
-    /* MODALE DASHBOARD */
+    /* MODALE */
     .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
     .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:15px; border-radius:10px; }
     .dash-actions { display:flex; gap:15px; margin-bottom:10px; flex-wrap:wrap; justify-content:center; }
     .d-btn { display:flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; font-size:14px; }
     .db-wa { background:#25D366; color:#041b0c; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; color:white; }
     
-    details summary{ cursor:pointer; user-select:none; font-weight:bold; outline:none; }
+    details summary{ cursor:pointer; user-select:none; font-weight:bold; outline:none; margin-bottom: 10px;}
     .hint { color:#777; font-size:11px; margin-top:5px; }
   </style>
 </head>
-<body style="background:#050505; color:white; font-family:sans-serif;">
+<body>
 
   <div class="dash-head">
     <a href="/area" style="color:white; font-weight:900; text-decoration:none;">← Indietro</a>
@@ -112,63 +117,64 @@
           <label style="color:#00ffc8; margin-bottom:10px;">FOTO AGENTE</label>
 
           <div class="crop-circle">
-            <img id="cropImg"
+            <img id="imgAgenteTarget"
                  src="{{ p.foto if p.foto else 'https://via.placeholder.com/150' }}"
                  style="object-position: {{ p.pos_x|int }}% {{ p.pos_y|int }}%; transform: scale({{ p.zoom|float }});">
           </div>
 
-          <input type="file" name="foto" accept="image/*" onchange="previewCrop(this)">
+          <input type="file" name="foto" accept="image/*" onchange="caricaAnteprima(this, 'imgAgenteTarget')">
 
           <div style="margin-top:15px; text-align:left;">
             <div class="slider-row">
               <label>↔️</label>
-              <input type="range" id="rngX" name="pos_x" min="0" max="100" step="1" value="{{ p.pos_x|int }}" oninput="refreshCrop()">
+              <input type="range" id="inputX_new" name="pos_x" min="0" max="100" step="1" value="{{ p.pos_x|int }}" oninput="applicaCropImmediato()">
             </div>
             <div class="slider-row">
               <label>↕️</label>
-              <input type="range" id="rngY" name="pos_y" min="0" max="100" step="1" value="{{ p.pos_y|int }}" oninput="refreshCrop()">
+              <input type="range" id="inputY_new" name="pos_y" min="0" max="100" step="1" value="{{ p.pos_y|int }}" oninput="applicaCropImmediato()">
             </div>
             <div class="slider-row">
               <label>🔍</label>
-              <input type="range" id="rngZ" name="zoom" min="1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="refreshCrop()">
+              <input type="range" id="inputZ_new" name="zoom" min="1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="applicaCropImmediato()">
             </div>
           </div>
 
           <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
             <label style="display:inline-block; margin-right:5px; cursor:pointer;">Gira Foto Agente?</label>
-            <input type="checkbox" id="chkRotate" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="checkEffects()">
+            <input type="checkbox" id="checkGiraFoto" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="gestisciAvvisoGiallo()">
             
-            <div id="warnBox">
+            <div id="boxAvvisoGiallo">
               ⚠️ ATTENZIONE:<br>
-              Attivando "Gira Foto Agente", gli effetti <b>Tap</b> e <b>Specchio</b> vengono disattivati automaticamente.
+              Hai attivato "Gira Foto Agente".<br>
+              Gli effetti <b>Tap</b> e <b>Specchio</b> sono stati disabilitati.
             </div>
           </div>
         </div>
 
         <div class="crop-area">
           <label style="color:#00ffc8; margin-bottom:10px;">LOGO AZIENDA</label>
-          <img id="prevLogo" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
-          <input type="file" name="logo" accept="image/*" onchange="simplePreview(this, 'prevLogo')">
+          <img id="anteprimaLogo" src="{{ p.logo if p.logo else 'https://via.placeholder.com/150' }}" style="height:80px; object-fit:contain; margin:10px auto; display:block;">
+          <input type="file" name="logo" accept="image/*" onchange="caricaAnteprima(this, 'anteprimaLogo')">
 
           <div style="margin-top:10px;">
-            <label style="display:inline-block;">Gira Logo (orario)?</label>
+            <label style="display:inline-block;">Gira Logo?</label>
             <input type="checkbox" name="fx_rotate_logo" {% if p.fx_rotate_logo=='on' %}checked{% endif %}>
           </div>
 
           <hr style="border-color:#333; margin:15px 0;">
 
-          <label style="color:#aaa;">FOTO RETRO (solo se Effetto = Foto)</label>
-          <img id="prevRetro" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:5px auto; display:block;">
-          <input type="file" name="personal_foto" accept="image/*" onchange="simplePreview(this, 'prevRetro')">
+          <label style="color:#aaa;">FOTO RETRO</label>
+          <img id="anteprimaRetro" src="{{ p.personal_foto if p.personal_foto else '' }}" style="height:50px; object-fit:contain; margin:5px auto; display:block;">
+          <input type="file" name="personal_foto" accept="image/*" onchange="caricaAnteprima(this, 'anteprimaRetro')">
         </div>
       </div>
 
       <div style="margin-top:20px; background:#222; padding:15px; border-radius:10px;">
         <label>Effetto Moneta:</label>
         <div style="margin-bottom:10px;">
-          <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %} class="fx-radio"> TAP (tocca per girare)
+          <input type="radio" name="fx_interaction" value="tap" {% if p.fx_interaction=='tap' %}checked{% endif %} class="radioEffetto"> TAP (tocca)
           <span style="margin:0 10px;"></span>
-          <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} class="fx-radio"> SPECCHIO (gira sempre)
+          <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} class="radioEffetto"> SPECCHIO (automatico)
         </div>
         
         <label>Retro della Card:</label>
@@ -191,11 +197,11 @@
     </div>
 
     <div class="edit-box">
-      <h3 class="box-title"><span>📸 FOTO</span><button type="button" class="btn-del-all" onclick="deleteAll('img')">🗑️ ELIMINA TUTTE</button></h3>
+      <h3 class="box-title"><span>📸 FOTO</span><button type="button" class="btn-del-all" onclick="svuotaTutto('img')">ELIMINA TUTTE</button></h3>
       <input type="file" name="gallery_img" multiple accept="image/*">
       <div class="dash-gallery">
         {% for img in p.gallery_img %}
-        <div class="dash-item img-item" onclick="openPreview('{{ img }}', 'img', this)">
+        <div class="dash-item img-item" onclick="apriPopup('{{ img }}', 'img', this)">
           <img src="{{ img }}"><input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;" class="del-chk-img">
         </div>
         {% endfor %}
@@ -203,11 +209,11 @@
 
       <hr style="border-color:#333; margin:20px 0;">
 
-      <h3 class="box-title"><span>🎬 VIDEO</span><button type="button" class="btn-del-all" onclick="deleteAll('vid')">🗑️ ELIMINA TUTTI</button></h3>
+      <h3 class="box-title"><span>🎬 VIDEO</span><button type="button" class="btn-del-all" onclick="svuotaTutto('vid')">ELIMINA TUTTI</button></h3>
       <input type="file" name="gallery_vid" multiple accept="video/*">
       <div class="dash-gallery">
         {% for vid in p.gallery_vid %}
-        <div class="dash-item vid-item" onclick="openPreview('{{ vid }}', 'vid', this)">
+        <div class="dash-item vid-item" onclick="apriPopup('{{ vid }}', 'vid', this)">
           <video src="{{ vid }}#t=2.0" preload="metadata"></video>
           <i class="fas fa-play" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white;"></i>
           <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;" class="del-chk-vid">
@@ -217,11 +223,11 @@
 
       <hr style="border-color:#333; margin:20px 0;">
 
-      <h3 class="box-title"><span>📄 PDF</span><button type="button" class="btn-del-all" onclick="deleteAll('pdf')">🗑️ ELIMINA TUTTI</button></h3>
+      <h3 class="box-title"><span>📄 PDF</span><button type="button" class="btn-del-all" onclick="svuotaTutto('pdf')">ELIMINA TUTTI</button></h3>
       <input type="file" name="gallery_pdf" multiple accept=".pdf">
       <div style="margin-top:10px;">
         {% for pdf in p.gallery_pdf %}
-        <div class="pdf-row pdf-item" onclick="openPreview('{{ pdf.path }}', 'pdf', this)">
+        <div class="pdf-row pdf-item" onclick="apriPopup('{{ pdf.path }}', 'pdf', this)">
           <span><i class="fas fa-file-pdf" style="color:#f44;"></i> {{ pdf.name }}</span>
           <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;" class="del-chk-pdf">
         </div>
@@ -231,30 +237,30 @@
 
     <details class="edit-box">
       <summary class="box-title">🌍 TRADUZIONI (4 lingue) <i class="fas fa-chevron-down"></i></summary>
-      <div class="hint" style="margin-top:10px;">Testi alternativi per le altre lingue.</div>
+      <div class="hint">Testi alternativi per le altre lingue.</div>
       <details style="margin-top:14px;">
-        <summary class="box-title" style="margin-bottom:10px;">🇬🇧 Inglese</summary>
+        <summary class="box-title">🇬🇧 Inglese</summary>
         <div class="form-grid">
           <div><label>Role (EN)</label><input type="text" name="role_en" value="{{ p.trans.en.role if p.trans and p.trans.en else '' }}"></div>
           <div class="full-width"><label>Bio (EN)</label><textarea name="bio_en" rows="2">{{ p.trans.en.bio if p.trans and p.trans.en else '' }}</textarea></div>
         </div>
       </details>
       <details style="margin-top:10px;">
-        <summary class="box-title" style="margin-bottom:10px;">🇫🇷 Francese</summary>
+        <summary class="box-title">🇫🇷 Francese</summary>
         <div class="form-grid">
           <div><label>Rôle (FR)</label><input type="text" name="role_fr" value="{{ p.trans.fr.role if p.trans and p.trans.fr else '' }}"></div>
           <div class="full-width"><label>Bio (FR)</label><textarea name="bio_fr" rows="2">{{ p.trans.fr.bio if p.trans and p.trans.fr else '' }}</textarea></div>
         </div>
       </details>
       <details style="margin-top:10px;">
-        <summary class="box-title" style="margin-bottom:10px;">🇪🇸 Spagnolo</summary>
+        <summary class="box-title">🇪🇸 Spagnolo</summary>
         <div class="form-grid">
           <div><label>Rol (ES)</label><input type="text" name="role_es" value="{{ p.trans.es.role if p.trans and p.trans.es else '' }}"></div>
           <div class="full-width"><label>Bio (ES)</label><textarea name="bio_es" rows="2">{{ p.trans.es.bio if p.trans and p.trans.es else '' }}</textarea></div>
         </div>
       </details>
       <details style="margin-top:10px;">
-        <summary class="box-title" style="margin-bottom:10px;">🇩🇪 Tedesco</summary>
+        <summary class="box-title">🇩🇪 Tedesco</summary>
         <div class="form-grid">
           <div><label>Rolle (DE)</label><input type="text" name="role_de" value="{{ p.trans.de.role if p.trans and p.trans.de else '' }}"></div>
           <div class="full-width"><label>Bio (DE)</label><textarea name="bio_de" rows="2">{{ p.trans.de.bio if p.trans and p.trans.de else '' }}</textarea></div>
@@ -262,141 +268,147 @@
       </details>
     </details>
 
-    <button type="submit" class="btn-save" id="btnSave">💾 SALVA MODIFICHE</button>
+    <button type="submit" class="btn-save" id="btnSalva">💾 SALVA MODIFICHE</button>
   </form>
 
-  <div id="dashModal" class="dash-modal">
-    <button onclick="closeDashModal()" class="d-btn db-cl" style="margin-bottom:10px;">CHIUDI X</button>
-    <div id="dashMediaBox"></div>
+  <div id="modalFile" class="dash-modal">
+    <button onclick="chiudiPopup()" class="d-btn db-cl" style="margin-bottom:10px;">CHIUDI X</button>
+    <div id="boxAnteprimaFile"></div>
     <div class="dash-actions">
-      <button onclick="sendMediaWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
-      <button onclick="sendMediaEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</button>
-      <button onclick="deleteCurrentItem()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
+      <button onclick="inviaWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
+      <button onclick="inviaEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</button>
+      <button onclick="cancellaFile()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
     </div>
   </div>
 
   <script>
-    // === 1. LOGICA CROP MIGLIORATA ===
-    function refreshCrop() {
-        var x = document.getElementById('rngX').value;
-        var y = document.getElementById('rngY').value;
-        var z = document.getElementById('rngZ').value;
-        var img = document.getElementById('cropImg');
-
-        // Applica direttamente lo stile
+    // --- 1. FUNZIONI CROP (BLINDATE) ---
+    function applicaCropImmediato() {
+        // Uso ID specifici per evitare conflitti con vecchi codici
+        var x = document.getElementById('inputX_new').value;
+        var y = document.getElementById('inputY_new').value;
+        var z = document.getElementById('inputZ_new').value;
+        var img = document.getElementById('imgAgenteTarget');
+        
         img.style.objectPosition = x + "% " + y + "%";
         img.style.transform = "scale(" + z + ")";
     }
 
-    function previewCrop(input) {
+    function caricaAnteprima(input, targetId) {
         if(input.files && input.files[0]) {
-            var r = new FileReader();
-            r.onload = function(e){ document.getElementById('cropImg').src = e.target.result; };
-            r.readAsDataURL(input.files[0]);
+            var reader = new FileReader();
+            reader.onload = function(e) { 
+                document.getElementById(targetId).src = e.target.result; 
+            };
+            reader.readAsDataURL(input.files[0]);
         }
     }
 
-    function simplePreview(input, id) {
-        if(input.files && input.files[0]) {
-            var r = new FileReader();
-            r.onload = function(e){ document.getElementById(id).src = e.target.result; };
-            r.readAsDataURL(input.files[0]);
-        }
-    }
+    // --- 2. FUNZIONI AVVISO GIALLO ---
+    function gestisciAvvisoGiallo() {
+        var checkbox = document.getElementById('checkGiraFoto');
+        var boxGiallo = document.getElementById('boxAvvisoGiallo');
+        var radioButtons = document.querySelectorAll('.radioEffetto');
 
-    // === 2. LOGICA AVVISO GIALLO ===
-    function checkEffects() {
-        var chk = document.getElementById('chkRotate');
-        var warn = document.getElementById('warnBox');
-        var radios = document.querySelectorAll('.fx-radio');
-
-        if(chk && chk.checked) {
-            warn.style.display = 'block'; // MOSTRA AVVISO
-            radios.forEach(function(r) { r.disabled = true; });
+        if(checkbox.checked) {
+            boxGiallo.style.display = 'block'; // Mostra Giallo
+            radioButtons.forEach(function(r){ r.disabled = true; });
         } else {
-            warn.style.display = 'none'; // NASCONDI AVVISO
-            radios.forEach(function(r) { r.disabled = false; });
+            boxGiallo.style.display = 'none';  // Nascondi
+            radioButtons.forEach(function(r){ r.disabled = false; });
         }
     }
 
-    // === 3. GESTIONE MEDIA & EMAIL ===
-    let CURRENT_MEDIA = { url:"", type:"" };
-    let currentItemElement = null;
+    // --- 3. FUNZIONI POPUP E INVIO ---
+    var FILE_CORRENTE = { url: "", type: "" };
+    var ELEMENTO_CORRENTE = null;
 
-    function openPreview(url, type, element) {
-        if(element.classList.contains('deleted')) return;
-        currentItemElement = element;
-        CURRENT_MEDIA.url = window.location.origin + url;
-        CURRENT_MEDIA.type = type;
+    function apriPopup(urlRelativo, tipo, elementoHtml) {
+        if(elementoHtml.classList.contains('deleted')) return;
+        
+        ELEMENTO_CORRENTE = elementoHtml;
+        FILE_CORRENTE.url = window.location.origin + urlRelativo;
+        FILE_CORRENTE.type = tipo;
 
-        var modal = document.getElementById('dashModal');
-        var box = document.getElementById('dashMediaBox');
+        var box = document.getElementById('boxAnteprimaFile');
+        // Pulisce
+        box.innerHTML = "";
 
-        if(type === 'img') box.innerHTML = '<img src="'+url+'" class="dash-modal-content">';
-        else if(type === 'vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="dash-modal-content"></video>';
-        else if(type === 'pdf') box.innerHTML = '<iframe src="'+url+'" class="dash-modal-content" style="background:white; width:95vw; height:80vh;"></iframe>';
+        if(tipo === 'img') {
+            box.innerHTML = '<img src="' + urlRelativo + '" class="dash-modal-content">';
+        } else if(tipo === 'vid') {
+            box.innerHTML = '<video src="' + urlRelativo + '" controls autoplay class="dash-modal-content"></video>';
+        } else if(tipo === 'pdf') {
+            box.innerHTML = '<iframe src="' + urlRelativo + '" class="dash-modal-content" style="background:white; width:95vw; height:80vh;"></iframe>';
+        }
 
-        modal.style.display = 'flex';
+        document.getElementById('modalFile').style.display = 'flex';
     }
 
-    function sendMediaWA() {
+    function chiudiPopup() {
+        document.getElementById('modalFile').style.display = 'none';
+        document.getElementById('boxAnteprimaFile').innerHTML = "";
+    }
+
+    function inviaWA() {
         var label = "File";
-        if(CURRENT_MEDIA.type === "img") label = "Foto";
-        if(CURRENT_MEDIA.type === "vid") label = "Video";
-        if(CURRENT_MEDIA.type === "pdf") label = "Documento";
+        if(FILE_CORRENTE.type === "img") label = "Foto";
+        if(FILE_CORRENTE.type === "vid") label = "Video";
+        if(FILE_CORRENTE.type === "pdf") label = "Documento";
         
-        window.open("https://wa.me/?text=" + encodeURIComponent("Pay4You - " + label + ":\n" + CURRENT_MEDIA.url), "_blank");
+        var testo = "Pay4You - " + label + ":\n" + FILE_CORRENTE.url;
+        window.open("https://wa.me/?text=" + encodeURIComponent(testo), "_blank");
     }
 
-    // FIX EMAIL: Testo completo
-    function sendMediaEmail() {
-        var name = "{{ p.name|default('', true) }}";
-        var subject = "Pay4You - Documento";
-        var body = "Ciao!\n" +
-                   "Ecco un file dalla mia Pay4You Card.\n\n" +
-                   (name ? "Da: " + name + "\n\n" : "") +
-                   "Link:\n" + CURRENT_MEDIA.url;
+    function inviaEmail() {
+        var nomeAgente = "{{ p.name|default('', true) }}";
+        var oggetto = "Pay4You - File Condiviso";
+        var corpo = "Ciao!\n" +
+                    "Ecco un file dalla mia Card Digitale Pay4You.\n\n" +
+                    (nomeAgente ? "Da: " + nomeAgente + "\n\n" : "") +
+                    "Link al file:\n" + FILE_CORRENTE.url + "\n\n" +
+                    "Saluti.";
 
-        // encodeURIComponent è fondamentale per i caratteri speciali
-        var href = "mailto:?subject=" + encodeURIComponent(subject) + 
-                   "&body=" + encodeURIComponent(body).replace(/%0A/g, "%0D%0A"); // Fix per nuove righe
+        var linkMail = "mailto:?subject=" + encodeURIComponent(oggetto) + 
+                       "&body=" + encodeURIComponent(corpo).replace(/%0A/g, "%0D%0A");
         
-        window.location.href = href;
+        window.location.href = linkMail;
     }
 
-    function closeDashModal() {
-        document.getElementById('dashModal').style.display = 'none';
-        document.getElementById('dashMediaBox').innerHTML = "";
-    }
-
-    function deleteCurrentItem() {
-        if(confirm("ELIMINARE?")) {
-            var chk = currentItemElement.querySelector('input[type="checkbox"]');
-            if(chk) chk.checked = true;
-            currentItemElement.style.display = 'none';
-            closeDashModal();
+    function cancellaFile() {
+        if(confirm("Vuoi davvero eliminare questo file?")) {
+            // Cerca la checkbox nascosta dentro l'elemento cliccato
+            var checkbox = ELEMENTO_CORRENTE.querySelector('input[type="checkbox"]');
+            if(checkbox) checkbox.checked = true;
+            
+            // Nascondi visivamente
+            ELEMENTO_CORRENTE.style.display = 'none';
+            ELEMENTO_CORRENTE.classList.add('deleted');
+            
+            chiudiPopup();
         }
     }
 
-    function deleteAll(type) {
-        if(confirm("ELIMINARE TUTTI?")) {
-            var items = document.querySelectorAll('.del-chk-' + type);
+    function svuotaTutto(tipo) {
+        if(confirm("ELIMINARE TUTTI I FILES DI QUESTO TIPO?")) {
+            var items = document.querySelectorAll('.del-chk-' + tipo);
             items.forEach(function(chk) { 
                 chk.checked = true; 
-                chk.parentElement.style.display = 'none'; 
+                chk.parentElement.style.display = 'none';
             });
         }
     }
 
-    document.getElementById('editForm').onsubmit = function() {
-        document.getElementById('btnSave').innerText = "⏳ SALVATAGGIO...";
+    // --- 4. AVVIO AUTOMATICO ---
+    window.onload = function() {
+        applicaCropImmediato();
+        gestisciAvvisoGiallo();
+        
+        // Listener form submit
+        document.getElementById('editForm').onsubmit = function() {
+            document.getElementById('btnSalva').innerText = "⏳ SALVATAGGIO...";
+        };
     };
-
-    // INIZIALIZZAZIONE AL CARICAMENTO DELLA PAGINA
-    window.addEventListener('load', function() {
-        refreshCrop();   // Applica subito il crop salvato
-        checkEffects();  // Mostra/Nascondi avviso giallo se necessario
-    });
 
   </script>
 </body>
