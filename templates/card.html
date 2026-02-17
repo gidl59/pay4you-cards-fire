@@ -11,13 +11,18 @@
 
   <div class="card-wrap">
 
-    <!-- LOGO TOP-LEFT -->
+    <!-- LOGO TOP-LEFT (60% della foto) -->
     {% if ag.logo_url %}
       <div class="top-left-logo {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         <img src="{{ ag.logo_url }}" alt="logo">
       </div>
     {% endif %}
 
+    {# ===== LOGICA EFFETTI =====
+       - Se gira agente ON -> NO effetto moneta (tap/specchio ignorati)
+       - Se mirror -> gira sempre
+       - Altrimenti tap (click per girare)
+    #}
     {% set flip_class = 'tap-flip' %}
     {% if ag.fx_rotate_agent == 'on' %}
       {% set flip_class = 'spin-agent' %}
@@ -25,13 +30,14 @@
       {% set flip_class = 'mirror-flip' %}
     {% endif %}
 
-    <div class="flip-container {{ flip_class }}" onclick="this.classList.toggle('flipped')">
+    <div class="flip-container {{ flip_class }}" id="flipBox">
       <div class="flipper">
 
         <div class="front">
           {% if ag.photo_url %}
             <img src="{{ ag.photo_url }}"
                  class="avatar-img"
+                 alt="foto"
                  style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
             <div class="avatar-img" style="background:#555;"></div>
@@ -68,6 +74,7 @@
       </div>
     </div>
 
+    {% if socials and socials|length > 0 %}
     <div class="social-grid">
       {% for s in socials %}
       <a href="{{ s.url }}" target="_blank" class="soc-btn
@@ -76,6 +83,7 @@
       </a>
       {% endfor %}
     </div>
+    {% endif %}
 
     <div class="switcher-bar">
       <div class="sw-left">
@@ -90,6 +98,9 @@
       </div>
     </div>
 
+    <!-- =======================
+         CONTATTI (come prima)
+         ======================= -->
     <div class="scene-box">
       <div class="scene-label">CONTATTI</div>
 
@@ -119,15 +130,108 @@
       </div>
     </div>
 
+    <!-- =======================
+         SITI WEB (RIPRISTINATO)
+         ======================= -->
+    {% if websites and websites|length > 0 %}
+    <div class="scene-box">
+      <div class="scene-label">SITI WEB</div>
+      {% for w_str in websites %}
+        {% for w in w_str.split(',') %}
+          {% if w.strip() %}
+            {% set ww = w.strip() %}
+            {% if not ww.startswith('http://') and not ww.startswith('https://') %}
+              {% set ww = 'https://' ~ ww %}
+            {% endif %}
+            <div class="d-row">
+              <span class="d-icon">🌐</span>
+              <a href="{{ ww }}" target="_blank" class="d-link">{{ ww }}</a>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- =======================
+         MAPPE / INDIRIZZO
+         ======================= -->
+    {% if ag.address %}
+    <div class="scene-box">
+      <div class="scene-label">MAPPE</div>
+      <div class="d-row">
+        <span class="d-icon">📍</span>
+        <a href="https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}" target="_blank" class="d-link">
+          {{ ag.address }}
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- =======================
+         GALLERY FOTO (RIPRISTINATA)
+         ======================= -->
+    {% if p_data.gallery_img and p_data.gallery_img|length > 0 %}
+    <div class="scene-box">
+      <div class="scene-label">FOTO</div>
+      <div class="gal-grid-5">
+        {% for img in p_data.gallery_img %}
+          <img src="{{ img }}" class="thumb" alt="foto" onclick="openShare('img','{{ img }}')">
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- =======================
+         VIDEO (RIPRISTINATI)
+         ======================= -->
+    {% if p_data.gallery_vid and p_data.gallery_vid|length > 0 %}
+    <div class="scene-box">
+      <div class="scene-label">VIDEO</div>
+      <div class="gal-grid-5">
+        {% for vid in p_data.gallery_vid %}
+          <div class="vid-box" onclick="openShare('vid','{{ vid }}')">
+            <video src="{{ vid }}#t=2.0" preload="metadata" muted playsinline></video>
+            <div class="vid-icon"><i class="fas fa-play"></i></div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- =======================
+         PDF (RIPRISTINATI)
+         ======================= -->
+    {% if p_data.gallery_pdf and p_data.gallery_pdf|length > 0 %}
+    <div class="scene-box">
+      <div class="scene-label">PDF</div>
+      <div class="pdf-grid">
+        {% for pdf in p_data.gallery_pdf %}
+          <div class="pdf-item" onclick="openShare('pdf','{{ pdf.path }}')">
+            <span><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}</span>
+            <span style="opacity:.8;"><i class="fas fa-share-nodes"></i></span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- FOOTER (RIPRISTINATO) -->
+    <div class="footer" onclick="openShare('qr','')">
+      Card Digitale Pay4You • Tocca qui per condividere il QR
+    </div>
+
+    <!-- SHARE MODAL -->
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
       <div class="modal-actions">
-        <a id="waLink" href="#" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
-        <a id="emLink" href="#" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
+        <a id="waLink" href="#" class="act-btn bg-wa" target="_blank"><i class="fab fa-whatsapp"></i></a>
+        <div id="emBtn" class="act-btn bg-em" onclick="sendEmailFromModal()"><i class="fas fa-envelope"></i></div>
         <div onclick="closeModal()" class="act-btn bg-cl"><i class="fas fa-times"></i></div>
       </div>
     </div>
 
+    <!-- WEB MODAL (se vuoi aprire PDF/link dentro) -->
     <div id="webModal" class="modal-overlay">
       <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
       <iframe id="webFrame" class="web-frame"></iframe>
@@ -136,6 +240,19 @@
   </div>
 
   <script>
+    // ✅ TAP SOLO SE tap-flip (mirror/spin NON devono toggle)
+    (function(){
+      const box = document.getElementById('flipBox');
+      if(!box) return;
+      box.addEventListener('click', function(){
+        if(box.classList.contains('tap-flip')){
+          box.classList.toggle('flipped');
+        }
+      });
+    })();
+
+    let LAST_SHARE_URL = "";
+
     function makeMailto(subject, body){
       const b = (body || "").replace(/\n/g, "\r\n");
       return "mailto:?subject=" + encodeURIComponent(subject) +
@@ -145,23 +262,53 @@
     function openShare(type, url) {
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
+      LAST_SHARE_URL = fullUrl;
 
       document.getElementById('waLink').href =
         "https://wa.me/?text=" + encodeURIComponent("Pay4You: " + fullUrl);
 
-      document.getElementById('emLink').href =
-        makeMailto("Pay4You - Condivisione", "Link:\n" + fullUrl);
-
+      // contenuto modal
       if(type==='qr'){
-        box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:14px; border-radius:18px;">';
+        box.innerHTML = '<img class="modal-content" src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='
+          + encodeURIComponent(fullUrl)
+          + '" style="background:white; padding:14px; border-radius:18px;">';
+      } else if(type==='img'){
+        box.innerHTML = '<img class="modal-content" src="'+fullUrl+'">';
+      } else if(type==='vid'){
+        box.innerHTML = '<video class="modal-content" src="'+fullUrl+'" controls autoplay playsinline style="background:#000;"></video>';
+      } else if(type==='pdf'){
+        box.innerHTML = '<iframe class="modal-content" src="'+fullUrl+'" style="width:92vw; height:70vh; background:white;"></iframe>';
       }
+
       document.getElementById('shareModal').style.display = 'flex';
     }
 
-    function closeModal(){ document.getElementById('shareModal').style.display='none'; document.getElementById('mediaBox').innerHTML=""; }
-    function openSite(url){ document.getElementById('webFrame').src=url; document.getElementById('webModal').style.display='flex'; }
-    function closeWeb(){ document.getElementById('webModal').style.display='none'; document.getElementById('webFrame').src=""; }
-    function setT(t){ if(t==='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
+    // ✅ FIX EMAIL: uso window.location (iPhone non perde il testo)
+    function sendEmailFromModal(){
+      const subject = "Pay4You - Condivisione";
+      const body = "Link:\n" + (LAST_SHARE_URL || window.location.href);
+      window.location.href = makeMailto(subject, body);
+    }
+
+    function closeModal(){
+      document.getElementById('shareModal').style.display='none';
+      document.getElementById('mediaBox').innerHTML="";
+      LAST_SHARE_URL = "";
+    }
+
+    function openSite(url){
+      document.getElementById('webFrame').src=url;
+      document.getElementById('webModal').style.display='flex';
+    }
+    function closeWeb(){
+      document.getElementById('webModal').style.display='none';
+      document.getElementById('webFrame').src="";
+    }
+
+    function setT(t){
+      if(t==='auto') document.body.removeAttribute('data-theme');
+      else document.body.setAttribute('data-theme', t);
+    }
   </script>
 </body>
 </html>
