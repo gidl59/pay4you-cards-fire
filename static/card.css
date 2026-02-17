@@ -21,35 +21,38 @@ body[data-theme="light"]{
 }
 
 .card-wrap{
+  position:relative;
   max-width:420px;
   margin:0 auto;
   padding:18px 14px 22px;
 }
 
-.hero{
-  display:flex;
-  justify-content:center;
-  margin-top:10px;
-  margin-bottom:12px;
-}
-
-.hero-logo-circle{
-  width:86px;
-  height:86px;
+/* ===== LOGO TOP LEFT (60% della foto agente) ===== */
+.top-left-logo{
+  position:absolute;
+  top:12px;
+  left:12px;
+  width:108px;   /* 60% di 180px */
+  height:108px;
   border-radius:50%;
-  background:#000;
-  border:2px solid rgba(0,255,200,.35);
+  overflow:hidden;
+  background:rgba(0,0,0,.65);
+  border:2px solid rgba(0,255,200,.30);
+  box-shadow:0 12px 34px rgba(0,0,0,.45);
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:5;
 }
-.hero-logo-circle img{
-  width:70%;
-  height:70%;
+.top-left-logo img{
+  width:72%;
+  height:72%;
   object-fit:contain;
 }
+
+/* rotazione logo oraria */
+@keyframes spinCw { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+.spin-cw{ animation: spinCw 6s linear infinite; }
 
 .info-section{
   text-align:center;
@@ -199,9 +202,7 @@ body[data-theme="light"]{
   padding:10px 8px;
   border-radius:12px;
 }
-.d-row:hover{
-  background:rgba(255,255,255,.04);
-}
+.d-row:hover{ background:rgba(255,255,255,.04); }
 .d-icon{ width:24px; text-align:center; }
 .d-link{
   color:var(--text);
@@ -219,6 +220,7 @@ body[data-theme="light"]{
   font-size:12px;
 }
 
+/* GALLERY */
 .gal-grid-5{
   display:grid;
   grid-template-columns: repeat(5, 1fr);
@@ -331,7 +333,7 @@ body[data-theme="light"]{
 }
 
 /* ===========================
-   FIX CROP DEFINITIVO (ANTI OVERRIDE)
+   FIX CROP DEFINITIVO
    =========================== */
 .avatar-img{
   width:100%;
@@ -370,9 +372,7 @@ body[data-theme="light"]{
   border-radius:50%;
   overflow:hidden;
 }
-.back{
-  transform: rotateY(180deg);
-}
+.back{ transform: rotateY(180deg); }
 
 /* TAP */
 .tap-flip.flipped .flipper{
@@ -389,7 +389,7 @@ body[data-theme="light"]{
   animation: mirrorFlip 3.5s linear infinite !important;
 }
 
-/* GIRA AGENTE */
+/* GIRA AGENTE (NO moneta) */
 @keyframes spinAgent{
   0%{ transform: rotate(0deg); }
   100%{ transform: rotate(360deg); }
@@ -401,7 +401,3 @@ body[data-theme="light"]{
   animation:none !important;
   transition:none !important;
 }
-
-/* GIRA LOGO */
-@keyframes spinCw { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-.spin-cw{ animation: spinCw 6s linear infinite; }
