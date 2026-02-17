@@ -14,6 +14,7 @@
       padding:16px;
       margin-bottom:14px;
     }
+    .topline{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .panel-title{
       text-align:center;
       color:#00ffc8;
@@ -37,8 +38,8 @@
       justify-content:center;
     }
     .qr-img img{
-      width:260px;
-      height:260px;
+      width:240px;
+      height:240px;
       display:block;
       border-radius:12px;
     }
@@ -86,12 +87,11 @@
 
 <body>
   <div class="wrap">
-    <div class="panel" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="panel topline">
       <div style="font-weight:900;color:#fff;">Ciao, {{ user.nome }}</div>
       <a href="/area/logout" style="color:#ff4444;font-weight:900;text-decoration:none;">Esci</a>
     </div>
 
-    <!-- IMPOSTAZIONE CARTA / QR -->
     <div class="panel">
       <div class="panel-title">IMPOSTAZIONE CARTA / QR</div>
 
@@ -104,7 +104,7 @@
 
       <div class="qr-flex">
         <div class="qr-img">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data={{ request.url_root.rstrip('/') }}/card/{{ user.slug }}" alt="QR">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={{ request.url_root.rstrip('/') }}/card/{{ user.slug }}" alt="QR">
         </div>
 
         <div class="qr-actions">
@@ -122,21 +122,17 @@
       </div>
     </div>
 
-    <!-- GESTIONE PROFILI -->
     <div class="panel">
       <div class="panel-title">GESTIONE PROFILI</div>
 
-      <!-- P1 -->
       <div class="row-prof">
         <div style="font-weight:900;font-size:18px;">P1</div>
         <div class="btnline">
           <a class="btnx" href="/card/{{ user.slug }}?p=p1" target="_blank">APRI CARD</a>
           <a class="btnx" href="/area/edit/1">MODIFICA CARD</a>
-          <!-- P1: mai disattivabile / eliminabile -->
         </div>
       </div>
 
-      <!-- P2 -->
       <div class="row-prof">
         <div style="font-weight:900;font-size:18px;">P2 {% if user.p2.active %}✅{% endif %}</div>
         <div class="btnline">
@@ -150,7 +146,6 @@
         </div>
       </div>
 
-      <!-- P3 -->
       <div class="row-prof">
         <div style="font-weight:900;font-size:18px;">P3 {% if user.p3.active %}✅{% endif %}</div>
         <div class="btnline">
@@ -171,16 +166,13 @@
       const b = (body || "").replace(/\n/g, "\r\n");
       return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
     }
-
-    function cardLink(){
-      return window.location.origin + "/card/{{ user.slug }}";
-    }
+    function cardLink(){ return window.location.origin + "/card/{{ user.slug }}"; }
 
     function sendCardWA(){
       const txt =
         "Pay4You - Link Card\n\n" +
         "Ecco il link della tua Card:\n" + cardLink() + "\n\n" +
-        "Questo è il link che si apre tramite NFC/QR.";
+        "Questo è il link che si apre tramite NFC/QR.\n\n— Pay4You";
       window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
     }
 
