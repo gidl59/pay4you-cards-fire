@@ -1,869 +1,94 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page_title }} | Pay4You</title>
-
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" href="/static/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css">
-
-  <style>
-    /* Piccole utility SOLO per i nuovi pulsanti credenziali (non tocca il resto) */
-    .cred-bar{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      margin-top:12px;
-    }
-    .cred-pill{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 14px;
-      border-radius:14px;
-      font-weight:950;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);
-      cursor:pointer;
-      user-select:none;
-    }
-    .cred-wa{ background:#25D366; color:#00120e; border:none; }
-    .cred-gm{ background:#ffffff; color:#000; border:none; }
-    .cred-app{ background:#444; color:#fff; border:none; }
-    .cred-copy{ background:#00ffc8; color:#00120e; border:none; }
-    .cred-qr{ background:#f5a300; color:#000; border:none; }
-
-    /* Modal QR (riuso stile overlay già presente in style.css se c'è) */
-    .qr-modal-overlay{
-      display:none;
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.70);
-      backdrop-filter: blur(10px);
-      z-index:9999;
-      align-items:center;
-      justify-content:center;
-      flex-direction:column;
-      gap:14px;
-      padding:18px;
-    }
-    .qr-modal-card{
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      padding:16px;
-      max-width:520px;
-      width:92vw;
-      text-align:center;
-    }
-    .qr-modal-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-    .qr-act{
-      width:54px; height:54px; border-radius:16px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:22px; cursor:pointer; user-select:none;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-    }
-    .qr-act-wa{ background:#25D366; color:#00120e; border:none; }
-    .qr-act-gm{ background:#fff; color:#000; border:none; }
-    .qr-act-app{ background:#444; color:#fff; border:none; }
-    .qr-act-copy{ background:#00ffc8; color:#00120e; border:none; }
-    .qr-act-cl{ background:#0088cc; color:#00120e; border:none; }
-
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:18px;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,.75);
-      border:1px solid rgba(255,255,255,.18);
-      color:#fff;
-      padding:10px 14px;
-      border-radius:14px;
-      font-weight:950;
-      display:none;
-      z-index:10000;
-      backdrop-filter: blur(8px);
-    }
-  </style>
-</head>
-<body>
-<div class="app-shell">
-
-  <header class="app-header">
-    <a class="brand" href="/area">
-      <div class="logo-dot"></div>
-      <div>
-        <div class="brand-title">Pay4You Cards</div>
-        <div class="hint">{{ profile_label }}</div>
-      </div>
-    </a>
-
-    <div class="toolbar">
-      <a class="btn" href="/area">← Dashboard</a>
-      <a class="btn danger" href="/area/logout">Logout</a>
-    </div>
-  </header>
-
-  <main class="app-main">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-wrap">
-          {% for cat,msg in messages %}
-            <div class="flash flash-{{cat}}">{{ msg }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <div class="page-main">
-      <div class="panel panel-wide">
-
-        <div class="panel-head">
-          <div>
-            <h1 class="page-title">{{ page_title }}</h1>
-            <div class="hint">{{ page_hint }}</div>
-          </div>
-
-          <div class="toolbar">
-            {% if agent %}
-              <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}">Apri P1</a>
-              {% if agent.p2_enabled == 1 %}
-                <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p2">Apri P2</a>
-              {% endif %}
-              {% if agent.p3_enabled == 1 %}
-                <a class="btn-mini ghost" target="_blank" href="/{{ agent.slug }}?p=p3">Apri P3</a>
-              {% endif %}
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <form method="post" enctype="multipart/form-data" class="card-form">
-
-          {% if not agent %}
-          <div class="section-box tone-gold">
-            <div class="h3">Crea nuova Card</div>
-            <div class="hint">Compila i dati minimi. Lo <b>username</b> sarà lo <b>slug</b>.</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Nome</label>
-                <input type="text" name="first_name" placeholder="Es. Giuseppe" required>
-              </div>
-              <div class="field">
-                <label>Cognome</label>
-                <input type="text" name="last_name" placeholder="Es. Di Lisio">
-              </div>
-              <div class="field">
-                <label>Slug (link pubblico)</label>
-                <input type="text" name="slug" placeholder="es. giuseppe" required>
-                <div class="hint">Solo lettere/numeri. Verrà normalizzato automaticamente.</div>
-              </div>
-              <div class="field">
-                <label>Password iniziale</label>
-                <input type="text" name="password" placeholder="Min 4 caratteri" required>
-                <div class="hint">Consiglio: password casuale. Al primo accesso potrai farla cambiare.</div>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if agent %}
-          <div class="section-box tone-1">
-            <div class="h3">Identificativo</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Slug (non modificabile)</label>
-                <input type="text" value="{{ agent.slug }}" readonly>
-                <div class="hint">È il link pubblico della card.</div>
-              </div>
-            </div>
-
-            <!-- ✅ NUOVO: barra invio credenziali (stesse funzioni: Gmail + App + Copia + WA + QR) -->
-            <div class="sep" style="margin:14px 0;"></div>
-            <div class="h3" style="margin-bottom:6px;">Invio credenziali</div>
-            <div class="hint">Invia all’agente: WhatsApp / Gmail / Email(APP) / Copia testo. (QR = link card)</div>
-
-            <div class="cred-bar">
-              <div class="cred-pill cred-wa" onclick="sendCredWA()">🟢 WhatsApp</div>
-              <div class="cred-pill cred-gm" onclick="sendCredGmail()">✉️ Gmail</div>
-              <div class="cred-pill cred-app" onclick="sendCredEmailApp()">📨 Email (APP)</div>
-              <div class="cred-pill cred-copy" onclick="copyCredText()">📋 Copia testo</div>
-              <div class="cred-pill cred-qr" onclick="openCredQR()">🟧 QR</div>
-            </div>
-          </div>
-          {% else %}
-          <div class="section-box tone-1">
-            <div class="h3">Dati accesso (creazione)</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Nome</label>
-                <input type="text" name="first_name" placeholder="Nome" required>
-              </div>
-              <div class="field">
-                <label>Cognome (opzionale)</label>
-                <input type="text" name="last_name" placeholder="Cognome">
-              </div>
-              <div class="field">
-                <label>Slug (consigliato)</label>
-                <input type="text" name="slug" placeholder="es. bar-rossi">
-                <div class="hint">Se lasci vuoto, lo generiamo dal nome.</div>
-              </div>
-              <div class="field">
-                <label>Password iniziale</label>
-                <input type="text" name="password" placeholder="Minimo 4 caratteri" required>
-                <div class="hint">Al primo accesso potrà cambiarla da <b>Password dimenticata</b>.</div>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
-          <div class="section-box tone-cyan">
-            <div class="h3">Dati principali</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Nome</label>
-                <input type="text" name="name" value="{{ data.get('name','') }}">
-              </div>
-              <div class="field">
-                <label>Azienda</label>
-                <input type="text" name="company" value="{{ data.get('company','') }}">
-              </div>
-              <div class="field">
-                <label>Ruolo</label>
-                <input type="text" name="role" value="{{ data.get('role','') }}">
-              </div>
-              <div class="field full">
-                <label>Bio</label>
-                <textarea name="bio" placeholder="Breve descrizione...">{{ data.get('bio','') }}</textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-box tone-blue">
-            <div class="h3">Contatti</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Telefono (mobile)</label>
-                <input type="text" name="phone_mobile" value="{{ data.get('phone_mobile','') }}">
-              </div>
-              <div class="field">
-                <label>Telefono (mobile 2)</label>
-                <input type="text" name="phone_mobile2" value="{{ data.get('phone_mobile2','') }}">
-              </div>
-              <div class="field">
-                <label>Telefono ufficio</label>
-                <input type="text" name="phone_office" value="{{ data.get('phone_office','') }}">
-              </div>
-              <div class="field">
-                <label>WhatsApp</label>
-                <input type="text" name="whatsapp" value="{{ data.get('whatsapp','') }}">
-                <div class="hint">Esempio: +39350.... oppure link wa.me</div>
-              </div>
-              <div class="field full">
-                <label>Email (separate da virgola)</label>
-                <input type="text" name="emails" value="{{ data.get('emails','') }}">
-              </div>
-              <div class="field full">
-                <label>Siti (separati da virgola)</label>
-                <input type="text" name="websites" value="{{ data.get('websites','') }}">
-              </div>
-              <div class="field">
-                <label>PEC</label>
-                <input type="text" name="pec" value="{{ data.get('pec','') }}">
-              </div>
-              <div class="field full">
-                <label>Indirizzi (uno per riga)</label>
-                <textarea name="addresses">{{ data.get('addresses','') }}</textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-box tone-gold">
-            <div class="h3">Dati aziendali</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>P.IVA</label>
-                <input type="text" name="piva" value="{{ data.get('piva','') }}">
-              </div>
-              <div class="field">
-                <label>SDI</label>
-                <input type="text" name="sdi" value="{{ data.get('sdi','') }}">
-              </div>
-            </div>
-          </div>
-
-          <div class="section-box tone-cyan">
-            <div class="h3">Social</div>
-            <div class="hint">Inserisci URL completi (se non valido non verrà mostrato).</div>
-
-            <div class="form-grid">
-              <div class="field">
-                <label>Facebook</label>
-                <input type="text" name="facebook" placeholder="https://www.facebook.com/..." value="{{ data.get('facebook','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.facebook.com/share/...)</div>
-              </div>
-              <div class="field">
-                <label>Instagram</label>
-                <input type="text" name="instagram" placeholder="https://www.instagram.com/..." value="{{ data.get('instagram','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.instagram.com/tuoprofilo)</div>
-              </div>
-              <div class="field">
-                <label>LinkedIn</label>
-                <input type="text" name="linkedin" placeholder="https://www.linkedin.com/in/..." value="{{ data.get('linkedin','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.linkedin.com/in/tuoprofilo)</div>
-              </div>
-              <div class="field">
-                <label>TikTok</label>
-                <input type="text" name="tiktok" placeholder="https://www.tiktok.com/@..." value="{{ data.get('tiktok','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.tiktok.com/@tuoprofilo)</div>
-              </div>
-              <div class="field">
-                <label>Telegram</label>
-                <input type="text" name="telegram" placeholder="https://t.me/..." value="{{ data.get('telegram','') }}">
-                <div class="hint">Inserisci il link completo (es. https://t.me/tuocanale)</div>
-              </div>
-              <div class="field">
-                <label>YouTube</label>
-                <input type="text" name="youtube" placeholder="https://www.youtube.com/@..." value="{{ data.get('youtube','') }}">
-                <div class="hint">Inserisci il link completo (es. https://www.youtube.com/@tuocanale)</div>
-              </div>
-              <div class="field">
-                <label>Spotify</label>
-                <input type="text" name="spotify" placeholder="https://open.spotify.com/..." value="{{ data.get('spotify','') }}">
-                <div class="hint">Inserisci il link completo (es. https://open.spotify.com/artist/...)</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-box tone-purple">
-            <div class="h3">Foto profilo · Logo · Foto dietro</div>
-            <div class="hint">Tre riquadri quadrati affiancati con anteprima e upload.</div>
-
-            <div class="triple-cols">
-
-              <div class="triple-col">
-                <div class="tc-title">Foto profilo</div>
-                <div class="tc-preview square">
-                  {% if data.get("photo_url") %}
-                    <img id="prevPhoto" src="{{ data.get('photo_url') }}" alt="">
-                  {% else %}
-                    <div class="tc-ph">Foto</div>
-                    <img id="prevPhoto" src="" style="display:none" alt="">
-                  {% endif %}
-                </div>
-                <input id="photoInput" type="file" name="photo" accept="image/*">
-              </div>
-
-              <div class="triple-col">
-                <div class="tc-title">Logo</div>
-                <div class="tc-preview square">
-                  {% if data.get("logo_url") %}
-                    <img id="prevLogo" src="{{ data.get('logo_url') }}" alt="">
-                  {% else %}
-                    <div class="tc-ph">Logo</div>
-                    <img id="prevLogo" src="" style="display:none" alt="">
-                  {% endif %}
-                </div>
-                <input id="logoInput" type="file" name="logo" accept="image/*">
-              </div>
-
-              <div class="triple-col">
-                <div class="tc-title">Foto dietro</div>
-                <div class="tc-preview square">
-                  {% if data.get("back_media_url") %}
-                    <img id="prevBack" src="{{ data.get('back_media_url') }}" alt="">
-                  {% else %}
-                    <div class="tc-ph">Dietro</div>
-                    <img id="prevBack" src="" style="display:none" alt="">
-                  {% endif %}
-                </div>
-                <input id="backInput" type="file" name="back_media" accept="image/*">
-              </div>
-
-            </div>
-
-            <div class="crop-preview" style="margin-top:12px;">
-              <div class="crop-circle-bg" id="cropCircleBg"
-                   data-url="{{ data.get('photo_url','') }}"
-                   data-x="{{ data.get('photo_pos_x',50) }}"
-                   data-y="{{ data.get('photo_pos_y',35) }}"
-                   data-z="{{ data.get('photo_zoom','1.0') }}">
-                <div class="crop-empty" id="cropEmptyBg" style="display:none">Carica una foto profilo</div>
-              </div>
-            </div>
-
-            <div class="form-grid" style="margin-top:12px">
-              <div class="field"><label>X (0–100)</label><input id="posX" type="range" min="0" max="100" name="photo_pos_x" value="{{ data.get('photo_pos_x',50) }}"></div>
-              <div class="field"><label>Y (0–100)</label><input id="posY" type="range" min="0" max="100" name="photo_pos_y" value="{{ data.get('photo_pos_y',35) }}"></div>
-              <div class="field full"><label>Zoom (1.0 – 2.5)</label><input id="zoom" type="range" min="1" max="2.5" step="0.05" name="photo_zoom" value="{{ data.get('photo_zoom','1.0') }}"></div>
-            </div>
-
-            <div class="sep"></div>
-
-            <div class="h3">Effetti</div>
-            <div class="form-grid">
-              <div class="field"><label><input type="checkbox" name="orbit_spin" {% if data.get('orbit_spin',0) == 1 %}checked{% endif %}> Ruota orbita</label></div>
-              <div class="field"><label><input type="checkbox" name="avatar_spin" {% if data.get('avatar_spin',0) == 1 %}checked{% endif %}> Tap su foto (ruota)</label></div>
-              <div class="field"><label><input type="checkbox" name="logo_spin" {% if data.get('logo_spin',0) == 1 %}checked{% endif %}> Ruota logo</label></div>
-              <div class="field"><label><input type="checkbox" name="allow_flip" {% if data.get('allow_flip',0) == 1 %}checked{% endif %}> Flip</label></div>
-            </div>
-          </div>
-
-          <div class="section-box">
-            <div class="h3">Galleria Foto</div>
-            <div class="form-grid">
-              <div class="field full"><label>Aggiungi foto (multiple)</label><input type="file" name="gallery_images" accept="image/*" multiple></div>
-            </div>
-
-            <div class="media-strip">
-              {% set imgs = (data.get("gallery_urls","") or "").split("|") %}
-              {% for g in imgs %}
-                {% if g and g.strip() %}
-                  <button type="button" class="media-thumb-btn" data-kind="img" data-url="{{ g }}">
-                    <img src="{{ g }}" alt="">
-                  </button>
-                {% endif %}
-              {% endfor %}
-              {% if imgs|length == 0 %}<div class="hint">—</div>{% endif %}
-            </div>
-          </div>
-
-          <div class="section-box">
-            <div class="h3">Galleria Video</div>
-            <div class="form-grid">
-              <div class="field full"><label>Aggiungi video (multiple)</label><input type="file" name="gallery_videos" accept="video/*" multiple></div>
-            </div>
-
-            <div class="media-strip">
-              {% set vids = (data.get("video_urls","") or "").split("|") %}
-              {% for v in vids %}
-                {% if v and v.strip() %}
-                  <button type="button" class="media-thumb-btn" data-kind="vid" data-url="{{ v }}">
-                    <video src="{{ v }}#t=0.1" muted playsinline preload="metadata"></video>
-                  </button>
-                {% endif %}
-              {% endfor %}
-              {% if vids|length == 0 %}<div class="hint">—</div>{% endif %}
-            </div>
-          </div>
-
-          <div class="section-box tone-6">
-            <div class="h3">PDF</div>
-            <div class="hint">Sezione PDF temporaneamente disattivata (stiamo risolvendo un bug di duplicazione).</div>
-          </div>
-
-          {% if show_i18n %}
-          <div class="section-box">
-            <div class="h3">Traduzioni</div>
-            <div class="hint">4 lingue. Clicca per aprire.</div>
-
-            {% for L, title in [("en","English"),("fr","Français"),("es","Español"),("de","Deutsch")] %}
-            <details style="margin-top:10px;">
-              <summary style="cursor:pointer; font-weight:950;">{{ title }}</summary>
-              <div style="margin-top:10px;">
-                <div class="form-grid compact">
-                  <div class="field"><label>Name</label><input type="text" name="name_{{L}}" value="{{ i18n.get(L,{}).get('name','') }}"></div>
-                  <div class="field"><label>Company</label><input type="text" name="company_{{L}}" value="{{ i18n.get(L,{}).get('company','') }}"></div>
-                  <div class="field"><label>Role</label><input type="text" name="role_{{L}}" value="{{ i18n.get(L,{}).get('role','') }}"></div>
-                  <div class="field full"><label>Bio</label><textarea name="bio_{{L}}">{{ i18n.get(L,{}).get('bio','') }}</textarea></div>
-                  <div class="field full"><label>Addresses</label><textarea name="addresses_{{L}}">{{ i18n.get(L,{}).get('addresses','') }}</textarea></div>
-                </div>
-              </div>
-            </details>
-            {% endfor %}
-          </div>
-          {% endif %}
-
-          <div class="sticky-save">
-            <button class="btn primary" type="submit">Salva</button>
-            <a class="btn" href="/area">Annulla</a>
-          </div>
-
-        </form>
-
-      </div>
-    </div>
-  </main>
-</div>
-
-<!-- ✅ MODALE MEDIA ESISTENTE -->
-<div id="mediaModal" class="modal-overlay" style="display:none" onclick="overlayCloseMedia(event)">
-  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:920px;">
-    <div class="modal-title" id="mediaTitle">Media</div>
-    <div id="mediaBody" style="margin-top:12px;"></div>
-
-    <div class="modal-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-      <button class="btn" type="button" onclick="shareMedia('whatsapp')">Invia WhatsApp</button>
-      <button class="btn" type="button" onclick="shareMedia('email')">Invia Email</button>
-
-      {% if agent %}
-        <button class="btn danger" type="button" onclick="deleteMedia()">Elimina</button>
-      {% endif %}
-
-      <button class="btn ghost" type="button" onclick="closeMediaModal()">Chiudi</button>
-    </div>
-
-    <input type="hidden" id="mmKind" value="">
-    <input type="hidden" id="mmUrl" value="">
-    <input type="hidden" id="mmDeleteHref" value="">
-  </div>
-</div>
-
-<!-- ✅ MODALE QR CREDENZIALI -->
-<div id="credQrModal" class="qr-modal-overlay" onclick="credQrOverlayClose(event)">
-  <div class="qr-modal-card" onclick="event.stopPropagation()">
-    <div style="font-weight:950; color:#00ffc8; letter-spacing:.06em;">QR + INVIO CREDENZIALI</div>
-    <div id="credQrBox" style="margin-top:12px;"></div>
-    <div class="hint" id="credQrInfo" style="margin-top:10px;"></div>
-
-    <div class="qr-modal-actions" style="margin-top:14px;">
-      <div class="qr-act qr-act-wa" onclick="sendCredWA()" title="WhatsApp">🟢</div>
-      <div class="qr-act qr-act-gm" onclick="sendCredGmail()" title="Gmail">✉️</div>
-      <div class="qr-act qr-act-app" onclick="sendCredEmailApp()" title="Email (APP)">📨</div>
-      <div class="qr-act qr-act-copy" onclick="copyCredText()" title="Copia testo">📋</div>
-      <div class="qr-act qr-act-cl" onclick="closeCredQR()" title="Chiudi">✖</div>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast">Copiato ✅</div>
-
 <script>
-  function bindPreview(inputId, imgId){
-    const inp = document.getElementById(inputId);
-    const img = document.getElementById(imgId);
-    if(!inp || !img) return;
-
-    inp.addEventListener('change', () => {
-      const f = inp.files && inp.files[0];
-      if(!f) return;
-      img.style.display = 'block';
-      img.src = URL.createObjectURL(f);
-    });
-  }
-
-  function absUrl(u){
-    if(!u) return '';
-    u = (u + '').trim();
-    if(/^https?:\/\//i.test(u)) return u;
-    if(u.startsWith('uploads/')) u = '/' + u;
-    if(u.startsWith('/uploads/')) {} else if(u.startsWith('pdf/') || u.startsWith('images/') || u.startsWith('videos/')) u = '/uploads/' + u;
-    else if(u.startsWith('/pdf/') || u.startsWith('/images/') || u.startsWith('/videos/')) u = '/uploads' + u;
-
-    const base = window.location.origin;
-    if(u.startsWith('/')) return base + u;
-    return base + '/' + u;
-  }
-
+  // ===== Helper Gmail + Mail App =====
   function gmailCompose(subject, body){
     const su = encodeURIComponent(subject || "");
     const bd = encodeURIComponent(body || "");
     return `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bd}`;
   }
-  function outlookCompose(subject, body){
-    const su = encodeURIComponent(subject || "");
-    const bd = encodeURIComponent(body || "");
-    return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
+
+  function makeMailto(subject, body){
+    const b = (body || "").replace(/\n/g, "\r\n");
+    return "mailto:?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(b);
   }
 
-  // ✅ Toast + copia
-  function showToast(msg){
-    const t = document.getElementById("toast");
-    if(!t) return;
-    t.textContent = msg || "Copiato ✅";
-    t.style.display = "block";
-    clearTimeout(window.__toastTimer);
-    window.__toastTimer = setTimeout(()=>{ t.style.display="none"; }, 1600);
-  }
-  async function copyText(text){
-    try{
-      await navigator.clipboard.writeText(text);
-      showToast("Copiato ✅");
-    }catch(e){
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.left = "-9999px";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try{
-        document.execCommand("copy");
-        showToast("Copiato ✅");
-      }catch(err){
-        alert("Non riesco a copiare automaticamente. Copia manualmente:\n\n" + text);
-      }
-      document.body.removeChild(ta);
-    }
-  }
+  // ===== Ricava URL card + profilo selezionato =====
+  function getSelectedProfile(){
+    // Prova a leggere un input/radio/select se esiste
+    const sel =
+      document.querySelector('input[name="profile"]:checked') ||
+      document.querySelector('#profileSelect') ||
+      document.querySelector('[data-selected-profile]');
 
-  document.addEventListener('DOMContentLoaded', () => {
-    bindPreview('photoInput','prevPhoto');
-    bindPreview('logoInput','prevLogo');
-    bindPreview('backInput','prevBack');
-
-    // ✅ Flip e "Tap su foto" non possono stare insieme
-    const cbFlip = document.querySelector('input[name="allow_flip"]');
-    const cbTap  = document.querySelector('input[name="avatar_spin"]');
-    function syncFlipTap(){
-      if(!cbFlip || !cbTap) return;
-      if(cbFlip.checked){ cbTap.checked = false; cbTap.disabled = true; }
-      else { cbTap.disabled = false; }
-    }
-    function syncTapFlip(){
-      if(!cbFlip || !cbTap) return;
-      if(cbTap.checked){ cbFlip.checked = false; }
-      syncFlipTap();
-    }
-    if(cbFlip){ cbFlip.addEventListener('change', syncFlipTap); }
-    if(cbTap){ cbTap.addEventListener('change', syncTapFlip); }
-    syncFlipTap();
-
-    const box = document.getElementById('cropCircleBg');
-    if(box){
-      const posX = document.getElementById('posX');
-      const posY = document.getElementById('posY');
-      const zoom = document.getElementById('zoom');
-      const photoInput = document.getElementById('photoInput');
-      const empty = document.getElementById('cropEmptyBg');
-
-      function apply(){
-        const url = box.getAttribute('data-url') || '';
-        const x = posX ? posX.value : (box.getAttribute('data-x') || 50);
-        const y = posY ? posY.value : (box.getAttribute('data-y') || 35);
-        const z = zoom ? zoom.value : (box.getAttribute('data-z') || 1.0);
-
-        if(!url){
-          box.style.backgroundImage = 'none';
-          if(empty) empty.style.display = 'flex';
-          return;
-        }
-        if(empty) empty.style.display = 'none';
-
-        box.style.backgroundImage = `url("${url}")`;
-        box.style.backgroundRepeat = 'no-repeat';
-        box.style.backgroundPosition = `${x}% ${y}%`;
-        box.style.backgroundSize = `${parseFloat(z) * 100}% ${parseFloat(z) * 100}%`;
-      }
-
-      apply();
-
-      if(posX){ posX.addEventListener('input', apply); posX.addEventListener('change', apply); }
-      if(posY){ posY.addEventListener('input', apply); posY.addEventListener('change', apply); }
-      if(zoom){ zoom.addEventListener('input', apply); zoom.addEventListener('change', apply); }
-
-      if(photoInput){
-        photoInput.addEventListener('change', () => {
-          const f = photoInput.files && photoInput.files[0];
-          if(!f) return;
-          const url = URL.createObjectURL(f);
-          box.setAttribute('data-url', url);
-          apply();
-        });
-      }
+    if(sel){
+      const v = sel.value || sel.getAttribute('data-selected-profile');
+      if(v) return (v + "").toLowerCase(); // p1 / p2 / p3
     }
 
-    document.querySelectorAll('.media-thumb-btn').forEach(btn => {
-      btn.addEventListener('click', () => openMediaModal(btn.dataset.kind, btn.dataset.url));
-    });
-
-    document.querySelectorAll('.pdf-open-btn').forEach(b => {
-      b.addEventListener('click', () => openPdfModal(b.dataset.url, b.dataset.name || 'PDF'));
-    });
-  });
-
-  function overlayCloseMedia(e){
-    if(e.target && e.target.id === "mediaModal"){
-      closeMediaModal();
-    }
-  }
-  function closeMediaModal(){
-    const m = document.getElementById('mediaModal');
-    if(m) m.style.display = 'none';
-    const body = document.getElementById('mediaBody');
-    if(body) body.innerHTML = '';
-  }
-
-  function openMediaModal(kind, url){
-    const m = document.getElementById('mediaModal');
-    const t = document.getElementById('mediaTitle');
-    const body = document.getElementById('mediaBody');
-
-    document.getElementById('mmKind').value = kind;
-    document.getElementById('mmUrl').value = url;
-
-    const abs = absUrl(url);
-    t.textContent = (kind === 'img') ? 'Foto' : 'Video';
-
-    if(kind === 'img'){
-      body.innerHTML = `<img src="${abs}" alt="" style="width:100%; max-height:65vh; object-fit:contain; border-radius:16px; border:1px solid rgba(255,255,255,.12);">`;
-    } else {
-      body.innerHTML = `<video src="${abs}" controls playsinline style="width:100%; max-height:65vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:black;"></video>`;
+    // fallback: prova dal pulsante attivo (se hai class "active")
+    const activeBtn = document.querySelector('.profile-btn.active, .btn-mini.active, .tab.active');
+    if(activeBtn && activeBtn.dataset && activeBtn.dataset.profile){
+      return (activeBtn.dataset.profile + "").toLowerCase();
     }
 
-    {% if agent %}
-      const profile =
-        ("{{ profile_label }}" === "Profilo 1") ? "p1" :
-        ("{{ profile_label }}" === "Profilo 2") ? "p2" : "p3";
-
-      const kindParam = (kind === 'img') ? 'img' : 'vid';
-      const del = `/area/media/delete/{{ agent.slug }}/${profile}?kind=${kindParam}&url=` + encodeURIComponent(url);
-      document.getElementById('mmDeleteHref').value = del;
-    {% endif %}
-
-    m.style.display = 'flex';
+    // default
+    return "p1";
   }
 
-  function openPdfModal(url, name){
-    const m = document.getElementById('mediaModal');
-    const t = document.getElementById('mediaTitle');
-    const body = document.getElementById('mediaBody');
+  function buildCardUrl(){
+    const base = window.location.origin;
 
-    document.getElementById('mmKind').value = 'pdf';
-    document.getElementById('mmUrl').value = url;
+    // Se la pagina già conosce lo slug in un elemento data-slug:
+    const slugEl = document.querySelector('[data-slug]');
+    const slug = slugEl ? slugEl.getAttribute('data-slug') : "";
 
-    t.textContent = 'PDF: ' + (name || 'Documento');
-    body.innerHTML = `<iframe src="${absUrl(url)}" style="width:100%; height:65vh; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:white;"></iframe>`;
+    // Se non c'è, prova a prenderlo dall'URL (es: /area/qr/giuseppe o simile)
+    let s = slug;
+    if(!s){
+      const parts = (window.location.pathname || "").split("/").filter(Boolean);
+      // ultimo pezzo come slug (fallback)
+      s = parts.length ? parts[parts.length - 1] : "";
+    }
 
-    {% if agent %}
-      const profile =
-        ("{{ profile_label }}" === "Profilo 1") ? "p1" :
-        ("{{ profile_label }}" === "Profilo 2") ? "p2" : "p3";
+    const prof = getSelectedProfile(); // p1/p2/p3
+    let url = base + "/" + s;
 
-      const del = `/area/media/delete/{{ agent.slug }}/${profile}?kind=pdf&url=` + encodeURIComponent(url);
-      document.getElementById('mmDeleteHref').value = del;
-    {% endif %}
+    // P2/P3: se nel tuo sistema usi ?p=p2 / ?p=p3
+    if(prof === "p2") url += "?p=p2";
+    if(prof === "p3") url += "?p=p3";
 
-    m.style.display = 'flex';
+    return { slug: s, prof, url };
   }
 
-  function shareMedia(channel){
-    const kind = document.getElementById('mmKind').value;
-    const url = document.getElementById('mmUrl').value;
-    const media = absUrl(url);
+  function buildQrImageUrl(cardUrl){
+    // immagine QR via servizio esterno (come negli altri file)
+    return "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=" + encodeURIComponent(cardUrl);
+  }
 
-    const msg = [
-      `Pay4You ${kind === 'img' ? 'Foto' : (kind === 'vid' ? 'Video' : 'PDF')}`,
-      `Link: ${media}`
-    ].join("\r\n");
-
-    if(channel === 'whatsapp'){
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  // ===== FUNZIONE PRINCIPALE: INVIA EMAIL QR =====
+  function sendQrEmail(){
+    const info = buildCardUrl();
+    if(!info.slug){
+      alert("Slug non trovato. Dimmi dove si trova lo slug in questa pagina e lo allineo al 100%.");
       return;
     }
 
-    const subject = `Pay4You ${kind === 'img' ? 'Foto' : (kind === 'vid' ? 'Video' : 'PDF')}`;
-    const g = gmailCompose(subject, msg);
-    const w = window.open(g, '_blank');
-    if(!w){
-      window.open(outlookCompose(subject, msg), '_blank');
-    }
-  }
+    const subject = "Pay4You - QR Code (" + info.prof.toUpperCase() + ")";
+    const qrImg = buildQrImageUrl(info.url);
 
-  function deleteMedia(){
-    const href = document.getElementById('mmDeleteHref').value;
-    if(!href) return;
-
-    if(!confirm("Sei sicuro di eliminare questo file?")) return;
-    if(!confirm("Conferma eliminazione DEFINITIVA.")) return;
-
-    window.location.href = href;
-  }
-
-  // ==========================
-  // ✅ INVIO CREDENZIALI AGENTE
-  // ==========================
-  function credInfo(){
-    const base = window.location.origin;
-
-    // slug + login
-    const slug = "{{ agent.slug if agent else '' }}";
-    const login = base + "/area/login";
-    const cardP1 = base + "/{{ agent.slug if agent else '' }}";
-
-    // username/password: li prendiamo da variabili server se disponibili, altrimenti vuote.
-    // Se nel tuo backend le chiami diversamente, dimmelo e le allineo.
-    const u = "{{ agent.username if agent and agent.username is defined else '' }}";
-    const p = "{{ agent.password if agent and agent.password is defined else '' }}";
-
-    return { base, slug, login, cardP1, u, p };
-  }
-
-  function credSubject(){
-    return "Pay4You - Credenziali Accesso";
-  }
-
-  function credBody(){
-    const c = credInfo();
-    return (
+    const body =
       "Ciao!\n\n" +
-      "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
-      "LOGIN: " + c.login + "\n" +
-      "USER: " + (c.u || "(username)") + "\n" +
-      "PASSWORD: " + (c.p || "(password)") + "\n\n" +
-      "La tua Card:\n" + c.cardP1 + "\n\n" +
-      "Consiglio: al primo accesso salva questi dati.\n\n" +
-      "— Pay4You"
-    );
-  }
+      "Ti invio il QR Code della mia Card Pay4You (" + info.prof.toUpperCase() + ").\n\n" +
+      "Link Card:\n" + info.url + "\n\n" +
+      "Immagine QR (aprila e stampala):\n" + qrImg + "\n\n" +
+      "— Pay4You";
 
-  function sendCredWA(){
-    const c = credInfo();
-    const txt =
-      "Pay4You - Credenziali\n\n" +
-      "Login: " + c.login + "\n" +
-      "User: " + (c.u || "(username)") + "\n" +
-      "Pass: " + (c.p || "(password)") + "\n\n" +
-      "Card: " + c.cardP1;
+    // 1) Gmail web (su PC funziona sempre con testo)
+    const g = gmailCompose(subject, body);
+    const w = window.open(g, "_blank");
 
-    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
-  }
-
-  function sendCredGmail(){
-    const subject = credSubject();
-    const body = credBody();
-    window.open(gmailCompose(subject, body), "_blank");
-  }
-
-  function sendCredEmailApp(){
-    const subject = credSubject();
-    const body = credBody().replace(/\n/g, "\r\n");
-    const mailto = "mailto:?subject=" + encodeURIComponent(subject) +
-                   "&body=" + encodeURIComponent(body);
-    window.location.href = mailto;
-  }
-
-  function copyCredText(){
-    const text = "OGGETTO:\n" + credSubject() + "\n\nTESTO:\n" + credBody();
-    copyText(text);
-  }
-
-  // ===== QR credenziali (QR solo per link card) =====
-  function openCredQR(){
-    const c = credInfo();
-    if(!c.slug) return;
-
-    const url = c.cardP1;
-    document.getElementById("credQrBox").innerHTML =
-      '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) +
-      '" style="background:white; padding:14px; border-radius:18px; width:260px; height:260px;">';
-
-    document.getElementById("credQrInfo").textContent =
-      "User: " + (c.u || "(username)") + "  |  Pass: " + (c.p || "(password)");
-
-    document.getElementById("credQrModal").style.display = "flex";
-  }
-
-  function closeCredQR(){
-    document.getElementById("credQrModal").style.display = "none";
-    document.getElementById("credQrBox").innerHTML = "";
-  }
-
-  function credQrOverlayClose(e){
-    if(e.target && e.target.id === "credQrModal"){
-      closeCredQR();
+    // 2) fallback su mailto (Thunderbird/Outlook/Apple Mail/Aruba se configurato)
+    if(!w){
+      window.location.href = makeMailto(subject, body);
     }
   }
 </script>
-
-</body>
-</html>
