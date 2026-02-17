@@ -8,6 +8,81 @@
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" href="/static/favicon.ico">
   <link rel="stylesheet" href="/static/style.css">
+
+  <style>
+    /* Piccole utility SOLO per i nuovi pulsanti credenziali (non tocca il resto) */
+    .cred-bar{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-top:12px;
+    }
+    .cred-pill{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:950;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      cursor:pointer;
+      user-select:none;
+    }
+    .cred-wa{ background:#25D366; color:#00120e; border:none; }
+    .cred-gm{ background:#ffffff; color:#000; border:none; }
+    .cred-app{ background:#444; color:#fff; border:none; }
+    .cred-copy{ background:#00ffc8; color:#00120e; border:none; }
+    .cred-qr{ background:#f5a300; color:#000; border:none; }
+
+    /* Modal QR (riuso stile overlay già presente in style.css se c'è) */
+    .qr-modal-overlay{
+      display:none;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.70);
+      backdrop-filter: blur(10px);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:14px;
+      padding:18px;
+    }
+    .qr-modal-card{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:16px;
+      max-width:520px;
+      width:92vw;
+      text-align:center;
+    }
+    .qr-modal-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .qr-act{
+      width:54px; height:54px; border-radius:16px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; cursor:pointer; user-select:none;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+    }
+    .qr-act-wa{ background:#25D366; color:#00120e; border:none; }
+    .qr-act-gm{ background:#fff; color:#000; border:none; }
+    .qr-act-app{ background:#444; color:#fff; border:none; }
+    .qr-act-copy{ background:#00ffc8; color:#00120e; border:none; }
+    .qr-act-cl{ background:#0088cc; color:#00120e; border:none; }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,.75);
+      border:1px solid rgba(255,255,255,.18);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:950;
+      display:none;
+      z-index:10000;
+      backdrop-filter: blur(8px);
+    }
+  </style>
 </head>
 <body>
 <div class="app-shell">
@@ -100,6 +175,19 @@
                 <input type="text" value="{{ agent.slug }}" readonly>
                 <div class="hint">È il link pubblico della card.</div>
               </div>
+            </div>
+
+            <!-- ✅ NUOVO: barra invio credenziali (stesse funzioni: Gmail + App + Copia + WA + QR) -->
+            <div class="sep" style="margin:14px 0;"></div>
+            <div class="h3" style="margin-bottom:6px;">Invio credenziali</div>
+            <div class="hint">Invia all’agente: WhatsApp / Gmail / Email(APP) / Copia testo. (QR = link card)</div>
+
+            <div class="cred-bar">
+              <div class="cred-pill cred-wa" onclick="sendCredWA()">🟢 WhatsApp</div>
+              <div class="cred-pill cred-gm" onclick="sendCredGmail()">✉️ Gmail</div>
+              <div class="cred-pill cred-app" onclick="sendCredEmailApp()">📨 Email (APP)</div>
+              <div class="cred-pill cred-copy" onclick="copyCredText()">📋 Copia testo</div>
+              <div class="cred-pill cred-qr" onclick="openCredQR()">🟧 QR</div>
             </div>
           </div>
           {% else %}
@@ -363,7 +451,6 @@
             <div class="hint">Sezione PDF temporaneamente disattivata (stiamo risolvendo un bug di duplicazione).</div>
           </div>
 
-
           {% if show_i18n %}
           <div class="section-box">
             <div class="h3">Traduzioni</div>
@@ -398,6 +485,7 @@
   </main>
 </div>
 
+<!-- ✅ MODALE MEDIA ESISTENTE -->
 <div id="mediaModal" class="modal-overlay" style="display:none" onclick="overlayCloseMedia(event)">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:920px;">
     <div class="modal-title" id="mediaTitle">Media</div>
@@ -419,6 +507,25 @@
     <input type="hidden" id="mmDeleteHref" value="">
   </div>
 </div>
+
+<!-- ✅ MODALE QR CREDENZIALI -->
+<div id="credQrModal" class="qr-modal-overlay" onclick="credQrOverlayClose(event)">
+  <div class="qr-modal-card" onclick="event.stopPropagation()">
+    <div style="font-weight:950; color:#00ffc8; letter-spacing:.06em;">QR + INVIO CREDENZIALI</div>
+    <div id="credQrBox" style="margin-top:12px;"></div>
+    <div class="hint" id="credQrInfo" style="margin-top:10px;"></div>
+
+    <div class="qr-modal-actions" style="margin-top:14px;">
+      <div class="qr-act qr-act-wa" onclick="sendCredWA()" title="WhatsApp">🟢</div>
+      <div class="qr-act qr-act-gm" onclick="sendCredGmail()" title="Gmail">✉️</div>
+      <div class="qr-act qr-act-app" onclick="sendCredEmailApp()" title="Email (APP)">📨</div>
+      <div class="qr-act qr-act-copy" onclick="copyCredText()" title="Copia testo">📋</div>
+      <div class="qr-act qr-act-cl" onclick="closeCredQR()" title="Chiudi">✖</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">Copiato ✅</div>
 
 <script>
   function bindPreview(inputId, imgId){
@@ -458,12 +565,43 @@
     return `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bd}`;
   }
 
+  // ✅ Toast + copia
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    if(!t) return;
+    t.textContent = msg || "Copiato ✅";
+    t.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(()=>{ t.style.display="none"; }, 1600);
+  }
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast("Copiato ✅");
+    }catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try{
+        document.execCommand("copy");
+        showToast("Copiato ✅");
+      }catch(err){
+        alert("Non riesco a copiare automaticamente. Copia manualmente:\n\n" + text);
+      }
+      document.body.removeChild(ta);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     bindPreview('photoInput','prevPhoto');
     bindPreview('logoInput','prevLogo');
     bindPreview('backInput','prevBack');
 
-    // ✅ Flip e "Tap su foto" non possono stare insieme (evita comportamenti confusi sulla card)
+    // ✅ Flip e "Tap su foto" non possono stare insieme
     const cbFlip = document.querySelector('input[name="allow_flip"]');
     const cbTap  = document.querySelector('input[name="avatar_spin"]');
     function syncFlipTap(){
@@ -629,6 +767,101 @@
     if(!confirm("Conferma eliminazione DEFINITIVA.")) return;
 
     window.location.href = href;
+  }
+
+  // ==========================
+  // ✅ INVIO CREDENZIALI AGENTE
+  // ==========================
+  function credInfo(){
+    const base = window.location.origin;
+
+    // slug + login
+    const slug = "{{ agent.slug if agent else '' }}";
+    const login = base + "/area/login";
+    const cardP1 = base + "/{{ agent.slug if agent else '' }}";
+
+    // username/password: li prendiamo da variabili server se disponibili, altrimenti vuote.
+    // Se nel tuo backend le chiami diversamente, dimmelo e le allineo.
+    const u = "{{ agent.username if agent and agent.username is defined else '' }}";
+    const p = "{{ agent.password if agent and agent.password is defined else '' }}";
+
+    return { base, slug, login, cardP1, u, p };
+  }
+
+  function credSubject(){
+    return "Pay4You - Credenziali Accesso";
+  }
+
+  function credBody(){
+    const c = credInfo();
+    return (
+      "Ciao!\n\n" +
+      "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
+      "LOGIN: " + c.login + "\n" +
+      "USER: " + (c.u || "(username)") + "\n" +
+      "PASSWORD: " + (c.p || "(password)") + "\n\n" +
+      "La tua Card:\n" + c.cardP1 + "\n\n" +
+      "Consiglio: al primo accesso salva questi dati.\n\n" +
+      "— Pay4You"
+    );
+  }
+
+  function sendCredWA(){
+    const c = credInfo();
+    const txt =
+      "Pay4You - Credenziali\n\n" +
+      "Login: " + c.login + "\n" +
+      "User: " + (c.u || "(username)") + "\n" +
+      "Pass: " + (c.p || "(password)") + "\n\n" +
+      "Card: " + c.cardP1;
+
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+  }
+
+  function sendCredGmail(){
+    const subject = credSubject();
+    const body = credBody();
+    window.open(gmailCompose(subject, body), "_blank");
+  }
+
+  function sendCredEmailApp(){
+    const subject = credSubject();
+    const body = credBody().replace(/\n/g, "\r\n");
+    const mailto = "mailto:?subject=" + encodeURIComponent(subject) +
+                   "&body=" + encodeURIComponent(body);
+    window.location.href = mailto;
+  }
+
+  function copyCredText(){
+    const text = "OGGETTO:\n" + credSubject() + "\n\nTESTO:\n" + credBody();
+    copyText(text);
+  }
+
+  // ===== QR credenziali (QR solo per link card) =====
+  function openCredQR(){
+    const c = credInfo();
+    if(!c.slug) return;
+
+    const url = c.cardP1;
+    document.getElementById("credQrBox").innerHTML =
+      '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url) +
+      '" style="background:white; padding:14px; border-radius:18px; width:260px; height:260px;">';
+
+    document.getElementById("credQrInfo").textContent =
+      "User: " + (c.u || "(username)") + "  |  Pass: " + (c.p || "(password)");
+
+    document.getElementById("credQrModal").style.display = "flex";
+  }
+
+  function closeCredQR(){
+    document.getElementById("credQrModal").style.display = "none";
+    document.getElementById("credQrBox").innerHTML = "";
+  }
+
+  function credQrOverlayClose(e){
+    if(e.target && e.target.id === "credQrModal"){
+      closeCredQR();
+    }
   }
 </script>
 
