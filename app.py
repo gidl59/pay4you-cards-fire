@@ -99,7 +99,6 @@ def repair_user(user):
                 p[k] = v
                 dirty = True
 
-        # Normalizza tipi
         if not isinstance(p.get('emails'), list):
             p['emails'] = []
             dirty = True
@@ -123,12 +122,10 @@ def repair_user(user):
             p['gallery_pdf'] = []
             dirty = True
 
-        # Normalizza tipi numerici crop
         p['pos_x'] = to_int(p.get('pos_x', 50), 50)
         p['pos_y'] = to_int(p.get('pos_y', 50), 50)
         p['zoom'] = to_float(p.get('zoom', 1.0), 1.0)
 
-        # Se gira agente ON, l'effetto moneta non deve creare conflitti
         if p.get('fx_rotate_agent') == 'on':
             if p.get('fx_interaction') not in ('tap', 'mirror'):
                 p['fx_interaction'] = 'tap'
@@ -197,14 +194,18 @@ def download_vcf(slug):
     if p.get('office_phone'):
         lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(p.get('office_phone'))}")
 
-    # Email
+    # ✅ EMAIL con etichetta "MAIL" su iPhone
+    # usiamo itemX.EMAIL + itemX.X-ABLabel:MAIL
     email_list = p.get('emails', []) or []
+    email_idx = 2  # item1 lo riserviamo all'URL brand
     if isinstance(email_list, list):
         for e_item in email_list:
             for e in str(e_item).split(','):
                 e = e.strip()
                 if e:
-                    lines.append(f"EMAIL;TYPE=INTERNET,WORK:{vcf_escape(e)}")
+                    lines.append(f"item{email_idx}.EMAIL:{vcf_escape(e)}")
+                    lines.append(f"item{email_idx}.X-ABLabel:{vcf_escape('MAIL')}")
+                    email_idx += 1
 
     # Websites
     web_list = p.get('websites', []) or []
@@ -230,7 +231,7 @@ def download_vcf(slug):
 
     # Social (URL + label)
     socials = p.get('socials', []) or []
-    idx = 2
+    idx = max(email_idx, 3)  # continua dopo email
     for s in socials:
         try:
             label = (s.get("label") or "").strip()
@@ -245,7 +246,7 @@ def download_vcf(slug):
         lines.append(f"item{idx}.X-ABLabel:{vcf_escape(label)}")
         idx += 1
 
-    # NOTE: Bio + P.IVA + SDI
+    # NOTE
     note_parts = []
     if p.get('bio'):
         note_parts.append(str(p.get('bio')).strip())
@@ -256,7 +257,7 @@ def download_vcf(slug):
     if note_parts:
         lines.append(f"NOTE:{vcf_escape(' | '.join(note_parts))}")
 
-    # PHOTO base64 -> iPhone salva foto contatto
+    # PHOTO base64
     foto_url = p.get('foto')
     fp = file_path_from_url(foto_url)
     if fp and os.path.exists(fp):
@@ -305,8 +306,6 @@ def area():
     user = next((c for c in load_db() if c.get('id') == session.get('user_id')), None)
     if not user:
         return redirect(url_for('logout'))
-    if repair_user(user):
-        save_db(load_db())
     return render_template('dashboard.html', user=user)
 
 @app.route('/area/activate/<p_id>')
@@ -400,16 +399,13 @@ def edit_profile(p_id):
         p['fx_interaction'] = request.form.get('fx_interaction', 'tap')
         p['fx_back_content'] = request.form.get('fx_back_content', 'logo')
 
-        # Se gira agente è ON, tap/specchio vengono ignorati (evito conflitti)
         if p['fx_rotate_agent'] == 'on':
             p['fx_interaction'] = 'tap'
 
-        # ===== FIX CROP: salva numeri veri =====
         p['pos_x'] = to_int(request.form.get('pos_x', 50), 50)
         p['pos_y'] = to_int(request.form.get('pos_y', 50), 50)
         p['zoom'] = to_float(request.form.get('zoom', 1), 1.0)
 
-        # ===== TRADUZIONI 4 LINGUE =====
         p['trans'] = {
             'en': {'role': request.form.get('role_en', ''), 'bio': request.form.get('bio_en', '')},
             'fr': {'role': request.form.get('role_fr', ''), 'bio': request.form.get('bio_fr', '')},
@@ -417,7 +413,6 @@ def edit_profile(p_id):
             'de': {'role': request.form.get('role_de', ''), 'bio': request.form.get('bio_de', '')}
         }
 
-        # Upload singoli
         if 'foto' in request.files:
             path = save_file(request.files['foto'], f"{prefix}_foto")
             if path:
@@ -431,7 +426,6 @@ def edit_profile(p_id):
             if path:
                 p['personal_foto'] = path
 
-        # Gallery
         if 'gallery_img' in request.files:
             for f in request.files.getlist('gallery_img'):
                 path = save_file(f, f"{prefix}_gimg")
@@ -448,7 +442,6 @@ def edit_profile(p_id):
                 if path:
                     p['gallery_vid'].append(path)
 
-        # Delete media
         if request.form.get('delete_media'):
             to_del = request.form.getlist('delete_media')
             p['gallery_img'] = [x for x in p.get('gallery_img', []) if x not in to_del]
@@ -519,7 +512,6 @@ def view_card(slug):
 
     p = user[p_req]
 
-    # (opzionale) qui in futuro puoi usare p['trans'] in base alla lingua
     ag = {
         "name": p.get('name'),
         "role": p.get('role'),
