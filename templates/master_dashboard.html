@@ -64,11 +64,30 @@
       width:92vw;
       text-align:center;
     }
-    .modal-actions{ display:flex; gap:12px; justify-content:center; }
-    .act{ width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; }
+    .modal-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .act{ width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; user-select:none; }
     .act-wa{ background:#25D366; color:#000; }
     .act-em{ background:#fff; color:#000; }
+    .act-app{ background:#444; color:#fff; }
+    .act-copy{ background:#00ffc8; color:#00120e; }
     .act-cl{ background:#0088cc; color:#000; }
+
+    /* mini toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,.75);
+      border:1px solid rgba(255,255,255,.18);
+      color:#fff;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:900;
+      display:none;
+      z-index:10000;
+      backdrop-filter: blur(8px);
+    }
   </style>
 </head>
 
@@ -120,10 +139,16 @@
             <td>
               <div class="row">
                 <div class="pill wa" onclick="sendWA('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">WA</div>
+
+                <!-- EMAIL come quello che ti funziona (Gmail compose) -->
                 <div class="pill em" onclick="sendEmailCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')">@</div>
+
                 <div class="pill qr" onclick="openQR('{{ c.slug|e }}','{{ c.username|e }}','{{ c.password|e }}')">QR</div>
+
+                <!-- Copia testo credenziali -->
+                <div class="pill" onclick="copyCred('{{ c.username|e }}','{{ c.password|e }}','{{ c.slug|e }}')" title="Copia testo">📋</div>
               </div>
-              <div class="small">✅ Email: testo completo</div>
+              <div class="small">✅ Gmail + Copia testo + Email(APP)</div>
             </td>
 
             <td style="text-align:right;">
@@ -143,26 +168,42 @@
       <div id="qrBox" style="margin-top:12px;"></div>
       <div class="small" id="qrInfo"></div>
     </div>
+
     <div class="modal-actions">
-      <div class="act act-wa act-wa" onclick="modalWA()">🟢</div>
-      <div class="act act-em" onclick="modalEmail()">✉️</div>
-      <div class="act act-cl" onclick="closeQR()">✖</div>
+      <div class="act act-wa" onclick="modalWA()" title="WhatsApp">🟢</div>
+
+      <!-- Gmail web compose (come nella dashboard file) -->
+      <div class="act act-em" onclick="modalEmail()" title="Gmail">✉️</div>
+
+      <!-- Mailto per Thunderbird/Outlook/Apple Mail -->
+      <div class="act act-app" onclick="modalEmailApp()" title="Email (APP)">📨</div>
+
+      <!-- Copia testo credenziali -->
+      <div class="act act-copy" onclick="modalCopy()" title="Copia testo">📋</div>
+
+      <div class="act act-cl" onclick="closeQR()" title="Chiudi">✖</div>
     </div>
   </div>
+
+  <div id="toast" class="toast">Copiato ✅</div>
 
   <script>
     let MOD_SLUG="", MOD_U="", MOD_P="";
 
-    function makeMailto(subject, body){
-      const b = (body || "").replace(/\n/g, "\r\n");
-      return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
+    // ===== helper base =====
+    function baseUrls(slug){
+      const base  = window.location.origin;
+      const login = base + "/area/login";
+      const card  = base + "/card/" + slug;
+      return { base, login, card };
+    }
+
+    function credSubject(){
+      return "Pay4You - Credenziali Accesso";
     }
 
     function credBody(u,p,slug){
-      const base = window.location.origin;
-      const login = base + "/area/login";
-      const card  = base + "/card/" + slug;
-
+      const { login, card } = baseUrls(slug);
       return (
         "Ciao!\n\n" +
         "Ecco le tue credenziali Pay4You per gestire la Card:\n\n" +
@@ -175,17 +216,70 @@
       );
     }
 
-    function sendEmailCred(u,p,slug){
-      const subject = "Pay4You - Credenziali Accesso";
-      const body = credBody(u,p,slug);
-      window.location.href = makeMailto(subject, body);
+    function showToast(msg){
+      const t = document.getElementById("toast");
+      if(!t) return;
+      t.textContent = msg || "Copiato ✅";
+      t.style.display = "block";
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(()=>{ t.style.display="none"; }, 1600);
     }
 
-    function sendWA(u,p,slug){
-      const base = window.location.origin;
-      const login = base + "/area/login";
-      const card  = base + "/card/" + slug;
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        showToast("Copiato ✅");
+      }catch(e){
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try{
+          document.execCommand("copy");
+          showToast("Copiato ✅");
+        }catch(err){
+          alert("Non riesco a copiare automaticamente. Copia manualmente:\n\n" + text);
+        }
+        document.body.removeChild(ta);
+      }
+    }
 
+    // ===== EMAIL: stessi comportamenti del file dashboard =====
+    function sendEmailCred(u,p,slug){
+      // Gmail web compose (risolve il problema: in Gmail c'è solo oggetto se usi mailto)
+      const subject = credSubject();
+      const body = credBody(u,p,slug);
+
+      const gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
+                       "&su=" + encodeURIComponent(subject) +
+                       "&body=" + encodeURIComponent(body);
+
+      window.open(gmailUrl, "_blank");
+    }
+
+    function sendEmailApp(u,p,slug){
+      // per Thunderbird/Outlook/Apple Mail
+      const subject = credSubject();
+      const body = credBody(u,p,slug).replace(/\n/g, "\r\n");
+      const mailto = "mailto:?subject=" + encodeURIComponent(subject) +
+                     "&body=" + encodeURIComponent(body);
+      window.location.href = mailto;
+    }
+
+    function copyCred(u,p,slug){
+      const subject = credSubject();
+      const body = credBody(u,p,slug);
+      const text = "OGGETTO:\n" + subject + "\n\nTESTO:\n" + body;
+      copyText(text);
+    }
+
+    // ===== WhatsApp (come prima) =====
+    function sendWA(u,p,slug){
+      const { login, card } = baseUrls(slug);
       const txt =
         "Pay4You - Credenziali\n\n" +
         "Login: " + login + "\n" +
@@ -196,6 +290,7 @@
       window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
     }
 
+    // ===== QR MODAL =====
     function openQR(slug,u,p){
       MOD_SLUG=slug; MOD_U=u; MOD_P=p;
 
@@ -218,6 +313,8 @@
 
     function modalWA(){ sendWA(MOD_U, MOD_P, MOD_SLUG); }
     function modalEmail(){ sendEmailCred(MOD_U, MOD_P, MOD_SLUG); }
+    function modalEmailApp(){ sendEmailApp(MOD_U, MOD_P, MOD_SLUG); }
+    function modalCopy(){ copyCred(MOD_U, MOD_P, MOD_SLUG); }
   </script>
 </body>
 </html>
