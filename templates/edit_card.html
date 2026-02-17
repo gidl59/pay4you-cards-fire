@@ -24,6 +24,7 @@
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
+    /* Stage per crop (stabile su iPhone/Safari) */
     #AGENT_STAGE{
       width:100%;
       height:100%;
@@ -58,9 +59,14 @@
     /* MODALE */
     .dash-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
     .dash-modal-content { max-width:90%; max-height:75vh; border-radius:10px; margin-bottom:15px; }
-    .dash-actions { display:flex; gap:15px; }
-    .d-btn { padding:12px 24px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
-    .db-wa { background:#25D366; color:#041b0c; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; }
+    .dash-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+    .d-btn { padding:12px 18px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
+    .db-wa { background:#25D366; color:#041b0c; }
+    .db-em { background:#666; }
+    .db-app { background:#444; }
+    .db-copy { background:#00ffc8; color:#00120e; }
+    .db-del { background:#ff4444; }
+    .db-cl { background:#0088cc; }
   </style>
 </head>
 <body>
@@ -207,13 +213,22 @@
     <div id="modalViewer"></div>
     <div class="dash-actions">
       <button onclick="invioWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
+
+      <!-- EMAIL: lascia Gmail come ora (NON cambiamo) -->
       <button onclick="invioEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> EMAIL</button>
+
+      <!-- EXTRA: apre mailto per Thunderbird/Outlook/Apple Mail -->
+      <button onclick="invioEmailApp()" class="d-btn db-app"><i class="fas fa-paper-plane"></i> EMAIL (APP)</button>
+
+      <!-- NUOVO: copia testo email -->
+      <button onclick="copiaTestoEmail()" class="d-btn db-copy"><i class="fas fa-copy"></i> COPIA TESTO</button>
+
       <button onclick="cancellaMedia()" class="d-btn db-del"><i class="fas fa-trash"></i> ELIMINA</button>
     </div>
   </div>
 
   <script>
-    // Crop stabile
+    // 1) CROP STABILE
     function aggiornaCrop() {
       var x = parseInt(document.getElementById('valX').value || "0", 10);
       var y = parseInt(document.getElementById('valY').value || "0", 10);
@@ -228,7 +243,7 @@
         "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
-    // Caricamento anteprima + RESET (solo per foto agente)
+    // 2) Anteprima + reset SOLO per foto agente
     function cambiaFotoAnteprima(input, id, isAgentPhoto) {
       if (input.files && input.files[0]) {
         var reader = new FileReader();
@@ -236,7 +251,6 @@
           var el = document.getElementById(id);
           el.src = e.target.result;
 
-          // Reset crop solo quando carichi la FOTO AGENTE
           if (isAgentPhoto) {
             document.getElementById('valX').value = 0;
             document.getElementById('valY').value = 0;
@@ -249,7 +263,7 @@
       }
     }
 
-    // Effetti
+    // 3) Effetti
     function gestisciEffetti(azione) {
       var checkGira = document.getElementById('checkGira');
       var radTap = document.getElementById('radTap');
@@ -265,7 +279,7 @@
       }
     }
 
-    // Modale + invio
+    // 4) Modale + invio
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
@@ -290,10 +304,8 @@
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
-    // Gmail web spesso ignora mailto body: usiamo compose su desktop
-    function invioEmail() {
-      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
-
+    // Costruisce oggetto + corpo sempre uguali
+    function buildEmailPayload() {
       var nomeInput = document.getElementById('inputNomeAgente').value;
       var nome = nomeInput ? nomeInput : "Agente Pay4You";
       var ogg = "Condivisione file da Card Pay4You";
@@ -304,22 +316,59 @@
         "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" +
         "Inviato da: " + nome + "\r\n";
 
-      var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      return { subject: ogg, body: corpo };
+    }
 
-      // Desktop: prova Gmail compose (molto più affidabile)
-      if (!isMobile) {
-        var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
-                       "&su=" + encodeURIComponent(ogg) +
-                       "&body=" + encodeURIComponent(corpo);
-        window.open(gmailUrl, "_blank");
-        return;
+    // EMAIL (Gmail web come ora: NON cambiamo)
+    function invioEmail() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+
+      // Desktop: Gmail compose (come già ti funziona)
+      var gmailUrl = "https://mail.google.com/mail/?view=cm&fs=1" +
+                     "&su=" + encodeURIComponent(p.subject) +
+                     "&body=" + encodeURIComponent(p.body);
+      window.open(gmailUrl, "_blank");
+    }
+
+    // EMAIL (APP): mailto per Thunderbird/Outlook/Apple Mail
+    function invioEmailApp() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+
+      var mailto = "mailto:?subject=" + encodeURIComponent(p.subject) +
+                   "&body=" + encodeURIComponent(p.body);
+
+      window.location.href = mailto;
+    }
+
+    // COPIA TESTO EMAIL (per Aruba webmail o qualsiasi client)
+    async function copiaTestoEmail() {
+      if (!FILE_ATTUALE.url) return alert("Apri prima un file dalla galleria.");
+      var p = buildEmailPayload();
+
+      var testo = "OGGETTO:\n" + p.subject + "\n\nTESTO:\n" + p.body;
+
+      try {
+        await navigator.clipboard.writeText(testo);
+        alert("Testo email copiato ✅\nOra incollalo dove vuoi (Gmail/Aruba/Thunderbird).");
+      } catch (e) {
+        // Fallback per browser vecchi
+        var ta = document.createElement("textarea");
+        ta.value = testo;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand("copy");
+          alert("Testo email copiato ✅\nOra incollalo dove vuoi (Gmail/Aruba/Thunderbird).");
+        } catch (err) {
+          alert("Non riesco a copiare automaticamente. Seleziona e copia manualmente:\n\n" + testo);
+        }
+        document.body.removeChild(ta);
       }
-
-      // Mobile: mailto va bene (apre app mail)
-      var mailto = "mailto:?subject=" + encodeURIComponent(ogg) +
-                   "&body=" + encodeURIComponent(corpo);
-
-      window.open(mailto, "_self");
     }
 
     function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
