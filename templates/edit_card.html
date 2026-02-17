@@ -4,8 +4,7 @@
 
   function makeMailto(subject, body){
     const b = (body || "").replace(/\n/g, "\r\n");
-    return "mailto:?subject=" + encodeURIComponent(subject) +
-           "&body=" + encodeURIComponent(b);
+    return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
   }
 
   function previewCrop(input){
@@ -18,7 +17,6 @@
       r.readAsDataURL(input.files[0]);
     }
   }
-
   function simplePreview(input, id){
     if(input.files && input.files[0]){
       const r = new FileReader();
@@ -27,7 +25,6 @@
     }
   }
 
-  // ✅ CROP FIX ROBUSTO: su/giù SEMPRE ok (input + change + touchend)
   function updateCrop(){
     const xEl = document.getElementsByName('pos_x')[0];
     const yEl = document.getElementsByName('pos_y')[0];
@@ -91,26 +88,18 @@
 
   function sendMediaWA(){
     const fullUrl = window.location.origin + CURRENT_MEDIA.url;
-    const txt = "Pay4You - File\n\nEcco il file:\n" + fullUrl + "\n\n— Pay4You";
-    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+    window.open("https://wa.me/?text=" + encodeURIComponent("Pay4You - File\n\n" + fullUrl + "\n\n— Pay4You"), "_blank");
   }
 
-  // ✅ EMAIL TESTO COMPLETO (foto/video/pdf) - mai vuoto
   function sendMediaEmail(){
     const fullUrl = window.location.origin + CURRENT_MEDIA.url;
-
     let tipo = "File";
     if(CURRENT_MEDIA.type === "img") tipo = "Foto";
     if(CURRENT_MEDIA.type === "vid") tipo = "Video";
     if(CURRENT_MEDIA.type === "pdf") tipo = "PDF";
 
     const subject = "Pay4You - " + tipo;
-    const body =
-      "Ciao!\n\n" +
-      "Ti invio questo contenuto Pay4You (" + tipo + "):\n" +
-      fullUrl + "\n\n" +
-      "— Pay4You";
-
+    const body = "Ciao!\n\nTi invio questo contenuto Pay4You (" + tipo + "):\n" + fullUrl + "\n\n— Pay4You";
     window.location.href = makeMailto(subject, body);
   }
 
