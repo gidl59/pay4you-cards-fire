@@ -11,45 +11,45 @@
     .edit-container { max-width:900px; margin:20px auto; padding-bottom:110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
-    
+
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
-    
+
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
     input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
-    
+
     /* SLIDER E CROP */
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
-    .crop-circle { 
-        width:160px; height:160px; 
-        border-radius:50%; border:3px solid #00ffc8; 
-        overflow:hidden; margin:0 auto 15px auto; 
-        position:relative; background:#222; 
+    .crop-circle {
+        width:160px; height:160px;
+        border-radius:50%; border:3px solid #00ffc8;
+        overflow:hidden; margin:0 auto 15px auto;
+        position:relative; background:#222;
         display: flex; align-items: center; justify-content: center;
     }
-    .crop-circle img { 
-        width:100%; height:100%; 
-        object-fit:cover; 
+    .crop-circle img {
+        width:100%; height:100%;
+        object-fit:cover;
         transform-origin: center center;
         display:block;
     }
-    
+
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
     .slider-row label { margin:0; width:30px; text-align:center; font-size:18px; }
     input[type="range"] { width: 100%; cursor: pointer; }
 
-    /* AVVISO GIALLO (Stile forzato con !important per essere visibile) */
-    #boxAvvisoGiallo { 
-        background-color: #382800 !important; 
-        border: 2px solid #ffb000 !important; 
-        color: #ffd58a !important; 
-        padding: 15px !important; 
-        border-radius: 8px !important; 
-        font-size: 13px !important; 
-        font-weight: bold !important; 
-        margin-top: 15px !important; 
-        text-align: left !important; 
-        display: none; /* Gestito da JS */
+    /* AVVISO GIALLO */
+    #boxAvvisoGiallo {
+        background-color: #382800 !important;
+        border: 2px solid #ffb000 !important;
+        color: #ffd58a !important;
+        padding: 15px !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        margin-top: 15px !important;
+        text-align: left !important;
+        display: none;
     }
 
     /* MEDIA GALLERY */
@@ -58,21 +58,57 @@
     .dash-item:hover { transform:scale(1.05); border-color:#00ffc8; }
     .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
     .dash-item.deleted { display:none; }
-    
+
     .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
     .btn-del-all { background:#330000; color:#ff4444; border:1px solid #ff4444; padding:5px 10px; border-radius:5px; font-size:10px; cursor:pointer; float:right; }
-    
+
     .btn-save { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
 
     /* MODALE */
-    .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
+    .dash-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; padding:14px; box-sizing:border-box; }
     .dash-modal-content { max-width:90%; max-height:80vh; margin-bottom:15px; border-radius:10px; }
     .dash-actions { display:flex; gap:15px; margin-bottom:10px; flex-wrap:wrap; justify-content:center; }
     .d-btn { display:flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; text-decoration:none; color:white; font-weight:bold; border:none; cursor:pointer; font-size:14px; }
-    .db-wa { background:#25D366; color:#041b0c; } .db-em { background:#666; } .db-del { background:#ff4444; } .db-cl { background:#0088cc; color:white; }
-    
+    .db-wa { background:#25D366; color:#041b0c; }
+    .db-em { background:#666; }
+    .db-del { background:#ff4444; }
+    .db-cl { background:#0088cc; color:white; }
+    .db-cp { background:#222; border:1px solid #00ffc8; color:#00ffc8; }
+
     details summary{ cursor:pointer; user-select:none; font-weight:bold; outline:none; margin-bottom: 10px;}
     .hint { color:#777; font-size:11px; margin-top:5px; }
+
+    /* BOX TESTO EMAIL (fallback/copia) */
+    #emailBox {
+      width: min(920px, 95vw);
+      background:#0d0d0d;
+      border:1px solid rgba(0,255,200,.25);
+      border-radius:12px;
+      padding:12px;
+      margin:10px 0 12px 0;
+      display:none;
+      box-sizing:border-box;
+    }
+    #emailBox .emailTitle { color:#00ffc8; font-weight:900; font-size:12px; letter-spacing:.05em; margin-bottom:8px; text-transform:uppercase; }
+    #emailText {
+      width:100%;
+      min-height:130px;
+      background:#111;
+      border:1px solid #333;
+      color:#fff;
+      border-radius:10px;
+      padding:10px;
+      box-sizing:border-box;
+      font-size:12px;
+      line-height:1.4;
+      resize:vertical;
+    }
+    .emailHint {
+      color:#aaa;
+      font-size:11px;
+      margin-top:8px;
+      opacity:.9;
+    }
   </style>
 </head>
 <body>
@@ -129,10 +165,13 @@
               <label>↔️</label>
               <input type="range" id="inputX_new" name="pos_x" min="0" max="100" step="1" value="{{ p.pos_x|int }}" oninput="applicaCropImmediato()">
             </div>
+
+            <!-- NOTA: slider Y “intuitivo” (su = sale). Inviamo al backend pos_y già corretto invertendo in JS -->
             <div class="slider-row">
               <label>↕️</label>
-              <input type="range" id="inputY_new" name="pos_y" min="0" max="100" step="1" value="{{ p.pos_y|int }}" oninput="applicaCropImmediato()">
+              <input type="range" id="inputY_new" name="pos_y" min="0" max="100" step="1" value="{{ (100 - (p.pos_y|int)) }}" oninput="applicaCropImmediato()">
             </div>
+
             <div class="slider-row">
               <label>🔍</label>
               <input type="range" id="inputZ_new" name="zoom" min="1" max="3" step="0.1" value="{{ p.zoom|float }}" oninput="applicaCropImmediato()">
@@ -142,7 +181,7 @@
           <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
             <label style="display:inline-block; margin-right:5px; cursor:pointer;">Gira Foto Agente?</label>
             <input type="checkbox" id="checkGiraFoto" name="fx_rotate_agent" {% if p.fx_rotate_agent=='on' %}checked{% endif %} onchange="gestisciAvvisoGiallo()">
-            
+
             <div id="boxAvvisoGiallo">
               ⚠️ ATTENZIONE:<br>
               Hai attivato "Gira Foto Agente".<br>
@@ -176,7 +215,7 @@
           <span style="margin:0 10px;"></span>
           <input type="radio" name="fx_interaction" value="mirror" {% if p.fx_interaction=='mirror' %}checked{% endif %} class="radioEffetto"> SPECCHIO (automatico)
         </div>
-        
+
         <label>Retro della Card:</label>
         <div>
           <input type="radio" name="fx_back_content" value="logo" {% if p.fx_back_content=='logo' %}checked{% endif %}> Logo
@@ -273,32 +312,59 @@
 
   <div id="modalFile" class="dash-modal">
     <button onclick="chiudiPopup()" class="d-btn db-cl" style="margin-bottom:10px;">CHIUDI X</button>
+
     <div id="boxAnteprimaFile"></div>
+
+    <!-- BOX TESTO EMAIL (mostrato quando premi Email) -->
+    <div id="emailBox">
+      <div class="emailTitle">Testo Email pronto (se il tasto Email apre solo il browser, copia e incolla)</div>
+      <textarea id="emailText" readonly></textarea>
+      <div class="emailHint">
+        Suggerimento: se non si apre l’app Mail, premi <b>COPIA TESTO</b> e incolla in Gmail/Outlook.
+      </div>
+    </div>
+
     <div class="dash-actions">
       <button onclick="inviaWA()" class="d-btn db-wa"><i class="fab fa-whatsapp"></i> WA</button>
       <button onclick="inviaEmail()" class="d-btn db-em"><i class="fas fa-envelope"></i> Email</button>
+      <button onclick="copiaTestoEmail()" class="d-btn db-cp"><i class="fas fa-copy"></i> COPIA TESTO</button>
       <button onclick="cancellaFile()" class="d-btn db-del"><i class="fas fa-trash"></i> DEL</button>
     </div>
   </div>
 
   <script>
     // --- 1. FUNZIONI CROP (BLINDATE) ---
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
     function applicaCropImmediato() {
-        // Uso ID specifici per evitare conflitti con vecchi codici
-        var x = document.getElementById('inputX_new').value;
-        var y = document.getElementById('inputY_new').value;
-        var z = document.getElementById('inputZ_new').value;
+        var x = parseInt(document.getElementById('inputX_new').value, 10) || 50;
+
+        // Slider Y “intuitivo”: 0 = su, 100 = giù.
+        // object-position invece: 0 = alto, 100 = basso come punto di fuoco.
+        // Per far sì che "sposto su" = immagine sale, invertiamo:
+        var y_slider = parseInt(document.getElementById('inputY_new').value, 10) || 50;
+        var y = 100 - y_slider; // <-- inversione
+
+        var z = parseFloat(document.getElementById('inputZ_new').value) || 1;
+
+        x = clamp(x, 0, 100);
+        y = clamp(y, 0, 100);
+        z = Math.max(1, Math.min(3, z));
+
         var img = document.getElementById('imgAgenteTarget');
-        
         img.style.objectPosition = x + "% " + y + "%";
         img.style.transform = "scale(" + z + ")";
+
+        // IMPORTANTISSIMO: salviamo al backend pos_y già invertito
+        // così in DB rimane coerente e la card fuori dashboard non cambia.
+        document.getElementById('inputY_new').dataset.realY = String(y);
     }
 
     function caricaAnteprima(input, targetId) {
         if(input.files && input.files[0]) {
             var reader = new FileReader();
-            reader.onload = function(e) { 
-                document.getElementById(targetId).src = e.target.result; 
+            reader.onload = function(e) {
+                document.getElementById(targetId).src = e.target.result;
             };
             reader.readAsDataURL(input.files[0]);
         }
@@ -311,10 +377,10 @@
         var radioButtons = document.querySelectorAll('.radioEffetto');
 
         if(checkbox.checked) {
-            boxGiallo.style.display = 'block'; // Mostra Giallo
+            boxGiallo.style.display = 'block';
             radioButtons.forEach(function(r){ r.disabled = true; });
         } else {
-            boxGiallo.style.display = 'none';  // Nascondi
+            boxGiallo.style.display = 'none';
             radioButtons.forEach(function(r){ r.disabled = false; });
         }
     }
@@ -325,14 +391,17 @@
 
     function apriPopup(urlRelativo, tipo, elementoHtml) {
         if(elementoHtml.classList.contains('deleted')) return;
-        
+
         ELEMENTO_CORRENTE = elementoHtml;
         FILE_CORRENTE.url = window.location.origin + urlRelativo;
         FILE_CORRENTE.type = tipo;
 
         var box = document.getElementById('boxAnteprimaFile');
-        // Pulisce
         box.innerHTML = "";
+
+        // reset email box
+        document.getElementById('emailBox').style.display = 'none';
+        document.getElementById('emailText').value = "";
 
         if(tipo === 'img') {
             box.innerHTML = '<img src="' + urlRelativo + '" class="dash-modal-content">';
@@ -348,6 +417,8 @@
     function chiudiPopup() {
         document.getElementById('modalFile').style.display = 'none';
         document.getElementById('boxAnteprimaFile').innerHTML = "";
+        document.getElementById('emailBox').style.display = 'none';
+        document.getElementById('emailText').value = "";
     }
 
     function inviaWA() {
@@ -355,36 +426,79 @@
         if(FILE_CORRENTE.type === "img") label = "Foto";
         if(FILE_CORRENTE.type === "vid") label = "Video";
         if(FILE_CORRENTE.type === "pdf") label = "Documento";
-        
+
         var testo = "Pay4You - " + label + ":\n" + FILE_CORRENTE.url;
         window.open("https://wa.me/?text=" + encodeURIComponent(testo), "_blank");
     }
 
-    function inviaEmail() {
+    function buildEmailPayload() {
         var nomeAgente = "{{ p.name|default('', true) }}";
         var oggetto = "Pay4You - File Condiviso";
-        var corpo = "Ciao!\n" +
-                    "Ecco un file dalla mia Card Digitale Pay4You.\n\n" +
-                    (nomeAgente ? "Da: " + nomeAgente + "\n\n" : "") +
-                    "Link al file:\n" + FILE_CORRENTE.url + "\n\n" +
-                    "Saluti.";
+        var corpo =
+          "Ciao!\n" +
+          "Ecco un file dalla mia Card Digitale Pay4You.\n\n" +
+          (nomeAgente ? ("Da: " + nomeAgente + "\n\n") : "") +
+          "Link al file:\n" + FILE_CORRENTE.url + "\n\n" +
+          "Saluti.\n" +
+          "— Pay4You";
 
-        var linkMail = "mailto:?subject=" + encodeURIComponent(oggetto) + 
-                       "&body=" + encodeURIComponent(corpo).replace(/%0A/g, "%0D%0A");
-        
-        window.location.href = linkMail;
+        return { oggetto: oggetto, corpo: corpo };
+    }
+
+    function inviaEmail() {
+        var payload = buildEmailPayload();
+
+        // Mostra sempre anche il testo pronto da copiare (fallback)
+        document.getElementById('emailBox').style.display = 'block';
+        document.getElementById('emailText').value =
+          "OGGETTO: " + payload.oggetto + "\n\n" +
+          payload.corpo;
+
+        // mailto (alcuni device/browser lo gestiscono male -> almeno hai copia)
+        var linkMail = "mailto:?subject=" + encodeURIComponent(payload.oggetto) +
+                       "&body=" + encodeURIComponent(payload.corpo).replace(/%0A/g, "%0D%0A");
+
+        try {
+          // usare location.href è il modo più compatibile
+          window.location.href = linkMail;
+        } catch(e) {
+          // se fallisce, resta comunque il testo da copiare
+        }
+    }
+
+    function copiaTestoEmail() {
+        var t = document.getElementById('emailText');
+        if(!t.value) {
+          // se non è stato generato ancora, lo generiamo adesso
+          var payload = buildEmailPayload();
+          document.getElementById('emailBox').style.display = 'block';
+          t.value = "OGGETTO: " + payload.oggetto + "\n\n" + payload.corpo;
+        }
+
+        t.focus();
+        t.select();
+
+        // Clipboard API (se disponibile)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(t.value).then(function(){
+            // ok
+          }).catch(function(){
+            // fallback execCommand
+            try { document.execCommand('copy'); } catch(e){}
+          });
+        } else {
+          try { document.execCommand('copy'); } catch(e){}
+        }
     }
 
     function cancellaFile() {
         if(confirm("Vuoi davvero eliminare questo file?")) {
-            // Cerca la checkbox nascosta dentro l'elemento cliccato
             var checkbox = ELEMENTO_CORRENTE.querySelector('input[type="checkbox"]');
             if(checkbox) checkbox.checked = true;
-            
-            // Nascondi visivamente
+
             ELEMENTO_CORRENTE.style.display = 'none';
             ELEMENTO_CORRENTE.classList.add('deleted');
-            
+
             chiudiPopup();
         }
     }
@@ -392,24 +506,28 @@
     function svuotaTutto(tipo) {
         if(confirm("ELIMINARE TUTTI I FILES DI QUESTO TIPO?")) {
             var items = document.querySelectorAll('.del-chk-' + tipo);
-            items.forEach(function(chk) { 
-                chk.checked = true; 
+            items.forEach(function(chk) {
+                chk.checked = true;
                 chk.parentElement.style.display = 'none';
             });
         }
     }
 
-    // --- 4. AVVIO AUTOMATICO ---
+    // --- 4. AVVIO AUTOMATICO + FIX SUBMIT (salva pos_y reale invertita) ---
     window.onload = function() {
         applicaCropImmediato();
         gestisciAvvisoGiallo();
-        
-        // Listener form submit
+
         document.getElementById('editForm').onsubmit = function() {
+            // prima di inviare: mettiamo nel value del range Y il valore reale (invertito)
+            var yReal = document.getElementById('inputY_new').dataset.realY;
+            if (yReal !== undefined && yReal !== null) {
+              document.getElementById('inputY_new').value = String(yReal);
+            }
+
             document.getElementById('btnSalva').innerText = "⏳ SALVATAGGIO...";
         };
     };
-
   </script>
 </body>
 </html>
