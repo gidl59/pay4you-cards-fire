@@ -56,6 +56,30 @@
         .flashes { list-style:none; padding:0; margin-bottom:20px; }
         .flash { padding:15px; border-radius:10px; margin-bottom:10px; font-weight:bold; }
         .flash.success { background:rgba(0,255,200,0.2); border:1px solid #00ffc8; color:#00ffc8; }
+
+        /* ✅ RING BADGE / BUTTON (aggiunta) */
+        .ring-wrap { margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .ring-badge{
+            display:inline-flex; align-items:center; gap:8px;
+            padding:6px 10px; border-radius:999px;
+            border:1px solid rgba(255,255,255,.12);
+            background: rgba(0,0,0,.22);
+            font-weight:bold; font-size:12px; color:#eee;
+        }
+        .ring-badge.ok{ border-color: rgba(68,208,127,.55); background: rgba(68,208,127,.10); color:#dff6e8; }
+        .ring-badge.no{ border-color: rgba(214,40,40,.55); background: rgba(214,40,40,.10); color:#ffecec; }
+        .ring-badge.unk{ border-color: rgba(255,255,255,.14); background: rgba(0,0,0,.20); color:#bbb; }
+        .ring-btn{
+            display:inline-flex; align-items:center; justify-content:center;
+            padding:8px 12px; border-radius:10px;
+            border:1px solid rgba(0,255,200,.35);
+            background: rgba(0,255,200,.10);
+            color:#00ffc8; font-weight:bold; font-size:12px;
+            cursor:pointer; user-select:none;
+            text-decoration:none;
+        }
+        .ring-btn.disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+        .ring-small{ font-size:11px; color:#888; font-weight:bold; }
     </style>
 </head>
 <body>
@@ -77,16 +101,23 @@
     <div class="box" style="border-color:#00ffc8;">
         <h3 style="color:#00ffc8; margin-top:0;">➕ Crea Nuova Card (Automatico)</h3>
         <p style="color:#aaa; font-size:13px; margin-bottom:15px;">Inserisci i dati per le credenziali. La password verrà generata automaticamente e la card sarà creata vuota.</p>
-        <form action="/master/add" method="POST" class="form-row">
+        <form action="/master/add" method="POST" class="form-row" id="createForm">
             
             <div class="input-group">
                 <label>SLUG / LINK (es. mario-rossi)</label>
-                <input type="text" name="slug" placeholder="es. card-cliente" required style="color:#00ffc8; font-weight:bold; border-color:#555;">
+                <input type="text" name="slug" id="newSlug" placeholder="es. card-cliente" required style="color:#00ffc8; font-weight:bold; border-color:#555;">
             </div>
             
             <div class="input-group">
                 <label>EMAIL (Per invio credenziali)</label>
-                <input type="email" name="admin_email" placeholder="email@cliente.com" required>
+                <input type="email" name="admin_email" id="newEmail" placeholder="email@cliente.com" required>
+
+                <!-- ✅ LUCETTA RING (form) -->
+                <div class="ring-wrap">
+                    <span class="ring-badge unk" id="ringBadgeForm">🔎 Ring: —</span>
+                    <a class="ring-btn disabled" id="ringBtnForm" href="#" target="_blank">Invia istruzioni Ring + Card</a>
+                    <span class="ring-small" id="ringInfoForm"></span>
+                </div>
             </div>
 
             <div class="input-group">
@@ -111,7 +142,9 @@
                 <th style="text-align:right;">Azioni</th>
             </tr>
             {% for c in clienti %}
-            <tr>
+            <tr class="clientRow"
+                data-email="{{ c.admin_contact.email }}"
+                data-slug="{{ c.slug }}">
                 <td>
                     <strong style="font-size:16px;">{{ c.p1.name if c.p1.name else 'Card Vuota (' + c.slug + ')' }}</strong><br>
                     <a href="/card/{{ c.slug }}" target="_blank" style="color:#666; font-size:12px; text-decoration:none;">/card/{{ c.slug }}</a>
@@ -124,6 +157,13 @@
                     <div style="font-size:11px; color:#888; margin-top:5px;">
                         ✉️ {{ c.admin_contact.email }}<br>
                         📱 {{ c.admin_contact.whatsapp }}
+                    </div>
+
+                    <!-- ✅ LUCETTA RING (lista) -->
+                    <div class="ring-wrap" style="margin-top:10px;">
+                        <span class="ring-badge unk ringBadgeRow">🔎 Ring: —</span>
+                        <a class="ring-btn disabled ringBtnRow" href="#" target="_blank">Invia istruzioni Ring + Card</a>
+                        <span class="ring-small ringInfoRow"></span>
                     </div>
                 </td>
                 <td>
@@ -190,7 +230,6 @@
 
         // 1. WHATSAPP (Apre la chat con il numero salvato)
         function sendWA(phone, user, pass, slug) {
-            // Pulisce il numero da spazi o caratteri extra
             var cleanPhone = phone.replace(/[^0-9]/g, '');
             var txt = getCredBody(user, pass, slug);
             window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(txt), '_blank');
@@ -245,6 +284,150 @@
         function chiudiQR() {
             document.getElementById('boxQR').style.display = 'none';
         }
+
+        /* ==========================
+           ✅ RING CHECK + SEND (JS)
+        ========================== */
+
+        // 🔧 CAMBIA QUESTE 2 CHIAVI (devono combaciare con Aruba)
+        const RING_STATUS_KEY = "CAMBIA_CHIAVE_STATUS_2026";
+        const RING_SEND_KEY   = "CAMBIA_CHIAVE_SEND_2026";
+
+        const RING_STATUS_URL = "https://www.pay4you.store/ring/api/ring-status.php";
+        const RING_SEND_URL   = "https://www.pay4you.store/ring/admin/send-ring-instructions.php";
+
+        function setBadge(el, type, text){
+            el.classList.remove("ok","no","unk");
+            el.classList.add(type);
+            el.textContent = text;
+        }
+
+        async function ringStatus(email){
+            if(!email) return {ok:false};
+            try{
+                const url = `${RING_STATUS_URL}?k=${encodeURIComponent(RING_STATUS_KEY)}&email=${encodeURIComponent(email)}`;
+                const res = await fetch(url, {cache:"no-store"});
+                if(!res.ok) return {ok:false};
+                const j = await res.json();
+                return j && j.ok ? j : {ok:false};
+            }catch(e){
+                return {ok:false};
+            }
+        }
+
+        function buildSendLink(email, slug){
+            return `${RING_SEND_URL}?k=${encodeURIComponent(RING_SEND_KEY)}&email=${encodeURIComponent(email)}&slug=${encodeURIComponent(slug)}`;
+        }
+
+        // --- FORM (creazione) ---
+        const emailInput = document.getElementById("newEmail");
+        const slugInput  = document.getElementById("newSlug");
+        const badgeForm  = document.getElementById("ringBadgeForm");
+        const btnForm    = document.getElementById("ringBtnForm");
+        const infoForm   = document.getElementById("ringInfoForm");
+
+        let formTimer = null;
+        async function updateFormRing(){
+            const email = (emailInput.value || "").trim();
+            const slug  = (slugInput.value || "").trim();
+
+            setBadge(badgeForm, "unk", "🔎 Ring: controllo...");
+            infoForm.textContent = "";
+            btnForm.classList.add("disabled");
+            btnForm.href = "#";
+
+            const st = await ringStatus(email);
+
+            if(!st.ok){
+                setBadge(badgeForm, "unk", "🔎 Ring: —");
+                infoForm.textContent = "API non raggiungibile (o chiave non impostata)";
+                return;
+            }
+
+            if(st.has_ring){
+                setBadge(badgeForm, "ok", "🟢 Ring acquistato");
+                if((st.instructions_sent_at||0) > 0){
+                    infoForm.textContent = "Istruzioni già inviate";
+                    btnForm.classList.add("disabled");
+                    btnForm.href = "#";
+                }else{
+                    if(slug){
+                        btnForm.href = buildSendLink(email, slug);
+                        btnForm.classList.remove("disabled");
+                        infoForm.textContent = "";
+                    }else{
+                        infoForm.textContent = "Inserisci prima lo slug";
+                    }
+                }
+            }else{
+                setBadge(badgeForm, "no", "🔴 Ring non trovato");
+                infoForm.textContent = "";
+            }
+        }
+
+        function debounceForm(){
+            if(formTimer) clearTimeout(formTimer);
+            formTimer = setTimeout(updateFormRing, 500);
+        }
+        emailInput.addEventListener("input", debounceForm);
+        slugInput.addEventListener("input", debounceForm);
+
+        // --- LISTA (per ogni cliente) ---
+        async function updateRowRing(row){
+            const email = (row.dataset.email || "").trim();
+            const slug  = (row.dataset.slug || "").trim();
+
+            const badge = row.querySelector(".ringBadgeRow");
+            const btn   = row.querySelector(".ringBtnRow");
+            const info  = row.querySelector(".ringInfoRow");
+
+            if(!badge || !btn || !info) return;
+
+            setBadge(badge, "unk", "🔎 Ring: controllo...");
+            info.textContent = "";
+            btn.classList.add("disabled");
+            btn.href = "#";
+
+            if(!email){
+                setBadge(badge, "unk", "🔎 Ring: —");
+                info.textContent = "Email mancante";
+                return;
+            }
+
+            const st = await ringStatus(email);
+
+            if(!st.ok){
+                setBadge(badge, "unk", "🔎 Ring: —");
+                info.textContent = "API non raggiungibile";
+                return;
+            }
+
+            if(st.has_ring){
+                setBadge(badge, "ok", "🟢 Ring acquistato");
+                if((st.instructions_sent_at||0) > 0){
+                    info.textContent = "Istruzioni già inviate";
+                }else{
+                    btn.href = buildSendLink(email, slug);
+                    btn.classList.remove("disabled");
+                }
+            }else{
+                setBadge(badge, "no", "🔴 Ring non trovato");
+            }
+        }
+
+        async function initRows(){
+            const rows = Array.from(document.querySelectorAll("tr.clientRow"));
+            // facciamo “a piccoli blocchi” per non stressare
+            for(let i=0;i<rows.length;i++){
+                await updateRowRing(rows[i]);
+            }
+        }
+
+        // Avvia controllo righe appena carica pagina
+        window.addEventListener("load", () => {
+            // se l'admin sta già scrivendo nel form, ok
+            initRows();
+        });
     </script>
 </body>
 </html>
