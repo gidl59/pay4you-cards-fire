@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; }
-    .edit-container { max-width:980px; margin:20px auto; padding:0 14px 110px; }
+    .edit-container { max-width:1280px; margin:20px auto; padding:0 14px 110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
@@ -25,7 +25,7 @@
     }
 
     .dash-head {
-      max-width:980px;
+      max-width:1280px;
       margin:20px auto 0;
       padding:0 14px;
       display:flex;
@@ -59,7 +59,13 @@
     .slider-row label { width:30px; font-size:18px; text-align:center; margin:0; }
     input[type="range"] { width: 100%; cursor: pointer; }
 
-    .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .dash-gallery {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:10px;
+    }
+
     .dash-item {
       position:relative;
       width:90px;
@@ -72,7 +78,9 @@
       display:flex;
       align-items:center;
       justify-content:center;
+      flex-shrink:0;
     }
+
     .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
 
     .pdf-row {
@@ -129,10 +137,12 @@
     details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
+    /* GALLERIA FILE ORIZZONTALE */
     .media-sections {
       display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap:16px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:20px;
+      align-items:start;
     }
 
     .media-panel {
@@ -140,6 +150,9 @@
       border:1px solid #333;
       border-radius:14px;
       padding:16px;
+      min-width:0;
+      height:100%;
+      box-sizing:border-box;
     }
 
     .media-panel h4 {
@@ -155,6 +168,7 @@
       color:#9a9a9a;
       margin-bottom:10px;
       line-height:1.45;
+      min-height:52px;
     }
 
     .media-upload {
@@ -167,6 +181,7 @@
       color:#ddd;
       margin-bottom:12px;
       box-sizing:border-box;
+      max-width:100%;
     }
 
     .media-counter {
@@ -192,6 +207,13 @@
       font-size:12px;
       text-align:center;
       padding:10px;
+      box-sizing:border-box;
+    }
+
+    @media (max-width: 1100px){
+      .media-sections {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 760px){
