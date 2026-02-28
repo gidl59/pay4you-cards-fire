@@ -46,10 +46,8 @@ SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "1").strip() == "1"
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()  # es: whatsapp:+3935xxxxxxx
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 
-
-# ===== DB =====
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
@@ -66,8 +64,6 @@ def save_db(data):
     except Exception as e:
         print(f"Errore DB: {e}")
 
-
-# ===== FILES =====
 def save_file(file, prefix):
     if file and file.filename:
         filename = secure_filename(f"{prefix}_{file.filename}")
@@ -75,8 +71,6 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
-
-# ===== HELPERS =====
 def to_int(v, d=50):
     try:
         return int(float(v))
@@ -170,8 +164,6 @@ def repair_user(user):
 
     return dirty
 
-
-# ===== CREDENTIALS / MESSAGING =====
 def build_credentials_data(user: dict) -> dict:
     slug = (user.get("slug") or "").strip()
     username = (user.get("username") or slug).strip()
@@ -298,8 +290,6 @@ def send_whatsapp_twilio(to_phone: str, body: str):
 def get_user_by_id(clienti, user_id):
     return next((c for c in clienti if c.get('id') == user_id), None)
 
-
-# ===== VCF =====
 def vcf_escape(s: str) -> str:
     s = str(s or "").replace("\\", "\\\\").replace("\r", " ").replace("\n", " ").replace(";", r"\;").replace(",", r"\,")
     return s.strip()
@@ -420,8 +410,6 @@ def download_vcf(slug):
     response.headers["Content-Type"] = "text/vcard; charset=utf-8"
     return response
 
-
-# ===== ROUTES =====
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -674,7 +662,6 @@ def master_credentials(id):
     recipient_email = (user.get('admin_contact', {}) or {}).get('email', '')
     recipient_whatsapp = (user.get('admin_contact', {}) or {}).get('whatsapp', '')
 
-    # Se hai già credentials.html, userà quello
     return render_template(
         'credentials.html',
         user=user,
@@ -704,7 +691,7 @@ def master_send_credentials_email(id):
     to_email = ((user.get('admin_contact', {}) or {}).get('email') or '').strip()
     if not to_email:
         flash("Nessuna email destinatario presente nella card.", "error")
-        return redirect(url_for('master_credentials', id=id))
+        return redirect(url_for('master_login'))
 
     try:
         send_email_smtp(
@@ -717,7 +704,7 @@ def master_send_credentials_email(id):
     except Exception as e:
         flash(f"Errore invio email: {e}", "error")
 
-    return redirect(url_for('master_credentials', id=id))
+    return redirect(url_for('master_login'))
 
 @app.route('/master/send-credentials-whatsapp/<int:id>')
 def master_send_credentials_whatsapp(id):
@@ -733,7 +720,7 @@ def master_send_credentials_whatsapp(id):
     to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
     if not to_phone:
         flash("Nessun numero WhatsApp destinatario presente nella card.", "error")
-        return redirect(url_for('master_credentials', id=id))
+        return redirect(url_for('master_login'))
 
     try:
         result = send_whatsapp_twilio(
@@ -745,7 +732,7 @@ def master_send_credentials_whatsapp(id):
     except Exception as e:
         flash(f"Errore invio WhatsApp: {e}", "error")
 
-    return redirect(url_for('master_credentials', id=id))
+    return redirect(url_for('master_login'))
 
 @app.route('/card/<slug>')
 def view_card(slug):
