@@ -777,7 +777,6 @@ def edit_profile(p_id):
 
         # ===== PRIMA APPLICA LE CANCELLAZIONI =====
         to_del = request.form.getlist('delete_media')
-
         if to_del:
             p['gallery_img'] = [x for x in p.get('gallery_img', []) if x not in to_del]
             p['gallery_pdf'] = [x for x in p.get('gallery_pdf', []) if x.get('path') not in to_del]
@@ -787,61 +786,82 @@ def edit_profile(p_id):
         if 'gallery_img' in request.files:
             new_imgs = [f for f in request.files.getlist('gallery_img') if f and f.filename]
 
-            future_img_count = len(p.get('gallery_img', [])) + len(new_imgs)
-            if future_img_count > MAX_GALLERY_IMG:
-                flash(f"Puoi avere massimo {MAX_GALLERY_IMG} immagini in galleria.", "error")
-                return redirect(url_for('edit_profile', p_id=p_id))
+            current_count = len(p.get('gallery_img', []))
+            slots_left = max(0, MAX_GALLERY_IMG - current_count)
 
-            for f in new_imgs:
-                ok, err = validate_upload(f, ALLOWED_IMAGE_EXT, MAX_IMAGE_MB)
-                if not ok:
-                    flash(err, "error")
-                    return redirect(url_for('edit_profile', p_id=p_id))
+            if slots_left == 0 and new_imgs:
+                flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_IMG} immagini. Nessuna nuova foto caricata.", "error")
+            else:
+                imgs_to_upload = new_imgs[:slots_left]
+                skipped_imgs = len(new_imgs) - len(imgs_to_upload)
 
-            for f in new_imgs:
-                path = save_file(f, f"{prefix}_gimg")
-                if path:
-                    p['gallery_img'].append(path)
+                for f in imgs_to_upload:
+                    ok, err = validate_upload(f, ALLOWED_IMAGE_EXT, MAX_IMAGE_MB)
+                    if not ok:
+                        flash(err, "error")
+                        return redirect(url_for('edit_profile', p_id=p_id))
+
+                for f in imgs_to_upload:
+                    path = save_file(f, f"{prefix}_gimg")
+                    if path:
+                        p['gallery_img'].append(path)
+
+                if skipped_imgs > 0:
+                    flash(f"Raggiunto il limite massimo di {MAX_GALLERY_IMG} immagini. {skipped_imgs} file non sono stati caricati.", "error")
 
         # ===== GALLERY PDF =====
         if 'gallery_pdf' in request.files:
             new_pdfs = [f for f in request.files.getlist('gallery_pdf') if f and f.filename]
 
-            future_pdf_count = len(p.get('gallery_pdf', [])) + len(new_pdfs)
-            if future_pdf_count > MAX_GALLERY_PDF:
-                flash(f"Puoi avere massimo {MAX_GALLERY_PDF} PDF in galleria.", "error")
-                return redirect(url_for('edit_profile', p_id=p_id))
+            current_count = len(p.get('gallery_pdf', []))
+            slots_left = max(0, MAX_GALLERY_PDF - current_count)
 
-            for f in new_pdfs:
-                ok, err = validate_upload(f, ALLOWED_PDF_EXT, MAX_PDF_MB)
-                if not ok:
-                    flash(err, "error")
-                    return redirect(url_for('edit_profile', p_id=p_id))
+            if slots_left == 0 and new_pdfs:
+                flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_PDF} PDF. Nessun nuovo PDF caricato.", "error")
+            else:
+                pdfs_to_upload = new_pdfs[:slots_left]
+                skipped_pdfs = len(new_pdfs) - len(pdfs_to_upload)
 
-            for f in new_pdfs:
-                path = save_file(f, f"{prefix}_gpdf")
-                if path:
-                    p['gallery_pdf'].append({'path': path, 'name': f.filename})
+                for f in pdfs_to_upload:
+                    ok, err = validate_upload(f, ALLOWED_PDF_EXT, MAX_PDF_MB)
+                    if not ok:
+                        flash(err, "error")
+                        return redirect(url_for('edit_profile', p_id=p_id))
+
+                for f in pdfs_to_upload:
+                    path = save_file(f, f"{prefix}_gpdf")
+                    if path:
+                        p['gallery_pdf'].append({'path': path, 'name': f.filename})
+
+                if skipped_pdfs > 0:
+                    flash(f"Raggiunto il limite massimo di {MAX_GALLERY_PDF} PDF. {skipped_pdfs} file non sono stati caricati.", "error")
 
         # ===== GALLERY VIDEO =====
         if 'gallery_vid' in request.files:
             new_vids = [f for f in request.files.getlist('gallery_vid') if f and f.filename]
 
-            future_vid_count = len(p.get('gallery_vid', [])) + len(new_vids)
-            if future_vid_count > MAX_GALLERY_VID:
-                flash(f"Puoi avere massimo {MAX_GALLERY_VID} video in galleria.", "error")
-                return redirect(url_for('edit_profile', p_id=p_id))
+            current_count = len(p.get('gallery_vid', []))
+            slots_left = max(0, MAX_GALLERY_VID - current_count)
 
-            for f in new_vids:
-                ok, err = validate_upload(f, ALLOWED_VIDEO_EXT, MAX_VIDEO_MB)
-                if not ok:
-                    flash(err, "error")
-                    return redirect(url_for('edit_profile', p_id=p_id))
+            if slots_left == 0 and new_vids:
+                flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_VID} video. Nessun nuovo video caricato.", "error")
+            else:
+                vids_to_upload = new_vids[:slots_left]
+                skipped_vids = len(new_vids) - len(vids_to_upload)
 
-            for f in new_vids:
-                path = save_file(f, f"{prefix}_gvid")
-                if path:
-                    p['gallery_vid'].append(path)
+                for f in vids_to_upload:
+                    ok, err = validate_upload(f, ALLOWED_VIDEO_EXT, MAX_VIDEO_MB)
+                    if not ok:
+                        flash(err, "error")
+                        return redirect(url_for('edit_profile', p_id=p_id))
+
+                for f in vids_to_upload:
+                    path = save_file(f, f"{prefix}_gvid")
+                    if path:
+                        p['gallery_vid'].append(path)
+
+                if skipped_vids > 0:
+                    flash(f"Raggiunto il limite massimo di {MAX_GALLERY_VID} video. {skipped_vids} file non sono stati caricati.", "error")
 
         repair_user(user)
         save_db(clienti)
