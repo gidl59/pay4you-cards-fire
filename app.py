@@ -222,65 +222,131 @@ def build_credentials_email_html(user: dict) -> str:
     cd = build_credentials_data(user)
 
     return f"""
-    <div style="margin:0; padding:0; background:#f3f3f3;">
-      <div style="max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
-        <div style="text-align:center; padding:22px 0 16px; border-bottom:1px solid #3b3120;">
-          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="width:105px !important; max-width:105px !important; height:auto !important; display:inline-block;">
-        </div>
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>{BRAND_NAME} - Credenziali</title>
+</head>
+<body style="margin:0; padding:0; background:#f3f3f3;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; width:100%; background:#f3f3f3; margin:0; padding:0;">
+    <tr>
+      <td align="center" style="padding:0; margin:0;">
 
-        <div style="padding:26px 24px 10px;">
-          <h1 style="margin:0 0 16px; color:#f6d47a; font-size:19px;">Credenziali della tua Card Digitale</h1>
-          <p style="margin:0 0 12px; font-size:16px; line-height:1.6;">
-            Ciao, abbiamo preparato correttamente le credenziali della tua nuova <strong>Card Digitale {BRAND_NAME}</strong>.
-          </p>
-          <p style="margin:0; font-size:16px; line-height:1.6;">
-            Qui sotto trovi i dati per accedere alla dashboard e il tuo link pubblico.
-          </p>
-        </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="760" style="border-collapse:collapse; width:100%; max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
+          
+          <tr>
+            <td align="center" style="padding:22px 20px 16px; border-bottom:1px solid #3b3120;">
 
-        <div style="padding:18px 18px 0;">
-          <div style="background:#101010; border:1px solid #3a2d16; border-radius:16px; padding:18px;">
-            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Riepilogo credenziali</div>
-            <div style="font-size:16px; line-height:1.8;">
-              <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff;">{cd['login_url']}</a></div>
-              <div><strong>User:</strong> {cd['username']}</div>
-              <div><strong>Password:</strong> {cd['password']}</div>
-              <div style="margin-top:10px;"><strong>Link pubblico:</strong> <a href="{cd['public_url']}" style="color:#66cfff;">{cd['public_url']}</a></div>
-            </div>
-          </div>
-        </div>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="105" style="border-collapse:collapse; width:105px; max-width:105px; min-width:105px; margin:0 auto;">
+                <tr>
+                  <td align="center" width="105" style="width:105px; max-width:105px; min-width:105px; padding:0; margin:0; line-height:0; font-size:0;">
+                    <img
+                      src="{BRAND_LOGO_URL}"
+                      alt="{BRAND_NAME}"
+                      width="105"
+                      border="0"
+                      style="display:block !important; width:105px !important; max-width:105px !important; min-width:105px !important; height:auto !important; max-height:70px !important; margin:0 auto !important; border:0 !important; outline:none !important; text-decoration:none !important; line-height:100% !important; -ms-interpolation-mode:bicubic;"
+                    >
+                  </td>
+                </tr>
+              </table>
 
-        <div style="padding:16px 18px 0;">
-          <div style="background:#1b160d; border:1px solid #4a3a19; border-radius:16px; padding:18px;">
-            <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:10px;">Consiglio utile</div>
-            <div style="font-size:16px; line-height:1.6;">
-              Salva questi dati e cambia la password al primo accesso.
-            </div>
-          </div>
-        </div>
+            </td>
+          </tr>
 
-        <div style="padding:16px 18px 0;">
-          <div style="background:#121212; border:1px solid #2a2a2a; border-radius:16px; padding:18px;">
-            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:10px;">Contatti {BRAND_NAME}</div>
-            <div style="font-size:16px; line-height:1.9;">
-              <div>📧 <a href="mailto:{BRAND_EMAIL}" style="color:#66cfff;">{BRAND_EMAIL}</a></div>
-              <div>📞 {BRAND_PHONE}</div>
-              <div>🌐 <a href="{BRAND_SITE}" style="color:#66cfff;">{BRAND_SITE}</a></div>
-            </div>
+          <tr>
+            <td style="padding:26px 24px 10px;">
+              <h1 style="margin:0 0 16px; color:#f6d47a; font-size:19px; line-height:1.3; font-weight:700;">
+                Credenziali della tua Card Digitale
+              </h1>
+              <p style="margin:0 0 12px; font-size:16px; line-height:1.6; color:#ffffff;">
+                Ciao, abbiamo preparato correttamente le credenziali della tua nuova
+                <strong>Card Digitale {BRAND_NAME}</strong>.
+              </p>
+              <p style="margin:0; font-size:16px; line-height:1.6; color:#ffffff;">
+                Qui sotto trovi i dati per accedere alla dashboard e il tuo link pubblico.
+              </p>
+            </td>
+          </tr>
 
-            <div style="margin-top:16px;">
-              <a href="{BRAND_WHATSAPP_URL}" style="display:inline-block; background:#1f7a3a; color:#d7ffd9; text-decoration:none; padding:12px 20px; border-radius:999px; font-weight:700;">
-                Scrivici su WhatsApp
-              </a>
-            </div>
-          </div>
-        </div>
+          <tr>
+            <td style="padding:18px 18px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#101010; border:1px solid #3a2d16; border-radius:16px;">
+                <tr>
+                  <td style="padding:18px;">
+                    <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">
+                      Riepilogo credenziali
+                    </div>
+                    <div style="font-size:16px; line-height:1.8; color:#ffffff;">
+                      <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff; text-decoration:none;">{cd['login_url']}</a></div>
+                      <div><strong>User:</strong> {cd['username']}</div>
+                      <div><strong>Password:</strong> {cd['password']}</div>
+                      <div style="margin-top:10px;"><strong>Link pubblico:</strong> <a href="{cd['public_url']}" style="color:#66cfff; text-decoration:none;">{cd['public_url']}</a></div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-        <div style="padding:20px 24px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
-          © 2026 {BRAND_NAME}
-        </div>
-      </div>
-    </div>
+          <tr>
+            <td style="padding:16px 18px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#1b160d; border:1px solid #4a3a19; border-radius:16px;">
+                <tr>
+                  <td style="padding:18px;">
+                    <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:10px;">
+                      Consiglio utile
+                    </div>
+                    <div style="font-size:16px; line-height:1.6; color:#ffffff;">
+                      Salva questi dati e cambia la password al primo accesso.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 18px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#121212; border:1px solid #2a2a2a; border-radius:16px;">
+                <tr>
+                  <td style="padding:18px;">
+                    <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:10px;">
+                      Contatti {BRAND_NAME}
+                    </div>
+                    <div style="font-size:16px; line-height:1.9; color:#ffffff;">
+                      <div>📧 <a href="mailto:{BRAND_EMAIL}" style="color:#66cfff; text-decoration:none;">{BRAND_EMAIL}</a></div>
+                      <div>📞 {BRAND_PHONE}</div>
+                      <div>🌐 <a href="{BRAND_SITE}" style="color:#66cfff; text-decoration:none;">{BRAND_SITE}</a></div>
+                    </div>
+
+                    <div style="margin-top:16px;">
+                      <a href="{BRAND_WHATSAPP_URL}" style="display:inline-block; background:#1f7a3a; color:#d7ffd9; text-decoration:none; padding:12px 20px; border-radius:999px; font-weight:700;">
+                        Scrivici su WhatsApp
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 24px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
+              © 2026 {BRAND_NAME}
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     """
 
 def build_credentials_email_text(user: dict) -> str:
