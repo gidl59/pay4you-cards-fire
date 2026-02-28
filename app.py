@@ -48,6 +48,14 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 
+# Branding email
+BRAND_NAME = os.getenv("BRAND_NAME", "Pay4You").strip()
+BRAND_SITE = os.getenv("BRAND_SITE", "https://www.pay4you.store").strip()
+BRAND_EMAIL = os.getenv("BRAND_EMAIL", "info@pay4you.store").strip()
+BRAND_PHONE = os.getenv("BRAND_PHONE", "+39 0541 1646895").strip()
+BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "").strip()  # opzionale: se la metti, mostra il logo in mail
+
+# ===== DB =====
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
@@ -64,6 +72,7 @@ def save_db(data):
     except Exception as e:
         print(f"Errore DB: {e}")
 
+# ===== FILES =====
 def save_file(file, prefix):
     if file and file.filename:
         filename = secure_filename(f"{prefix}_{file.filename}")
@@ -71,6 +80,7 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
+# ===== HELPERS =====
 def to_int(v, d=50):
     try:
         return int(float(v))
@@ -84,14 +94,47 @@ def to_float(v, d=1.0):
         return d
 
 def normalize_phone(phone: str) -> str:
+    """
+    Accetta:
+    - +39333...
+    - 39333...
+    - 333...
+    - whatsapp:+39333...
+    e restituisce sempre un numero in formato +39...
+    """
     phone = str(phone or "").strip()
     if not phone:
         return ""
-    phone = phone.replace(" ", "").replace("-", "").replace("/", "")
-    if phone.startswith("whatsapp:"):
-        phone = phone.replace("whatsapp:", "", 1)
+
+    phone = phone.replace("whatsapp:", "", 1)
+    phone = phone.replace(" ", "").replace("-", "").replace("/", "").replace(".", "")
+
+    # lascia solo + e cifre
+    cleaned = []
+    for i, ch in enumerate(phone):
+        if ch.isdigit():
+            cleaned.append(ch)
+        elif ch == '+' and i == 0:
+            cleaned.append(ch)
+    phone = "".join(cleaned)
+
+    if not phone:
+        return ""
+
+    # 0039.... -> +39....
     if phone.startswith("00"):
         phone = "+" + phone[2:]
+
+    # 39.... senza +
+    if phone.startswith("39") and not phone.startswith("+39"):
+        phone = "+" + phone
+
+    # numero italiano senza prefisso
+    if not phone.startswith("+"):
+        # se è verosimilmente un cellulare/numero IT
+        if len(phone) >= 9:
+            phone = "+39" + phone
+
     return phone
 
 def repair_user(user):
@@ -164,6 +207,7 @@ def repair_user(user):
 
     return dirty
 
+# ===== CREDENTIALS =====
 def build_credentials_data(user: dict) -> dict:
     slug = (user.get("slug") or "").strip()
     username = (user.get("username") or slug).strip()
@@ -182,22 +226,70 @@ def build_credentials_data(user: dict) -> dict:
 
 def build_credentials_email_html(user: dict) -> str:
     cd = build_credentials_data(user)
+
+    logo_html = ""
+    if BRAND_LOGO_URL:
+        logo_html = f"""
+        <div style="text-align:center; padding:18px 0 10px;">
+          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:180px; height:auto; display:inline-block;">
+        </div>
+        """
+
     return f"""
-    <div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#222">
-      <h2 style="margin:0 0 14px;">Pay4You - Credenziali Accesso</h2>
-      <p>Ciao!</p>
-      <p>Ecco le tue credenziali per gestire la tua nuova Card Digitale Pay4You.</p>
-      <p>Ti preghiamo di accedere e compilare i tuoi dati.</p>
+    <div style="margin:0; padding:0; background:#f3f3f3;">
+      <div style="max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
 
-      <p><strong>LOGIN (Per modificare):</strong><br>
-      <a href="{cd['login_url']}">{cd['login_url']}</a><br>
-      <strong>USER:</strong> {cd['username']}<br>
-      <strong>PASSWORD:</strong> {cd['password']}</p>
+        {logo_html}
 
-      <p><strong>IL TUO LINK PUBBLICO:</strong><br>
-      <a href="{cd['public_url']}">{cd['public_url']}</a></p>
+        <div style="padding:24px 22px 8px;">
+          <h1 style="margin:0 0 16px; color:#f6d47a; font-size:20px;">Credenziali della tua Card Digitale</h1>
 
-      <p>Consiglio: salva questi dati e cambia la password al primo accesso.</p>
+          <p style="margin:0 0 14px; font-size:16px; line-height:1.6;">
+            Ciao! Abbiamo preparato le credenziali per gestire la tua nuova <strong>Card Digitale {BRAND_NAME}</strong>.
+          </p>
+
+          <p style="margin:0 0 18px; font-size:16px; line-height:1.6;">
+            Qui sotto trovi tutti i dati utili per accedere, modificare la card e condividere il tuo link pubblico.
+          </p>
+        </div>
+
+        <div style="padding:0 14px 14px;">
+          <div style="background:#111111; border:1px solid #3a2d16; border-radius:16px; padding:18px;">
+            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Riepilogo accesso</div>
+
+            <div style="font-size:16px; line-height:1.7;">
+              <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff;">{cd['login_url']}</a></div>
+              <div><strong>Username:</strong> {cd['username']}</div>
+              <div><strong>Password:</strong> {cd['password']}</div>
+              <div style="margin-top:10px;"><strong>Link pubblico:</strong> <a href="{cd['public_url']}" style="color:#66cfff;">{cd['public_url']}</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:0 14px 14px;">
+          <div style="background:#1a1710; border:1px solid #47391b; border-radius:16px; padding:18px;">
+            <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:12px;">Consiglio utile</div>
+            <div style="font-size:16px; line-height:1.6; color:#f0f0f0;">
+              Salva questi dati e cambia la password al primo accesso.
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:0 14px 14px;">
+          <div style="background:#111111; border:1px solid #2a2a2a; border-radius:16px; padding:18px;">
+            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Contatti {BRAND_NAME}</div>
+            <div style="font-size:16px; line-height:1.8;">
+              <div>📧 <a href="mailto:{BRAND_EMAIL}" style="color:#66cfff;">{BRAND_EMAIL}</a></div>
+              <div>📞 {BRAND_PHONE}</div>
+              <div>🌐 <a href="{BRAND_SITE}" style="color:#66cfff;">{BRAND_SITE}</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:18px 22px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
+          © 2026 {BRAND_NAME}
+        </div>
+      </div>
     </div>
     """
 
@@ -227,6 +319,7 @@ def build_credentials_whatsapp_text(user: dict) -> str:
         "Consiglio: salva questi dati e cambia la password al primo accesso."
     )
 
+# ===== SENDERS =====
 def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str = ""):
     if not SMTP_HOST or not SMTP_PORT or not SMTP_FROM:
         raise Exception("SMTP non configurato. Imposta SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM.")
@@ -261,7 +354,7 @@ def send_whatsapp_twilio(to_phone: str, body: str):
 
     to_phone = normalize_phone(to_phone)
     if not to_phone.startswith("+"):
-        raise Exception("Numero WhatsApp destinatario non valido. Deve iniziare con +39...")
+        raise Exception("Numero WhatsApp destinatario non valido.")
 
     api_url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
     post_data = urlencode({
@@ -290,6 +383,7 @@ def send_whatsapp_twilio(to_phone: str, body: str):
 def get_user_by_id(clienti, user_id):
     return next((c for c in clienti if c.get('id') == user_id), None)
 
+# ===== VCF =====
 def vcf_escape(s: str) -> str:
     s = str(s or "").replace("\\", "\\\\").replace("\r", " ").replace("\n", " ").replace(";", r"\;").replace(",", r"\,")
     return s.strip()
@@ -410,6 +504,7 @@ def download_vcf(slug):
     response.headers["Content-Type"] = "text/vcard; charset=utf-8"
     return response
 
+# ===== ROUTES =====
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -728,9 +823,70 @@ def master_send_credentials_whatsapp(id):
             body=build_credentials_whatsapp_text(user)
         )
         print("Twilio result:", result)
-        flash(f"WhatsApp inviato con successo a {to_phone}", "success")
+        flash(f"WhatsApp inviato con successo a {normalize_phone(to_phone)}", "success")
     except Exception as e:
         flash(f"Errore invio WhatsApp: {e}", "error")
+
+    return redirect(url_for('master_login'))
+
+@app.route('/master/send-credentials-all/<int:id>')
+def master_send_credentials_all(id):
+    if not session.get('is_master'):
+        return redirect(url_for('master_login'))
+
+    clienti = load_db()
+    user = get_user_by_id(clienti, id)
+    if not user:
+        flash("Card non trovata.", "error")
+        return redirect(url_for('master_login'))
+
+    to_email = ((user.get('admin_contact', {}) or {}).get('email') or '').strip()
+    to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
+
+    email_ok = False
+    wa_ok = False
+    errors = []
+
+    if to_email:
+        try:
+            send_email_smtp(
+                to_email=to_email,
+                subject="Pay4You - Credenziali Accesso",
+                html_body=build_credentials_email_html(user),
+                text_body=build_credentials_email_text(user)
+            )
+            email_ok = True
+        except Exception as e:
+            errors.append(f"Email: {e}")
+    else:
+        errors.append("Email: destinatario mancante")
+
+    if to_phone:
+        try:
+            send_whatsapp_twilio(
+                to_phone=to_phone,
+                body=build_credentials_whatsapp_text(user)
+            )
+            wa_ok = True
+        except Exception as e:
+            errors.append(f"WhatsApp: {e}")
+    else:
+        errors.append("WhatsApp: numero mancante")
+
+    if email_ok and wa_ok:
+        flash("Credenziali inviate con successo via Email + WhatsApp.", "success")
+    elif email_ok and not wa_ok:
+        flash("Email inviata. WhatsApp non inviato.", "error")
+        for err in errors:
+            flash(err, "error")
+    elif wa_ok and not email_ok:
+        flash("WhatsApp inviato. Email non inviata.", "error")
+        for err in errors:
+            flash(err, "error")
+    else:
+        flash("Invio credenziali fallito.", "error")
+        for err in errors:
+            flash(err, "error")
 
     return redirect(url_for('master_login'))
 
