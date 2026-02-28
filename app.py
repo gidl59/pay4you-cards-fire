@@ -31,7 +31,22 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+
+# limite totale richiesta
+app.config['MAX_CONTENT_LENGTH'] = 80 * 1024 * 1024
+
+# ===== LIMITI GALLERIA =====
+MAX_GALLERY_IMG = 30
+MAX_GALLERY_VID = 10
+MAX_GALLERY_PDF = 12
+
+MAX_IMAGE_MB = 4
+MAX_VIDEO_MB = 20
+MAX_PDF_MB = 8
+
+ALLOWED_IMAGE_EXT = {'jpg', 'jpeg', 'png', 'webp'}
+ALLOWED_VIDEO_EXT = {'mp4', 'mov', 'webm', 'm4v'}
+ALLOWED_PDF_EXT = {'pdf'}
 
 # ===== ENV CONFIG =====
 CARD_BASE_URL = os.getenv("CARD_BASE_URL", "https://pay4you-cards-fire.onrender.com").rstrip("/")
@@ -125,6 +140,39 @@ def normalize_phone(phone: str) -> str:
 
     return phone
 
+def get_file_ext(filename: str) -> str:
+    filename = (filename or "").lower().strip()
+    if "." not in filename:
+        return ""
+    return filename.rsplit(".", 1)[1]
+
+def get_file_size_bytes(file_storage) -> int:
+    try:
+        current_pos = file_storage.stream.tell()
+        file_storage.stream.seek(0, os.SEEK_END)
+        size = file_storage.stream.tell()
+        file_storage.stream.seek(current_pos)
+        return size
+    except:
+        return 0
+
+def file_size_ok(file_storage, max_mb: int) -> bool:
+    size = get_file_size_bytes(file_storage)
+    return size > 0 and size <= (max_mb * 1024 * 1024)
+
+def validate_upload(file_storage, allowed_exts: set, max_mb: int):
+    if not file_storage or not file_storage.filename:
+        return False, "File mancante."
+
+    ext = get_file_ext(file_storage.filename)
+    if ext not in allowed_exts:
+        return False, f"Formato non consentito: {file_storage.filename}"
+
+    if not file_size_ok(file_storage, max_mb):
+        return False, f"File troppo pesante: {file_storage.filename} (max {max_mb} MB)"
+
+    return True, ""
+
 def repair_user(user):
     dirty = False
 
@@ -132,7 +180,6 @@ def repair_user(user):
         user['default_profile'] = 'p1'
         dirty = True
 
-    # compatibilità con template che usano user.nome
     if 'nome' not in user:
         user['nome'] = ''
         dirty = True
@@ -234,12 +281,9 @@ def build_credentials_email_html(user: dict) -> str:
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; width:100%; background:#f3f3f3; margin:0; padding:0;">
     <tr>
       <td align="center" style="padding:0; margin:0;">
-
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="760" style="border-collapse:collapse; width:100%; max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
-          
           <tr>
             <td align="center" style="padding:22px 20px 16px; border-bottom:1px solid #3b3120;">
-
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="105" style="border-collapse:collapse; width:105px; max-width:105px; min-width:105px; margin:0 auto;">
                 <tr>
                   <td align="center" width="105" style="width:105px; max-width:105px; min-width:105px; padding:0; margin:0; line-height:0; font-size:0;">
@@ -253,7 +297,6 @@ def build_credentials_email_html(user: dict) -> str:
                   </td>
                 </tr>
               </table>
-
             </td>
           </tr>
 
@@ -339,9 +382,7 @@ def build_credentials_email_html(user: dict) -> str:
               © 2026 {BRAND_NAME}
             </td>
           </tr>
-
         </table>
-
       </td>
     </tr>
   </table>
@@ -723,29 +764,73 @@ def edit_profile(p_id):
             path = save_file(request.files['foto'], f"{prefix}_foto")
             if path:
                 p['foto'] = path
+
         if 'logo' in request.files:
             path = save_file(request.files['logo'], f"{prefix}_logo")
             if path:
                 p['logo'] = path
+
         if 'personal_foto' in request.files:
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path:
                 p['personal_foto'] = path
 
+        # ===== GALLERY IMG =====
         if 'gallery_img' in request.files:
-            for f in request.files.getlist('gallery_img'):
+            current_imgs = len(p.get('gallery_img', []))
+            new_imgs = [f for f in request.files.getlist('gallery_img') if f and f.filename]
+
+            if current_imgs + len(new_imgs) > MAX_GALLERY_IMG:
+                flash(f"Puoi avere massimo {MAX_GALLERY_IMG} immagini in galleria.", "error")
+                return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_imgs:
+                ok, err = validate_upload(f, ALLOWED_IMAGE_EXT, MAX_IMAGE_MB)
+                if not ok:
+                    flash(err, "error")
+                    return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_imgs:
                 path = save_file(f, f"{prefix}_gimg")
                 if path:
                     p['gallery_img'].append(path)
 
+        # ===== GALLERY PDF =====
         if 'gallery_pdf' in request.files:
-            for f in request.files.getlist('gallery_pdf'):
+            current_pdfs = len(p.get('gallery_pdf', []))
+            new_pdfs = [f for f in request.files.getlist('gallery_pdf') if f and f.filename]
+
+            if current_pdfs + len(new_pdfs) > MAX_GALLERY_PDF:
+                flash(f"Puoi avere massimo {MAX_GALLERY_PDF} PDF in galleria.", "error")
+                return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_pdfs:
+                ok, err = validate_upload(f, ALLOWED_PDF_EXT, MAX_PDF_MB)
+                if not ok:
+                    flash(err, "error")
+                    return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_pdfs:
                 path = save_file(f, f"{prefix}_gpdf")
                 if path:
                     p['gallery_pdf'].append({'path': path, 'name': f.filename})
 
+        # ===== GALLERY VIDEO =====
         if 'gallery_vid' in request.files:
-            for f in request.files.getlist('gallery_vid'):
+            current_vids = len(p.get('gallery_vid', []))
+            new_vids = [f for f in request.files.getlist('gallery_vid') if f and f.filename]
+
+            if current_vids + len(new_vids) > MAX_GALLERY_VID:
+                flash(f"Puoi avere massimo {MAX_GALLERY_VID} video in galleria.", "error")
+                return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_vids:
+                ok, err = validate_upload(f, ALLOWED_VIDEO_EXT, MAX_VIDEO_MB)
+                if not ok:
+                    flash(err, "error")
+                    return redirect(url_for('edit_profile', p_id=p_id))
+
+            for f in new_vids:
                 path = save_file(f, f"{prefix}_gvid")
                 if path:
                     p['gallery_vid'].append(path)
