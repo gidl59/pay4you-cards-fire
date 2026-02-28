@@ -1,409 +1,277 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Master Control | Pay4You</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background:#050505; color:white; font-family:sans-serif; padding:20px; }
-        .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; }
-        .box { background:#111; padding:20px; border-radius:10px; margin-bottom:20px; border:1px solid #333; }
+  <meta charset="UTF-8">
+  <title>Dashboard Cliente</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background:#050505; color:white; font-family:sans-serif; margin:0; padding:20px; }
+    
+    /* HEADER */
+    .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; }
+    .dash-title { color:#00ffc8; margin:0; font-size:24px; text-transform:uppercase; letter-spacing:1px; }
+    .btn-logout { color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s; }
+    .btn-logout:hover { background:#330000; }
 
-        table { width:100%; border-collapse:collapse; margin-top:10px; }
-        td, th { padding:12px; border-bottom:1px solid #222; text-align:left; vertical-align:middle; }
-        th { color:#888; font-size:12px; text-transform:uppercase; }
+    /* --- SEZIONE SUPERIORE: QR + SELETTORE APERTURA --- */
+    .top-control-panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 40px;
+        align-items: center;
+    }
 
-        .row-btns { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-        .pill {
-            display:inline-flex; align-items:center; justify-content:center;
-            width:36px; height:36px; border-radius:10px; font-weight:bold; font-size:16px;
-            border:1px solid rgba(255,255,255,.1); cursor:pointer; user-select:none;
-            transition: transform 0.2s, opacity 0.2s;
-            text-decoration:none;
-        }
-        .pill:hover { transform: scale(1.06); }
+    /* QR CODE SINISTRA */
+    .qr-area { text-align:center; min-width: 150px; border-right: 1px solid #333; padding-right: 30px; }
+    .qr-area img { width:120px; height:120px; border-radius: 10px; background: white; padding: 5px; }
+    .qr-link { color:white; font-size:12px; display:block; margin-top:10px; text-decoration:none; font-weight:bold; }
+    .qr-link:hover { color:#00ffc8; }
 
-        .cp { background:#00ffc8; color:#000; }
-        .qr { background:#f5a300; color:#000; }
-        .vw { background:#7c4dff; color:#fff; }
-        .se { background:#ffffff; color:#111; }
-        .sw { background:#25D366; color:#000; }
+    /* SELETTORE DESTRA */
+    .opener-area { flex-grow: 1; }
+    .opener-title { color:#00ffc8; margin:0 0 15px 0; font-size:18px; text-transform:uppercase; }
+    .opener-desc { color:#aaa; font-size:13px; margin-bottom:15px; }
+    
+    .opener-buttons { display:flex; gap:15px; flex-wrap:wrap; }
+    
+    /* BOTTONI SCELTA APERTURA */
+    .btn-opener {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        width: 100px; height: 80px;
+        background: #222; border: 2px solid #444; border-radius: 10px;
+        cursor: pointer; text-decoration:none; transition: 0.2s;
+    }
+    .btn-opener:hover { background:#333; border-color:#666; transform:translateY(-3px); }
+    .btn-opener span { font-size: 18px; font-weight:900; color:white; }
+    .btn-opener small { font-size: 10px; color:#888; text-transform:uppercase; margin-top:4px; }
+    
+    /* STATO ATTIVO */
+    .btn-opener.active { background: #004400; border-color: #00ffc8; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
+    .btn-opener.active span { color:#00ffc8; }
+    .btn-opener.active small { color:#fff; }
 
-        .btn-gest { background:#0088cc; color:#fff; font-size:13px; padding:0 10px; width:auto; text-decoration:none; }
-        .btn-del { background:#330000; color:#ff4444; border:1px solid #550000; font-size:16px; }
+    /* STATO DISABILITATO (Se profilo spento) */
+    .btn-opener.disabled { opacity:0.3; pointer-events:none; border-color:#222; }
 
-        .credenziali { font-family:monospace; color:#00ffc8; background:rgba(0,255,200,0.1); padding:8px 10px; border-radius:8px; font-size:13px; }
 
-        .form-row { display:flex; gap:15px; flex-wrap:wrap; align-items: flex-end; }
-        .input-group { display:flex; flex-direction:column; flex:1; min-width: 200px; }
-        .input-group label { font-size:12px; color:#aaa; margin-bottom:5px; font-weight:bold; }
-        input { background:#222; border:1px solid #444; color:white; padding:10px; border-radius:5px; width:100%; box-sizing: border-box; }
-        input:focus { border-color:#00ffc8; outline:none; }
+    /* --- LAYOUT PROFILI (LISTA) --- */
+    .profile-list { display: flex; flex-direction: column; gap: 20px; }
+    
+    .profile-row { 
+        background:#111; border:1px solid #333; border-radius:15px; padding:20px; 
+        position:relative; transition:0.3s;
+        display: flex; flex-wrap: wrap; gap: 20px;
+    }
+    .profile-row.active { border-left: 5px solid #00ffc8; }
+    .profile-row.inactive { opacity:0.6; filter:grayscale(100%); }
 
-        .btn-crea { background:#00ffc8; color:black; border:none; padding:10px 25px; font-weight:bold; border-radius:5px; cursor:pointer; height: 38px; }
+    /* COL 1: INFO */
+    .pr-info-col { width: 220px; flex-shrink: 0; border-right: 1px solid #333; padding-right: 20px; }
+    .pr-header { display:flex; align-items:center; gap:15px; margin-bottom:10px; }
+    .pr-avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #444; background:#000; }
+    .pr-title { font-size:20px; font-weight:bold; color:white; margin:0; }
+    .pr-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; }
+    .st-on { color:#00ffc8; border:1px solid #00ffc8; }
 
-        .qr-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; justify-content:center; align-items:center; flex-direction:column; }
-        .qr-box { background:white; padding:20px; border-radius:15px; text-align:center; }
-        .close-qr { margin-top:15px; color:white; cursor:pointer; font-weight:bold; font-size:18px; }
+    /* COL 2: MEDIA (DIVISO IN 3 RIQUADRI) */
+    .pr-media-col { flex-grow: 1; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; }
+    
+    .media-box { background:#000; border:1px solid #333; border-radius:10px; padding:10px; height:100px; overflow:hidden; display:flex; flex-direction:column; }
+    .mb-title { font-size:10px; color:#00ffc8; text-transform:uppercase; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #222; padding-bottom:4px; }
+    
+    .mb-content-img, .mb-content-vid { display:flex; gap:5px; overflow-x:auto; height:100%; align-items:center; }
+    .mb-thumb { width:45px; height:45px; object-fit:cover; border-radius:5px; border:1px solid #444; flex-shrink:0; }
+    .mb-pdf-list { font-size:11px; color:#ccc; overflow-y:auto; }
+    .mb-empty { font-size:10px; color:#444; font-style:italic; margin:auto; }
 
-        .toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:rgba(0,0,0,.8); border:1px solid #444; color:#fff; padding:10px 20px; border-radius:20px; display:none; z-index:10000; }
+    /* COL 3: AZIONI */
+    .pr-actions-col { width: 140px; display:flex; flex-direction: column; gap:10px; justify-content:center; padding-left:10px; border-left:1px solid #333; }
+    
+    .btn { display:block; text-align:center; padding:12px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s; border:none; cursor: pointer; }
+    .btn-edit { background:#222; color:white; border:1px solid #555; }
+    .btn-edit:hover { background:#444; border-color:white; }
+    
+    .btn-power { background:#330000; color:#ff4444; border:1px solid #550000; }
+    .btn-power:hover { background:#550000; }
+    
+    .btn-on { background:#003300; color:#00ffc8; border:1px solid #005500; }
+    .btn-on:hover { background:#005500; }
 
-        .flashes { list-style:none; padding:0; margin-bottom:20px; }
-        .flash { padding:15px; border-radius:10px; margin-bottom:10px; font-weight:bold; }
-        .flash.success { background:rgba(0,255,200,0.2); border:1px solid #00ffc8; color:#00ffc8; }
-        .flash.error { background:rgba(255,80,80,0.16); border:1px solid #ff5c5c; color:#ffb3b3; }
+    /* TOAST */
+    .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,255,200,0.9); color:black; padding:10px 20px; border-radius:30px; font-weight:bold; display:none; z-index:9999; }
 
-        .ring-wrap { margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-        .ring-badge{
-          display:inline-flex; align-items:center; gap:8px;
-          padding:6px 10px; border-radius:999px;
-          border:1px solid rgba(255,255,255,.12);
-          background: rgba(0,0,0,.22);
-          font-weight:bold; font-size:12px; color:#eee;
-        }
-        .ring-badge.ok{ border-color: rgba(68,208,127,.55); background: rgba(68,208,127,.10); color:#dff6e8; }
-        .ring-badge.no{ border-color: rgba(214,40,40,.55); background: rgba(214,40,40,.10); color:#ffecec; }
-        .ring-badge.unk{ border-color: rgba(255,255,255,.14); background: rgba(0,0,0,.20); color:#bbb; }
-        .ring-btn{
-          display:inline-flex; align-items:center; justify-content:center;
-          padding:8px 12px; border-radius:10px;
-          border:1px solid rgba(0,255,200,.35);
-          background: rgba(0,255,200,.10);
-          color:#00ffc8; font-weight:bold; font-size:12px;
-          cursor:pointer; user-select:none;
-          text-decoration:none;
-        }
-        .ring-btn.disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
-        .ring-small{ font-size:11px; color:#888; font-weight:bold; }
-
-        .mini-help{ color:#8d8d8d; font-size:12px; margin-top:8px; line-height:1.4; }
-        .client-title{ font-size:16px; font-weight:800; color:#fff; }
-        .client-link{ color:#666; font-size:12px; text-decoration:none; }
-    </style>
+    /* MOBILE */
+    @media (max-width: 900px) {
+        .top-control-panel { flex-direction: column; text-align: center; }
+        .qr-area { border-right: none; border-bottom: 1px solid #333; padding-right: 0; padding-bottom: 20px; width:100%; }
+        .opener-buttons { justify-content: center; }
+        
+        .profile-row { flex-direction: column; }
+        .pr-info-col, .pr-actions-col { width: 100%; border: none; padding: 0; text-align: center; }
+        .pr-header { justify-content: center; }
+    }
+  </style>
 </head>
 <body>
-    <div class="head">
-        <h1>MASTER CONTROL 🎛️</h1>
-        <a href="/master/logout" style="color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 15px; border-radius:5px;">ESCI DAL PORTALE</a>
+
+  <div id="toast" class="toast">Impostazione Salvata!</div>
+
+  <div class="dash-header">
+    <h1 class="dash-title">Ciao, {{ user.nome }}</h1>
+    <a href="/area/logout" class="btn-logout">ESCI</a>
+  </div>
+
+  <div class="top-control-panel">
+    
+    <div class="qr-area">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR">
+        <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="flashes">
-        {% for category, message in messages %}
-          <li class="flash {{ category }}">{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
-
-    <div class="box" style="border-color:#00ffc8;">
-        <h3 style="color:#00ffc8; margin-top:0;">➕ Crea Nuova Card (Automatico)</h3>
-        <p style="color:#aaa; font-size:13px; margin-bottom:15px;">
-            Inserisci i dati per le credenziali. La password verrà generata automaticamente e la card sarà creata vuota.
+    <div class="opener-area">
+        <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
+        <p class="opener-desc">
+            Cosa deve succedere quando un cliente scansiona il tuo QR Code o apre il tuo link?<br>
+            Scegli se aprire direttamente un profilo specifico (P1, P2, P3) o mostrare il Menu di Scelta.
         </p>
 
-        <form action="/master/add" method="POST" class="form-row" id="createForm">
-            <div class="input-group">
-                <label>SLUG / LINK (es. mario-rossi)</label>
-                <input type="text" name="slug" id="newSlug" placeholder="es. card-cliente" required style="color:#00ffc8; font-weight:bold; border-color:#555;">
+        <div class="opener-buttons">
+            <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}">
+                <span>P1</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}">
+                <span>P2</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}">
+                <span>P3</span>
+                <small>DIRETTO</small>
+            </a>
+
+            <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;">
+                <span style="font-size:24px;"><i class="fas fa-list"></i></span>
+                <small>MENU SCELTA</small>
+            </a>
+        </div>
+        
+        {% if user.default_profile != 'menu' and user.default_profile != 'p1' and not user[user.default_profile].active %}
+            <div style="color:#ff4444; font-size:12px; margin-top:10px;">⚠️ Attenzione: Il profilo principale selezionato è spento. La card mostrerà il P1 di default.</div>
+        {% endif %}
+    </div>
+  </div>
+
+  <div class="profile-list">
+    
+    {% for pid in ['1', '2', '3'] %}
+      {% set p_key = 'p' + pid %}
+      {% set p_data = user[p_key] %}
+      {% set is_active = p_data.active %}
+      
+      <div class="profile-row {% if is_active %}active{% else %}inactive{% endif %}">
+        
+        <div class="pr-info-col">
+          <div class="pr-header">
+            {% if p_data.foto %}
+                <img src="{{ p_data.foto }}" class="pr-avatar">
+            {% else %}
+                <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;"><i class="fas fa-user"></i></div>
+            {% endif %}
+            <div>
+                <h3 class="pr-title">Profilo P{{ pid }}</h3>
+                <span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span>
             </div>
+          </div>
+          <div style="font-size:12px; color:#aaa;">
+            <div>{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</div>
+            <div>{{ p_data.company if p_data.company else 'Azienda non impostata' }}</div>
+          </div>
+        </div>
 
-            <div class="input-group">
-                <label>EMAIL (Per invio credenziali)</label>
-                <input type="email" name="admin_email" id="newEmail" placeholder="email@cliente.com" required>
-
-                <div class="ring-wrap">
-                  <span class="ring-badge unk" id="ringBadgeForm">🔎 Ring: —</span>
-                  <a class="ring-btn disabled" id="ringBtnForm" href="#" target="_blank">Invia istruzioni Ring + Card</a>
-                  <span class="ring-small" id="ringInfoForm"></span>
+        <div class="pr-media-col">
+            
+            <div class="media-box">
+                <div class="mb-title">📸 FOTO ({{ p_data.gallery_img|length }})</div>
+                <div class="mb-content-img">
+                    {% if p_data.gallery_img|length == 0 %}
+                        <div class="mb-empty">Nessuna foto</div>
+                    {% else %}
+                        {% for img in p_data.gallery_img[:4] %}
+                            <img src="{{ img }}" class="mb-thumb">
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="input-group">
-                <label>WHATSAPP (Per invio credenziali)</label>
-                <input type="text" name="admin_whatsapp" id="newWhatsapp" placeholder="+39 333..." required>
+            <div class="media-box">
+                <div class="mb-title">🎬 VIDEO ({{ p_data.gallery_vid|length }})</div>
+                <div class="mb-content-vid">
+                    {% if p_data.gallery_vid|length == 0 %}
+                        <div class="mb-empty">Nessun video</div>
+                    {% else %}
+                        {% for vid in p_data.gallery_vid[:3] %}
+                            <video src="{{ vid }}#t=1.0" class="mb-thumb" style="background:#000;"></video>
+                        {% endfor %}
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="input-group" style="flex:0;">
-                <label>&nbsp;</label>
-                <button class="btn-crea">CREA AUTO 🚀</button>
+            <div class="media-box">
+                <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
+                <div class="mb-pdf-list">
+                    {% if p_data.gallery_pdf|length == 0 %}
+                        <div class="mb-empty">Nessun PDF</div>
+                    {% else %}
+                        {% for pdf in p_data.gallery_pdf[:2] %}
+                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                <i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}
+                            </div>
+                        {% endfor %}
+                        {% if p_data.gallery_pdf|length > 2 %}
+                            <div style="font-size:10px; color:#666;">...e altri</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
             </div>
-        </form>
-    </div>
 
-    <div class="box">
-        <h3>Lista Clienti ({{ clienti|length }})</h3>
-        <table>
-            <tr>
-                <th>Cliente / Link</th>
-                <th>Credenziali & Contatti Admin</th>
-                <th>Invio credenziali</th>
-                <th style="text-align:right;">Azioni</th>
-            </tr>
-
-            {% for c in clienti %}
-            <tr class="clientRow" data-email="{{ c.admin_contact.email }}" data-slug="{{ c.slug }}">
-                <td>
-                    <div class="client-title">{{ c.p1.name if c.p1.name else c.slug }}</div>
-                    <a href="/card/{{ c.slug }}" target="_blank" class="client-link">/card/{{ c.slug }}</a>
-                </td>
-
-                <td>
-                    <div class="credenziali">
-                        U: {{ c.username }}<br>
-                        P: {{ c.password }}
-                    </div>
-                    <div style="font-size:11px; color:#888; margin-top:5px;">
-                        ✉️ {{ c.admin_contact.email }}<br>
-                        📱 {{ c.admin_contact.whatsapp }}
-                    </div>
-
-                    <div class="ring-wrap" style="margin-top:10px;">
-                      <span class="ring-badge unk ringBadgeRow">🔎 Ring: —</span>
-                      <a class="ring-btn disabled ringBtnRow" href="#" target="_blank">Invia istruzioni Ring + Card</a>
-                      <span class="ring-small ringInfoRow"></span>
-                    </div>
-                </td>
-
-                <td>
-                    <div class="row-btns">
-                        <a class="pill vw" href="/master/credentials/{{c.id}}" title="Vedi credenziali">
-                            <i class="fas fa-id-card"></i>
-                        </a>
-
-                        <a class="pill se" href="/master/send-credentials-email/{{c.id}}" title="Invia email dal server" onclick="return confirm('Inviare le credenziali via email a {{ c.admin_contact.email }}?')">
-                            <i class="fas fa-paper-plane"></i>
-                        </a>
-
-                        <a class="pill sw" href="/master/send-credentials-whatsapp/{{c.id}}" title="Invia WhatsApp da Twilio" onclick="return confirm('Inviare le credenziali via WhatsApp a {{ c.admin_contact.whatsapp }}?')">
-                            <i class="fab fa-whatsapp"></i>
-                        </a>
-
-                        <div class="pill cp" onclick="copyCred('{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Copia Testo">
-                            📋
-                        </div>
-
-                        <div class="pill qr" onclick="mostraQR('{{c.slug}}')" title="QR Link">
-                            <i class="fas fa-qrcode"></i>
-                        </div>
-                    </div>
-
-                    <div class="mini-help">
-                        viola = vedi credenziali · bianco = invia email reale · verde = invia WhatsApp reale
-                    </div>
-                </td>
-
-                <td style="text-align:right;">
-                    <div class="row-btns" style="justify-content: flex-end;">
-                        <a href="/master/impersonate/{{c.id}}" class="pill btn-gest">Gestisci</a>
-                        <a href="/master/delete/{{c.id}}" class="pill btn-del" onclick="return confirm('Sei sicuro di voler eliminare {{c.slug}}?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-
-    <div id="boxQR" class="qr-modal">
-        <div class="qr-box">
-            <img id="imgQR" src="" width="250" height="250">
-            <div style="color:black; margin-top:10px; font-weight:bold;">LINK CARD</div>
         </div>
-        <div class="close-qr" onclick="chiudiQR()">CHIUDI X</div>
-    </div>
 
-    <div id="toast" class="toast">Testo Copiato! ✅</div>
+        <div class="pr-actions-col">
+          <a href="/area/edit/{{ pid }}" class="btn btn-edit">✏️ MODIFICA</a>
+          
+          {% if is_active %}
+            <a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
+          {% else %}
+            <a href="/area/activate/{{ pid }}" class="btn btn-on">ACCENDI</a>
+          {% endif %}
+          
+          <a href="/card/{{ user.slug }}?p=p{{ pid }}" target="_blank" style="color:#00ffc8; text-decoration:none; font-size:11px; text-align:center; margin-top:5px;">Anteprima ></a>
+        </div>
 
-    <script>
-        var baseUrl = window.location.origin;
+      </div>
+    {% endfor %}
 
-        function getCredSubject() {
-            return "Pay4You - Credenziali Accesso";
+  </div>
+
+  <script>
+    const btns = document.querySelectorAll('.btn-opener, .btn');
+    btns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        if(!this.classList.contains('disabled') && !this.href.includes('delete') && !this.href.includes('deactivate') && !this.getAttribute('onclick')) {
+           // Piccola animazione caricamento
+           this.style.opacity = "0.7";
         }
+      });
+    });
+  </script>
 
-        function getCredBody(user, pass, slug) {
-            var linkLogin = "https://pay4you-cards-fire.onrender.com/area/login";
-            var linkCard = "https://pay4you-cards-fire.onrender.com/card/" + slug;
-
-            return "Ciao!\n\n" +
-                   "Ecco le tue credenziali per gestire la tua nuova Card Digitale Pay4You.\n\n" +
-                   "Ti preghiamo di accedere e compilare i tuoi dati.\n\n" +
-                   "LOGIN (Per modificare):\n" + linkLogin + "\n" +
-                   "USER: " + user + "\n" +
-                   "PASSWORD: " + pass + "\n\n" +
-                   "IL TUO LINK PUBBLICO:\n" + linkCard + "\n\n" +
-                   "Consiglio: salva questi dati e cambia la password al primo accesso.";
-        }
-
-        async function copyCred(user, pass, slug) {
-            var txt = "OGGETTO: " + getCredSubject() + "\n\n" + getCredBody(user, pass, slug);
-            try {
-                await navigator.clipboard.writeText(txt);
-                showToast();
-            } catch (err) {
-                var ta = document.createElement("textarea");
-                ta.value = txt;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand("copy");
-                document.body.removeChild(ta);
-                showToast();
-            }
-        }
-
-        function showToast() {
-            var t = document.getElementById("toast");
-            t.style.display = "block";
-            setTimeout(function(){ t.style.display = "none"; }, 2000);
-        }
-
-        function mostraQR(slug) {
-            var linkCard = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent("https://pay4you-cards-fire.onrender.com/card/" + slug);
-            document.getElementById('imgQR').src = linkCard;
-            document.getElementById('boxQR').style.display = 'flex';
-        }
-
-        function chiudiQR() {
-            document.getElementById('boxQR').style.display = 'none';
-        }
-
-        const RING_STATUS_KEY = "P4Y_STATUS_2026_X9k3";
-        const RING_SEND_KEY   = "P4Y_SEND_2026_X9k3";
-        const RING_STATUS_URL = "https://www.pay4you.store/ring/api/ring-status.php";
-        const RING_SEND_URL   = "https://www.pay4you.store/ring/admin/send-ring-instructions.php";
-
-        function setBadge(el, type, text){
-          if(!el) return;
-          el.classList.remove("ok","no","unk");
-          el.classList.add(type);
-          el.textContent = text;
-        }
-
-        async function ringStatus(email){
-          if(!email) return {ok:false};
-          try{
-            const url = `${RING_STATUS_URL}?k=${encodeURIComponent(RING_STATUS_KEY)}&email=${encodeURIComponent(email)}`;
-            const res = await fetch(url, {cache:"no-store"});
-            if(!res.ok) return {ok:false};
-            const j = await res.json();
-            return (j && j.ok) ? j : {ok:false};
-          }catch(e){
-            return {ok:false};
-          }
-        }
-
-        function buildSendLink(email, slug){
-          return `${RING_SEND_URL}?k=${encodeURIComponent(RING_SEND_KEY)}&email=${encodeURIComponent(email)}&slug=${encodeURIComponent(slug)}`;
-        }
-
-        const emailInput = document.getElementById("newEmail");
-        const slugInput  = document.getElementById("newSlug");
-        const badgeForm  = document.getElementById("ringBadgeForm");
-        const btnForm    = document.getElementById("ringBtnForm");
-        const infoForm   = document.getElementById("ringInfoForm");
-        let formTimer = null;
-
-        async function updateFormRing(){
-          const email = (emailInput?.value || "").trim();
-          const slug  = (slugInput?.value || "").trim();
-
-          setBadge(badgeForm,"unk","🔎 Ring: controllo...");
-          if(infoForm) infoForm.textContent = "";
-          if(btnForm){
-            btnForm.classList.add("disabled");
-            btnForm.href="#";
-          }
-
-          const st = await ringStatus(email);
-          if(!st.ok){
-            setBadge(badgeForm,"unk","🔎 Ring: —");
-            if(infoForm) infoForm.textContent="API non raggiungibile";
-            return;
-          }
-
-          if(st.has_ring){
-            setBadge(badgeForm,"ok","🟢 Ring acquistato");
-            if((st.instructions_sent_at||0) > 0){
-              if(infoForm) infoForm.textContent="Istruzioni già inviate";
-              return;
-            }
-            if(slug){
-              if(btnForm){
-                btnForm.href = buildSendLink(email, slug);
-                btnForm.classList.remove("disabled");
-              }
-            }else{
-              if(infoForm) infoForm.textContent="Inserisci prima lo slug";
-            }
-          }else{
-            setBadge(badgeForm,"no","🔴 Ring non trovato");
-          }
-        }
-
-        function debounceForm(){
-          if(formTimer) clearTimeout(formTimer);
-          formTimer = setTimeout(updateFormRing, 500);
-        }
-        emailInput?.addEventListener("input", debounceForm);
-        slugInput?.addEventListener("input", debounceForm);
-
-        async function updateRowRing(row){
-          const email = (row.dataset.email || "").trim();
-          const slug  = (row.dataset.slug || "").trim();
-
-          const badge = row.querySelector(".ringBadgeRow");
-          const btn   = row.querySelector(".ringBtnRow");
-          const info  = row.querySelector(".ringInfoRow");
-
-          setBadge(badge,"unk","🔎 Ring: controllo...");
-          if(info) info.textContent = "";
-          if(btn){
-            btn.classList.add("disabled");
-            btn.href="#";
-          }
-
-          if(!email){
-            setBadge(badge,"unk","🔎 Ring: —");
-            if(info) info.textContent="Email mancante";
-            return;
-          }
-
-          const st = await ringStatus(email);
-          if(!st.ok){
-            setBadge(badge,"unk","🔎 Ring: —");
-            if(info) info.textContent="API non raggiungibile";
-            return;
-          }
-
-          if(st.has_ring){
-            setBadge(badge,"ok","🟢 Ring acquistato");
-            if((st.instructions_sent_at||0) > 0){
-              if(info) info.textContent="Istruzioni già inviate";
-            }else{
-              if(btn){
-                btn.href = buildSendLink(email, slug);
-                btn.classList.remove("disabled");
-              }
-            }
-          }else{
-            setBadge(badge,"no","🔴 Ring non trovato");
-          }
-        }
-
-        async function initRows(){
-          const rows = Array.from(document.querySelectorAll("tr.clientRow"));
-          for(let i=0;i<rows.length;i++){
-            await updateRowRing(rows[i]);
-          }
-        }
-
-        window.addEventListener("load", () => {
-          initRows();
-        });
-    </script>
 </body>
 </html>
