@@ -14,28 +14,31 @@
         td, th { padding:12px; border-bottom:1px solid #222; text-align:left; vertical-align:middle; }
         th { color:#888; font-size:12px; text-transform:uppercase; }
 
-        /* BOTTONI AZIONE STILE "PILLOLA" */
-        .row-btns { display:flex; gap:5px; flex-wrap:wrap; }
+        .row-btns { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
         .pill {
             display:inline-flex; align-items:center; justify-content:center;
-            width:36px; height:36px; border-radius:10px; font-weight:bold; font-size:18px;
+            width:36px; height:36px; border-radius:10px; font-weight:bold; font-size:16px;
             border:1px solid rgba(255,255,255,.1); cursor:pointer; user-select:none;
-            transition: transform 0.2s;
+            transition: transform 0.2s, opacity 0.2s;
+            text-decoration:none;
         }
-        .pill:hover { transform: scale(1.1); }
+        .pill:hover { transform: scale(1.06); }
 
         .wa { background:#25D366; color:#000; }
         .gm { background:#ffffff; color:#c71610; }
         .em { background:#444; color:#fff; }
         .cp { background:#00ffc8; color:#000; }
         .qr { background:#f5a300; color:#000; }
+        .vw { background:#7c4dff; color:#fff; }
+        .sv { background:#1e88e5; color:#fff; }
+        .se { background:#ffffff; color:#111; }
+        .sw { background:#25D366; color:#000; }
 
         .btn-gest { background:#0088cc; color:#fff; font-size:13px; padding:0 10px; width:auto; text-decoration:none; }
         .btn-del { background:#330000; color:#ff4444; border:1px solid #550000; font-size:16px; }
 
         .credenziali { font-family:monospace; color:#00ffc8; background:rgba(0,255,200,0.1); padding:5px 8px; border-radius:5px; font-size:13px; }
 
-        /* NUOVO FORM CREAZIONE AUTOMATICA */
         .form-row { display:flex; gap:15px; flex-wrap:wrap; align-items: flex-end; }
         .input-group { display:flex; flex-direction:column; flex:1; min-width: 200px; }
         .input-group label { font-size:12px; color:#aaa; margin-bottom:5px; font-weight:bold; }
@@ -44,20 +47,17 @@
 
         .btn-crea { background:#00ffc8; color:black; border:none; padding:10px 25px; font-weight:bold; border-radius:5px; cursor:pointer; height: 38px; }
 
-        /* MODALE QR */
         .qr-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; justify-content:center; align-items:center; flex-direction:column; }
         .qr-box { background:white; padding:20px; border-radius:15px; text-align:center; }
         .close-qr { margin-top:15px; color:white; cursor:pointer; font-weight:bold; font-size:18px; }
 
-        /* TOAST */
         .toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:rgba(0,0,0,.8); border:1px solid #444; color:#fff; padding:10px 20px; border-radius:20px; display:none; z-index:10000; }
 
-        /* FLASH MESSAGES */
         .flashes { list-style:none; padding:0; margin-bottom:20px; }
         .flash { padding:15px; border-radius:10px; margin-bottom:10px; font-weight:bold; }
         .flash.success { background:rgba(0,255,200,0.2); border:1px solid #00ffc8; color:#00ffc8; }
+        .flash.error { background:rgba(255,80,80,0.16); border:1px solid #ff5c5c; color:#ffb3b3; }
 
-        /* ✅ RING BADGE / BUTTON */
         .ring-wrap { margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .ring-badge{
           display:inline-flex; align-items:center; gap:8px;
@@ -80,6 +80,13 @@
         }
         .ring-btn.disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
         .ring-small{ font-size:11px; color:#888; font-weight:bold; }
+
+        .mini-help{
+            color:#8d8d8d;
+            font-size:12px;
+            margin-top:8px;
+            line-height:1.4;
+        }
     </style>
 </head>
 <body>
@@ -100,10 +107,11 @@
 
     <div class="box" style="border-color:#00ffc8;">
         <h3 style="color:#00ffc8; margin-top:0;">➕ Crea Nuova Card (Automatico)</h3>
-        <p style="color:#aaa; font-size:13px; margin-bottom:15px;">Inserisci i dati per le credenziali. La password verrà generata automaticamente e la card sarà creata vuota.</p>
+        <p style="color:#aaa; font-size:13px; margin-bottom:15px;">
+            Inserisci i dati per le credenziali. La password verrà generata automaticamente e la card sarà creata vuota.
+        </p>
 
         <form action="/master/add" method="POST" class="form-row" id="createForm">
-
             <div class="input-group">
                 <label>SLUG / LINK (es. mario-rossi)</label>
                 <input type="text" name="slug" id="newSlug" placeholder="es. card-cliente" required style="color:#00ffc8; font-weight:bold; border-color:#555;">
@@ -113,7 +121,6 @@
                 <label>EMAIL (Per invio credenziali)</label>
                 <input type="email" name="admin_email" id="newEmail" placeholder="email@cliente.com" required>
 
-                <!-- ✅ LUCETTA RING (FORM) -->
                 <div class="ring-wrap">
                   <span class="ring-badge unk" id="ringBadgeForm">🔎 Ring: —</span>
                   <a class="ring-btn disabled" id="ringBtnForm" href="#" target="_blank">Invia istruzioni Ring + Card</a>
@@ -139,7 +146,7 @@
             <tr>
                 <th>Cliente / Link</th>
                 <th>Credenziali & Contatti Admin</th>
-                <th>Invia Dati (Privato)</th>
+                <th>Invio credenziali</th>
                 <th style="text-align:right;">Azioni</th>
             </tr>
 
@@ -160,7 +167,6 @@
                         📱 {{ c.admin_contact.whatsapp }}
                     </div>
 
-                    <!-- ✅ LUCETTA RING (RIGA) -->
                     <div class="ring-wrap" style="margin-top:10px;">
                       <span class="ring-badge unk ringBadgeRow">🔎 Ring: —</span>
                       <a class="ring-btn disabled ringBtnRow" href="#" target="_blank">Invia istruzioni Ring + Card</a>
@@ -170,21 +176,29 @@
 
                 <td>
                     <div class="row-btns">
-                        <div class="pill wa" onclick="sendWA('{{c.admin_contact.whatsapp}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="WhatsApp a {{c.admin_contact.whatsapp}}">
+                        <a class="pill vw" href="/master/credentials/{{c.id}}" title="Vedi credenziali">
+                            <i class="fas fa-id-card"></i>
+                        </a>
+
+                        <a class="pill se" href="/master/send-credentials-email/{{c.id}}" title="Invia email dal server" onclick="return confirm('Inviare le credenziali via email a {{ c.admin_contact.email }}?')">
+                            <i class="fas fa-paper-plane"></i>
+                        </a>
+
+                        <a class="pill sw" href="/master/send-credentials-whatsapp/{{c.id}}" title="Invia WhatsApp da Twilio" onclick="return confirm('Inviare le credenziali via WhatsApp a {{ c.admin_contact.whatsapp }}?')">
                             <i class="fab fa-whatsapp"></i>
-                        </div>
-                        <div class="pill gm" onclick="sendGmail('{{c.admin_contact.email}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Gmail a {{c.admin_contact.email}}">
-                            ✉️
-                        </div>
-                        <div class="pill em" onclick="sendEmailApp('{{c.admin_contact.email}}', '{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Email App a {{c.admin_contact.email}}">
-                            📨
-                        </div>
+                        </a>
+
                         <div class="pill cp" onclick="copyCred('{{c.username}}', '{{c.password}}', '{{c.slug}}')" title="Copia Testo">
                             📋
                         </div>
+
                         <div class="pill qr" onclick="mostraQR('{{c.slug}}')" title="QR Link">
                             <i class="fas fa-qrcode"></i>
                         </div>
+                    </div>
+
+                    <div class="mini-help">
+                        blu = vedi credenziali · bianco = invia email reale · verde = invia WhatsApp reale
                     </div>
                 </td>
 
@@ -214,8 +228,9 @@
     <script>
         var baseUrl = window.location.origin;
 
-        // --- FUNZIONI DI COSTRUZIONE TESTO ---
-        function getCredSubject() { return "Pay4You - Credenziali Accesso"; }
+        function getCredSubject() {
+            return "Pay4You - Credenziali Accesso";
+        }
 
         function getCredBody(user, pass, slug) {
             var linkLogin = baseUrl + "/area/login";
@@ -231,29 +246,6 @@
                    "Consiglio: salva questi dati e cambia la password al primo accesso.";
         }
 
-        // 1. WHATSAPP
-        function sendWA(phone, user, pass, slug) {
-            var cleanPhone = phone.replace(/[^0-9]/g, '');
-            var txt = getCredBody(user, pass, slug);
-            window.open("https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(txt), '_blank');
-        }
-
-        // 2. GMAIL
-        function sendGmail(email, user, pass, slug) {
-            var sub = getCredSubject();
-            var body = getCredBody(user, pass, slug);
-            var url = "https://mail.google.com/mail/?view=cm&fs=1&to=" + email + "&su=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
-            window.open(url, '_blank');
-        }
-
-        // 3. EMAIL APP
-        function sendEmailApp(email, user, pass, slug) {
-            var sub = getCredSubject();
-            var body = getCredBody(user, pass, slug);
-            window.location.href = "mailto:" + email + "?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
-        }
-
-        // 4. COPIA TESTO
         async function copyCred(user, pass, slug) {
             var txt = "OGGETTO: " + getCredSubject() + "\n\n" + getCredBody(user, pass, slug);
             try {
@@ -276,7 +268,6 @@
             setTimeout(function(){ t.style.display = "none"; }, 2000);
         }
 
-        // 5. QR CODE
         function mostraQR(slug) {
             var linkCard = baseUrl + "/card/" + slug;
             var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(linkCard);
@@ -288,9 +279,6 @@
             document.getElementById('boxQR').style.display = 'none';
         }
 
-        /* ==========================
-           ✅ RING CHECK + SEND
-        ========================== */
         const RING_STATUS_KEY = "P4Y_STATUS_2026_X9k3";
         const RING_SEND_KEY   = "P4Y_SEND_2026_X9k3";
 
@@ -321,7 +309,6 @@
           return `${RING_SEND_URL}?k=${encodeURIComponent(RING_SEND_KEY)}&email=${encodeURIComponent(email)}&slug=${encodeURIComponent(slug)}`;
         }
 
-        // FORM
         const emailInput = document.getElementById("newEmail");
         const slugInput  = document.getElementById("newSlug");
         const badgeForm  = document.getElementById("ringBadgeForm");
@@ -373,7 +360,6 @@
         emailInput?.addEventListener("input", debounceForm);
         slugInput?.addEventListener("input", debounceForm);
 
-        // LISTA CLIENTI
         async function updateRowRing(row){
           const email = (row.dataset.email || "").trim();
           const slug  = (row.dataset.slug || "").trim();
