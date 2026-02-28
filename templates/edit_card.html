@@ -166,14 +166,6 @@
       position:relative !important;
     }
 
-    .media-panel h4 {
-      margin:0 0 8px;
-      color:#00ffc8;
-      font-size:13px;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-    }
-
     .media-top {
       display:flex;
       justify-content:space-between;
@@ -194,6 +186,14 @@
       gap:10px;
       flex-wrap:wrap;
       justify-content:flex-end;
+    }
+
+    .media-panel h4 {
+      margin:0 0 8px;
+      color:#00ffc8;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
     }
 
     .media-help {
@@ -232,18 +232,19 @@
       display:inline-flex;
       align-items:center;
       gap:8px;
-      background:#2a0c0c;
-      color:#ffb3b3;
-      border:1px solid #6b1f1f;
+      background:#3a0d0d;
+      color:#ffd2d2;
+      border:1px solid #8f2222;
       border-radius:999px;
       padding:8px 12px;
       font-size:12px;
       font-weight:900;
       cursor:pointer;
+      white-space:nowrap;
     }
     .btn-danger-mini:hover {
-      background:#3a1111;
-      border-color:#a62c2c;
+      background:#4c1111;
+      border-color:#c13030;
     }
     .btn-danger-mini[disabled] {
       opacity:.45;
@@ -430,7 +431,7 @@
             <div class="media-head-right">
               <div class="media-counter">{{ p.gallery_img|length }} foto caricate</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_img|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('img')">
-                <i class="fas fa-trash"></i> Cancella tutto Foto
+                <i class="fas fa-trash"></i> Cancella tutte le foto
               </button>
             </div>
           </div>
@@ -464,7 +465,7 @@
             <div class="media-head-right">
               <div class="media-counter">{{ p.gallery_vid|length }} video caricati</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_vid|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('vid')">
-                <i class="fas fa-trash"></i> Cancella tutto Video
+                <i class="fas fa-trash"></i> Cancella tutti i video
               </button>
             </div>
           </div>
@@ -498,7 +499,7 @@
             <div class="media-head-right">
               <div class="media-counter">{{ p.gallery_pdf|length }} PDF caricati</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_pdf|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('pdf')">
-                <i class="fas fa-trash"></i> Cancella tutto PDF
+                <i class="fas fa-trash"></i> Cancella tutti i PDF
               </button>
             </div>
           </div>
