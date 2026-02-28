@@ -24,20 +24,16 @@
         }
         .pill:hover { transform: scale(1.06); }
 
-        .wa { background:#25D366; color:#000; }
-        .gm { background:#ffffff; color:#c71610; }
-        .em { background:#444; color:#fff; }
         .cp { background:#00ffc8; color:#000; }
         .qr { background:#f5a300; color:#000; }
         .vw { background:#7c4dff; color:#fff; }
-        .sv { background:#1e88e5; color:#fff; }
         .se { background:#ffffff; color:#111; }
         .sw { background:#25D366; color:#000; }
 
         .btn-gest { background:#0088cc; color:#fff; font-size:13px; padding:0 10px; width:auto; text-decoration:none; }
         .btn-del { background:#330000; color:#ff4444; border:1px solid #550000; font-size:16px; }
 
-        .credenziali { font-family:monospace; color:#00ffc8; background:rgba(0,255,200,0.1); padding:5px 8px; border-radius:5px; font-size:13px; }
+        .credenziali { font-family:monospace; color:#00ffc8; background:rgba(0,255,200,0.1); padding:8px 10px; border-radius:8px; font-size:13px; }
 
         .form-row { display:flex; gap:15px; flex-wrap:wrap; align-items: flex-end; }
         .input-group { display:flex; flex-direction:column; flex:1; min-width: 200px; }
@@ -81,12 +77,9 @@
         .ring-btn.disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
         .ring-small{ font-size:11px; color:#888; font-weight:bold; }
 
-        .mini-help{
-            color:#8d8d8d;
-            font-size:12px;
-            margin-top:8px;
-            line-height:1.4;
-        }
+        .mini-help{ color:#8d8d8d; font-size:12px; margin-top:8px; line-height:1.4; }
+        .client-title{ font-size:16px; font-weight:800; color:#fff; }
+        .client-link{ color:#666; font-size:12px; text-decoration:none; }
     </style>
 </head>
 <body>
@@ -153,8 +146,8 @@
             {% for c in clienti %}
             <tr class="clientRow" data-email="{{ c.admin_contact.email }}" data-slug="{{ c.slug }}">
                 <td>
-                    <strong style="font-size:16px;">{{ c.p1.name if c.p1.name else 'Card Vuota (' + c.slug + ')' }}</strong><br>
-                    <a href="/card/{{ c.slug }}" target="_blank" style="color:#666; font-size:12px; text-decoration:none;">/card/{{ c.slug }}</a>
+                    <div class="client-title">{{ c.p1.name if c.p1.name else c.slug }}</div>
+                    <a href="/card/{{ c.slug }}" target="_blank" class="client-link">/card/{{ c.slug }}</a>
                 </td>
 
                 <td>
@@ -198,7 +191,7 @@
                     </div>
 
                     <div class="mini-help">
-                        blu = vedi credenziali · bianco = invia email reale · verde = invia WhatsApp reale
+                        viola = vedi credenziali · bianco = invia email reale · verde = invia WhatsApp reale
                     </div>
                 </td>
 
@@ -233,8 +226,8 @@
         }
 
         function getCredBody(user, pass, slug) {
-            var linkLogin = baseUrl + "/area/login";
-            var linkCard = baseUrl + "/card/" + slug;
+            var linkLogin = "https://pay4you-cards-fire.onrender.com/area/login";
+            var linkCard = "https://pay4you-cards-fire.onrender.com/card/" + slug;
 
             return "Ciao!\n\n" +
                    "Ecco le tue credenziali per gestire la tua nuova Card Digitale Pay4You.\n\n" +
@@ -269,9 +262,8 @@
         }
 
         function mostraQR(slug) {
-            var linkCard = baseUrl + "/card/" + slug;
-            var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(linkCard);
-            document.getElementById('imgQR').src = qrUrl;
+            var linkCard = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent("https://pay4you-cards-fire.onrender.com/card/" + slug);
+            document.getElementById('imgQR').src = linkCard;
             document.getElementById('boxQR').style.display = 'flex';
         }
 
@@ -281,7 +273,6 @@
 
         const RING_STATUS_KEY = "P4Y_STATUS_2026_X9k3";
         const RING_SEND_KEY   = "P4Y_SEND_2026_X9k3";
-
         const RING_STATUS_URL = "https://www.pay4you.store/ring/api/ring-status.php";
         const RING_SEND_URL   = "https://www.pay4you.store/ring/admin/send-ring-instructions.php";
 
