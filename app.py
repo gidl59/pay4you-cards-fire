@@ -775,12 +775,20 @@ def edit_profile(p_id):
             if path:
                 p['personal_foto'] = path
 
+        # ===== PRIMA APPLICA LE CANCELLAZIONI =====
+        to_del = request.form.getlist('delete_media')
+
+        if to_del:
+            p['gallery_img'] = [x for x in p.get('gallery_img', []) if x not in to_del]
+            p['gallery_pdf'] = [x for x in p.get('gallery_pdf', []) if x.get('path') not in to_del]
+            p['gallery_vid'] = [x for x in p.get('gallery_vid', []) if x not in to_del]
+
         # ===== GALLERY IMG =====
         if 'gallery_img' in request.files:
-            current_imgs = len(p.get('gallery_img', []))
             new_imgs = [f for f in request.files.getlist('gallery_img') if f and f.filename]
 
-            if current_imgs + len(new_imgs) > MAX_GALLERY_IMG:
+            future_img_count = len(p.get('gallery_img', [])) + len(new_imgs)
+            if future_img_count > MAX_GALLERY_IMG:
                 flash(f"Puoi avere massimo {MAX_GALLERY_IMG} immagini in galleria.", "error")
                 return redirect(url_for('edit_profile', p_id=p_id))
 
@@ -797,10 +805,10 @@ def edit_profile(p_id):
 
         # ===== GALLERY PDF =====
         if 'gallery_pdf' in request.files:
-            current_pdfs = len(p.get('gallery_pdf', []))
             new_pdfs = [f for f in request.files.getlist('gallery_pdf') if f and f.filename]
 
-            if current_pdfs + len(new_pdfs) > MAX_GALLERY_PDF:
+            future_pdf_count = len(p.get('gallery_pdf', [])) + len(new_pdfs)
+            if future_pdf_count > MAX_GALLERY_PDF:
                 flash(f"Puoi avere massimo {MAX_GALLERY_PDF} PDF in galleria.", "error")
                 return redirect(url_for('edit_profile', p_id=p_id))
 
@@ -817,10 +825,10 @@ def edit_profile(p_id):
 
         # ===== GALLERY VIDEO =====
         if 'gallery_vid' in request.files:
-            current_vids = len(p.get('gallery_vid', []))
             new_vids = [f for f in request.files.getlist('gallery_vid') if f and f.filename]
 
-            if current_vids + len(new_vids) > MAX_GALLERY_VID:
+            future_vid_count = len(p.get('gallery_vid', [])) + len(new_vids)
+            if future_vid_count > MAX_GALLERY_VID:
                 flash(f"Puoi avere massimo {MAX_GALLERY_VID} video in galleria.", "error")
                 return redirect(url_for('edit_profile', p_id=p_id))
 
@@ -834,12 +842,6 @@ def edit_profile(p_id):
                 path = save_file(f, f"{prefix}_gvid")
                 if path:
                     p['gallery_vid'].append(path)
-
-        if request.form.get('delete_media'):
-            to_del = request.form.getlist('delete_media')
-            p['gallery_img'] = [x for x in p.get('gallery_img', []) if x not in to_del]
-            p['gallery_pdf'] = [x for x in p.get('gallery_pdf', []) if x.get('path') not in to_del]
-            p['gallery_vid'] = [x for x in p.get('gallery_vid', []) if x not in to_del]
 
         repair_user(user)
         save_db(clienti)
