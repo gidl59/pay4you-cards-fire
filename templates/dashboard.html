@@ -6,87 +6,255 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background:#050505; color:white; font-family:sans-serif; margin:0; padding:20px; }
+    body {
+      background:#050505;
+      color:white;
+      font-family:sans-serif;
+      margin:0;
+      padding:20px;
+    }
 
-    .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; gap:12px; flex-wrap:wrap; }
-    .dash-title { color:#00ffc8; margin:0; font-size:24px; text-transform:uppercase; letter-spacing:1px; }
-    .btn-logout { color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s; }
+    .dash-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+      border-bottom:1px solid #333;
+      padding-bottom:15px;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .dash-title {
+      color:#00ffc8;
+      margin:0;
+      font-size:24px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+    }
+
+    .btn-logout {
+      color:#ff4444;
+      text-decoration:none;
+      border:1px solid #ff4444;
+      padding:8px 20px;
+      border-radius:30px;
+      font-weight:bold;
+      transition:0.3s;
+    }
+
     .btn-logout:hover { background:#330000; }
 
-    .flashes { list-style:none; padding:0; margin:0 0 20px 0; }
-    .flash { padding:14px 16px; border-radius:12px; margin-bottom:10px; font-weight:800; }
-    .flash.success { background:rgba(0,255,200,0.14); border:1px solid rgba(0,255,200,0.45); color:#b8fff0; }
-    .flash.error { background:rgba(255,80,80,0.14); border:1px solid rgba(255,80,80,0.45); color:#ffc4c4; }
+    .flashes {
+      list-style:none;
+      padding:0;
+      margin:0 0 20px 0;
+    }
+
+    .flash {
+      padding:14px 16px;
+      border-radius:12px;
+      margin-bottom:10px;
+      font-weight:800;
+    }
+
+    .flash.success {
+      background:rgba(0,255,200,0.14);
+      border:1px solid rgba(0,255,200,0.45);
+      color:#b8fff0;
+    }
+
+    .flash.error {
+      background:rgba(255,80,80,0.14);
+      border:1px solid rgba(255,80,80,0.45);
+      color:#ffc4c4;
+    }
 
     .top-control-panel {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 30px;
-        background: #111;
-        border: 1px solid #333;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 40px;
-        align-items: center;
+      display:flex;
+      flex-wrap:wrap;
+      gap:30px;
+      background:#111;
+      border:1px solid #333;
+      border-radius:15px;
+      padding:20px;
+      margin-bottom:40px;
+      align-items:center;
     }
 
-    .qr-area { text-align:center; min-width: 150px; border-right: 1px solid #333; padding-right: 30px; }
-    .qr-area img { width:120px; height:120px; border-radius: 10px; background: white; padding: 5px; }
-    .qr-link { color:white; font-size:12px; display:block; margin-top:10px; text-decoration:none; font-weight:bold; }
+    .qr-area {
+      text-align:center;
+      min-width:150px;
+      border-right:1px solid #333;
+      padding-right:30px;
+    }
+
+    .qr-area img {
+      width:120px;
+      height:120px;
+      border-radius:10px;
+      background:white;
+      padding:5px;
+    }
+
+    .qr-link {
+      color:white;
+      font-size:12px;
+      display:block;
+      margin-top:10px;
+      text-decoration:none;
+      font-weight:bold;
+    }
+
     .qr-link:hover { color:#00ffc8; }
 
-    .opener-area { flex-grow: 1; }
-    .opener-title { color:#00ffc8; margin:0 0 15px 0; font-size:18px; text-transform:uppercase; }
-    .opener-desc { color:#aaa; font-size:13px; margin-bottom:15px; }
+    .opener-area { flex-grow:1; }
 
-    .opener-buttons { display:flex; gap:15px; flex-wrap:wrap; }
+    .opener-title {
+      color:#00ffc8;
+      margin:0 0 15px 0;
+      font-size:18px;
+      text-transform:uppercase;
+    }
+
+    .opener-desc {
+      color:#aaa;
+      font-size:13px;
+      margin-bottom:15px;
+    }
+
+    .opener-buttons {
+      display:flex;
+      gap:15px;
+      flex-wrap:wrap;
+    }
 
     .btn-opener {
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-        width: 100px; height: 80px;
-        background: #222; border: 2px solid #444; border-radius: 10px;
-        cursor: pointer; text-decoration:none; transition: 0.2s;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      width:100px;
+      height:80px;
+      background:#222;
+      border:2px solid #444;
+      border-radius:10px;
+      cursor:pointer;
+      text-decoration:none;
+      transition:0.2s;
     }
-    .btn-opener:hover { background:#333; border-color:#666; transform:translateY(-3px); }
-    .btn-opener span { font-size: 18px; font-weight:900; color:white; }
-    .btn-opener small { font-size: 10px; color:#888; text-transform:uppercase; margin-top:4px; }
 
-    .btn-opener.active { background: #004400; border-color: #00ffc8; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
+    .btn-opener:hover {
+      background:#333;
+      border-color:#666;
+      transform:translateY(-3px);
+    }
+
+    .btn-opener span {
+      font-size:18px;
+      font-weight:900;
+      color:white;
+    }
+
+    .btn-opener small {
+      font-size:10px;
+      color:#888;
+      text-transform:uppercase;
+      margin-top:4px;
+    }
+
+    .btn-opener.active {
+      background:#004400;
+      border-color:#00ffc8;
+      box-shadow:0 0 15px rgba(0,255,200,0.3);
+    }
+
     .btn-opener.active span { color:#00ffc8; }
     .btn-opener.active small { color:#fff; }
 
-    .btn-opener.disabled { opacity:0.3; pointer-events:none; border-color:#222; }
+    .btn-opener.disabled {
+      opacity:0.3;
+      pointer-events:none;
+      border-color:#222;
+    }
 
-    .profile-list { display: flex; flex-direction: column; gap: 20px; }
+    .profile-list {
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
 
     .profile-row {
-        background:#111; border:1px solid #333; border-radius:15px; padding:20px;
-        position:relative; transition:0.3s;
-        display: flex; flex-wrap: wrap; gap: 20px;
+      background:#111;
+      border:1px solid #333;
+      border-radius:15px;
+      padding:20px;
+      position:relative;
+      transition:0.3s;
+      display:grid;
+      grid-template-columns:220px minmax(0, 1fr) 160px;
+      gap:20px;
+      align-items:center;
     }
-    .profile-row.active { border-left: 5px solid #00ffc8; }
+
+    .profile-row.active { border-left:5px solid #00ffc8; }
     .profile-row.inactive { opacity:0.72; }
 
     .pr-info-col {
-      width: 220px;
-      flex-shrink: 0;
-      border-right: 1px solid #333;
-      padding-right: 20px;
+      width:220px;
+      flex-shrink:0;
+      border-right:1px solid #333;
+      padding-right:20px;
     }
 
-    .pr-header { display:flex; align-items:center; gap:15px; margin-bottom:10px; }
-    .pr-avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #444; background:#000; }
-    .pr-title { font-size:20px; font-weight:bold; color:white; margin:0; }
-    .pr-status { font-size:11px; padding:4px 8px; border-radius:999px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; border:1px solid #444; }
-    .st-on { color:#00ffc8; border:1px solid #00ffc8; background:rgba(0,255,200,.08); }
-
-    /* 3 RIQUADRI ORIZZONTALI */
-    .pr-media-col {
-      flex: 1 1 420px;
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .pr-header {
+      display:flex;
+      align-items:center;
       gap:15px;
-      min-width: 0;
+      margin-bottom:10px;
+    }
+
+    .pr-avatar {
+      width:60px;
+      height:60px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #444;
+      background:#000;
+    }
+
+    .pr-title {
+      font-size:20px;
+      font-weight:bold;
+      color:white;
+      margin:0;
+    }
+
+    .pr-status {
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      font-weight:bold;
+      text-transform:uppercase;
+      background:#333;
+      color:#aaa;
+      display:inline-block;
+      margin-top:5px;
+      border:1px solid #444;
+    }
+
+    .st-on {
+      color:#00ffc8;
+      border:1px solid #00ffc8;
+      background:rgba(0,255,200,.08);
+    }
+
+    .pr-media-col {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(180px, 1fr));
+      gap:15px;
+      min-width:0;
+      align-items:stretch;
     }
 
     .media-box {
@@ -98,7 +266,7 @@
       display:flex;
       flex-direction:column;
       overflow:hidden;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
       min-width:0;
     }
 
@@ -113,7 +281,8 @@
       letter-spacing:.04em;
     }
 
-    .mb-content-img, .mb-content-vid {
+    .mb-content-img,
+    .mb-content-vid {
       display:flex;
       gap:8px;
       overflow-x:auto;
@@ -169,9 +338,9 @@
     }
 
     .pr-actions-col {
-      width: 160px;
+      width:160px;
       display:flex;
-      flex-direction: column;
+      flex-direction:column;
       gap:10px;
       justify-content:center;
       padding-left:10px;
@@ -188,16 +357,34 @@
       font-size:13px;
       transition:0.2s;
       border:none;
-      cursor: pointer;
+      cursor:pointer;
     }
 
-    .btn-edit { background:#222; color:white; border:1px solid #555; }
-    .btn-edit:hover { background:#444; border-color:white; }
+    .btn-edit {
+      background:#222;
+      color:white;
+      border:1px solid #555;
+    }
 
-    .btn-power { background:#330000; color:#ff4444; border:1px solid #550000; }
+    .btn-edit:hover {
+      background:#444;
+      border-color:white;
+    }
+
+    .btn-power {
+      background:#330000;
+      color:#ff4444;
+      border:1px solid #550000;
+    }
+
     .btn-power:hover { background:#550000; }
 
-    .btn-on { background:#003300; color:#00ffc8; border:1px solid #005500; }
+    .btn-on {
+      background:#003300;
+      color:#00ffc8;
+      border:1px solid #005500;
+    }
+
     .btn-on:hover { background:#005500; }
 
     .btn-lock {
@@ -212,6 +399,7 @@
       color:#111;
       border:1px solid #d79b00;
     }
+
     .btn-preview:hover {
       background:#ffca38;
       border-color:#ffca38;
@@ -226,26 +414,59 @@
       text-align:center;
     }
 
-    .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,255,200,0.9); color:black; padding:10px 20px; border-radius:30px; font-weight:bold; display:none; z-index:9999; }
+    .toast {
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:rgba(0,255,200,0.9);
+      color:black;
+      padding:10px 20px;
+      border-radius:30px;
+      font-weight:bold;
+      display:none;
+      z-index:9999;
+    }
 
     @media (max-width: 1100px) {
       .pr-media-col {
-        grid-template-columns: repeat(3, minmax(140px, 1fr));
+        grid-template-columns:repeat(3, minmax(140px, 1fr));
       }
     }
 
     @media (max-width: 900px) {
-        .top-control-panel { flex-direction: column; text-align: center; }
-        .qr-area { border-right: none; border-bottom: 1px solid #333; padding-right: 0; padding-bottom: 20px; width:100%; }
-        .opener-buttons { justify-content: center; }
+      .top-control-panel {
+        flex-direction:column;
+        text-align:center;
+      }
 
-        .profile-row { flex-direction: column; }
-        .pr-info-col, .pr-actions-col { width: 100%; border: none; padding: 0; text-align: center; }
-        .pr-header { justify-content: center; }
+      .qr-area {
+        border-right:none;
+        border-bottom:1px solid #333;
+        padding-right:0;
+        padding-bottom:20px;
+        width:100%;
+      }
 
-        .pr-media-col {
-          grid-template-columns: 1fr;
-        }
+      .opener-buttons { justify-content:center; }
+
+      .profile-row {
+        grid-template-columns:1fr;
+      }
+
+      .pr-info-col,
+      .pr-actions-col {
+        width:100%;
+        border:none;
+        padding:0;
+        text-align:center;
+      }
+
+      .pr-header { justify-content:center; }
+
+      .pr-media-col {
+        grid-template-columns:1fr;
+      }
     }
   </style>
 </head>
@@ -271,38 +492,38 @@
   <div class="top-control-panel">
 
     <div class="qr-area">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR">
-        <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR">
+      <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
     </div>
 
     <div class="opener-area">
-        <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
-        <p class="opener-desc">
-            Scegli cosa deve aprirsi quando il cliente scansiona il QR o apre il link:
-            profilo diretto P1/P2/P3 oppure menu di scelta.
-        </p>
+      <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
+      <p class="opener-desc">
+        Scegli cosa deve aprirsi quando il cliente scansiona il QR o apre il link:
+        profilo diretto P1/P2/P3 oppure menu di scelta.
+      </p>
 
-        <div class="opener-buttons">
-            <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}">
-                <span>P1</span>
-                <small>DIRETTO</small>
-            </a>
+      <div class="opener-buttons">
+        <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}">
+          <span>P1</span>
+          <small>DIRETTO</small>
+        </a>
 
-            <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}">
-                <span>P2</span>
-                <small>DIRETTO</small>
-            </a>
+        <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}">
+          <span>P2</span>
+          <small>DIRETTO</small>
+        </a>
 
-            <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}">
-                <span>P3</span>
-                <small>DIRETTO</small>
-            </a>
+        <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}">
+          <span>P3</span>
+          <small>DIRETTO</small>
+        </a>
 
-            <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;">
-                <span style="font-size:24px;"><i class="fas fa-list"></i></span>
-                <small>MENU SCELTA</small>
-            </a>
-        </div>
+        <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;">
+          <span style="font-size:24px;"><i class="fas fa-list"></i></span>
+          <small>MENU SCELTA</small>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -318,15 +539,18 @@
         <div class="pr-info-col">
           <div class="pr-header">
             {% if p_data.foto %}
-                <img src="{{ p_data.foto }}" class="pr-avatar">
+              <img src="{{ p_data.foto }}" class="pr-avatar">
             {% else %}
-                <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;"><i class="fas fa-user"></i></div>
+              <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;">
+                <i class="fas fa-user"></i>
+              </div>
             {% endif %}
             <div>
-                <h3 class="pr-title">Profilo P{{ pid }}</h3>
-                <span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span>
+              <h3 class="pr-title">Profilo P{{ pid }}</h3>
+              <span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span>
             </div>
           </div>
+
           <div style="font-size:12px; color:#aaa;">
             <div>{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</div>
             <div>{{ p_data.company if p_data.company else 'Azienda non impostata' }}</div>
@@ -335,50 +559,50 @@
 
         <div class="pr-media-col">
 
-            <div class="media-box">
-                <div class="mb-title">📸 Foto ({{ p_data.gallery_img|length }})</div>
-                <div class="mb-content-img">
-                    {% if p_data.gallery_img|length == 0 %}
-                        <div class="mb-empty">Nessuna foto caricata</div>
-                    {% else %}
-                        {% for img in p_data.gallery_img[:4] %}
-                            <img src="{{ img }}" class="mb-thumb">
-                        {% endfor %}
-                    {% endif %}
-                </div>
+          <div class="media-box">
+            <div class="mb-title">📸 Foto ({{ p_data.gallery_img|length }})</div>
+            <div class="mb-content-img">
+              {% if p_data.gallery_img|length == 0 %}
+                <div class="mb-empty">Nessuna foto caricata</div>
+              {% else %}
+                {% for img in p_data.gallery_img[:4] %}
+                  <img src="{{ img }}" class="mb-thumb">
+                {% endfor %}
+              {% endif %}
             </div>
+          </div>
 
-            <div class="media-box">
-                <div class="mb-title">🎬 Video ({{ p_data.gallery_vid|length }})</div>
-                <div class="mb-content-vid">
-                    {% if p_data.gallery_vid|length == 0 %}
-                        <div class="mb-empty">Nessun video caricato</div>
-                    {% else %}
-                        {% for vid in p_data.gallery_vid[:3] %}
-                            <video src="{{ vid }}#t=1.0" class="mb-thumb" muted playsinline preload="metadata" style="background:#000;"></video>
-                        {% endfor %}
-                    {% endif %}
-                </div>
+          <div class="media-box">
+            <div class="mb-title">🎬 Video ({{ p_data.gallery_vid|length }})</div>
+            <div class="mb-content-vid">
+              {% if p_data.gallery_vid|length == 0 %}
+                <div class="mb-empty">Nessun video caricato</div>
+              {% else %}
+                {% for vid in p_data.gallery_vid[:3] %}
+                  <video src="{{ vid }}#t=1.0" class="mb-thumb" muted playsinline preload="metadata" style="background:#000;"></video>
+                {% endfor %}
+              {% endif %}
             </div>
+          </div>
 
-            <div class="media-box">
-                <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
-                <div class="mb-pdf-list">
-                    {% if p_data.gallery_pdf|length == 0 %}
-                        <div class="mb-empty">Nessun PDF caricato</div>
-                    {% else %}
-                        {% for pdf in p_data.gallery_pdf[:2] %}
-                            <div class="mb-pdf-item">
-                                <i class="fas fa-file-pdf" style="color:#ff4444;"></i>
-                                <span>{{ pdf.name }}</span>
-                            </div>
-                        {% endfor %}
-                        {% if p_data.gallery_pdf|length > 2 %}
-                            <div style="font-size:10px; color:#666;">…e altri file</div>
-                        {% endif %}
-                    {% endif %}
-                </div>
+          <div class="media-box">
+            <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
+            <div class="mb-pdf-list">
+              {% if p_data.gallery_pdf|length == 0 %}
+                <div class="mb-empty">Nessun PDF caricato</div>
+              {% else %}
+                {% for pdf in p_data.gallery_pdf[:2] %}
+                  <div class="mb-pdf-item">
+                    <i class="fas fa-file-pdf" style="color:#ff4444;"></i>
+                    <span>{{ pdf.name }}</span>
+                  </div>
+                {% endfor %}
+                {% if p_data.gallery_pdf|length > 2 %}
+                  <div style="font-size:10px; color:#666;">…e altri file</div>
+                {% endif %}
+              {% endif %}
             </div>
+          </div>
 
         </div>
 
@@ -408,7 +632,7 @@
     const btns = document.querySelectorAll('.btn-opener, .btn');
     btns.forEach(btn => {
       btn.addEventListener('click', function() {
-        if(
+        if (
           !this.classList.contains('disabled') &&
           !this.classList.contains('btn-lock') &&
           !(this.href && this.href.includes('delete')) &&
