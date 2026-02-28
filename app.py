@@ -95,14 +95,6 @@ def to_float(v, d=1.0):
         return d
 
 def normalize_phone(phone: str) -> str:
-    """
-    Accetta:
-    - +39333...
-    - 39333...
-    - 333...
-    - whatsapp:+39333...
-    e restituisce sempre un numero in formato +39...
-    """
     phone = str(phone or "").strip()
     if not phone:
         return ""
@@ -140,6 +132,11 @@ def repair_user(user):
         user['default_profile'] = 'p1'
         dirty = True
 
+    # compatibilità con template che usano user.nome
+    if 'nome' not in user:
+        user['nome'] = ''
+        dirty = True
+
     if 'admin_contact' not in user or not isinstance(user['admin_contact'], dict):
         user['admin_contact'] = {'email': '', 'whatsapp': ''}
         dirty = True
@@ -158,6 +155,7 @@ def repair_user(user):
 
         p = user[pid]
         defaults = {
+            'active': False,
             'name': '', 'role': '', 'company': '', 'bio': '',
             'foto': '', 'logo': '', 'personal_foto': '',
             'office_phone': '', 'address': '',
@@ -226,18 +224,15 @@ def build_credentials_email_html(user: dict) -> str:
     return f"""
     <div style="margin:0; padding:0; background:#f3f3f3;">
       <div style="max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
-
         <div style="text-align:center; padding:22px 0 16px; border-bottom:1px solid #3b3120;">
-          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:105px; height:auto; display:inline-block;">
+          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="width:105px !important; max-width:105px !important; height:auto !important; display:inline-block;">
         </div>
 
         <div style="padding:26px 24px 10px;">
           <h1 style="margin:0 0 16px; color:#f6d47a; font-size:19px;">Credenziali della tua Card Digitale</h1>
-
           <p style="margin:0 0 12px; font-size:16px; line-height:1.6;">
             Ciao, abbiamo preparato correttamente le credenziali della tua nuova <strong>Card Digitale {BRAND_NAME}</strong>.
           </p>
-
           <p style="margin:0; font-size:16px; line-height:1.6;">
             Qui sotto trovi i dati per accedere alla dashboard e il tuo link pubblico.
           </p>
@@ -246,7 +241,6 @@ def build_credentials_email_html(user: dict) -> str:
         <div style="padding:18px 18px 0;">
           <div style="background:#101010; border:1px solid #3a2d16; border-radius:16px; padding:18px;">
             <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Riepilogo credenziali</div>
-
             <div style="font-size:16px; line-height:1.8;">
               <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff;">{cd['login_url']}</a></div>
               <div><strong>User:</strong> {cd['username']}</div>
@@ -537,25 +531,43 @@ def activate_profile(p_id):
     user = get_user_by_id(clienti, session.get('user_id'))
     if not user:
         return redirect(url_for('logout'))
-    user['p' + p_id]['active'] = True
+
+    pkey = 'p' + p_id
+    if pkey not in user:
+        flash("Profilo non trovato.", "error")
+        return redirect(url_for('area'))
+
+    user[pkey]['active'] = True
     repair_user(user)
     save_db(clienti)
+    flash(f"Profilo P{p_id} attivato correttamente.", "success")
     return redirect(url_for('area'))
 
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
+
     if p_id == '1':
-        return "Impossibile"
+        flash("Il profilo P1 è principale e non può essere disattivato.", "error")
+        return redirect(url_for('area'))
+
     clienti = load_db()
     user = get_user_by_id(clienti, session.get('user_id'))
     if not user:
         return redirect(url_for('logout'))
-    user['p' + p_id]['active'] = False
-    if user.get('default_profile') == ('p' + p_id):
+
+    pkey = 'p' + p_id
+    if pkey not in user:
+        flash("Profilo non trovato.", "error")
+        return redirect(url_for('area'))
+
+    user[pkey]['active'] = False
+    if user.get('default_profile') == pkey:
         user['default_profile'] = 'p1'
+
     save_db(clienti)
+    flash(f"Profilo P{p_id} disattivato.", "success")
     return redirect(url_for('area'))
 
 @app.route('/area/set_default/<mode>')
@@ -569,16 +581,20 @@ def set_default_profile(mode):
 
     if mode.startswith('p') and user.get(mode, {}).get('active'):
         user['default_profile'] = mode
+        save_db(clienti)
+        flash(f"Apertura predefinita impostata su {mode.upper()}.", "success")
     elif mode == 'menu':
         user['default_profile'] = 'menu'
+        save_db(clienti)
+        flash("Apertura predefinita impostata su Menu.", "success")
 
-    save_db(clienti)
     return redirect(url_for('area'))
 
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
+
     clienti = load_db()
     user = get_user_by_id(clienti, session.get('user_id'))
     if not user:
@@ -596,6 +612,9 @@ def edit_profile(p_id):
         prefix = f"u{user['id']}_{p_id}"
 
         p['name'] = request.form.get('name', '')
+        if p_id == '1':
+            user['nome'] = p['name']
+
         p['role'] = request.form.get('role', '')
         p['company'] = request.form.get('company', '')
         p['bio'] = request.form.get('bio', '')
@@ -652,11 +671,13 @@ def edit_profile(p_id):
                 path = save_file(f, f"{prefix}_gimg")
                 if path:
                     p['gallery_img'].append(path)
+
         if 'gallery_pdf' in request.files:
             for f in request.files.getlist('gallery_pdf'):
                 path = save_file(f, f"{prefix}_gpdf")
                 if path:
                     p['gallery_pdf'].append({'path': path, 'name': f.filename})
+
         if 'gallery_vid' in request.files:
             for f in request.files.getlist('gallery_vid'):
                 path = save_file(f, f"{prefix}_gvid")
@@ -671,6 +692,7 @@ def edit_profile(p_id):
 
         repair_user(user)
         save_db(clienti)
+        flash(f"Profilo P{p_id} salvato correttamente.", "success")
         return redirect(url_for('area'))
 
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
@@ -721,6 +743,7 @@ def master_add():
         "slug": slug,
         "username": slug,
         "password": password,
+        "nome": "",
         "admin_contact": {
             "email": admin_email,
             "whatsapp": admin_whatsapp
