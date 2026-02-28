@@ -9,7 +9,10 @@
     body { background:#050505; color:white; font-family:sans-serif; margin:0; }
     .edit-container { max-width:1100px; margin:20px auto; padding:0 14px 110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
-    .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
+    .box-title {
+      color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px;
+      font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+    }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
 
@@ -41,7 +44,7 @@
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
-    #AGENT_STAGE{ width:100%; height:100%; position:relative; }
+    #AGENT_STAGE { width:100%; height:100%; position:relative; }
 
     #PREVIEW_IMG_AGENT{
       position:absolute;
@@ -126,7 +129,10 @@
 
     .dash-modal-content { max-width:90%; max-height:75vh; border-radius:10px; margin-bottom:15px; }
     .dash-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
-    .d-btn { padding:12px 18px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
+    .d-btn {
+      padding:12px 18px; border-radius:30px; font-weight:bold; border:none; cursor:pointer;
+      display:flex; align-items:center; gap:8px; text-decoration:none; color:white;
+    }
     .db-wa { background:#25D366; color:#041b0c; }
     .db-em { background:#666; }
     .db-app { background:#444; }
@@ -134,7 +140,7 @@
     .db-del { background:#ff4444; }
     .db-cl { background:#0088cc; }
 
-    details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
+    details summary { cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
     /* GALLERIA FILE IN VERTICALE */
@@ -166,6 +172,28 @@
       font-size:13px;
       text-transform:uppercase;
       letter-spacing:.04em;
+    }
+
+    .media-top {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+
+    .media-head-left {
+      min-width:220px;
+      flex:1 1 300px;
+    }
+
+    .media-head-right {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
     }
 
     .media-help {
@@ -200,6 +228,28 @@
       margin-bottom:8px;
     }
 
+    .btn-danger-mini {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:#2a0c0c;
+      color:#ffb3b3;
+      border:1px solid #6b1f1f;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .btn-danger-mini:hover {
+      background:#3a1111;
+      border-color:#a62c2c;
+    }
+    .btn-danger-mini[disabled] {
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
     .empty-box {
       min-height:84px;
       border:1px dashed #2e2e2e;
@@ -214,6 +264,32 @@
       box-sizing:border-box;
     }
 
+    .to-delete {
+      opacity:.28 !important;
+      filter:grayscale(1);
+      border-color:#ff4444 !important;
+      position:relative;
+    }
+    .to-delete::after {
+      content:"DA ELIMINARE";
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      background:rgba(0,0,0,.82);
+      color:#ff8b8b;
+      border:1px solid #ff4444;
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.04em;
+      white-space:nowrap;
+      z-index:3;
+    }
+
+    .panel-hidden { display:none !important; }
+
     @media (max-width: 760px){
       .form-grid { grid-template-columns:1fr; }
       .full-width { grid-column:span 1; }
@@ -222,6 +298,13 @@
         right:14px;
         width:calc(100% - 28px);
         padding:14px 20px;
+      }
+      .media-top {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .media-head-right {
+        justify-content:flex-start;
       }
     }
   </style>
@@ -335,62 +418,97 @@
 
       <div class="media-sections">
 
-        <div class="media-panel">
-          <h4>📸 Foto</h4>
-          <div class="media-help">
-            Carica qui solo immagini della galleria. Verranno mostrate come anteprime fotografiche.
+        <!-- FOTO -->
+        <div class="media-panel" id="panel-img">
+          <div class="media-top">
+            <div class="media-head-left">
+              <h4>📸 Foto</h4>
+              <div class="media-help">
+                Carica qui solo immagini della galleria. Verranno mostrate come anteprime fotografiche.
+              </div>
+            </div>
+            <div class="media-head-right">
+              <div class="media-counter">{{ p.gallery_img|length }} foto caricate</div>
+              <button type="button" class="btn-danger-mini" {% if p.gallery_img|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('img')">
+                <i class="fas fa-trash"></i> Cancella tutto Foto
+              </button>
+            </div>
           </div>
-          <div class="media-counter">{{ p.gallery_img|length }} foto caricate</div>
+
           <input class="media-upload" type="file" name="gallery_img" multiple accept="image/*">
 
           {% if p.gallery_img|length > 0 %}
-            <div class="dash-gallery">
+            <div class="dash-gallery" id="gallery-img">
               {% for img in p.gallery_img %}
-              <div class="dash-item" onclick="apriMedia('{{ img }}', 'img', this)">
+              <div class="dash-item media-item media-item-img" onclick="apriMedia('{{ img }}', 'img', this)">
                 <img src="{{ img }}">
                 <input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
               </div>
               {% endfor %}
             </div>
           {% else %}
-            <div class="empty-box">Nessuna foto caricata</div>
+            <div class="empty-box" id="empty-img">Nessuna foto caricata</div>
           {% endif %}
+          <div class="empty-box panel-hidden" id="empty-img-hidden">Nessuna foto caricata</div>
         </div>
 
-        <div class="media-panel">
-          <h4>🎬 Video</h4>
-          <div class="media-help">
-            Carica qui solo video. Ogni file verrà mostrato con anteprima video separata.
+        <!-- VIDEO -->
+        <div class="media-panel" id="panel-vid">
+          <div class="media-top">
+            <div class="media-head-left">
+              <h4>🎬 Video</h4>
+              <div class="media-help">
+                Carica qui solo video. Ogni file verrà mostrato con anteprima video separata.
+              </div>
+            </div>
+            <div class="media-head-right">
+              <div class="media-counter">{{ p.gallery_vid|length }} video caricati</div>
+              <button type="button" class="btn-danger-mini" {% if p.gallery_vid|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('vid')">
+                <i class="fas fa-trash"></i> Cancella tutto Video
+              </button>
+            </div>
           </div>
-          <div class="media-counter">{{ p.gallery_vid|length }} video caricati</div>
+
           <input class="media-upload" type="file" name="gallery_vid" multiple accept="video/*">
 
           {% if p.gallery_vid|length > 0 %}
-            <div class="dash-gallery">
+            <div class="dash-gallery" id="gallery-vid">
               {% for vid in p.gallery_vid %}
-              <div class="dash-item" onclick="apriMedia('{{ vid }}', 'vid', this)">
+              <div class="dash-item media-item media-item-vid" onclick="apriMedia('{{ vid }}', 'vid', this)">
                 <video src="{{ vid }}#t=2.0" muted playsinline preload="metadata"></video>
                 <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;">
               </div>
               {% endfor %}
             </div>
           {% else %}
-            <div class="empty-box">Nessun video caricato</div>
+            <div class="empty-box" id="empty-vid">Nessun video caricato</div>
           {% endif %}
+          <div class="empty-box panel-hidden" id="empty-vid-hidden">Nessun video caricato</div>
         </div>
 
-        <div class="media-panel">
-          <h4>📄 PDF</h4>
-          <div class="media-help">
-            Carica qui solo file PDF. Verranno mostrati con elenco e nome file.
+        <!-- PDF -->
+        <div class="media-panel" id="panel-pdf">
+          <div class="media-top">
+            <div class="media-head-left">
+              <h4>📄 PDF</h4>
+              <div class="media-help">
+                Carica qui solo file PDF. Verranno mostrati con elenco e nome file.
+              </div>
+            </div>
+            <div class="media-head-right">
+              <div class="media-counter">{{ p.gallery_pdf|length }} PDF caricati</div>
+              <button type="button" class="btn-danger-mini" {% if p.gallery_pdf|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('pdf')">
+                <i class="fas fa-trash"></i> Cancella tutto PDF
+              </button>
+            </div>
           </div>
-          <div class="media-counter">{{ p.gallery_pdf|length }} PDF caricati</div>
+
           <input class="media-upload" type="file" name="gallery_pdf" multiple accept=".pdf,application/pdf">
 
           {% if p.gallery_pdf|length > 0 %}
-            <div style="margin-top:10px;">
+            <div style="margin-top:10px;" id="gallery-pdf">
               {% for pdf in p.gallery_pdf %}
-              <div class="pdf-row" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
+              <div class="pdf-row media-item media-item-pdf" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
                 <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   <i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}
                 </span>
@@ -399,8 +517,9 @@
               {% endfor %}
             </div>
           {% else %}
-            <div class="empty-box">Nessun PDF caricato</div>
+            <div class="empty-box" id="empty-pdf">Nessun PDF caricato</div>
           {% endif %}
+          <div class="empty-box panel-hidden" id="empty-pdf-hidden">Nessun PDF caricato</div>
         </div>
 
       </div>
@@ -507,10 +626,60 @@
       }
     }
 
+    function doubleConfirm(firstMsg, secondMsg) {
+      if (!confirm(firstMsg)) return false;
+      if (!confirm(secondMsg)) return false;
+      return true;
+    }
+
+    function markItemForDelete(el) {
+      if (!el) return;
+      var chk = el.querySelector('input[type="checkbox"]');
+      if (chk) chk.checked = true;
+      el.classList.add('to-delete');
+      el.onclick = null;
+    }
+
+    function updateSectionAfterDelete(type) {
+      var items = document.querySelectorAll('.media-item-' + type + ':not(.to-delete)');
+      var gallery = document.getElementById('gallery-' + type);
+
+      if (items.length === 0) {
+        if (gallery) gallery.classList.add('panel-hidden');
+        var emptyBox = document.getElementById('empty-' + type);
+        if (emptyBox) emptyBox.classList.add('panel-hidden');
+        var hiddenEmpty = document.getElementById('empty-' + type + '-hidden');
+        if (hiddenEmpty) hiddenEmpty.classList.remove('panel-hidden');
+      }
+    }
+
+    function deleteAllMedia(type) {
+      var label = "file";
+      if (type === 'img') label = "tutte le foto";
+      if (type === 'vid') label = "tutti i video";
+      if (type === 'pdf') label = "tutti i PDF";
+
+      var ok = doubleConfirm(
+        "Vuoi davvero eliminare " + label + "?",
+        "Confermi di voler segnare per l'eliminazione " + label + "? Premi poi SALVA TUTTO."
+      );
+      if (!ok) return;
+
+      var items = document.querySelectorAll('.media-item-' + type);
+      items.forEach(function(el){
+        markItemForDelete(el);
+      });
+
+      updateSectionAfterDelete(type);
+      alert("Operazione registrata. Premi SALVA TUTTO per confermare definitivamente.");
+    }
+
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
     function apriMedia(url, type, el) {
+      if (el && el.classList.contains('to-delete')) return;
+
       ELEMENTO_ATTUALE = el;
       FILE_ATTUALE.url = window.location.origin + url;
       FILE_ATTUALE.type = type;
@@ -568,15 +737,29 @@
       }
     }
 
-    function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
+    function chiudiMedia() {
+      document.getElementById('modalDash').style.display='none';
+    }
 
     function cancellaMedia() {
-      if(confirm("Eliminare questo file?")) {
-        var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
-        if(chk) chk.checked = true;
-        ELEMENTO_ATTUALE.style.display = 'none';
-        chiudiMedia();
-      }
+      if (!ELEMENTO_ATTUALE) return;
+
+      var tipo = FILE_ATTUALE.type === 'img' ? 'questa foto' : (FILE_ATTUALE.type === 'vid' ? 'questo video' : 'questo PDF');
+
+      var ok = doubleConfirm(
+        "Vuoi davvero eliminare " + tipo + "?",
+        "Confermi di voler segnare per l'eliminazione " + tipo + "? Premi poi SALVA TUTTO."
+      );
+      if (!ok) return;
+
+      markItemForDelete(ELEMENTO_ATTUALE);
+
+      if (FILE_ATTUALE.type === 'img') updateSectionAfterDelete('img');
+      if (FILE_ATTUALE.type === 'vid') updateSectionAfterDelete('vid');
+      if (FILE_ATTUALE.type === 'pdf') updateSectionAfterDelete('pdf');
+
+      chiudiMedia();
+      alert("Operazione registrata. Premi SALVA TUTTO per confermare definitivamente.");
     }
 
     window.onload = function() {
