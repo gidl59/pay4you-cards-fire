@@ -177,8 +177,8 @@
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
       <div class="modal-actions">
-        <a id="waLink" href="#" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
-        <a id="emLink" href="#" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
+        <a id="waLink" href="#" target="_blank" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
+        <a id="emLink" href="#" target="_blank" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
         <div onclick="closeModal()" class="act-btn bg-cl"><i class="fas fa-times"></i></div>
       </div>
     </div>
@@ -191,39 +191,106 @@
   </div>
 
   <script>
-    function makeMailto(subject, body){
-      const b = (body || "").replace(/\n/g, "\r\n");
-      return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(b);
+    function getPrimaryRecipient() {
+      const rawEmails = {{ emails|tojson|safe }};
+      if (Array.isArray(rawEmails)) {
+        for (let i = 0; i < rawEmails.length; i++) {
+          const block = String(rawEmails[i] || "");
+          const parts = block.split(",");
+          for (let j = 0; j < parts.length; j++) {
+            const e = parts[j].trim();
+            if (e) return e;
+          }
+        }
+      }
+      const pec = {{ ag.pec|tojson|safe }};
+      if (pec && String(pec).trim()) return String(pec).trim();
+      return "";
+    }
+
+    function buildGmailLink(to, subject, body){
+      return "https://mail.google.com/mail/?view=cm&fs=1"
+        + "&to=" + encodeURIComponent(to || "")
+        + "&su=" + encodeURIComponent(subject || "")
+        + "&body=" + encodeURIComponent(body || "");
     }
 
     function buildEmailText(kind, link){
-      const name = "{{ ag.name|default('', true) }}";
-      const role = "{{ ag.role|default('', true) }}";
-      const company = "{{ ag.company|default('', true) }}";
+      const name = {{ ag.name|default('', true)|tojson|safe }};
+      const role = {{ ag.role|default('', true)|tojson|safe }};
+      const company = {{ ag.company|default('', true)|tojson|safe }};
       const cardLink = window.location.href;
+
       let header = "Pay4You - Condivisione";
-      let body = "Ciao!\nTi invio la mia Card digitale Pay4You.\n\n" + (name ? "Nome: "+name+"\n" : "") + (role ? "Ruolo: "+role+"\n" : "") + (company ? "Azienda: "+company+"\n" : "") + "\nLink:\n" + link + "\n\nCard:\n" + cardLink;
+      let intro = "Ciao!";
+
+      if (kind === 'qr') {
+        header = "Pay4You - QR Code / Link Card";
+        intro = "Ti invio il QR Code / link della mia Card digitale Pay4You.";
+      } else if (kind === 'img') {
+        header = "Pay4You - Condivisione Foto";
+        intro = "Ti invio una foto dalla mia Card digitale Pay4You.";
+      } else if (kind === 'vid') {
+        header = "Pay4You - Condivisione Video";
+        intro = "Ti invio un video dalla mia Card digitale Pay4You.";
+      } else if (kind === 'pdf') {
+        header = "Pay4You - Condivisione PDF";
+        intro = "Ti invio un PDF dalla mia Card digitale Pay4You.";
+      }
+
+      let body =
+        intro + "\n\n" +
+        (name ? "Nome: " + name + "\n" : "") +
+        (role ? "Ruolo: " + role + "\n" : "") +
+        (company ? "Azienda: " + company + "\n" : "") +
+        "\nLink contenuto:\n" + link + "\n\n" +
+        "Card:\n" + cardLink;
+
       return { subject: header, body: body };
     }
 
     function openShare(type, url) {
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
-      document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
-      const mail = buildEmailText(type, fullUrl);
-      document.getElementById('emLink').href = makeMailto(mail.subject, mail.body);
+      const recipient = getPrimaryRecipient();
 
-      if(type==='img') box.innerHTML = '<img src="'+url+'" class="modal-content">';
-      else if(type==='vid') box.innerHTML = '<video src="'+url+'" controls autoplay class="modal-content"></video>';
-      else if(type==='pdf') box.innerHTML = '<iframe src="'+url+'" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-      else if(type==='qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(fullUrl)+'" style="background:white; padding:14px; border-radius:18px;">';
+      document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
+
+      const mail = buildEmailText(type, fullUrl);
+      document.getElementById('emLink').href = buildGmailLink(recipient, mail.subject, mail.body);
+
+      if(type === 'img') {
+        box.innerHTML = '<img src="' + url + '" class="modal-content">';
+      } else if(type === 'vid') {
+        box.innerHTML = '<video src="' + url + '" controls autoplay class="modal-content"></video>';
+      } else if(type === 'pdf') {
+        box.innerHTML = '<iframe src="' + url + '" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
+      } else if(type === 'qr') {
+        box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(fullUrl) + '" style="background:white; padding:14px; border-radius:18px;">';
+      }
+
       document.getElementById('shareModal').style.display = 'flex';
     }
 
-    function closeModal(){ document.getElementById('shareModal').style.display='none'; document.getElementById('mediaBox').innerHTML=""; }
-    function openSite(url){ document.getElementById('webFrame').src=url; document.getElementById('webModal').style.display='flex'; }
-    function closeWeb(){ document.getElementById('webModal').style.display='none'; document.getElementById('webFrame').src=""; }
-    function setT(t){ if(t==='auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
+    function closeModal(){
+      document.getElementById('shareModal').style.display='none';
+      document.getElementById('mediaBox').innerHTML="";
+    }
+
+    function openSite(url){
+      document.getElementById('webFrame').src=url;
+      document.getElementById('webModal').style.display='flex';
+    }
+
+    function closeWeb(){
+      document.getElementById('webModal').style.display='none';
+      document.getElementById('webFrame').src="";
+    }
+
+    function setT(t){
+      if(t === 'auto') document.body.removeAttribute('data-theme');
+      else document.body.setAttribute('data-theme', t);
+    }
   </script>
 </body>
 </html>
