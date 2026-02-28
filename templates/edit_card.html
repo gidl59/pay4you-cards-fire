@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; }
-    .edit-container { max-width:1500px; margin:20px auto; padding:0 14px 110px; }
+    .edit-container { max-width:1100px; margin:20px auto; padding:0 14px 110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
@@ -25,7 +25,7 @@
     }
 
     .dash-head {
-      max-width:1500px;
+      max-width:1100px;
       margin:20px auto 0;
       padding:0 14px;
       display:flex;
@@ -137,13 +137,12 @@
     details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
-    /* GALLERIA FILE */
+    /* GALLERIA FILE IN VERTICALE */
     .edit-box .media-sections,
     .media-sections {
-      display:grid !important;
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-      gap:20px !important;
-      align-items:start !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:18px !important;
       width:100% !important;
     }
 
@@ -158,8 +157,6 @@
       border:1px solid #333 !important;
       border-radius:14px !important;
       padding:16px !important;
-      height:100% !important;
-      float:none !important;
       position:relative !important;
     }
 
@@ -176,7 +173,6 @@
       color:#9a9a9a;
       margin-bottom:10px;
       line-height:1.45;
-      min-height:52px;
     }
 
     .media-upload {
@@ -216,14 +212,6 @@
       text-align:center;
       padding:10px;
       box-sizing:border-box;
-    }
-
-    /* SOLO SU SCHERMI DAVVERO PICCOLI */
-    @media (max-width: 900px){
-      .edit-box .media-sections,
-      .media-sections {
-        grid-template-columns: 1fr !important;
-      }
     }
 
     @media (max-width: 760px){
