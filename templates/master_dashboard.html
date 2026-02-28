@@ -29,6 +29,7 @@
         .vw { background:#7c4dff; color:#fff; }
         .se { background:#ffffff; color:#111; }
         .sw { background:#25D366; color:#000; }
+        .sa { background:#ffb020; color:#111; width:auto; padding:0 14px; font-size:13px; font-weight:800; }
 
         .btn-gest { background:#0088cc; color:#fff; font-size:13px; padding:0 10px; width:auto; text-decoration:none; }
         .btn-del { background:#330000; color:#ff4444; border:1px solid #550000; font-size:16px; }
@@ -169,6 +170,11 @@
 
                 <td>
                     <div class="row-btns">
+                        <a class="pill sa" href="/master/send-credentials-all/{{c.id}}" title="Invia Email + WhatsApp"
+                           onclick="return confirm('Inviare insieme Email + WhatsApp al cliente?')">
+                            <i class="fas fa-paper-plane"></i>&nbsp;+&nbsp;<i class="fab fa-whatsapp"></i>
+                        </a>
+
                         <a class="pill vw" href="/master/credentials/{{c.id}}" title="Vedi credenziali">
                             <i class="fas fa-id-card"></i>
                         </a>
@@ -191,7 +197,7 @@
                     </div>
 
                     <div class="mini-help">
-                        viola = vedi credenziali · bianco = invia email reale · verde = invia WhatsApp reale
+                        arancio = invia tutto · viola = vedi credenziali · bianco = email · verde = WhatsApp
                     </div>
                 </td>
 
@@ -219,8 +225,6 @@
     <div id="toast" class="toast">Testo Copiato! ✅</div>
 
     <script>
-        var baseUrl = window.location.origin;
-
         function getCredSubject() {
             return "Pay4You - Credenziali Accesso";
         }
@@ -262,8 +266,8 @@
         }
 
         function mostraQR(slug) {
-            var linkCard = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent("https://pay4you-cards-fire.onrender.com/card/" + slug);
-            document.getElementById('imgQR').src = linkCard;
+            var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent("https://pay4you-cards-fire.onrender.com/card/" + slug);
+            document.getElementById('imgQR').src = qrUrl;
             document.getElementById('boxQR').style.display = 'flex';
         }
 
