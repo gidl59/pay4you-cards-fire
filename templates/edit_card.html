@@ -7,23 +7,40 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; }
-    .edit-container { max-width:900px; margin:20px auto; padding-bottom:110px; }
+    .edit-container { max-width:980px; margin:20px auto; padding:0 14px 110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
     .full-width { grid-column: span 2; }
 
     label { display:block; color:#aaa; margin-bottom:5px; font-size:12px; font-weight:bold; }
-    input[type="text"], textarea { width:100%; padding:12px; background:#222; border:1px solid #444; color:white; border-radius:6px; box-sizing:border-box; }
+    input[type="text"], textarea {
+      width:100%;
+      padding:12px;
+      background:#222;
+      border:1px solid #444;
+      color:white;
+      border-radius:8px;
+      box-sizing:border-box;
+    }
 
-    /* CROP AREA */
+    .dash-head {
+      max-width:980px;
+      margin:20px auto 0;
+      padding:0 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
     .crop-area { text-align:center; background:#000; padding:15px; border-radius:10px; border:1px solid #333; }
     .crop-circle-box {
       width:160px; height:160px; border-radius:50%; border:3px solid #00ffc8;
       overflow:hidden; margin:0 auto 15px; position:relative; background:#222;
     }
 
-    /* Stage per crop (stabile su iPhone/Safari) */
     #AGENT_STAGE{ width:100%; height:100%; position:relative; }
 
     #PREVIEW_IMG_AGENT{
@@ -39,19 +56,66 @@
     }
 
     .slider-row { display:flex; align-items:center; gap:10px; margin-bottom:15px; }
-    .slider-row label { width:30px; font-size:18px; text-align:center; }
+    .slider-row label { width:30px; font-size:18px; text-align:center; margin:0; }
     input[type="range"] { width: 100%; cursor: pointer; }
 
-    /* MEDIA GALLERY */
     .dash-gallery { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
-    .dash-item { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #444; cursor:pointer; }
+    .dash-item {
+      position:relative;
+      width:90px;
+      height:90px;
+      border-radius:10px;
+      overflow:hidden;
+      border:1px solid #444;
+      cursor:pointer;
+      background:#000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
     .dash-item img, .dash-item video { width:100%; height:100%; object-fit:cover; }
-    .pdf-row { display:flex; justify-content:space-between; align-items:center; background:#222; padding:10px; margin-bottom:5px; border-radius:5px; cursor:pointer; border:1px solid #333; }
 
-    .btn-save-float { position:fixed; bottom:20px; right:20px; background:linear-gradient(90deg, #0088cc, #00ffc8); color:#000; padding:15px 50px; border-radius:40px; border:none; font-weight:bold; font-size:16px; cursor:pointer; z-index:999; box-shadow:0 10px 30px rgba(0,255,200,0.3); }
+    .pdf-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:#171717;
+      padding:12px;
+      margin-bottom:8px;
+      border-radius:8px;
+      cursor:pointer;
+      border:1px solid #333;
+      gap:10px;
+    }
 
-    /* MODALE */
-    .dash-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; justify-content:center; align-items:center; flex-direction:column; }
+    .btn-save-float {
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      background:linear-gradient(90deg, #0088cc, #00ffc8);
+      color:#000;
+      padding:15px 50px;
+      border-radius:40px;
+      border:none;
+      font-weight:bold;
+      font-size:16px;
+      cursor:pointer;
+      z-index:999;
+      box-shadow:0 10px 30px rgba(0,255,200,0.3);
+    }
+
+    .dash-modal {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.95);
+      z-index:10000;
+      justify-content:center;
+      align-items:center;
+      flex-direction:column;
+      padding:20px;
+    }
+
     .dash-modal-content { max-width:90%; max-height:75vh; border-radius:10px; margin-bottom:15px; }
     .dash-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
     .d-btn { padding:12px 18px; border-radius:30px; font-weight:bold; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:white; }
@@ -61,9 +125,85 @@
     .db-copy { background:#00ffc8; color:#00120e; }
     .db-del { background:#ff4444; }
     .db-cl { background:#0088cc; }
-    
+
     details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
+
+    .media-sections {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:16px;
+    }
+
+    .media-panel {
+      background:linear-gradient(180deg,#151515 0%,#0d0d0d 100%);
+      border:1px solid #333;
+      border-radius:14px;
+      padding:16px;
+    }
+
+    .media-panel h4 {
+      margin:0 0 8px;
+      color:#00ffc8;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+
+    .media-help {
+      font-size:12px;
+      color:#9a9a9a;
+      margin-bottom:10px;
+      line-height:1.45;
+    }
+
+    .media-upload {
+      display:block;
+      width:100%;
+      background:#1a1a1a;
+      border:1px dashed #4a4a4a;
+      border-radius:12px;
+      padding:12px;
+      color:#ddd;
+      margin-bottom:12px;
+      box-sizing:border-box;
+    }
+
+    .media-counter {
+      display:inline-flex;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(0,255,200,.08);
+      border:1px solid rgba(0,255,200,.25);
+      color:#bffff2;
+      font-size:11px;
+      font-weight:900;
+      margin-bottom:8px;
+    }
+
+    .empty-box {
+      min-height:84px;
+      border:1px dashed #2e2e2e;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#666;
+      font-size:12px;
+      text-align:center;
+      padding:10px;
+    }
+
+    @media (max-width: 760px){
+      .form-grid { grid-template-columns:1fr; }
+      .full-width { grid-column:span 1; }
+      .btn-save-float {
+        left:14px;
+        right:14px;
+        width:calc(100% - 28px);
+        padding:14px 20px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -172,40 +312,84 @@
 
     <div class="edit-box">
       <h3 class="box-title">📂 Galleria File</h3>
-      <input type="file" name="gallery_img" multiple accept="image/*">
-      <div class="dash-gallery">
-        {% for img in p.gallery_img %}
-        <div class="dash-item" onclick="apriMedia('{{ img }}', 'img', this)">
-          <img src="{{ img }}"><input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
+
+      <div class="media-sections">
+
+        <div class="media-panel">
+          <h4>📸 Foto</h4>
+          <div class="media-help">
+            Carica qui solo immagini della galleria. Verranno mostrate come anteprime fotografiche.
+          </div>
+          <div class="media-counter">{{ p.gallery_img|length }} foto caricate</div>
+          <input class="media-upload" type="file" name="gallery_img" multiple accept="image/*">
+
+          {% if p.gallery_img|length > 0 %}
+            <div class="dash-gallery">
+              {% for img in p.gallery_img %}
+              <div class="dash-item" onclick="apriMedia('{{ img }}', 'img', this)">
+                <img src="{{ img }}">
+                <input type="checkbox" name="delete_media" value="{{ img }}" style="display:none;">
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-box">Nessuna foto caricata</div>
+          {% endif %}
         </div>
-        {% endfor %}
-      </div>
-      <hr style="border-color:#333; margin:20px 0;">
-      <input type="file" name="gallery_vid" multiple accept="video/*">
-      <div class="dash-gallery">
-        {% for vid in p.gallery_vid %}
-        <div class="dash-item" onclick="apriMedia('{{ vid }}', 'vid', this)">
-          <video src="{{ vid }}#t=2.0"></video>
-          <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;">
+
+        <div class="media-panel">
+          <h4>🎬 Video</h4>
+          <div class="media-help">
+            Carica qui solo video. Ogni file verrà mostrato con anteprima video separata.
+          </div>
+          <div class="media-counter">{{ p.gallery_vid|length }} video caricati</div>
+          <input class="media-upload" type="file" name="gallery_vid" multiple accept="video/*">
+
+          {% if p.gallery_vid|length > 0 %}
+            <div class="dash-gallery">
+              {% for vid in p.gallery_vid %}
+              <div class="dash-item" onclick="apriMedia('{{ vid }}', 'vid', this)">
+                <video src="{{ vid }}#t=2.0" muted playsinline preload="metadata"></video>
+                <input type="checkbox" name="delete_media" value="{{ vid }}" style="display:none;">
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-box">Nessun video caricato</div>
+          {% endif %}
         </div>
-        {% endfor %}
-      </div>
-      <hr style="border-color:#333; margin:20px 0;">
-      <input type="file" name="gallery_pdf" multiple accept=".pdf">
-      <div style="margin-top:10px;">
-        {% for pdf in p.gallery_pdf %}
-        <div class="pdf-row" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
-          <span><i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}</span>
-          <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;">
+
+        <div class="media-panel">
+          <h4>📄 PDF</h4>
+          <div class="media-help">
+            Carica qui solo file PDF. Verranno mostrati con elenco e nome file.
+          </div>
+          <div class="media-counter">{{ p.gallery_pdf|length }} PDF caricati</div>
+          <input class="media-upload" type="file" name="gallery_pdf" multiple accept=".pdf,application/pdf">
+
+          {% if p.gallery_pdf|length > 0 %}
+            <div style="margin-top:10px;">
+              {% for pdf in p.gallery_pdf %}
+              <div class="pdf-row" onclick="apriMedia('{{ pdf.path }}', 'pdf', this)">
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  <i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}
+                </span>
+                <input type="checkbox" name="delete_media" value="{{ pdf.path }}" style="display:none;">
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-box">Nessun PDF caricato</div>
+          {% endif %}
         </div>
-        {% endfor %}
+
       </div>
     </div>
 
     <details class="edit-box">
       <summary class="box-title">🌍 TRADUZIONI (4 lingue) <i class="fas fa-chevron-down"></i></summary>
       <div class="hint">Testi alternativi per le altre lingue.</div>
-      
+
       <details style="margin-top:14px;">
         <summary class="box-title" style="margin-bottom:10px;">🇬🇧 Inglese</summary>
         <div class="form-grid">
@@ -255,7 +439,6 @@
   </div>
 
   <script>
-    // ---- FIX FOTO GIGANTE: La logica è semplificata ----
     function setAgentFitMode(mode){
       var img = document.getElementById('PREVIEW_IMG_AGENT');
       if(!img) return;
@@ -264,7 +447,6 @@
       img.style.objectFit = "cover";
     }
 
-    // 1) CROP FUNZIONANTE
     function aggiornaCrop() {
       setAgentFitMode('cover');
       var x = parseInt(document.getElementById('valX').value || "0", 10);
@@ -274,7 +456,6 @@
       img.style.transform = "translate(-50%, -50%) translate(" + x + "%, " + y + "%) scale(" + z + ")";
     }
 
-    // 2) Anteprima
     function cambiaFotoAnteprima(input, id, isAgentPhoto) {
       if (input.files && input.files[0]) {
         var reader = new FileReader();
@@ -284,15 +465,14 @@
           if (isAgentPhoto) {
             document.getElementById('valX').value = 0;
             document.getElementById('valY').value = 0;
-            document.getElementById('valZ').value = 1; 
-            aggiornaCrop(); 
+            document.getElementById('valZ').value = 1;
+            aggiornaCrop();
           }
         };
         reader.readAsDataURL(input.files[0]);
       }
     }
 
-    // 3) Effetti
     function gestisciEffetti(azione) {
       var checkGira = document.getElementById('checkGira');
       var radTap = document.getElementById('radTap');
@@ -307,7 +487,6 @@
       }
     }
 
-    // 4) Modale + invio
     var FILE_ATTUALE = { url:"", type:"" };
     var ELEMENTO_ATTUALE = null;
 
@@ -333,7 +512,7 @@
       var nomeInput = document.getElementById('inputNomeAgente').value;
       var nome = nomeInput ? nomeInput : "Agente Pay4You";
       var ogg = "Condivisione file da Card Pay4You";
-      var corpo = "Ciao!\r\n" + "Ti invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\n" + "Link al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\n" + "Inviato da: " + nome + "\r\n";
+      var corpo = "Ciao!\r\nTi invio un contenuto dalla mia Card Digitale Pay4You.\r\n\r\nLink al file:\r\n" + FILE_ATTUALE.url + "\r\n\r\nInviato da: " + nome + "\r\n";
       return { subject: ogg, body: corpo };
     }
 
@@ -372,7 +551,7 @@
     function chiudiMedia() { document.getElementById('modalDash').style.display='none'; }
 
     function cancellaMedia() {
-      if(confirm("Eliminare?")) {
+      if(confirm("Eliminare questo file?")) {
         var chk = ELEMENTO_ATTUALE.querySelector('input[type="checkbox"]');
         if(chk) chk.checked = true;
         ELEMENTO_ATTUALE.style.display = 'none';
