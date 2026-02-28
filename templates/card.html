@@ -177,9 +177,18 @@
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
       <div class="modal-actions">
-        <a id="waLink" href="#" target="_blank" class="act-btn bg-wa"><i class="fab fa-whatsapp"></i></a>
-        <a id="emLink" href="#" target="_blank" class="act-btn bg-em"><i class="fas fa-envelope"></i></a>
-        <div onclick="closeModal()" class="act-btn bg-cl"><i class="fas fa-times"></i></div>
+        <a id="waLink" href="#" target="_blank" class="act-btn bg-wa" title="WhatsApp">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+        <a id="mailAppLink" href="#" class="act-btn bg-appmail" title="Email App">
+          <i class="fas fa-paper-plane"></i>
+        </a>
+        <a id="gmailLink" href="#" target="_blank" class="act-btn bg-gmail" title="Gmail">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <div onclick="closeModal()" class="act-btn bg-cl" title="Chiudi">
+          <i class="fas fa-times"></i>
+        </div>
       </div>
     </div>
 
@@ -191,6 +200,17 @@
   </div>
 
   <script>
+    function ensureModalColors() {
+      if (document.getElementById('modalColorFix')) return;
+      const st = document.createElement('style');
+      st.id = 'modalColorFix';
+      st.textContent = `
+        .bg-appmail{ background:#1d6fd8 !important; color:#ffffff !important; }
+        .bg-gmail{ background:#d93025 !important; color:#ffffff !important; }
+      `;
+      document.head.appendChild(st);
+    }
+
     function getPrimaryRecipient() {
       const rawEmails = {{ emails|tojson|safe }};
       if (Array.isArray(rawEmails)) {
@@ -212,6 +232,12 @@
       return "https://mail.google.com/mail/?view=cm&fs=1"
         + "&to=" + encodeURIComponent(to || "")
         + "&su=" + encodeURIComponent(subject || "")
+        + "&body=" + encodeURIComponent(body || "");
+    }
+
+    function buildMailtoLink(to, subject, body){
+      return "mailto:" + encodeURIComponent(to || "")
+        + "?subject=" + encodeURIComponent(subject || "")
         + "&body=" + encodeURIComponent(body || "");
     }
 
@@ -250,14 +276,22 @@
     }
 
     function openShare(type, url) {
+      ensureModalColors();
+
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
       const recipient = getPrimaryRecipient();
 
-      document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
+      document.getElementById('waLink').href =
+        "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
 
       const mail = buildEmailText(type, fullUrl);
-      document.getElementById('emLink').href = buildGmailLink(recipient, mail.subject, mail.body);
+
+      document.getElementById('mailAppLink').href =
+        buildMailtoLink(recipient, mail.subject, mail.body);
+
+      document.getElementById('gmailLink').href =
+        buildGmailLink(recipient, mail.subject, mail.body);
 
       if(type === 'img') {
         box.innerHTML = '<img src="' + url + '" class="modal-content">';
@@ -291,6 +325,8 @@
       if(t === 'auto') document.body.removeAttribute('data-theme');
       else document.body.setAttribute('data-theme', t);
     }
+
+    ensureModalColors();
   </script>
 </body>
 </html>
