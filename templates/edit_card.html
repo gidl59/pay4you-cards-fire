@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; }
-    .edit-container { max-width:1280px; margin:20px auto; padding:0 14px 110px; }
+    .edit-container { max-width:1500px; margin:20px auto; padding:0 14px 110px; }
     .edit-box { background:#111; padding:25px; border-radius:15px; border:1px solid #333; margin-bottom:20px; }
     .box-title { color:#00ffc8; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:20px; font-size:14px; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
     .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
@@ -25,7 +25,7 @@
     }
 
     .dash-head {
-      max-width:1280px;
+      max-width:1500px;
       margin:20px auto 0;
       padding:0 14px;
       display:flex;
@@ -137,22 +137,30 @@
     details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
-    /* GALLERIA FILE ORIZZONTALE */
+    /* FORZATURA MASSIMA GALLERIA FILE */
+    .edit-box .media-sections,
     .media-sections {
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap:20px;
-      align-items:start;
+      display:grid !important;
+      grid-template-columns: 1fr 1fr 1fr !important;
+      gap:20px !important;
+      align-items:start !important;
+      width:100% !important;
     }
 
+    .edit-box .media-panel,
     .media-panel {
-      background:linear-gradient(180deg,#151515 0%,#0d0d0d 100%);
-      border:1px solid #333;
-      border-radius:14px;
-      padding:16px;
-      min-width:0;
-      height:100%;
-      box-sizing:border-box;
+      display:block !important;
+      width:100% !important;
+      min-width:0 !important;
+      max-width:none !important;
+      box-sizing:border-box !important;
+      background:linear-gradient(180deg,#151515 0%,#0d0d0d 100%) !important;
+      border:1px solid #333 !important;
+      border-radius:14px !important;
+      padding:16px !important;
+      height:100% !important;
+      float:none !important;
+      position:relative !important;
     }
 
     .media-panel h4 {
@@ -172,8 +180,9 @@
     }
 
     .media-upload {
-      display:block;
-      width:100%;
+      display:block !important;
+      width:100% !important;
+      max-width:100% !important;
       background:#1a1a1a;
       border:1px dashed #4a4a4a;
       border-radius:12px;
@@ -181,7 +190,6 @@
       color:#ddd;
       margin-bottom:12px;
       box-sizing:border-box;
-      max-width:100%;
     }
 
     .media-counter {
@@ -210,9 +218,10 @@
       box-sizing:border-box;
     }
 
-    @media (max-width: 1100px){
+    @media (max-width: 1200px){
+      .edit-box .media-sections,
       .media-sections {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
       }
     }
 
@@ -594,4 +603,4 @@
     };
   </script>
 </body>
-</html>
+</html>    ormai ti mando tutto il file per capire bene. siamo sicuri che è questo? 
