@@ -137,11 +137,11 @@
     details summary{ cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
-    /* FORZATURA MASSIMA GALLERIA FILE */
+    /* GALLERIA FILE */
     .edit-box .media-sections,
     .media-sections {
       display:grid !important;
-      grid-template-columns: 1fr 1fr 1fr !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
       gap:20px !important;
       align-items:start !important;
       width:100% !important;
@@ -218,7 +218,8 @@
       box-sizing:border-box;
     }
 
-    @media (max-width: 1200px){
+    /* SOLO SU SCHERMI DAVVERO PICCOLI */
+    @media (max-width: 900px){
       .edit-box .media-sections,
       .media-sections {
         grid-template-columns: 1fr !important;
@@ -603,4 +604,4 @@
     };
   </script>
 </body>
-</html>    ormai ti mando tutto il file per capire bene. siamo sicuri che è questo? 
+</html>
