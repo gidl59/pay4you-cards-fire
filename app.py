@@ -228,7 +228,7 @@ def build_credentials_email_html(user: dict) -> str:
       <div style="max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
 
         <div style="text-align:center; padding:22px 0 16px; border-bottom:1px solid #3b3120;">
-          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:180px; height:auto; display:inline-block;">
+          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:105px; height:auto; display:inline-block;">
         </div>
 
         <div style="padding:26px 24px 10px;">
