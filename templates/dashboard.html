@@ -7,14 +7,17 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { background:#050505; color:white; font-family:sans-serif; margin:0; padding:20px; }
-    
-    /* HEADER */
-    .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; }
+
+    .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; gap:12px; flex-wrap:wrap; }
     .dash-title { color:#00ffc8; margin:0; font-size:24px; text-transform:uppercase; letter-spacing:1px; }
     .btn-logout { color:#ff4444; text-decoration:none; border:1px solid #ff4444; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s; }
     .btn-logout:hover { background:#330000; }
 
-    /* --- SEZIONE SUPERIORE: QR + SELETTORE APERTURA --- */
+    .flashes { list-style:none; padding:0; margin:0 0 20px 0; }
+    .flash { padding:14px 16px; border-radius:12px; margin-bottom:10px; font-weight:800; }
+    .flash.success { background:rgba(0,255,200,0.14); border:1px solid rgba(0,255,200,0.45); color:#b8fff0; }
+    .flash.error { background:rgba(255,80,80,0.14); border:1px solid rgba(255,80,80,0.45); color:#ffc4c4; }
+
     .top-control-panel {
         display: flex;
         flex-wrap: wrap;
@@ -27,20 +30,17 @@
         align-items: center;
     }
 
-    /* QR CODE SINISTRA */
     .qr-area { text-align:center; min-width: 150px; border-right: 1px solid #333; padding-right: 30px; }
     .qr-area img { width:120px; height:120px; border-radius: 10px; background: white; padding: 5px; }
     .qr-link { color:white; font-size:12px; display:block; margin-top:10px; text-decoration:none; font-weight:bold; }
     .qr-link:hover { color:#00ffc8; }
 
-    /* SELETTORE DESTRA */
     .opener-area { flex-grow: 1; }
     .opener-title { color:#00ffc8; margin:0 0 15px 0; font-size:18px; text-transform:uppercase; }
     .opener-desc { color:#aaa; font-size:13px; margin-bottom:15px; }
-    
+
     .opener-buttons { display:flex; gap:15px; flex-wrap:wrap; }
-    
-    /* BOTTONI SCELTA APERTURA */
+
     .btn-opener {
         display:flex; flex-direction:column; align-items:center; justify-content:center;
         width: 100px; height: 80px;
@@ -50,68 +50,150 @@
     .btn-opener:hover { background:#333; border-color:#666; transform:translateY(-3px); }
     .btn-opener span { font-size: 18px; font-weight:900; color:white; }
     .btn-opener small { font-size: 10px; color:#888; text-transform:uppercase; margin-top:4px; }
-    
-    /* STATO ATTIVO */
+
     .btn-opener.active { background: #004400; border-color: #00ffc8; box-shadow: 0 0 15px rgba(0,255,200,0.3); }
     .btn-opener.active span { color:#00ffc8; }
     .btn-opener.active small { color:#fff; }
 
-    /* STATO DISABILITATO (Se profilo spento) */
     .btn-opener.disabled { opacity:0.3; pointer-events:none; border-color:#222; }
 
-
-    /* --- LAYOUT PROFILI (LISTA) --- */
     .profile-list { display: flex; flex-direction: column; gap: 20px; }
-    
-    .profile-row { 
-        background:#111; border:1px solid #333; border-radius:15px; padding:20px; 
+
+    .profile-row {
+        background:#111; border:1px solid #333; border-radius:15px; padding:20px;
         position:relative; transition:0.3s;
         display: flex; flex-wrap: wrap; gap: 20px;
     }
     .profile-row.active { border-left: 5px solid #00ffc8; }
-    .profile-row.inactive { opacity:0.6; filter:grayscale(100%); }
+    .profile-row.inactive { opacity:0.72; }
 
-    /* COL 1: INFO */
     .pr-info-col { width: 220px; flex-shrink: 0; border-right: 1px solid #333; padding-right: 20px; }
     .pr-header { display:flex; align-items:center; gap:15px; margin-bottom:10px; }
     .pr-avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #444; background:#000; }
     .pr-title { font-size:20px; font-weight:bold; color:white; margin:0; }
-    .pr-status { font-size:11px; padding:3px 8px; border-radius:4px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; }
-    .st-on { color:#00ffc8; border:1px solid #00ffc8; }
+    .pr-status { font-size:11px; padding:4px 8px; border-radius:999px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; border:1px solid #444; }
+    .st-on { color:#00ffc8; border:1px solid #00ffc8; background:rgba(0,255,200,.08); }
 
-    /* COL 2: MEDIA (DIVISO IN 3 RIQUADRI) */
-    .pr-media-col { flex-grow: 1; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; }
-    
-    .media-box { background:#000; border:1px solid #333; border-radius:10px; padding:10px; height:100px; overflow:hidden; display:flex; flex-direction:column; }
-    .mb-title { font-size:10px; color:#00ffc8; text-transform:uppercase; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #222; padding-bottom:4px; }
-    
-    .mb-content-img, .mb-content-vid { display:flex; gap:5px; overflow-x:auto; height:100%; align-items:center; }
-    .mb-thumb { width:45px; height:45px; object-fit:cover; border-radius:5px; border:1px solid #444; flex-shrink:0; }
-    .mb-pdf-list { font-size:11px; color:#ccc; overflow-y:auto; }
-    .mb-empty { font-size:10px; color:#444; font-style:italic; margin:auto; }
+    .pr-media-col {
+      flex-grow: 1;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap:15px;
+    }
 
-    /* COL 3: AZIONI */
-    .pr-actions-col { width: 140px; display:flex; flex-direction: column; gap:10px; justify-content:center; padding-left:10px; border-left:1px solid #333; }
-    
-    .btn { display:block; text-align:center; padding:12px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s; border:none; cursor: pointer; }
+    .media-box {
+      background:linear-gradient(180deg, #151515 0%, #0d0d0d 100%);
+      border:1px solid #333;
+      border-radius:14px;
+      padding:12px;
+      min-height:140px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    .mb-title {
+      font-size:11px;
+      color:#00ffc8;
+      text-transform:uppercase;
+      font-weight:900;
+      margin-bottom:10px;
+      border-bottom:1px solid #222;
+      padding-bottom:6px;
+      letter-spacing:.04em;
+    }
+
+    .mb-content-img, .mb-content-vid {
+      display:flex;
+      gap:8px;
+      overflow-x:auto;
+      min-height:72px;
+      align-items:center;
+      padding-bottom:4px;
+    }
+
+    .mb-thumb {
+      width:56px;
+      height:56px;
+      object-fit:cover;
+      border-radius:8px;
+      border:1px solid #444;
+      flex-shrink:0;
+      background:#000;
+    }
+
+    .mb-pdf-list {
+      font-size:11px;
+      color:#ccc;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .mb-pdf-item {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#171717;
+      border:1px solid #2d2d2d;
+      border-radius:8px;
+      padding:8px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .mb-empty {
+      font-size:11px;
+      color:#666;
+      font-style:italic;
+      margin:auto;
+      text-align:center;
+    }
+
+    .pr-actions-col {
+      width: 150px;
+      display:flex;
+      flex-direction: column;
+      gap:10px;
+      justify-content:center;
+      padding-left:10px;
+      border-left:1px solid #333;
+    }
+
+    .btn { display:block; text-align:center; padding:12px; border-radius:10px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s; border:none; cursor: pointer; }
     .btn-edit { background:#222; color:white; border:1px solid #555; }
     .btn-edit:hover { background:#444; border-color:white; }
-    
+
     .btn-power { background:#330000; color:#ff4444; border:1px solid #550000; }
     .btn-power:hover { background:#550000; }
-    
+
     .btn-on { background:#003300; color:#00ffc8; border:1px solid #005500; }
     .btn-on:hover { background:#005500; }
 
-    /* TOAST */
+    .btn-lock {
+      background:#161616;
+      color:#8f8f8f;
+      border:1px solid #2f2f2f;
+      cursor:not-allowed;
+    }
+
+    .pr-note {
+      margin-top:8px;
+      font-size:11px;
+      color:#888;
+      line-height:1.35;
+      text-align:center;
+    }
+
     .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,255,200,0.9); color:black; padding:10px 20px; border-radius:30px; font-weight:bold; display:none; z-index:9999; }
 
-    /* MOBILE */
     @media (max-width: 900px) {
         .top-control-panel { flex-direction: column; text-align: center; }
         .qr-area { border-right: none; border-bottom: 1px solid #333; padding-right: 0; padding-bottom: 20px; width:100%; }
         .opener-buttons { justify-content: center; }
-        
+
         .profile-row { flex-direction: column; }
         .pr-info-col, .pr-actions-col { width: 100%; border: none; padding: 0; text-align: center; }
         .pr-header { justify-content: center; }
@@ -123,12 +205,22 @@
   <div id="toast" class="toast">Impostazione Salvata!</div>
 
   <div class="dash-header">
-    <h1 class="dash-title">Ciao, {{ user.nome }}</h1>
+    <h1 class="dash-title">Ciao, {{ user.nome if user.nome else user.slug }}</h1>
     <a href="/area/logout" class="btn-logout">ESCI</a>
   </div>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+      {% for category, message in messages %}
+        <li class="flash {{ category }}">{{ message }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
   <div class="top-control-panel">
-    
+
     <div class="qr-area">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ request.url_root }}card/{{ user.slug }}" alt="QR">
         <a href="/card/{{ user.slug }}" target="_blank" class="qr-link">/card/{{ user.slug }} <i class="fas fa-external-link-alt"></i></a>
@@ -137,8 +229,8 @@
     <div class="opener-area">
         <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
         <p class="opener-desc">
-            Cosa deve succedere quando un cliente scansiona il tuo QR Code o apre il tuo link?<br>
-            Scegli se aprire direttamente un profilo specifico (P1, P2, P3) o mostrare il Menu di Scelta.
+            Scegli cosa deve aprirsi quando il cliente scansiona il QR o apre il link:
+            profilo diretto P1/P2/P3 oppure menu di scelta.
         </p>
 
         <div class="opener-buttons">
@@ -162,22 +254,18 @@
                 <small>MENU SCELTA</small>
             </a>
         </div>
-        
-        {% if user.default_profile != 'menu' and user.default_profile != 'p1' and not user[user.default_profile].active %}
-            <div style="color:#ff4444; font-size:12px; margin-top:10px;">⚠️ Attenzione: Il profilo principale selezionato è spento. La card mostrerà il P1 di default.</div>
-        {% endif %}
     </div>
   </div>
 
   <div class="profile-list">
-    
+
     {% for pid in ['1', '2', '3'] %}
       {% set p_key = 'p' + pid %}
       {% set p_data = user[p_key] %}
       {% set is_active = p_data.active %}
-      
+
       <div class="profile-row {% if is_active %}active{% else %}inactive{% endif %}">
-        
+
         <div class="pr-info-col">
           <div class="pr-header">
             {% if p_data.foto %}
@@ -197,12 +285,12 @@
         </div>
 
         <div class="pr-media-col">
-            
+
             <div class="media-box">
-                <div class="mb-title">📸 FOTO ({{ p_data.gallery_img|length }})</div>
+                <div class="mb-title">📸 Foto ({{ p_data.gallery_img|length }})</div>
                 <div class="mb-content-img">
                     {% if p_data.gallery_img|length == 0 %}
-                        <div class="mb-empty">Nessuna foto</div>
+                        <div class="mb-empty">Nessuna foto caricata</div>
                     {% else %}
                         {% for img in p_data.gallery_img[:4] %}
                             <img src="{{ img }}" class="mb-thumb">
@@ -212,13 +300,13 @@
             </div>
 
             <div class="media-box">
-                <div class="mb-title">🎬 VIDEO ({{ p_data.gallery_vid|length }})</div>
+                <div class="mb-title">🎬 Video ({{ p_data.gallery_vid|length }})</div>
                 <div class="mb-content-vid">
                     {% if p_data.gallery_vid|length == 0 %}
-                        <div class="mb-empty">Nessun video</div>
+                        <div class="mb-empty">Nessun video caricato</div>
                     {% else %}
                         {% for vid in p_data.gallery_vid[:3] %}
-                            <video src="{{ vid }}#t=1.0" class="mb-thumb" style="background:#000;"></video>
+                            <video src="{{ vid }}#t=1.0" class="mb-thumb" muted playsinline preload="metadata" style="background:#000;"></video>
                         {% endfor %}
                     {% endif %}
                 </div>
@@ -228,15 +316,16 @@
                 <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
                 <div class="mb-pdf-list">
                     {% if p_data.gallery_pdf|length == 0 %}
-                        <div class="mb-empty">Nessun PDF</div>
+                        <div class="mb-empty">Nessun PDF caricato</div>
                     {% else %}
                         {% for pdf in p_data.gallery_pdf[:2] %}
-                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                <i class="fas fa-file-pdf" style="color:#ff4444;"></i> {{ pdf.name }}
+                            <div class="mb-pdf-item">
+                                <i class="fas fa-file-pdf" style="color:#ff4444;"></i>
+                                <span style="overflow:hidden; text-overflow:ellipsis;">{{ pdf.name }}</span>
                             </div>
                         {% endfor %}
                         {% if p_data.gallery_pdf|length > 2 %}
-                            <div style="font-size:10px; color:#666;">...e altri</div>
+                            <div style="font-size:10px; color:#666;">…e altri file</div>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -246,13 +335,18 @@
 
         <div class="pr-actions-col">
           <a href="/area/edit/{{ pid }}" class="btn btn-edit">✏️ MODIFICA</a>
-          
-          {% if is_active %}
-            <a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
+
+          {% if pid == '1' %}
+            <div class="btn btn-lock">SEMPRE ATTIVO</div>
+            <div class="pr-note">Il profilo P1 è principale e non può essere disattivato.</div>
           {% else %}
-            <a href="/area/activate/{{ pid }}" class="btn btn-on">ACCENDI</a>
+            {% if is_active %}
+              <a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
+            {% else %}
+              <a href="/area/activate/{{ pid }}" class="btn btn-on">ATTIVA</a>
+            {% endif %}
           {% endif %}
-          
+
           <a href="/card/{{ user.slug }}?p=p{{ pid }}" target="_blank" style="color:#00ffc8; text-decoration:none; font-size:11px; text-align:center; margin-top:5px;">Anteprima ></a>
         </div>
 
@@ -265,9 +359,14 @@
     const btns = document.querySelectorAll('.btn-opener, .btn');
     btns.forEach(btn => {
       btn.addEventListener('click', function() {
-        if(!this.classList.contains('disabled') && !this.href.includes('delete') && !this.href.includes('deactivate') && !this.getAttribute('onclick')) {
-           // Piccola animazione caricamento
-           this.style.opacity = "0.7";
+        if(
+          !this.classList.contains('disabled') &&
+          !this.classList.contains('btn-lock') &&
+          !(this.href && this.href.includes('delete')) &&
+          !(this.href && this.href.includes('deactivate')) &&
+          !this.getAttribute('onclick')
+        ) {
+          this.style.opacity = "0.7";
         }
       });
     });
