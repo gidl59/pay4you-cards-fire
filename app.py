@@ -48,12 +48,13 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 
-# Branding email
+# Branding
 BRAND_NAME = os.getenv("BRAND_NAME", "Pay4You").strip()
 BRAND_SITE = os.getenv("BRAND_SITE", "https://www.pay4you.store").strip()
 BRAND_EMAIL = os.getenv("BRAND_EMAIL", "info@pay4you.store").strip()
 BRAND_PHONE = os.getenv("BRAND_PHONE", "+39 0541 1646895").strip()
-BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "").strip()  # opzionale: se la metti, mostra il logo in mail
+BRAND_WHATSAPP_URL = os.getenv("BRAND_WHATSAPP_URL", "https://wa.me/393508725353").strip()
+BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "https://www.pay4you.store/logo-pay4you.png").strip()
 
 # ===== DB =====
 def load_db():
@@ -109,7 +110,6 @@ def normalize_phone(phone: str) -> str:
     phone = phone.replace("whatsapp:", "", 1)
     phone = phone.replace(" ", "").replace("-", "").replace("/", "").replace(".", "")
 
-    # lascia solo + e cifre
     cleaned = []
     for i, ch in enumerate(phone):
         if ch.isdigit():
@@ -121,17 +121,13 @@ def normalize_phone(phone: str) -> str:
     if not phone:
         return ""
 
-    # 0039.... -> +39....
     if phone.startswith("00"):
         phone = "+" + phone[2:]
 
-    # 39.... senza +
     if phone.startswith("39") and not phone.startswith("+39"):
         phone = "+" + phone
 
-    # numero italiano senza prefisso
     if not phone.startswith("+"):
-        # se è verosimilmente un cellulare/numero IT
         if len(phone) >= 9:
             phone = "+39" + phone
 
@@ -227,66 +223,66 @@ def build_credentials_data(user: dict) -> dict:
 def build_credentials_email_html(user: dict) -> str:
     cd = build_credentials_data(user)
 
-    logo_html = ""
-    if BRAND_LOGO_URL:
-        logo_html = f"""
-        <div style="text-align:center; padding:18px 0 10px;">
-          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:180px; height:auto; display:inline-block;">
-        </div>
-        """
-
     return f"""
     <div style="margin:0; padding:0; background:#f3f3f3;">
       <div style="max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
 
-        {logo_html}
+        <div style="text-align:center; padding:22px 0 16px; border-bottom:1px solid #3b3120;">
+          <img src="{BRAND_LOGO_URL}" alt="{BRAND_NAME}" style="max-width:180px; height:auto; display:inline-block;">
+        </div>
 
-        <div style="padding:24px 22px 8px;">
-          <h1 style="margin:0 0 16px; color:#f6d47a; font-size:20px;">Credenziali della tua Card Digitale</h1>
+        <div style="padding:26px 24px 10px;">
+          <h1 style="margin:0 0 16px; color:#f6d47a; font-size:19px;">Credenziali della tua Card Digitale</h1>
 
-          <p style="margin:0 0 14px; font-size:16px; line-height:1.6;">
-            Ciao! Abbiamo preparato le credenziali per gestire la tua nuova <strong>Card Digitale {BRAND_NAME}</strong>.
+          <p style="margin:0 0 12px; font-size:16px; line-height:1.6;">
+            Ciao, abbiamo preparato correttamente le credenziali della tua nuova <strong>Card Digitale {BRAND_NAME}</strong>.
           </p>
 
-          <p style="margin:0 0 18px; font-size:16px; line-height:1.6;">
-            Qui sotto trovi tutti i dati utili per accedere, modificare la card e condividere il tuo link pubblico.
+          <p style="margin:0; font-size:16px; line-height:1.6;">
+            Qui sotto trovi i dati per accedere alla dashboard e il tuo link pubblico.
           </p>
         </div>
 
-        <div style="padding:0 14px 14px;">
-          <div style="background:#111111; border:1px solid #3a2d16; border-radius:16px; padding:18px;">
-            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Riepilogo accesso</div>
+        <div style="padding:18px 18px 0;">
+          <div style="background:#101010; border:1px solid #3a2d16; border-radius:16px; padding:18px;">
+            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Riepilogo credenziali</div>
 
-            <div style="font-size:16px; line-height:1.7;">
+            <div style="font-size:16px; line-height:1.8;">
               <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff;">{cd['login_url']}</a></div>
-              <div><strong>Username:</strong> {cd['username']}</div>
+              <div><strong>User:</strong> {cd['username']}</div>
               <div><strong>Password:</strong> {cd['password']}</div>
               <div style="margin-top:10px;"><strong>Link pubblico:</strong> <a href="{cd['public_url']}" style="color:#66cfff;">{cd['public_url']}</a></div>
             </div>
           </div>
         </div>
 
-        <div style="padding:0 14px 14px;">
-          <div style="background:#1a1710; border:1px solid #47391b; border-radius:16px; padding:18px;">
-            <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:12px;">Consiglio utile</div>
-            <div style="font-size:16px; line-height:1.6; color:#f0f0f0;">
+        <div style="padding:16px 18px 0;">
+          <div style="background:#1b160d; border:1px solid #4a3a19; border-radius:16px; padding:18px;">
+            <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:10px;">Consiglio utile</div>
+            <div style="font-size:16px; line-height:1.6;">
               Salva questi dati e cambia la password al primo accesso.
             </div>
           </div>
         </div>
 
-        <div style="padding:0 14px 14px;">
-          <div style="background:#111111; border:1px solid #2a2a2a; border-radius:16px; padding:18px;">
-            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">Contatti {BRAND_NAME}</div>
-            <div style="font-size:16px; line-height:1.8;">
+        <div style="padding:16px 18px 0;">
+          <div style="background:#121212; border:1px solid #2a2a2a; border-radius:16px; padding:18px;">
+            <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:10px;">Contatti {BRAND_NAME}</div>
+            <div style="font-size:16px; line-height:1.9;">
               <div>📧 <a href="mailto:{BRAND_EMAIL}" style="color:#66cfff;">{BRAND_EMAIL}</a></div>
               <div>📞 {BRAND_PHONE}</div>
               <div>🌐 <a href="{BRAND_SITE}" style="color:#66cfff;">{BRAND_SITE}</a></div>
             </div>
+
+            <div style="margin-top:16px;">
+              <a href="{BRAND_WHATSAPP_URL}" style="display:inline-block; background:#1f7a3a; color:#d7ffd9; text-decoration:none; padding:12px 20px; border-radius:999px; font-weight:700;">
+                Scrivici su WhatsApp
+              </a>
+            </div>
           </div>
         </div>
 
-        <div style="padding:18px 22px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
+        <div style="padding:20px 24px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
           © 2026 {BRAND_NAME}
         </div>
       </div>
