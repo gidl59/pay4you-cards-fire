@@ -62,6 +62,7 @@ SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "1").strip() == "1"
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
+TWILIO_TEMPLATE_CARD_SID = os.getenv("TWILIO_TEMPLATE_CARD_SID", "").strip()
 
 # Branding
 BRAND_NAME = os.getenv("BRAND_NAME", "Pay4You").strip()
@@ -139,6 +140,14 @@ def normalize_phone(phone: str) -> str:
             phone = "+39" + phone
 
     return phone
+
+def ensure_whatsapp_prefix(value: str) -> str:
+    value = str(value or "").strip()
+    if not value:
+        return ""
+    if value.startswith("whatsapp:"):
+        return value
+    return f"whatsapp:{value}"
 
 def get_file_ext(filename: str) -> str:
     filename = (filename or "").lower().strip()
@@ -416,6 +425,30 @@ def build_credentials_whatsapp_text(user: dict) -> str:
         "Consiglio: salva questi dati e cambia la password al primo accesso."
     )
 
+def get_card_template_variables(user: dict) -> dict:
+    cd = build_credentials_data(user)
+    admin_contact = user.get("admin_contact", {}) or {}
+
+    display_name = (
+        (user.get("nome") or "").strip()
+        or (user.get("p1", {}).get("name") or "").strip()
+        or cd["slug"]
+    )
+
+    recipient_email = (admin_contact.get("email") or "").strip() or cd["username"]
+
+    # Variabili previste dal template card approvato:
+    # {{1}} = nome
+    # {{2}} = link/login
+    # {{3}} = email o user
+    # {{4}} = password
+    return {
+        "1": display_name,
+        "2": cd["login_url"],
+        "3": recipient_email,
+        "4": cd["password"]
+    }
+
 # ===== SENDERS =====
 def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str = ""):
     if not SMTP_HOST or not SMTP_PORT or not SMTP_FROM:
@@ -445,7 +478,7 @@ def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str 
         except:
             pass
 
-def send_whatsapp_twilio(to_phone: str, body: str):
+def send_whatsapp_twilio_freeform(to_phone: str, body: str):
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_FROM:
         raise Exception("Twilio non configurato. Imposta TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_FROM.")
 
@@ -453,9 +486,11 @@ def send_whatsapp_twilio(to_phone: str, body: str):
     if not to_phone.startswith("+"):
         raise Exception("Numero WhatsApp destinatario non valido.")
 
+    from_phone = ensure_whatsapp_prefix(TWILIO_WHATSAPP_FROM)
+
     api_url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
     post_data = urlencode({
-        "From": TWILIO_WHATSAPP_FROM,
+        "From": from_phone,
         "To": f"whatsapp:{to_phone}",
         "Body": body
     }).encode("utf-8")
@@ -476,6 +511,56 @@ def send_whatsapp_twilio(to_phone: str, body: str):
         raise Exception(f"Errore Twilio HTTP {e.code}: {err}")
     except URLError as e:
         raise Exception(f"Errore rete Twilio: {e}")
+
+def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: dict):
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_FROM:
+        raise Exception("Twilio non configurato. Imposta TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_FROM.")
+
+    if not content_sid:
+        raise Exception("Template Twilio non configurato. Imposta TWILIO_TEMPLATE_CARD_SID.")
+
+    to_phone = normalize_phone(to_phone)
+    if not to_phone.startswith("+"):
+        raise Exception("Numero WhatsApp destinatario non valido.")
+
+    from_phone = ensure_whatsapp_prefix(TWILIO_WHATSAPP_FROM)
+
+    api_url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+    post_data = urlencode({
+        "From": from_phone,
+        "To": f"whatsapp:{to_phone}",
+        "ContentSid": content_sid,
+        "ContentVariables": json.dumps(variables, ensure_ascii=False)
+    }).encode("utf-8")
+
+    auth_raw = f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")
+    auth_b64 = base64.b64encode(auth_raw).decode("ascii")
+
+    req = Request(api_url, data=post_data)
+    req.add_header("Authorization", f"Basic {auth_b64}")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+    try:
+        with urlopen(req, timeout=30) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+            return raw
+    except HTTPError as e:
+        err = e.read().decode("utf-8", errors="ignore")
+        raise Exception(f"Errore Twilio HTTP {e.code}: {err}")
+    except URLError as e:
+        raise Exception(f"Errore rete Twilio: {e}")
+
+def send_card_credentials_whatsapp(user: dict):
+    to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
+    if not to_phone:
+        raise Exception("Nessun numero WhatsApp destinatario presente nella card.")
+
+    variables = get_card_template_variables(user)
+    return send_whatsapp_twilio_template(
+        to_phone=to_phone,
+        content_sid=TWILIO_TEMPLATE_CARD_SID,
+        variables=variables
+    )
 
 def get_user_by_id(clienti, user_id):
     return next((c for c in clienti if c.get('id') == user_id), None)
@@ -1004,18 +1089,11 @@ def master_send_credentials_whatsapp(id):
         flash("Card non trovata.", "error")
         return redirect(url_for('master_login'))
 
-    to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
-    if not to_phone:
-        flash("Nessun numero WhatsApp destinatario presente nella card.", "error")
-        return redirect(url_for('master_login'))
-
     try:
-        result = send_whatsapp_twilio(
-            to_phone=to_phone,
-            body=build_credentials_whatsapp_text(user)
-        )
-        print("Twilio result:", result)
-        flash(f"WhatsApp inviato con successo a {normalize_phone(to_phone)}", "success")
+        result = send_card_credentials_whatsapp(user)
+        print("Twilio template result:", result)
+        to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
+        flash(f"WhatsApp template inviato con successo a {normalize_phone(to_phone)}", "success")
     except Exception as e:
         flash(f"Errore invio WhatsApp: {e}", "error")
 
@@ -1055,10 +1133,7 @@ def master_send_credentials_all(id):
 
     if to_phone:
         try:
-            send_whatsapp_twilio(
-                to_phone=to_phone,
-                body=build_credentials_whatsapp_text(user)
-            )
+            send_card_credentials_whatsapp(user)
             wa_ok = True
         except Exception as e:
             errors.append(f"WhatsApp: {e}")
