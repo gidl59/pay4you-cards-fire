@@ -1,9 +1,11 @@
+
 import os
 import json
 import base64
 import random
 import string
 import smtplib
+from io import BytesIO
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from urllib.parse import urlparse, urlencode
@@ -15,6 +17,12 @@ from flask import (
     session, send_from_directory, make_response, flash
 )
 from werkzeug.utils import secure_filename
+
+try:
+    from PIL import Image, ImageOps
+except Exception:
+    Image = None
+    ImageOps = None
 
 app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
@@ -72,6 +80,7 @@ BRAND_PHONE = os.getenv("BRAND_PHONE", "+39 0541 1646895").strip()
 BRAND_WHATSAPP_URL = os.getenv("BRAND_WHATSAPP_URL", "https://wa.me/393508725353").strip()
 BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "https://www.pay4you.store/logo-pay4you.png").strip()
 
+
 # ===== DB =====
 def load_db():
     if not os.path.exists(DB_FILE):
@@ -79,8 +88,9 @@ def load_db():
     try:
         with open(DB_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except:
+    except Exception:
         return []
+
 
 def save_db(data):
     try:
@@ -88,6 +98,7 @@ def save_db(data):
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"Errore DB: {e}")
+
 
 # ===== FILES =====
 def save_file(file, prefix):
@@ -97,18 +108,51 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
+
+def replace_uploaded_file_from_bytes(content: bytes, original_filename: str, prefix: str, fallback_ext: str = "jpg"):
+    ext = get_file_ext(original_filename)
+    if ext not in ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT | ALLOWED_PDF_EXT:
+        ext = fallback_ext
+
+    safe_prefix = secure_filename(prefix)
+    filename = secure_filename(f"{safe_prefix}.{ext}")
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    with open(path, 'wb') as f:
+        f.write(content)
+
+    return f"/uploads/{filename}"
+
+
+def delete_uploaded_url(url_path: str):
+    try:
+        if not url_path:
+            return
+        parsed = urlparse(str(url_path)).path
+        if not parsed.startswith('/uploads/'):
+            return
+        filename = parsed.split('/uploads/', 1)[1]
+        fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.isfile(fp):
+            os.remove(fp)
+    except Exception:
+        pass
+
+
 # ===== HELPERS =====
 def to_int(v, d=50):
     try:
         return int(float(v))
-    except:
+    except Exception:
         return d
+
 
 def to_float(v, d=1.0):
     try:
         return float(v)
-    except:
+    except Exception:
         return d
+
 
 def normalize_phone(phone: str) -> str:
     phone = str(phone or "").strip()
@@ -141,6 +185,7 @@ def normalize_phone(phone: str) -> str:
 
     return phone
 
+
 def ensure_whatsapp_prefix(value: str) -> str:
     value = str(value or "").strip()
     if not value:
@@ -149,11 +194,13 @@ def ensure_whatsapp_prefix(value: str) -> str:
         return value
     return f"whatsapp:{value}"
 
+
 def get_file_ext(filename: str) -> str:
     filename = (filename or "").lower().strip()
     if "." not in filename:
         return ""
     return filename.rsplit(".", 1)[1]
+
 
 def get_file_size_bytes(file_storage) -> int:
     try:
@@ -162,12 +209,14 @@ def get_file_size_bytes(file_storage) -> int:
         size = file_storage.stream.tell()
         file_storage.stream.seek(current_pos)
         return size
-    except:
+    except Exception:
         return 0
+
 
 def file_size_ok(file_storage, max_mb: int) -> bool:
     size = get_file_size_bytes(file_storage)
     return size > 0 and size <= (max_mb * 1024 * 1024)
+
 
 def validate_upload(file_storage, allowed_exts: set, max_mb: int):
     if not file_storage or not file_storage.filename:
@@ -182,6 +231,7 @@ def validate_upload(file_storage, allowed_exts: set, max_mb: int):
 
     return True, ""
 
+
 def repair_user(user):
     dirty = False
 
@@ -191,6 +241,17 @@ def repair_user(user):
 
     if 'nome' not in user:
         user['nome'] = ''
+        dirty = True
+
+    if 'must_change_password' not in user:
+        user['must_change_password'] = True
+        dirty = True
+
+    if 'reset_token' not in user:
+        user['reset_token'] = ''
+        dirty = True
+    if 'reset_expires' not in user:
+        user['reset_expires'] = 0
         dirty = True
 
     if 'admin_contact' not in user or not isinstance(user['admin_contact'], dict):
@@ -220,7 +281,7 @@ def repair_user(user):
             'piva': '', 'cod_sdi': '', 'pec': '',
             'fx_rotate_logo': 'off', 'fx_rotate_agent': 'off',
             'fx_interaction': 'tap', 'fx_back_content': 'logo',
-            'pos_x': 50, 'pos_y': 50, 'zoom': 1.0,
+            'pos_x': 0, 'pos_y': 0, 'zoom': 1.0,
             'trans': {'en': {}, 'fr': {}, 'es': {}, 'de': {}}
         }
 
@@ -251,11 +312,80 @@ def repair_user(user):
             p['gallery_pdf'] = []
             dirty = True
 
-        p['pos_x'] = to_int(p.get('pos_x', 50), 50)
-        p['pos_y'] = to_int(p.get('pos_y', 50), 50)
+        p['pos_x'] = to_int(p.get('pos_x', 0), 0)
+        p['pos_y'] = to_int(p.get('pos_y', 0), 0)
         p['zoom'] = to_float(p.get('zoom', 1.0), 1.0)
 
     return dirty
+
+
+def make_random_password(length=12):
+    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+    return ''.join(random.choice(chars) for _ in range(length))
+
+
+def make_reset_token(length=32):
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
+
+def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, zoom: float):
+    """
+    Salva davvero la foto già ritagliata in base a crop frontend.
+    Non tocca il frontend: usa gli stessi valori pos_x / pos_y / zoom.
+    """
+    if not file_storage or not file_storage.filename:
+        return None
+
+    ok, err = validate_upload(file_storage, ALLOWED_IMAGE_EXT, MAX_IMAGE_MB)
+    if not ok:
+        raise ValueError(err)
+
+    if Image is None:
+        return save_file(file_storage, f"{prefix}_foto")
+
+    file_storage.stream.seek(0)
+    img = Image.open(file_storage.stream)
+    img = ImageOps.exif_transpose(img).convert('RGB')
+
+    w, h = img.size
+    viewport = 160.0
+
+    base_scale = max(viewport / w, viewport / h)
+    zoom = max(0.5, min(3.0, float(zoom or 1.0)))
+    final_scale = base_scale * zoom
+
+    crop_w = viewport / final_scale
+    crop_h = viewport / final_scale
+
+    # il frontend parte centrato e poi applica translate(x%, y%)
+    # traduciamo in spazio immagine reale
+    shift_x = (float(pos_x or 0) / 100.0) * crop_w
+    shift_y = (float(pos_y or 0) / 100.0) * crop_h
+
+    left = (w - crop_w) / 2.0 - shift_x
+    top = (h - crop_h) / 2.0 - shift_y
+
+    # clamp
+    if crop_w > w:
+        crop_w = float(w)
+    if crop_h > h:
+        crop_h = float(h)
+
+    left = max(0.0, min(left, w - crop_w))
+    top = max(0.0, min(top, h - crop_h))
+    right = left + crop_w
+    bottom = top + crop_h
+
+    cropped = img.crop((int(round(left)), int(round(top)), int(round(right)), int(round(bottom))))
+    cropped = cropped.resize((800, 800), Image.LANCZOS)
+
+    bio = BytesIO()
+    cropped.save(bio, format='JPEG', quality=92, optimize=True)
+    bio.seek(0)
+
+    return replace_uploaded_file_from_bytes(bio.read(), file_storage.filename, f"{prefix}_foto_crop", fallback_ext="jpg")
+
 
 # ===== CREDENTIALS =====
 def build_credentials_data(user: dict) -> dict:
@@ -273,6 +403,7 @@ def build_credentials_data(user: dict) -> dict:
         "login_url": login_url,
         "public_url": public_url
     }
+
 
 def build_credentials_email_html(user: dict) -> str:
     cd = build_credentials_data(user)
@@ -399,6 +530,7 @@ def build_credentials_email_html(user: dict) -> str:
 </html>
     """
 
+
 def build_credentials_email_text(user: dict) -> str:
     cd = build_credentials_data(user)
     return (
@@ -413,6 +545,7 @@ def build_credentials_email_text(user: dict) -> str:
         "Consiglio: salva questi dati e cambia la password al primo accesso."
     )
 
+
 def build_credentials_whatsapp_text(user: dict) -> str:
     cd = build_credentials_data(user)
     return (
@@ -424,6 +557,7 @@ def build_credentials_whatsapp_text(user: dict) -> str:
         f"LINK PUBBLICO: {cd['public_url']}\n\n"
         "Consiglio: salva questi dati e cambia la password al primo accesso."
     )
+
 
 def get_card_template_variables(user: dict) -> dict:
     cd = build_credentials_data(user)
@@ -437,17 +571,38 @@ def get_card_template_variables(user: dict) -> dict:
 
     recipient_email = (admin_contact.get("email") or "").strip() or cd["username"]
 
-    # Variabili previste dal template card approvato:
-    # {{1}} = nome
-    # {{2}} = link/login
-    # {{3}} = email o user
-    # {{4}} = password
     return {
         "1": display_name,
         "2": cd["login_url"],
         "3": recipient_email,
         "4": cd["password"]
     }
+
+
+def build_reset_email_html(user: dict, new_password: str) -> str:
+    login_url = f"{CARD_BASE_URL}/area/login"
+    return f"""
+    <html><body style="font-family:Arial,Helvetica,sans-serif;background:#0b0b0b;color:#fff;padding:24px;">
+    <h2 style="color:#f6d47a;">Recupero password Card Digitale</h2>
+    <p>Ciao, abbiamo generato una nuova password temporanea per la tua card.</p>
+    <p><strong>Login:</strong> <a href="{login_url}" style="color:#66cfff;">{login_url}</a><br>
+    <strong>Username:</strong> {user.get('username') or user.get('slug')}<br>
+    <strong>Password temporanea:</strong> {new_password}</p>
+    <p>Al primo accesso ti verrà chiesto di cambiarla.</p>
+    </body></html>
+    """
+
+
+def build_reset_email_text(user: dict, new_password: str) -> str:
+    login_url = f"{CARD_BASE_URL}/area/login"
+    return (
+        "Pay4You - Recupero password\n\n"
+        f"Login: {login_url}\n"
+        f"Username: {user.get('username') or user.get('slug')}\n"
+        f"Password temporanea: {new_password}\n\n"
+        "Al primo accesso ti verrà chiesto di cambiarla."
+    )
+
 
 # ===== SENDERS =====
 def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str = ""):
@@ -475,8 +630,9 @@ def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str 
     finally:
         try:
             server.quit()
-        except:
+        except Exception:
             pass
+
 
 def send_whatsapp_twilio_freeform(to_phone: str, body: str):
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_FROM:
@@ -511,6 +667,7 @@ def send_whatsapp_twilio_freeform(to_phone: str, body: str):
         raise Exception(f"Errore Twilio HTTP {e.code}: {err}")
     except URLError as e:
         raise Exception(f"Errore rete Twilio: {e}")
+
 
 def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: dict):
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_FROM:
@@ -550,6 +707,7 @@ def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: di
     except URLError as e:
         raise Exception(f"Errore rete Twilio: {e}")
 
+
 def send_card_credentials_whatsapp(user: dict):
     to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
     if not to_phone:
@@ -562,16 +720,31 @@ def send_card_credentials_whatsapp(user: dict):
         variables=variables
     )
 
+
 def get_user_by_id(clienti, user_id):
     return next((c for c in clienti if c.get('id') == user_id), None)
+
+
+def get_user_by_email(clienti, email):
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    for c in clienti:
+        admin_email = (((c.get('admin_contact') or {}).get('email')) or '').strip().lower()
+        if admin_email and admin_email == email:
+            return c
+    return None
+
 
 # ===== VCF =====
 def vcf_escape(s: str) -> str:
     s = str(s or "").replace("\\", "\\\\").replace("\r", " ").replace("\n", " ").replace(";", r"\;").replace(",", r"\,")
     return s.strip()
 
+
 def guess_mime_from_filename(fn: str) -> str:
     return "PNG" if (fn or "").lower().endswith(".png") else "JPEG"
+
 
 def file_path_from_url(url_path: str) -> str:
     if not url_path:
@@ -581,6 +754,7 @@ def file_path_from_url(url_path: str) -> str:
         filename = path.split("/uploads/", 1)[1]
         return os.path.join(app.config["UPLOAD_FOLDER"], filename)
     return ""
+
 
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
@@ -657,7 +831,7 @@ def download_vcf(slug):
             lines.append(f"item{idx}.URL:{vcf_escape(url)}")
             lines.append(f"item{idx}.X-ABLabel:{vcf_escape(label)}")
             idx += 1
-        except:
+        except Exception:
             continue
 
     note_parts = []
@@ -677,7 +851,7 @@ def download_vcf(slug):
             with open(fp, "rb") as f:
                 b64 = base64.b64encode(f.read()).decode("ascii")
             lines.append(f"PHOTO;ENCODING=b;TYPE={guess_mime_from_filename(fp)}:{b64}")
-        except:
+        except Exception:
             pass
 
     lines.append("END:VCARD")
@@ -686,34 +860,148 @@ def download_vcf(slug):
     response.headers["Content-Type"] = "text/vcard; charset=utf-8"
     return response
 
+
 # ===== ROUTES =====
 @app.route('/')
 def home():
     return redirect(url_for('login'))
 
+
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
+    if session.get('logged_in'):
+        user = next((c for c in load_db() if c.get('id') == session.get('user_id')), None)
+        if user and repair_user(user):
+            clienti = load_db()
+            for c in clienti:
+                if c.get('id') == user.get('id'):
+                    repair_user(c)
+            save_db(clienti)
+
+        if user and user.get('must_change_password'):
+            return redirect(url_for('change_password'))
+        return redirect(url_for('area'))
+
+    error = None
     if request.method == 'POST':
-        u = request.form.get('username')
-        p = request.form.get('password')
+        u = (request.form.get('username') or '').strip()
+        p = request.form.get('password') or ''
         clienti = load_db()
         user = next((c for c in clienti if c.get('username') == u and c.get('password') == p), None)
         if user:
-            session['logged_in'] = True
-            session['user_id'] = user['id']
             if repair_user(user):
                 save_db(clienti)
+            session['logged_in'] = True
+            session['user_id'] = user['id']
+            if user.get('must_change_password'):
+                flash("Per sicurezza devi cambiare la password al primo accesso.", "success")
+                return redirect(url_for('change_password'))
             return redirect(url_for('area'))
-    return render_template('login.html')
+        error = "Credenziali non valide."
+
+    return render_template('login.html', error=error)
+
+
+@app.route('/area/forgot', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        clienti = load_db()
+        user = get_user_by_email(clienti, email)
+
+        # messaggio neutro sempre
+        public_msg = "Se la tua email è registrata, riceverai le istruzioni per recuperare la password."
+
+        if user:
+            new_password = make_random_password(12)
+            user['password'] = new_password
+            user['must_change_password'] = True
+            save_db(clienti)
+
+            try:
+                send_email_smtp(
+                    to_email=email,
+                    subject="Pay4You - Recupero password",
+                    html_body=build_reset_email_html(user, new_password),
+                    text_body=build_reset_email_text(user, new_password),
+                )
+            except Exception:
+                flash("SMTP non configurato o invio email non riuscito. Controlla le variabili SMTP.", "error")
+                return render_template('forgot.html')
+
+        flash(public_msg, "success")
+        return redirect(url_for('login'))
+
+    return render_template('forgot.html')
+
+
+@app.route('/area/change-password', methods=['GET', 'POST'])
+def change_password():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    clienti = load_db()
+    user = get_user_by_id(clienti, session.get('user_id'))
+    if not user:
+        return redirect(url_for('logout'))
+
+    if repair_user(user):
+        save_db(clienti)
+
+    forced = bool(user.get('must_change_password'))
+
+    if request.method == 'POST':
+        current_password = request.form.get('current_password') or ''
+        new_password = (request.form.get('new_password') or '').strip()
+        confirm_password = (request.form.get('confirm_password') or '').strip()
+
+        if not forced and current_password != (user.get('password') or ''):
+            flash("Password attuale non corretta.", "error")
+            return render_template('change_password.html', forced=forced, user=user)
+
+        if len(new_password) < 8:
+            flash("La nuova password deve avere almeno 8 caratteri.", "error")
+            return render_template('change_password.html', forced=forced, user=user)
+
+        if new_password != confirm_password:
+            flash("Le due password non coincidono.", "error")
+            return render_template('change_password.html', forced=forced, user=user)
+
+        if new_password == (user.get('password') or ''):
+            flash("La nuova password deve essere diversa da quella attuale.", "error")
+            return render_template('change_password.html', forced=forced, user=user)
+
+        user['password'] = new_password
+        user['must_change_password'] = False
+        save_db(clienti)
+
+        flash("Password aggiornata correttamente.", "success")
+        return redirect(url_for('area'))
+
+    return render_template('change_password.html', forced=forced, user=user)
+
 
 @app.route('/area')
 def area():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
+
     user = next((c for c in load_db() if c.get('id') == session.get('user_id')), None)
     if not user:
         return redirect(url_for('logout'))
+
+    if repair_user(user):
+        clienti = load_db()
+        for c in clienti:
+            if c.get('id') == user.get('id'):
+                repair_user(c)
+        save_db(clienti)
+
+    if user.get('must_change_password'):
+        return redirect(url_for('change_password'))
+
     return render_template('dashboard.html', user=user)
+
 
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
@@ -734,6 +1022,7 @@ def activate_profile(p_id):
     save_db(clienti)
     flash(f"Profilo P{p_id} attivato correttamente.", "success")
     return redirect(url_for('area'))
+
 
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
@@ -762,6 +1051,7 @@ def deactivate_profile(p_id):
     flash(f"Profilo P{p_id} disattivato.", "success")
     return redirect(url_for('area'))
 
+
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
     if not session.get('logged_in'):
@@ -782,6 +1072,7 @@ def set_default_profile(mode):
 
     return redirect(url_for('area'))
 
+
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
     if not session.get('logged_in'):
@@ -793,6 +1084,9 @@ def edit_profile(p_id):
         return redirect(url_for('logout'))
     if repair_user(user):
         save_db(clienti)
+
+    if user.get('must_change_password'):
+        return redirect(url_for('change_password'))
 
     p_key = 'p' + p_id
     if not user[p_key].get('active'):
@@ -834,8 +1128,8 @@ def edit_profile(p_id):
         if p['fx_rotate_agent'] == 'on':
             p['fx_interaction'] = 'tap'
 
-        p['pos_x'] = to_int(request.form.get('pos_x', 50), 50)
-        p['pos_y'] = to_int(request.form.get('pos_y', 50), 50)
+        p['pos_x'] = to_int(request.form.get('pos_x', 0), 0)
+        p['pos_y'] = to_int(request.form.get('pos_y', 0), 0)
         p['zoom'] = to_float(request.form.get('zoom', 1), 1.0)
 
         p['trans'] = {
@@ -845,17 +1139,30 @@ def edit_profile(p_id):
             'de': {'role': request.form.get('role_de', ''), 'bio': request.form.get('bio_de', '')}
         }
 
-        if 'foto' in request.files:
-            path = save_file(request.files['foto'], f"{prefix}_foto")
-            if path:
-                p['foto'] = path
+        if 'foto' in request.files and request.files['foto'] and request.files['foto'].filename:
+            try:
+                old_foto = p.get('foto')
+                path = save_cropped_agent_photo(
+                    request.files['foto'],
+                    prefix=prefix,
+                    pos_x=p['pos_x'],
+                    pos_y=p['pos_y'],
+                    zoom=p['zoom'],
+                )
+                if path:
+                    p['foto'] = path
+                    if old_foto and old_foto != path:
+                        delete_uploaded_url(old_foto)
+            except Exception as e:
+                flash(f"Errore foto profilo: {e}", "error")
+                return redirect(url_for('edit_profile', p_id=p_id))
 
-        if 'logo' in request.files:
+        if 'logo' in request.files and request.files['logo'] and request.files['logo'].filename:
             path = save_file(request.files['logo'], f"{prefix}_logo")
             if path:
                 p['logo'] = path
 
-        if 'personal_foto' in request.files:
+        if 'personal_foto' in request.files and request.files['personal_foto'] and request.files['personal_foto'].filename:
             path = save_file(request.files['personal_foto'], f"{prefix}_pers")
             if path:
                 p['personal_foto'] = path
@@ -955,6 +1262,7 @@ def edit_profile(p_id):
 
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
 
+
 @app.route('/master', methods=['GET', 'POST'])
 def master_login():
     if session.get('is_master'):
@@ -972,6 +1280,7 @@ def master_login():
         return redirect(url_for('master_login'))
 
     return render_template('master_login.html')
+
 
 @app.route('/master/add', methods=['POST'])
 def master_add():
@@ -992,8 +1301,7 @@ def master_add():
         flash(f"Errore: Lo slug '{slug}' è già in uso. Scegline un altro.", "error")
         return redirect(url_for('master_login'))
 
-    chars = string.ascii_letters + string.digits + "!@#$%^&*"
-    password = ''.join(random.choice(chars) for i in range(12))
+    password = make_random_password(12)
     new_id = max([c['id'] for c in clienti], default=0) + 1
 
     new_client = {
@@ -1001,6 +1309,9 @@ def master_add():
         "slug": slug,
         "username": slug,
         "password": password,
+        "must_change_password": True,
+        "reset_token": "",
+        "reset_expires": 0,
         "nome": "",
         "admin_contact": {
             "email": admin_email,
@@ -1018,6 +1329,7 @@ def master_add():
 
     flash(f"Card '{slug}' creata con successo!", "success")
     return redirect(url_for('master_login'))
+
 
 @app.route('/master/credentials/<int:id>')
 def master_credentials(id):
@@ -1049,6 +1361,7 @@ def master_credentials(id):
         email_text=build_credentials_email_text(user),
     )
 
+
 @app.route('/master/send-credentials-email/<int:id>')
 def master_send_credentials_email(id):
     if not session.get('is_master'):
@@ -1078,6 +1391,7 @@ def master_send_credentials_email(id):
 
     return redirect(url_for('master_login'))
 
+
 @app.route('/master/send-credentials-whatsapp/<int:id>')
 def master_send_credentials_whatsapp(id):
     if not session.get('is_master'):
@@ -1098,6 +1412,7 @@ def master_send_credentials_whatsapp(id):
         flash(f"Errore invio WhatsApp: {e}", "error")
 
     return redirect(url_for('master_login'))
+
 
 @app.route('/master/send-credentials-all/<int:id>')
 def master_send_credentials_all(id):
@@ -1157,6 +1472,7 @@ def master_send_credentials_all(id):
 
     return redirect(url_for('master_login'))
 
+
 @app.route('/card/<slug>')
 def view_card(slug):
     clienti = load_db()
@@ -1194,8 +1510,8 @@ def view_card(slug):
         "fx_rotate_agent": p.get('fx_rotate_agent'),
         "fx_interaction": p.get('fx_interaction'),
         "fx_back": p.get('fx_back_content'),
-        "photo_pos_x": p.get('pos_x', 50),
-        "photo_pos_y": p.get('pos_y', 50),
+        "photo_pos_x": p.get('pos_x', 0),
+        "photo_pos_y": p.get('pos_y', 0),
         "photo_zoom": p.get('zoom', 1.0),
         "trans": p.get('trans', {})
     }
@@ -1214,6 +1530,7 @@ def view_card(slug):
         p3_enabled=user['p3']['active']
     )
 
+
 @app.route('/master/delete/<int:id>')
 def master_delete(id):
     if not session.get('is_master'):
@@ -1222,16 +1539,19 @@ def master_delete(id):
     flash("Card eliminata.", "success")
     return redirect(url_for('master_login'))
 
+
 @app.route('/master/impersonate/<int:id>')
 def master_impersonate(id):
     session['logged_in'] = True
     session['user_id'] = id
     return redirect(url_for('area'))
 
+
 @app.route('/master/logout')
 def master_logout():
     session.pop('is_master', None)
     return redirect(url_for('master_login'))
+
 
 @app.route('/area/logout')
 def logout():
@@ -1241,13 +1561,16 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
+
 
 @app.route('/reset-tutto')
 def reset_db_emergency():
@@ -1255,9 +1578,10 @@ def reset_db_emergency():
         try:
             os.remove(DB_FILE)
             return "DB CANCELLATO"
-        except:
+        except Exception:
             pass
     return "DB PULITO"
+
 
 if __name__ == '__main__':
     app.run(debug=True)
