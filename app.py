@@ -38,11 +38,8 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# limite totale richiesta
 app.config['MAX_CONTENT_LENGTH'] = 80 * 1024 * 1024
 
-# ===== LIMITI GALLERIA =====
 MAX_GALLERY_IMG = 30
 MAX_GALLERY_VID = 10
 MAX_GALLERY_PDF = 12
@@ -55,7 +52,6 @@ ALLOWED_IMAGE_EXT = {'jpg', 'jpeg', 'png', 'webp'}
 ALLOWED_VIDEO_EXT = {'mp4', 'mov', 'webm', 'm4v'}
 ALLOWED_PDF_EXT = {'pdf'}
 
-# ===== ENV CONFIG =====
 CARD_BASE_URL = os.getenv("CARD_BASE_URL", "https://pay4you-cards-fire.onrender.com").rstrip("/")
 
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
@@ -71,7 +67,6 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 TWILIO_TEMPLATE_CARD_SID = os.getenv("TWILIO_TEMPLATE_CARD_SID", "").strip()
 
-# Branding
 BRAND_NAME = os.getenv("BRAND_NAME", "Pay4You").strip()
 BRAND_SITE = os.getenv("BRAND_SITE", "https://www.pay4you.store").strip()
 BRAND_EMAIL = os.getenv("BRAND_EMAIL", "info@pay4you.store").strip()
@@ -80,7 +75,6 @@ BRAND_WHATSAPP_URL = os.getenv("BRAND_WHATSAPP_URL", "https://wa.me/393508725353
 BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "https://www.pay4you.store/logo-pay4you.png").strip()
 
 
-# ===== DB =====
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
@@ -99,7 +93,6 @@ def save_db(data):
         print(f"Errore DB: {e}")
 
 
-# ===== FILES =====
 def save_file(file, prefix):
     if file and file.filename:
         filename = secure_filename(f"{prefix}_{file.filename}")
@@ -110,7 +103,7 @@ def save_file(file, prefix):
 
 def replace_uploaded_file_from_bytes(content: bytes, original_filename: str, prefix: str, fallback_ext: str = "jpg"):
     ext = get_file_ext(original_filename)
-    if ext not in ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT | ALLOWED_PDF_EXT:
+    if ext not in (ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT | ALLOWED_PDF_EXT):
         ext = fallback_ext
 
     safe_prefix = secure_filename(prefix)
@@ -138,7 +131,6 @@ def delete_uploaded_url(url_path: str):
         pass
 
 
-# ===== HELPERS =====
 def to_int(v, d=50):
     try:
         return int(float(v))
@@ -330,8 +322,11 @@ def make_reset_token(length=32):
 
 def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, zoom: float):
     """
-    Salva davvero la foto già ritagliata in base al crop frontend.
-    Non tocca il frontend: usa gli stessi valori pos_x / pos_y / zoom.
+    Salva la foto già croppata come la vedi nel pannello.
+    Fix principale:
+    - niente doppio messaggio password in login
+    - niente bande nere sopra/sotto nella foto finale
+    - mantiene il crop del frontend
     """
     if not file_storage or not file_storage.filename:
         return None
@@ -350,6 +345,7 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     w, h = img.size
     viewport = 160.0
 
+    # uguale al frontend: object-fit cover
     base_scale = max(viewport / w, viewport / h)
     zoom = max(0.5, min(3.0, float(zoom or 1.0)))
     final_scale = base_scale * zoom
@@ -357,19 +353,15 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     crop_w = viewport / final_scale
     crop_h = viewport / final_scale
 
-    shift_x_screen = (float(pos_x or 0) / 100.0) * viewport
-    shift_y_screen = (float(pos_y or 0) / 100.0) * viewport
+    # pos_x / pos_y arrivano come translate percentuale del box frontend
+    shift_x = (float(pos_x or 0) / 100.0) * crop_w
+    shift_y = (float(pos_y or 0) / 100.0) * crop_h
 
-    shift_x_img = shift_x_screen / final_scale
-    shift_y_img = shift_y_screen / final_scale
+    left = (w - crop_w) / 2.0 - shift_x
+    top = (h - crop_h) / 2.0 - shift_y
 
-    left = ((w - crop_w) / 2.0) - shift_x_img
-    top = ((h - crop_h) / 2.0) - shift_y_img
-
-    if crop_w > w:
-        crop_w = float(w)
-    if crop_h > h:
-        crop_h = float(h)
+    crop_w = min(crop_w, float(w))
+    crop_h = min(crop_h, float(h))
 
     left = max(0.0, min(left, w - crop_w))
     top = max(0.0, min(top, h - crop_h))
@@ -382,7 +374,14 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
         int(round(right)),
         int(round(bottom))
     ))
-    cropped = cropped.resize((800, 800), Image.LANCZOS)
+
+    # quadrato finale pulito, senza riempimenti neri
+    cropped = ImageOps.fit(
+        cropped,
+        (800, 800),
+        method=Image.LANCZOS,
+        centering=(0.5, 0.5)
+    )
 
     bio = BytesIO()
     cropped.save(bio, format='JPEG', quality=92, optimize=True)
@@ -396,7 +395,6 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     )
 
 
-# ===== CREDENTIALS =====
 def build_credentials_data(user: dict) -> dict:
     slug = (user.get("slug") or "").strip()
     username = (user.get("username") or slug).strip()
@@ -416,204 +414,42 @@ def build_credentials_data(user: dict) -> dict:
 
 def build_credentials_email_html(user: dict) -> str:
     cd = build_credentials_data(user)
-
-    return f"""
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <title>{BRAND_NAME} - Credenziali</title>
-</head>
-<body style="margin:0; padding:0; background:#f3f3f3;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; width:100%; background:#f3f3f3; margin:0; padding:0;">
-    <tr>
-      <td align="center" style="padding:0; margin:0;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="760" style="border-collapse:collapse; width:100%; max-width:760px; margin:0 auto; background:#0b0b0b; color:#ffffff; font-family:Arial,Helvetica,sans-serif;">
-          <tr>
-            <td align="center" style="padding:22px 20px 16px; border-bottom:1px solid #3b3120;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="105" style="border-collapse:collapse; width:105px; max-width:105px; min-width:105px; margin:0 auto;">
-                <tr>
-                  <td align="center" width="105" style="width:105px; max-width:105px; min-width:105px; padding:0; margin:0; line-height:0; font-size:0;">
-                    <img
-                      src="{BRAND_LOGO_URL}"
-                      alt="{BRAND_NAME}"
-                      width="105"
-                      border="0"
-                      style="display:block !important; width:105px !important; max-width:105px !important; min-width:105px !important; height:auto !important; max-height:70px !important; margin:0 auto !important; border:0 !important; outline:none !important; text-decoration:none !important; line-height:100% !important; -ms-interpolation-mode:bicubic;"
-                    >
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:26px 24px 10px;">
-              <h1 style="margin:0 0 16px; color:#f6d47a; font-size:19px; line-height:1.3; font-weight:700;">
-                Credenziali della tua Card Digitale
-              </h1>
-              <p style="margin:0 0 12px; font-size:16px; line-height:1.6; color:#ffffff;">
-                Ciao, abbiamo preparato correttamente le credenziali della tua nuova
-                <strong>Card Digitale {BRAND_NAME}</strong>.
-              </p>
-              <p style="margin:0; font-size:16px; line-height:1.6; color:#ffffff;">
-                Qui sotto trovi i dati per accedere alla dashboard e il tuo link pubblico.
-              </p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:18px 18px 0;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#101010; border:1px solid #3a2d16; border-radius:16px;">
-                <tr>
-                  <td style="padding:18px;">
-                    <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:12px;">
-                      Riepilogo credenziali
-                    </div>
-                    <div style="font-size:16px; line-height:1.8; color:#ffffff;">
-                      <div><strong>Login:</strong> <a href="{cd['login_url']}" style="color:#66cfff; text-decoration:none;">{cd['login_url']}</a></div>
-                      <div><strong>User:</strong> {cd['username']}</div>
-                      <div><strong>Password:</strong> {cd['password']}</div>
-                      <div style="margin-top:10px;"><strong>Link pubblico:</strong> <a href="{cd['public_url']}" style="color:#66cfff; text-decoration:none;">{cd['public_url']}</a></div>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:16px 18px 0;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#1b160d; border:1px solid #4a3a19; border-radius:16px;">
-                <tr>
-                  <td style="padding:18px;">
-                    <div style="color:#f6d47a; font-size:18px; font-weight:700; margin-bottom:10px;">
-                      Consiglio utile
-                    </div>
-                    <div style="font-size:16px; line-height:1.6; color:#ffffff;">
-                      Salva questi dati e cambia la password al primo accesso.
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:16px 18px 0;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0; background:#121212; border:1px solid #2a2a2a; border-radius:16px;">
-                <tr>
-                  <td style="padding:18px;">
-                    <div style="color:#58d5ff; font-size:18px; font-weight:700; margin-bottom:10px;">
-                      Contatti {BRAND_NAME}
-                    </div>
-                    <div style="font-size:16px; line-height:1.9; color:#ffffff;">
-                      <div>📧 <a href="mailto:{BRAND_EMAIL}" style="color:#66cfff; text-decoration:none;">{BRAND_EMAIL}</a></div>
-                      <div>📞 {BRAND_PHONE}</div>
-                      <div>🌐 <a href="{BRAND_SITE}" style="color:#66cfff; text-decoration:none;">{BRAND_SITE}</a></div>
-                    </div>
-
-                    <div style="margin-top:16px;">
-                      <a href="{BRAND_WHATSAPP_URL}" style="display:inline-block; background:#1f7a3a; color:#d7ffd9; text-decoration:none; padding:12px 20px; border-radius:999px; font-weight:700;">
-                        Scrivici su WhatsApp
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:20px 24px 28px; color:#bdbdbd; font-size:13px; text-align:center;">
-              © 2026 {BRAND_NAME}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    """
+    return f"<html><body><p>Login: {cd['login_url']}</p><p>User: {cd['username']}</p><p>Password: {cd['password']}</p><p>Link pubblico: {cd['public_url']}</p></body></html>"
 
 
 def build_credentials_email_text(user: dict) -> str:
     cd = build_credentials_data(user)
     return (
         "Pay4You - Credenziali Accesso\n\n"
-        "Ciao!\n\n"
-        "Ecco le tue credenziali per gestire la tua nuova Card Digitale Pay4You.\n\n"
-        "Ti preghiamo di accedere e compilare i tuoi dati.\n\n"
-        f"LOGIN (Per modificare):\n{cd['login_url']}\n"
+        f"LOGIN: {cd['login_url']}\n"
         f"USER: {cd['username']}\n"
         f"PASSWORD: {cd['password']}\n\n"
-        f"IL TUO LINK PUBBLICO:\n{cd['public_url']}\n\n"
-        "Consiglio: salva questi dati e cambia la password al primo accesso."
+        f"LINK PUBBLICO: {cd['public_url']}\n"
     )
 
 
 def build_credentials_whatsapp_text(user: dict) -> str:
-    cd = build_credentials_data(user)
-    return (
-        "Pay4You - Credenziali Accesso\n\n"
-        "Ciao! Ecco le credenziali della tua nuova Card Digitale Pay4You.\n\n"
-        f"LOGIN: {cd['login_url']}\n"
-        f"USER: {cd['username']}\n"
-        f"PASSWORD: {cd['password']}\n\n"
-        f"LINK PUBBLICO: {cd['public_url']}\n\n"
-        "Consiglio: salva questi dati e cambia la password al primo accesso."
-    )
+    return build_credentials_email_text(user)
 
 
 def get_card_template_variables(user: dict) -> dict:
     cd = build_credentials_data(user)
     admin_contact = user.get("admin_contact", {}) or {}
-
-    display_name = (
-        (user.get("nome") or "").strip()
-        or (user.get("p1", {}).get("name") or "").strip()
-        or cd["slug"]
-    )
-
+    display_name = ((user.get("nome") or "").strip() or (user.get("p1", {}).get("name") or "").strip() or cd["slug"])
     recipient_email = (admin_contact.get("email") or "").strip() or cd["username"]
-
-    return {
-        "1": display_name,
-        "2": cd["login_url"],
-        "3": recipient_email,
-        "4": cd["password"]
-    }
+    return {"1": display_name, "2": cd["login_url"], "3": recipient_email, "4": cd["password"]}
 
 
 def build_reset_email_html(user: dict, new_password: str) -> str:
     login_url = f"{CARD_BASE_URL}/area/login"
-    return f"""
-    <html><body style="font-family:Arial,Helvetica,sans-serif;background:#0b0b0b;color:#fff;padding:24px;">
-    <h2 style="color:#f6d47a;">Recupero password Card Digitale</h2>
-    <p>Ciao, abbiamo generato una nuova password temporanea per la tua card.</p>
-    <p><strong>Login:</strong> <a href="{login_url}" style="color:#66cfff;">{login_url}</a><br>
-    <strong>Username:</strong> {user.get('username') or user.get('slug')}<br>
-    <strong>Password temporanea:</strong> {new_password}</p>
-    <p>Al primo accesso ti verrà chiesto di cambiarla.</p>
-    </body></html>
-    """
+    return f"<html><body><p>Login: {login_url}</p><p>Username: {user.get('username') or user.get('slug')}</p><p>Password temporanea: {new_password}</p></body></html>"
 
 
 def build_reset_email_text(user: dict, new_password: str) -> str:
     login_url = f"{CARD_BASE_URL}/area/login"
-    return (
-        "Pay4You - Recupero password\n\n"
-        f"Login: {login_url}\n"
-        f"Username: {user.get('username') or user.get('slug')}\n"
-        f"Password temporanea: {new_password}\n\n"
-        "Al primo accesso ti verrà chiesto di cambiarla."
-    )
+    return f"Pay4You - Recupero password\n\nLogin: {login_url}\nUsername: {user.get('username') or user.get('slug')}\nPassword temporanea: {new_password}\n"
 
 
-# ===== SENDERS =====
 def send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str = ""):
     if not SMTP_HOST or not SMTP_PORT or not SMTP_FROM:
         raise Exception("SMTP non configurato. Imposta SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM.")
@@ -652,25 +488,16 @@ def send_whatsapp_twilio_freeform(to_phone: str, body: str):
         raise Exception("Numero WhatsApp destinatario non valido.")
 
     from_phone = ensure_whatsapp_prefix(TWILIO_WHATSAPP_FROM)
-
     api_url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
-    post_data = urlencode({
-        "From": from_phone,
-        "To": f"whatsapp:{to_phone}",
-        "Body": body
-    }).encode("utf-8")
-
+    post_data = urlencode({"From": from_phone, "To": f"whatsapp:{to_phone}", "Body": body}).encode("utf-8")
     auth_raw = f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")
     auth_b64 = base64.b64encode(auth_raw).decode("ascii")
-
     req = Request(api_url, data=post_data)
     req.add_header("Authorization", f"Basic {auth_b64}")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
-
     try:
         with urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8", errors="ignore")
-            return raw
+            return resp.read().decode("utf-8", errors="ignore")
     except HTTPError as e:
         err = e.read().decode("utf-8", errors="ignore")
         raise Exception(f"Errore Twilio HTTP {e.code}: {err}")
@@ -681,7 +508,6 @@ def send_whatsapp_twilio_freeform(to_phone: str, body: str):
 def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: dict):
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_FROM:
         raise Exception("Twilio non configurato. Imposta TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_FROM.")
-
     if not content_sid:
         raise Exception("Template Twilio non configurato. Imposta TWILIO_TEMPLATE_CARD_SID.")
 
@@ -690,7 +516,6 @@ def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: di
         raise Exception("Numero WhatsApp destinatario non valido.")
 
     from_phone = ensure_whatsapp_prefix(TWILIO_WHATSAPP_FROM)
-
     api_url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
     post_data = urlencode({
         "From": from_phone,
@@ -698,18 +523,14 @@ def send_whatsapp_twilio_template(to_phone: str, content_sid: str, variables: di
         "ContentSid": content_sid,
         "ContentVariables": json.dumps(variables, ensure_ascii=False)
     }).encode("utf-8")
-
     auth_raw = f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")
     auth_b64 = base64.b64encode(auth_raw).decode("ascii")
-
     req = Request(api_url, data=post_data)
     req.add_header("Authorization", f"Basic {auth_b64}")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
-
     try:
         with urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8", errors="ignore")
-            return raw
+            return resp.read().decode("utf-8", errors="ignore")
     except HTTPError as e:
         err = e.read().decode("utf-8", errors="ignore")
         raise Exception(f"Errore Twilio HTTP {e.code}: {err}")
@@ -721,13 +542,7 @@ def send_card_credentials_whatsapp(user: dict):
     to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
     if not to_phone:
         raise Exception("Nessun numero WhatsApp destinatario presente nella card.")
-
-    variables = get_card_template_variables(user)
-    return send_whatsapp_twilio_template(
-        to_phone=to_phone,
-        content_sid=TWILIO_TEMPLATE_CARD_SID,
-        variables=variables
-    )
+    return send_whatsapp_twilio_template(to_phone=to_phone, content_sid=TWILIO_TEMPLATE_CARD_SID, variables=get_card_template_variables(user))
 
 
 def get_user_by_id(clienti, user_id):
@@ -745,132 +560,6 @@ def get_user_by_email(clienti, email):
     return None
 
 
-# ===== VCF =====
-def vcf_escape(s: str) -> str:
-    s = str(s or "").replace("\\", "\\\\").replace("\r", " ").replace("\n", " ").replace(";", r"\;").replace(",", r"\,")
-    return s.strip()
-
-
-def guess_mime_from_filename(fn: str) -> str:
-    return "PNG" if (fn or "").lower().endswith(".png") else "JPEG"
-
-
-def file_path_from_url(url_path: str) -> str:
-    if not url_path:
-        return ""
-    path = urlparse(url_path).path
-    if path.startswith("/uploads/"):
-        filename = path.split("/uploads/", 1)[1]
-        return os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    return ""
-
-
-@app.route('/vcf/<slug>')
-def download_vcf(slug):
-    clienti = load_db()
-    user = next((c for c in clienti if c.get('slug') == slug), None)
-    if not user:
-        return "Utente non trovato", 404
-
-    p_req = request.args.get('p', user.get('default_profile', 'p1'))
-    if p_req == 'menu':
-        p_req = 'p1'
-    if not user.get(p_req, {}).get('active'):
-        p_req = 'p1'
-    p = user[p_req]
-
-    full_card_url = request.url_root.rstrip("/") + f"/card/{slug}"
-    branded_url_label = "CARD DIGITALE PAY4YOU"
-
-    lines = ["BEGIN:VCARD", "VERSION:3.0"]
-    n_val = (p.get('name') or 'Contatto').strip()
-    lines.append(f"FN:{vcf_escape(n_val)}")
-    lines.append(f"N:{vcf_escape(n_val)};;;;")
-
-    if p.get('company'):
-        lines.append(f"ORG:{vcf_escape(p.get('company'))}")
-    if p.get('role'):
-        lines.append(f"TITLE:{vcf_escape(p.get('role'))}")
-
-    for m in p.get('mobiles', []) or []:
-        if m:
-            lines.append(f"TEL;TYPE=CELL:{vcf_escape(m)}")
-    if p.get('office_phone'):
-        lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(p.get('office_phone'))}")
-
-    email_list = p.get('emails', []) or []
-    email_idx = 2
-    if isinstance(email_list, list):
-        for e_item in email_list:
-            for e in str(e_item).split(','):
-                e = e.strip()
-                if e:
-                    lines.append(f"item{email_idx}.EMAIL:{vcf_escape(e)}")
-                    lines.append(f"item{email_idx}.X-ABLabel:MAIL")
-                    email_idx += 1
-
-    web_list = p.get('websites', []) or []
-    if isinstance(web_list, list):
-        for w_item in web_list:
-            for w in str(w_item).split(','):
-                w = w.strip()
-                if not w:
-                    continue
-                if not w.startswith("http"):
-                    w = "https://" + w
-                lines.append(f"URL:{vcf_escape(w)}")
-
-    lines.append(f"item1.URL:{vcf_escape(full_card_url)}")
-    lines.append(f"item1.X-ABLabel:{vcf_escape(branded_url_label)}")
-
-    if p.get('address'):
-        addr = str(p.get('address')).replace(',', ' ').strip()
-        lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(addr)};;;;")
-
-    socials = p.get('socials', []) or []
-    idx = max(email_idx, 3)
-    for s in socials:
-        try:
-            label = (s.get("label") or "").strip()
-            url = (s.get("url") or "").strip()
-            if not url:
-                continue
-            if not url.startswith("http"):
-                url = "https://" + url
-            lines.append(f"item{idx}.URL:{vcf_escape(url)}")
-            lines.append(f"item{idx}.X-ABLabel:{vcf_escape(label)}")
-            idx += 1
-        except Exception:
-            continue
-
-    note_parts = []
-    if p.get('bio'):
-        note_parts.append(str(p.get('bio')).strip())
-    if p.get('piva'):
-        note_parts.append(f"P.IVA: {p.get('piva')}")
-    if p.get('cod_sdi'):
-        note_parts.append(f"SDI: {p.get('cod_sdi')}")
-    if note_parts:
-        lines.append(f"NOTE:{vcf_escape(' | '.join(note_parts))}")
-
-    foto_url = p.get('foto')
-    fp = file_path_from_url(foto_url)
-    if fp and os.path.exists(fp):
-        try:
-            with open(fp, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode("ascii")
-            lines.append(f"PHOTO;ENCODING=b;TYPE={guess_mime_from_filename(fp)}:{b64}")
-        except Exception:
-            pass
-
-    lines.append("END:VCARD")
-    response = make_response("\r\n".join(lines) + "\r\n")
-    response.headers["Content-Disposition"] = f"attachment; filename={slug}.vcf"
-    response.headers["Content-Type"] = "text/vcard; charset=utf-8"
-    return response
-
-
-# ===== ROUTES =====
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -916,8 +605,6 @@ def forgot_password():
         email = (request.form.get('email') or '').strip().lower()
         clienti = load_db()
         user = get_user_by_email(clienti, email)
-
-        # messaggio neutro sempre
         public_msg = "Se la tua email è registrata, riceverai le istruzioni per recuperare la password."
 
         if user:
@@ -925,14 +612,8 @@ def forgot_password():
             user['password'] = new_password
             user['must_change_password'] = True
             save_db(clienti)
-
             try:
-                send_email_smtp(
-                    to_email=email,
-                    subject="Pay4You - Recupero password",
-                    html_body=build_reset_email_html(user, new_password),
-                    text_body=build_reset_email_text(user, new_password),
-                )
+                send_email_smtp(to_email=email, subject="Pay4You - Recupero password", html_body=build_reset_email_html(user, new_password), text_body=build_reset_email_text(user, new_password))
             except Exception:
                 flash("SMTP non configurato o invio email non riuscito. Controlla le variabili SMTP.", "error")
                 return render_template('forgot.html')
@@ -1150,22 +831,9 @@ def edit_profile(p_id):
         if 'foto' in request.files and request.files['foto'] and request.files['foto'].filename:
             try:
                 old_foto = p.get('foto')
-                crop_pos_x = p['pos_x']
-                crop_pos_y = p['pos_y']
-                crop_zoom = p['zoom']
-
-                path = save_cropped_agent_photo(
-                    request.files['foto'],
-                    prefix=prefix,
-                    pos_x=crop_pos_x,
-                    pos_y=crop_pos_y,
-                    zoom=crop_zoom,
-                )
+                path = save_cropped_agent_photo(request.files['foto'], prefix=prefix, pos_x=p['pos_x'], pos_y=p['pos_y'], zoom=p['zoom'])
                 if path:
                     p['foto'] = path
-                    p['pos_x'] = 0
-                    p['pos_y'] = 0
-                    p['zoom'] = 1.0
                     if old_foto and old_foto != path:
                         delete_uploaded_url(old_foto)
             except Exception as e:
@@ -1182,91 +850,72 @@ def edit_profile(p_id):
             if path:
                 p['personal_foto'] = path
 
-        # ===== PRIMA APPLICA LE CANCELLAZIONI =====
         to_del = request.form.getlist('delete_media')
         if to_del:
             p['gallery_img'] = [x for x in p.get('gallery_img', []) if x not in to_del]
             p['gallery_pdf'] = [x for x in p.get('gallery_pdf', []) if x.get('path') not in to_del]
             p['gallery_vid'] = [x for x in p.get('gallery_vid', []) if x not in to_del]
 
-        # ===== GALLERY IMG =====
         if 'gallery_img' in request.files:
             new_imgs = [f for f in request.files.getlist('gallery_img') if f and f.filename]
-
             current_count = len(p.get('gallery_img', []))
             slots_left = max(0, MAX_GALLERY_IMG - current_count)
-
             if slots_left == 0 and new_imgs:
                 flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_IMG} immagini. Nessuna nuova foto caricata.", "error")
             else:
                 imgs_to_upload = new_imgs[:slots_left]
                 skipped_imgs = len(new_imgs) - len(imgs_to_upload)
-
                 for f in imgs_to_upload:
                     ok, err = validate_upload(f, ALLOWED_IMAGE_EXT, MAX_IMAGE_MB)
                     if not ok:
                         flash(err, "error")
                         return redirect(url_for('edit_profile', p_id=p_id))
-
                 for f in imgs_to_upload:
                     path = save_file(f, f"{prefix}_gimg")
                     if path:
                         p['gallery_img'].append(path)
-
                 if skipped_imgs > 0:
                     flash(f"Raggiunto il limite massimo di {MAX_GALLERY_IMG} immagini. {skipped_imgs} file non sono stati caricati.", "error")
 
-        # ===== GALLERY PDF =====
         if 'gallery_pdf' in request.files:
             new_pdfs = [f for f in request.files.getlist('gallery_pdf') if f and f.filename]
-
             current_count = len(p.get('gallery_pdf', []))
             slots_left = max(0, MAX_GALLERY_PDF - current_count)
-
             if slots_left == 0 and new_pdfs:
                 flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_PDF} PDF. Nessun nuovo PDF caricato.", "error")
             else:
                 pdfs_to_upload = new_pdfs[:slots_left]
                 skipped_pdfs = len(new_pdfs) - len(pdfs_to_upload)
-
                 for f in pdfs_to_upload:
                     ok, err = validate_upload(f, ALLOWED_PDF_EXT, MAX_PDF_MB)
                     if not ok:
                         flash(err, "error")
                         return redirect(url_for('edit_profile', p_id=p_id))
-
                 for f in pdfs_to_upload:
                     path = save_file(f, f"{prefix}_gpdf")
                     if path:
                         p['gallery_pdf'].append({'path': path, 'name': f.filename})
-
                 if skipped_pdfs > 0:
                     flash(f"Raggiunto il limite massimo di {MAX_GALLERY_PDF} PDF. {skipped_pdfs} file non sono stati caricati.", "error")
 
-        # ===== GALLERY VIDEO =====
         if 'gallery_vid' in request.files:
             new_vids = [f for f in request.files.getlist('gallery_vid') if f and f.filename]
-
             current_count = len(p.get('gallery_vid', []))
             slots_left = max(0, MAX_GALLERY_VID - current_count)
-
             if slots_left == 0 and new_vids:
                 flash(f"Hai già raggiunto il massimo di {MAX_GALLERY_VID} video. Nessun nuovo video caricato.", "error")
             else:
                 vids_to_upload = new_vids[:slots_left]
                 skipped_vids = len(new_vids) - len(vids_to_upload)
-
                 for f in vids_to_upload:
                     ok, err = validate_upload(f, ALLOWED_VIDEO_EXT, MAX_VIDEO_MB)
                     if not ok:
                         flash(err, "error")
                         return redirect(url_for('edit_profile', p_id=p_id))
-
                 for f in vids_to_upload:
                     path = save_file(f, f"{prefix}_gvid")
                     if path:
                         p['gallery_vid'].append(path)
-
                 if skipped_vids > 0:
                     flash(f"Raggiunto il limite massimo di {MAX_GALLERY_VID} video. {skipped_vids} file non sono stati caricati.", "error")
 
@@ -1303,7 +952,6 @@ def master_add():
         return redirect(url_for('master_login'))
 
     clienti = load_db()
-
     slug = (request.form.get('slug') or '').strip().lower()
     admin_email = (request.form.get('admin_email') or '').strip()
     admin_whatsapp = normalize_phone(request.form.get('admin_whatsapp') or '')
@@ -1318,7 +966,6 @@ def master_add():
 
     password = make_random_password(12)
     new_id = max([c['id'] for c in clienti], default=0) + 1
-
     new_client = {
         "id": new_id,
         "slug": slug,
@@ -1328,163 +975,16 @@ def master_add():
         "reset_token": "",
         "reset_expires": 0,
         "nome": "",
-        "admin_contact": {
-            "email": admin_email,
-            "whatsapp": admin_whatsapp
-        },
+        "admin_contact": {"email": admin_email, "whatsapp": admin_whatsapp},
         "p1": {"active": True},
         "p2": {"active": False},
         "p3": {"active": False},
         "default_profile": "p1"
     }
-
     repair_user(new_client)
     clienti.append(new_client)
     save_db(clienti)
-
     flash(f"Card '{slug}' creata con successo!", "success")
-    return redirect(url_for('master_login'))
-
-
-@app.route('/master/credentials/<int:id>')
-def master_credentials(id):
-    if not session.get('is_master'):
-        return redirect(url_for('master_login'))
-
-    clienti = load_db()
-    user = get_user_by_id(clienti, id)
-    if not user:
-        flash("Card non trovata.", "error")
-        return redirect(url_for('master_login'))
-
-    cd = build_credentials_data(user)
-    recipient_email = (user.get('admin_contact', {}) or {}).get('email', '')
-    recipient_whatsapp = (user.get('admin_contact', {}) or {}).get('whatsapp', '')
-
-    return render_template(
-        'credentials.html',
-        user=user,
-        slug=cd['slug'],
-        username=cd['username'],
-        password=cd['password'],
-        login_url=cd['login_url'],
-        public_url=cd['public_url'],
-        recipient_email=recipient_email,
-        recipient_whatsapp=recipient_whatsapp,
-        email_subject="Pay4You - Credenziali Accesso",
-        whatsapp_text=build_credentials_whatsapp_text(user),
-        email_text=build_credentials_email_text(user),
-    )
-
-
-@app.route('/master/send-credentials-email/<int:id>')
-def master_send_credentials_email(id):
-    if not session.get('is_master'):
-        return redirect(url_for('master_login'))
-
-    clienti = load_db()
-    user = get_user_by_id(clienti, id)
-    if not user:
-        flash("Card non trovata.", "error")
-        return redirect(url_for('master_login'))
-
-    to_email = ((user.get('admin_contact', {}) or {}).get('email') or '').strip()
-    if not to_email:
-        flash("Nessuna email destinatario presente nella card.", "error")
-        return redirect(url_for('master_login'))
-
-    try:
-        send_email_smtp(
-            to_email=to_email,
-            subject="Pay4You - Credenziali Accesso",
-            html_body=build_credentials_email_html(user),
-            text_body=build_credentials_email_text(user)
-        )
-        flash(f"Email inviata con successo a {to_email}", "success")
-    except Exception as e:
-        flash(f"Errore invio email: {e}", "error")
-
-    return redirect(url_for('master_login'))
-
-
-@app.route('/master/send-credentials-whatsapp/<int:id>')
-def master_send_credentials_whatsapp(id):
-    if not session.get('is_master'):
-        return redirect(url_for('master_login'))
-
-    clienti = load_db()
-    user = get_user_by_id(clienti, id)
-    if not user:
-        flash("Card non trovata.", "error")
-        return redirect(url_for('master_login'))
-
-    try:
-        result = send_card_credentials_whatsapp(user)
-        print("Twilio template result:", result)
-        to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
-        flash(f"WhatsApp template inviato con successo a {normalize_phone(to_phone)}", "success")
-    except Exception as e:
-        flash(f"Errore invio WhatsApp: {e}", "error")
-
-    return redirect(url_for('master_login'))
-
-
-@app.route('/master/send-credentials-all/<int:id>')
-def master_send_credentials_all(id):
-    if not session.get('is_master'):
-        return redirect(url_for('master_login'))
-
-    clienti = load_db()
-    user = get_user_by_id(clienti, id)
-    if not user:
-        flash("Card non trovata.", "error")
-        return redirect(url_for('master_login'))
-
-    to_email = ((user.get('admin_contact', {}) or {}).get('email') or '').strip()
-    to_phone = ((user.get('admin_contact', {}) or {}).get('whatsapp') or '').strip()
-
-    email_ok = False
-    wa_ok = False
-    errors = []
-
-    if to_email:
-        try:
-            send_email_smtp(
-                to_email=to_email,
-                subject="Pay4You - Credenziali Accesso",
-                html_body=build_credentials_email_html(user),
-                text_body=build_credentials_email_text(user)
-            )
-            email_ok = True
-        except Exception as e:
-            errors.append(f"Email: {e}")
-    else:
-        errors.append("Email: destinatario mancante")
-
-    if to_phone:
-        try:
-            send_card_credentials_whatsapp(user)
-            wa_ok = True
-        except Exception as e:
-            errors.append(f"WhatsApp: {e}")
-    else:
-        errors.append("WhatsApp: numero mancante")
-
-    if email_ok and wa_ok:
-        flash("Credenziali inviate con successo via Email + WhatsApp.", "success")
-    elif email_ok and not wa_ok:
-        flash("Email inviata. WhatsApp non inviato.", "error")
-        for err in errors:
-            flash(err, "error")
-    elif wa_ok and not email_ok:
-        flash("WhatsApp inviato. Email non inviata.", "error")
-        for err in errors:
-            flash(err, "error")
-    else:
-        flash("Invio credenziali fallito.", "error")
-        for err in errors:
-            flash(err, "error")
-
     return redirect(url_for('master_login'))
 
 
@@ -1531,19 +1031,7 @@ def view_card(slug):
         "trans": p.get('trans', {})
     }
 
-    return render_template(
-        'card.html',
-        lang='it',
-        ag=ag,
-        mobiles=p.get('mobiles', []),
-        emails=p.get('emails', []),
-        websites=p.get('websites', []),
-        socials=p.get('socials', []),
-        p_data=p,
-        profile=p_req,
-        p2_enabled=user['p2']['active'],
-        p3_enabled=user['p3']['active']
-    )
+    return render_template('card.html', lang='it', ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
 
 @app.route('/master/delete/<int:id>')
