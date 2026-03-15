@@ -1,4 +1,3 @@
-
 import os
 import json
 import base64
@@ -331,7 +330,7 @@ def make_reset_token(length=32):
 
 def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, zoom: float):
     """
-    Salva davvero la foto già ritagliata in base a crop frontend.
+    Salva davvero la foto già ritagliata in base al crop frontend.
     Non tocca il frontend: usa gli stessi valori pos_x / pos_y / zoom.
     """
     if not file_storage or not file_storage.filename:
@@ -358,15 +357,15 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     crop_w = viewport / final_scale
     crop_h = viewport / final_scale
 
-    # il frontend parte centrato e poi applica translate(x%, y%)
-    # traduciamo in spazio immagine reale
-    shift_x = (float(pos_x or 0) / 100.0) * crop_w
-    shift_y = (float(pos_y or 0) / 100.0) * crop_h
+    shift_x_screen = (float(pos_x or 0) / 100.0) * viewport
+    shift_y_screen = (float(pos_y or 0) / 100.0) * viewport
 
-    left = (w - crop_w) / 2.0 - shift_x
-    top = (h - crop_h) / 2.0 - shift_y
+    shift_x_img = shift_x_screen / final_scale
+    shift_y_img = shift_y_screen / final_scale
 
-    # clamp
+    left = ((w - crop_w) / 2.0) - shift_x_img
+    top = ((h - crop_h) / 2.0) - shift_y_img
+
     if crop_w > w:
         crop_w = float(w)
     if crop_h > h:
@@ -377,14 +376,24 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     right = left + crop_w
     bottom = top + crop_h
 
-    cropped = img.crop((int(round(left)), int(round(top)), int(round(right)), int(round(bottom))))
+    cropped = img.crop((
+        int(round(left)),
+        int(round(top)),
+        int(round(right)),
+        int(round(bottom))
+    ))
     cropped = cropped.resize((800, 800), Image.LANCZOS)
 
     bio = BytesIO()
     cropped.save(bio, format='JPEG', quality=92, optimize=True)
     bio.seek(0)
 
-    return replace_uploaded_file_from_bytes(bio.read(), file_storage.filename, f"{prefix}_foto_crop", fallback_ext="jpg")
+    return replace_uploaded_file_from_bytes(
+        bio.read(),
+        file_storage.filename,
+        f"{prefix}_foto_crop",
+        fallback_ext="jpg"
+    )
 
 
 # ===== CREDENTIALS =====
@@ -894,7 +903,6 @@ def login():
             session['logged_in'] = True
             session['user_id'] = user['id']
             if user.get('must_change_password'):
-                flash("Per sicurezza devi cambiare la password al primo accesso.", "success")
                 return redirect(url_for('change_password'))
             return redirect(url_for('area'))
         error = "Credenziali non valide."
@@ -1142,15 +1150,22 @@ def edit_profile(p_id):
         if 'foto' in request.files and request.files['foto'] and request.files['foto'].filename:
             try:
                 old_foto = p.get('foto')
+                crop_pos_x = p['pos_x']
+                crop_pos_y = p['pos_y']
+                crop_zoom = p['zoom']
+
                 path = save_cropped_agent_photo(
                     request.files['foto'],
                     prefix=prefix,
-                    pos_x=p['pos_x'],
-                    pos_y=p['pos_y'],
-                    zoom=p['zoom'],
+                    pos_x=crop_pos_x,
+                    pos_y=crop_pos_y,
+                    zoom=crop_zoom,
                 )
                 if path:
                     p['foto'] = path
+                    p['pos_x'] = 0
+                    p['pos_y'] = 0
+                    p['zoom'] = 1.0
                     if old_foto and old_foto != path:
                         delete_uploaded_url(old_foto)
             except Exception as e:
