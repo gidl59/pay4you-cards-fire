@@ -5,14 +5,35 @@
     <meta charset="UTF-8">
     <title>Accedi | Pay4You</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+      .pw-wrap{position:relative}
+      .pw-eye{
+        position:absolute; right:10px; top:50%; transform:translateY(-50%);
+        background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16);
+        color:#fff; border-radius:12px; padding:8px 10px; cursor:pointer; font-weight:900;
+      }
+      .pw-input{padding-right:58px}
+      .flash-msg{
+        background:rgba(0,255,200,.10); color:#b8fff0; padding:10px; border-radius:8px;
+        margin-bottom:15px; font-size:14px; border:1px solid rgba(0,255,200,.35);
+      }
+    </style>
 </head>
 <body>
     <div class="login-wrap">
         <img src="/static/pay4you-logo.png" class="logo-login">
-        
+
         <div class="login-box">
             <h2 style="color:var(--brand); margin-top:0;">Area Riservata</h2>
-            
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="flash-msg">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
             {% if error %}
                 <div style="background: #ff4444; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 14px;">
                     ⚠ {{ error }}
@@ -20,8 +41,11 @@
             {% endif %}
 
             <form method="POST" action="/area/login">
-                <input type="text" name="username" class="input-rect" placeholder="Username" required>
-                <input type="password" name="password" class="input-rect" placeholder="Password" required>
+                <input type="text" name="username" class="input-rect" placeholder="Username" autocomplete="username" required>
+                <div class="pw-wrap" style="margin-top:12px;">
+                  <input id="pw" type="password" name="password" class="input-rect pw-input" placeholder="Password" autocomplete="current-password" required>
+                  <button type="button" class="pw-eye" onclick="togglePw()">👁</button>
+                </div>
                 <button type="submit" class="btn-login">ACCEDI ORA</button>
             </form>
 
@@ -29,11 +53,19 @@
                 <a href="/area/forgot">Password dimenticata?</a>
             </div>
         </div>
-<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+
         <div class="legal-foot">
             <a href="/privacy">Privacy Policy</a> • <a href="/cookie">Cookie Policy</a>
             <br><br>© 2026 Pay4You
         </div>
     </div>
+
+<script>
+function togglePw(){
+  const i = document.getElementById('pw');
+  if(!i) return;
+  i.type = (i.type === 'password') ? 'text' : 'password';
+}
+</script>
 </body>
 </html>
