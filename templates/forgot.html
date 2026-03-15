@@ -4,39 +4,34 @@
     <meta charset="UTF-8">
     <title>Recupero Password</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script>
-        function startRecovery(e) {
-            e.preventDefault();
-            document.getElementById('form-box').style.display = 'none';
-            document.getElementById('msg-box').style.display = 'block';
-            
-            // Timer 3 secondi
-            setTimeout(() => { window.location.href = "/area/login"; }, 3000);
-        }
-    </script>
 </head>
 <body>
     <div class="login-wrap">
         <img src="/static/pay4you-logo.png" class="logo-login">
-        
-        <div class="login-box">
-            <div id="form-box">
-                <h2 style="color:white;">Recupero</h2>
-                <form onsubmit="startRecovery(event)">
-                    <input type="email" class="input-rect" placeholder="Inserisci la tua email" required>
-                    <button type="submit" class="btn-login">INVIA</button>
-                </form>
-                <div class="login-links" style="justify-content:center;">
-                    <a href="/area/login">Annulla</a>
-                </div>
-            </div>
 
-            <div id="msg-box" style="display:none;">
-                <h3 style="color:var(--brand);">Richiesta Inviata</h3>
-                <p style="color:#ccc; font-size:14px; line-height:1.5;">
-                    Se la tua email è registrata, riceverai le istruzioni per recuperare la password.
-                </p>
-                <p style="font-size:12px; color:#666;">Ritorno al login in 3 secondi...</p>
+        <div class="login-box">
+            <h2 style="color:white;">Recupero password</h2>
+            <p style="color:#ccc; font-size:14px; line-height:1.5; margin-bottom:14px;">
+                Inserisci l'email usata per la card. Se è registrata, riceverai una password temporanea via email.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div style="background:{% if category == 'error' %}#662222{% else %}#0f332b{% endif %}; color:white; padding:10px; border-radius:8px; margin-bottom:12px; font-size:14px;">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/area/forgot">
+                <input type="email" class="input-rect" name="email" placeholder="Inserisci la tua email" autocomplete="email" required>
+                <button type="submit" class="btn-login">INVIA</button>
+            </form>
+
+            <div class="login-links" style="justify-content:center;">
+                <a href="/area/login">Torna al login</a>
             </div>
         </div>
     </div>
