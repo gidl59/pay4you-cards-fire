@@ -27,6 +27,7 @@ app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
 app.secret_key = "pay4you_final_fix_v8"
 
+# ===== CONFIG =====
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
 else:
@@ -66,6 +67,7 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 TWILIO_TEMPLATE_CARD_SID = os.getenv("TWILIO_TEMPLATE_CARD_SID", "").strip()
 
+
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
@@ -75,12 +77,14 @@ def load_db():
     except Exception:
         return []
 
+
 def save_db(data):
     try:
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"Errore DB: {e}")
+
 
 def save_file(file, prefix):
     if file and file.filename:
@@ -89,16 +93,21 @@ def save_file(file, prefix):
         return f"/uploads/{filename}"
     return None
 
+
 def replace_uploaded_file_from_bytes(content: bytes, original_filename: str, prefix: str, fallback_ext: str = "jpg"):
     ext = get_file_ext(original_filename)
     if ext not in (ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT | ALLOWED_PDF_EXT):
         ext = fallback_ext
+
     safe_prefix = secure_filename(prefix)
     filename = secure_filename(f"{safe_prefix}.{ext}")
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
     with open(path, 'wb') as f:
         f.write(content)
+
     return f"/uploads/{filename}"
+
 
 def delete_uploaded_url(url_path: str):
     try:
@@ -114,11 +123,13 @@ def delete_uploaded_url(url_path: str):
     except Exception:
         pass
 
+
 def to_int(v, d=50):
     try:
         return int(float(v))
     except Exception:
         return d
+
 
 def to_float(v, d=1.0):
     try:
@@ -126,12 +137,14 @@ def to_float(v, d=1.0):
     except Exception:
         return d
 
+
 def normalize_phone(phone: str) -> str:
     phone = str(phone or "").strip()
     if not phone:
         return ""
     phone = phone.replace("whatsapp:", "", 1)
     phone = phone.replace(" ", "").replace("-", "").replace("/", "").replace(".", "")
+
     cleaned = []
     for i, ch in enumerate(phone):
         if ch.isdigit():
@@ -139,6 +152,7 @@ def normalize_phone(phone: str) -> str:
         elif ch == '+' and i == 0:
             cleaned.append(ch)
     phone = "".join(cleaned)
+
     if not phone:
         return ""
     if phone.startswith("00"):
@@ -150,6 +164,7 @@ def normalize_phone(phone: str) -> str:
             phone = "+39" + phone
     return phone
 
+
 def ensure_whatsapp_prefix(value: str) -> str:
     value = str(value or "").strip()
     if not value:
@@ -158,11 +173,13 @@ def ensure_whatsapp_prefix(value: str) -> str:
         return value
     return f"whatsapp:{value}"
 
+
 def get_file_ext(filename: str) -> str:
     filename = (filename or "").lower().strip()
     if "." not in filename:
         return ""
     return filename.rsplit(".", 1)[1]
+
 
 def get_file_size_bytes(file_storage) -> int:
     try:
@@ -174,9 +191,11 @@ def get_file_size_bytes(file_storage) -> int:
     except Exception:
         return 0
 
+
 def file_size_ok(file_storage, max_mb: int) -> bool:
     size = get_file_size_bytes(file_storage)
     return size > 0 and size <= (max_mb * 1024 * 1024)
+
 
 def validate_upload(file_storage, allowed_exts: set, max_mb: int):
     if not file_storage or not file_storage.filename:
@@ -187,6 +206,7 @@ def validate_upload(file_storage, allowed_exts: set, max_mb: int):
     if not file_size_ok(file_storage, max_mb):
         return False, f"File troppo pesante: {file_storage.filename} (max {max_mb} MB)"
     return True, ""
+
 
 def repair_user(user):
     dirty = False
@@ -215,6 +235,7 @@ def repair_user(user):
         if 'whatsapp' not in user['admin_contact']:
             user['admin_contact']['whatsapp'] = ''
             dirty = True
+
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
@@ -263,9 +284,11 @@ def repair_user(user):
         p['zoom'] = to_float(p.get('zoom', 1.0), 1.0)
     return dirty
 
+
 def make_random_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(random.choice(chars) for _ in range(length))
+
 
 def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, zoom: float):
     if not file_storage or not file_storage.filename:
@@ -275,6 +298,7 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
         raise ValueError(err)
     if Image is None:
         return save_file(file_storage, f"{prefix}_foto")
+
     file_storage.stream.seek(0)
     img = Image.open(file_storage.stream)
     img = ImageOps.exif_transpose(img).convert('RGB')
@@ -302,8 +326,10 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     bio.seek(0)
     return replace_uploaded_file_from_bytes(bio.read(), file_storage.filename, f"{prefix}_foto_crop", fallback_ext="jpg")
 
+
 def get_user_by_id(clienti, user_id):
     return next((c for c in clienti if c.get('id') == user_id), None)
+
 
 def get_user_by_email(clienti, email):
     email = (email or "").strip().lower()
@@ -315,9 +341,76 @@ def get_user_by_email(clienti, email):
             return c
     return None
 
+
+def detect_lang_from_request() -> str:
+    try:
+        raw = (request.headers.get("Accept-Language") or "").lower().strip()
+    except Exception:
+        raw = ""
+    supported = ["it", "en", "fr", "es", "de"]
+    if not raw:
+        return "it"
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    for part in parts:
+        code = part.split(";")[0].strip()
+        short = code.split("-")[0].strip()
+        if short in supported:
+            return short
+    return "it"
+
+
+def translated_value(p: dict, lang: str, field_name: str, fallback: str = "") -> str:
+    if lang == "it":
+        return (p.get(field_name) or fallback or "").strip()
+    trans = p.get("trans") or {}
+    block = trans.get(lang) or {}
+    value = (block.get(field_name) or "").strip()
+    if value:
+        return value
+    return (p.get(field_name) or fallback or "").strip()
+
+
+def ui_labels_for_lang(lang: str) -> dict:
+    labels = {
+        "it": {"save_contact":"SALVA CONTATTO","contacts":"CONTATTI","photos":"FOTO","videos":"VIDEO","documents":"DOCUMENTI","light":"CHIARO","dark":"SCURO","auto":"AUTO"},
+        "en": {"save_contact":"SAVE CONTACT","contacts":"CONTACTS","photos":"PHOTOS","videos":"VIDEOS","documents":"DOCUMENTS","light":"LIGHT","dark":"DARK","auto":"AUTO"},
+        "fr": {"save_contact":"ENREGISTRER LE CONTACT","contacts":"CONTACTS","photos":"PHOTOS","videos":"VIDÉOS","documents":"DOCUMENTS","light":"CLAIR","dark":"SOMBRE","auto":"AUTO"},
+        "es": {"save_contact":"GUARDAR CONTACTO","contacts":"CONTACTOS","photos":"FOTOS","videos":"VÍDEOS","documents":"DOCUMENTOS","light":"CLARO","dark":"OSCURO","auto":"AUTO"},
+        "de": {"save_contact":"KONTAKT SPEICHERN","contacts":"KONTAKTE","photos":"FOTOS","videos":"VIDEOS","documents":"DOKUMENTE","light":"HELL","dark":"DUNKEL","auto":"AUTO"},
+    }
+    return labels.get(lang, labels["it"])
+
+
+def vcf_escape(value: str) -> str:
+    s = str(value or "")
+    s = s.replace("\\", "\\\\")
+    s = s.replace("\n", "\\n").replace("\r", "")
+    s = s.replace(";", r"\;").replace(",", r"\,")
+    return s.strip()
+
+
+def absolute_url(path: str) -> str:
+    path = str(path or "").strip()
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return f"{CARD_BASE_URL}{path}"
+
+
+def normalize_web_url(url: str) -> str:
+    url = str(url or "").strip()
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return "https://" + url
+
+
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
 
 @app.route('/area/login', methods=['GET', 'POST'])
 def login():
@@ -332,6 +425,7 @@ def login():
         if user and user.get('must_change_password'):
             return redirect(url_for('change_password'))
         return redirect(url_for('area'))
+
     error = None
     if request.method == 'POST':
         u = (request.form.get('username') or '').strip()
@@ -349,6 +443,7 @@ def login():
         error = "Credenziali non valide."
     return render_template('login.html', error=error)
 
+
 @app.route('/area/forgot', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -364,6 +459,7 @@ def forgot_password():
         flash(public_msg, "success")
         return redirect(url_for('login'))
     return render_template('forgot.html')
+
 
 @app.route('/area/change-password', methods=['GET', 'POST'])
 def change_password():
@@ -399,6 +495,7 @@ def change_password():
         return redirect(url_for('area'))
     return render_template('change_password.html', forced=forced, user=user)
 
+
 @app.route('/area')
 def area():
     if not session.get('logged_in'):
@@ -415,6 +512,7 @@ def area():
     if user.get('must_change_password'):
         return redirect(url_for('change_password'))
     return render_template('dashboard.html', user=user)
+
 
 @app.route('/area/activate/<p_id>')
 def activate_profile(p_id):
@@ -433,6 +531,7 @@ def activate_profile(p_id):
     save_db(clienti)
     flash(f"Profilo P{p_id} attivato correttamente.", "success")
     return redirect(url_for('area'))
+
 
 @app.route('/area/deactivate/<p_id>')
 def deactivate_profile(p_id):
@@ -456,6 +555,7 @@ def deactivate_profile(p_id):
     flash(f"Profilo P{p_id} disattivato.", "success")
     return redirect(url_for('area'))
 
+
 @app.route('/area/set_default/<mode>')
 def set_default_profile(mode):
     if not session.get('logged_in'):
@@ -473,6 +573,7 @@ def set_default_profile(mode):
         save_db(clienti)
         flash("Apertura predefinita impostata su Menu.", "success")
     return redirect(url_for('area'))
+
 
 @app.route('/area/edit/<p_id>', methods=['GET', 'POST'])
 def edit_profile(p_id):
@@ -526,7 +627,7 @@ def edit_profile(p_id):
             'en': {'role': request.form.get('role_en', ''), 'bio': request.form.get('bio_en', '')},
             'fr': {'role': request.form.get('role_fr', ''), 'bio': request.form.get('bio_fr', '')},
             'es': {'role': request.form.get('role_es', ''), 'bio': request.form.get('bio_es', '')},
-            'de': {'role': request.form.get('role_de', ''), 'bio': request.form.get('bio_de', '')}
+            'de': {'role': request.form.get('role_de', ''), 'bio': request.form.get('bio_de', '')},
         }
         if 'foto' in request.files and request.files['foto'] and request.files['foto'].filename:
             try:
@@ -600,70 +701,6 @@ def edit_profile(p_id):
         return redirect(url_for('area'))
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
 
-def vcf_escape(value: str) -> str:
-    s = str(value or "")
-    s = s.replace("\\", "\\\\")
-    s = s.replace("\n", "\\n").replace("\r", "")
-    s = s.replace(";", r"\;").replace(",", r"\,")
-    return s.strip()
-
-def absolute_url(path: str) -> str:
-    path = str(path or "").strip()
-    if not path:
-        return ""
-    if path.startswith("http://") or path.startswith("https://"):
-        return path
-    return f"{CARD_BASE_URL}{path}"
-
-def normalize_web_url(url: str) -> str:
-    url = str(url or "").strip()
-    if not url:
-        return ""
-    if url.startswith("http://") or url.startswith("https://"):
-        return url
-    return "https://" + url
-
-def build_maps_url(address: str) -> str:
-    address = str(address or "").strip()
-    if not address:
-        return ""
-    return "https://www.google.com/maps/search/?api=1&query=" + urlencode({"q": address})[2:]
-
-def detect_lang_from_request() -> str:
-    try:
-        raw = (request.headers.get("Accept-Language") or "").lower().strip()
-    except Exception:
-        raw = ""
-    supported = ["it", "en", "fr", "es", "de"]
-    if not raw:
-        return "it"
-    parts = [p.strip() for p in raw.split(",") if p.strip()]
-    for part in parts:
-        code = part.split(";")[0].strip()
-        short = code.split("-")[0].strip()
-        if short in supported:
-            return short
-    return "it"
-
-def translated_value(p: dict, lang: str, field_name: str, fallback: str = "") -> str:
-    if lang == "it":
-        return (p.get(field_name) or fallback or "").strip()
-    trans = p.get("trans") or {}
-    block = trans.get(lang) or {}
-    value = (block.get(field_name) or "").strip()
-    if value:
-        return value
-    return (p.get(field_name) or fallback or "").strip()
-
-def ui_labels_for_lang(lang: str) -> dict:
-    labels = {
-        "it": {"save_contact":"SALVA CONTATTO","contacts":"CONTATTI","photos":"FOTO","videos":"VIDEO","documents":"DOCUMENTI","light":"CHIARO","dark":"SCURO","auto":"AUTO","choose":"Seleziona come vuoi connetterti:"},
-        "en": {"save_contact":"SAVE CONTACT","contacts":"CONTACTS","photos":"PHOTOS","videos":"VIDEOS","documents":"DOCUMENTS","light":"LIGHT","dark":"DARK","auto":"AUTO","choose":"Choose how you want to connect:"},
-        "fr": {"save_contact":"ENREGISTRER LE CONTACT","contacts":"CONTACTS","photos":"PHOTOS","videos":"VIDÉOS","documents":"DOCUMENTS","light":"CLAIR","dark":"SOMBRE","auto":"AUTO","choose":"Choisissez comment vous connecter :"},
-        "es": {"save_contact":"GUARDAR CONTACTO","contacts":"CONTACTOS","photos":"FOTOS","videos":"VÍDEOS","documents":"DOCUMENTOS","light":"CLARO","dark":"OSCURO","auto":"AUTO","choose":"Elige cómo quieres conectarte:"},
-        "de": {"save_contact":"KONTAKT SPEICHERN","contacts":"KONTAKTE","photos":"FOTOS","videos":"VIDEOS","documents":"DOKUMENTE","light":"HELL","dark":"DUNKEL","auto":"AUTO","choose":"Wählen Sie, wie Sie sich verbinden möchten:"},
-    }
-    return labels.get(lang, labels["it"])
 
 @app.route('/vcf/<slug>')
 def download_vcf(slug):
@@ -673,81 +710,94 @@ def download_vcf(slug):
         return "Contatto non trovato", 404
     if repair_user(user):
         save_db(clienti)
-    p_req = (request.args.get('p') or "").strip().lower()
-    if p_req not in ("p1", "p2", "p3"):
-        p_req = user.get("default_profile", "p1")
-    if p_req == "menu":
-        p_req = "p1"
-    if not user.get(p_req, {}).get("active"):
-        p_req = "p1"
+    p_req = (request.args.get('p') or '').strip().lower()
+    if p_req not in ('p1', 'p2', 'p3'):
+        p_req = user.get('default_profile', 'p1')
+    if p_req == 'menu':
+        p_req = 'p1'
+    if not user.get(p_req, {}).get('active'):
+        p_req = 'p1'
     p = user.get(p_req, {}) or {}
-    full_name = (p.get("name") or user.get("nome") or slug).strip()
-    role = (p.get("role") or "").strip()
-    company = (p.get("company") or "").strip()
-    bio = (p.get("bio") or "").strip()
-    office_phone = (p.get("office_phone") or "").strip()
-    address = (p.get("address") or "").strip()
-    pec = (p.get("pec") or "").strip()
-    piva = (p.get("piva") or "").strip()
-    cod_sdi = (p.get("cod_sdi") or "").strip()
-    mobiles = [str(x).strip() for x in (p.get("mobiles") or []) if str(x).strip()]
-    emails = [str(x).strip() for x in (p.get("emails") or []) if str(x).strip()]
-    websites = [normalize_web_url(x) for x in (p.get("websites") or []) if str(x).strip()]
-    socials = []
-    for s in (p.get("socials") or []):
-        label = str((s or {}).get("label", "")).strip()
-        url = normalize_web_url((s or {}).get("url", ""))
-        if url:
-            socials.append((label, url))
-    photo_url = absolute_url(p.get("foto") or "")
+    full_name = (p.get('name') or user.get('nome') or slug).strip()
+    role = (p.get('role') or '').strip()
+    company = (p.get('company') or '').strip()
+    bio = (p.get('bio') or '').strip()
+    office_phone = (p.get('office_phone') or '').strip()
+    address = (p.get('address') or '').strip()
+    pec = (p.get('pec') or '').strip()
+    piva = (p.get('piva') or '').strip()
+    cod_sdi = (p.get('cod_sdi') or '').strip()
+    mobiles = [str(x).strip() for x in (p.get('mobiles') or []) if str(x).strip()]
+    emails = [str(x).strip() for x in (p.get('emails') or []) if str(x).strip()]
+    websites = [normalize_web_url(x) for x in (p.get('websites') or []) if str(x).strip()]
+    socials = [normalize_web_url((s or {}).get('url', '')) for s in (p.get('socials') or []) if normalize_web_url((s or {}).get('url', ''))]
+    photo_url = absolute_url(p.get('foto') or '')
     card_url = f"{CARD_BASE_URL}/card/{slug}?p={p_req}"
-    maps_url = build_maps_url(address)
-    gallery_img = [absolute_url(x) for x in (p.get("gallery_img") or []) if absolute_url(x)]
-    gallery_vid = [absolute_url(x) for x in (p.get("gallery_vid") or []) if absolute_url(x)]
-    gallery_pdf = [absolute_url((x or {}).get("path", "")) for x in (p.get("gallery_pdf") or []) if absolute_url((x or {}).get("path", ""))]
+    gallery_img = [absolute_url(x) for x in (p.get('gallery_img') or []) if absolute_url(x)]
+    gallery_vid = [absolute_url(x) for x in (p.get('gallery_vid') or []) if absolute_url(x)]
+    gallery_pdf = [absolute_url((x or {}).get('path', '')) for x in (p.get('gallery_pdf') or []) if absolute_url((x or {}).get('path', ''))]
     notes = []
-    if bio: notes.append("Bio: " + bio)
-    if piva: notes.append("P.IVA: " + piva)
-    if cod_sdi: notes.append("SDI: " + cod_sdi)
-    if pec: notes.append("PEC: " + pec)
-    notes.append("Card Digitale Pay4You: " + card_url)
+    if bio:
+        notes.append('Bio: ' + bio)
+    if piva:
+        notes.append('P.IVA: ' + piva)
+    if cod_sdi:
+        notes.append('SDI: ' + cod_sdi)
+    if pec:
+        notes.append('PEC: ' + pec)
+    notes.append('Card Digitale Pay4You: ' + card_url)
     if gallery_img:
-        notes.append("Foto galleria:")
-        for x in gallery_img[:30]: notes.append("- " + x)
+        notes.append('Foto galleria:')
+        for x in gallery_img[:30]:
+            notes.append('- ' + x)
     if gallery_vid:
-        notes.append("Video galleria:")
-        for x in gallery_vid[:10]: notes.append("- " + x)
+        notes.append('Video galleria:')
+        for x in gallery_vid[:10]:
+            notes.append('- ' + x)
     if gallery_pdf:
-        notes.append("PDF galleria:")
-        for x in gallery_pdf[:12]: notes.append("- " + x)
-    vcf_lines = ["BEGIN:VCARD","VERSION:3.0",f"N:{vcf_escape(full_name)};;;;",f"FN:{vcf_escape(full_name)}"]
-    if company: vcf_lines.append(f"ORG:{vcf_escape(company)}")
-    if role: vcf_lines.append(f"TITLE:{vcf_escape(role)}")
-    if photo_url: vcf_lines.append(f"PHOTO;VALUE=URI:{vcf_escape(photo_url)}")
+        notes.append('PDF galleria:')
+        for x in gallery_pdf[:12]:
+            notes.append('- ' + x)
+    vcf_lines = [
+        'BEGIN:VCARD', 'VERSION:3.0',
+        f"N:{vcf_escape(full_name)};;;;",
+        f"FN:{vcf_escape(full_name)}",
+    ]
+    if company:
+        vcf_lines.append(f"ORG:{vcf_escape(company)}")
+    if role:
+        vcf_lines.append(f"TITLE:{vcf_escape(role)}")
+    if photo_url:
+        vcf_lines.append(f"PHOTO;VALUE=URI:{vcf_escape(photo_url)}")
     for m in mobiles:
         nm = normalize_phone(m)
-        if nm: vcf_lines.append(f"TEL;TYPE=CELL:{vcf_escape(nm)}")
+        if nm:
+            vcf_lines.append(f"TEL;TYPE=CELL:{vcf_escape(nm)}")
     if office_phone:
         no = normalize_phone(office_phone)
-        if no: vcf_lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(no)}")
+        if no:
+            vcf_lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(no)}")
     for e in emails:
         vcf_lines.append(f"EMAIL;TYPE=INTERNET,WORK:{vcf_escape(e)}")
-    if pec: vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
+    if pec:
+        vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
     for w in websites:
         vcf_lines.append(f"URL;TYPE=WORK:{vcf_escape(w)}")
-    for label, s in socials:
-        typ = label.upper() if label else "SOCIAL"
-        vcf_lines.append(f"URL;TYPE={vcf_escape(typ)}:{vcf_escape(s)}")
+    for s in socials:
+        vcf_lines.append(f"URL;TYPE=SOCIAL:{vcf_escape(s)}")
     vcf_lines.append(f"URL;TYPE=CARD:{vcf_escape(card_url)}")
-    if address: vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
-    if notes: vcf_lines.append(f"NOTE:{vcf_escape(chr(10).join(notes))}")
-    vcf_lines.append("END:VCARD")
-    vcf_content = "\r\n".join(vcf_lines) + "\r\n"
+    if address:
+        vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
+    if notes:
+        vcf_lines.append(f"NOTE:{vcf_escape(chr(10).join(notes))}")
+    vcf_lines.append('END:VCARD')
+    vcf_content = '\r\n'.join(vcf_lines) + '\r\n'
     filename = f"{slug}-{p_req}.vcf"
     resp = make_response(vcf_content)
-    resp.headers["Content-Type"] = "text/vcard; charset=utf-8"
-    resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    resp.headers['Content-Type'] = 'text/vcard; charset=utf-8'
+    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     return resp
+
 
 @app.route('/card/<slug>')
 def view_card(slug):
@@ -769,73 +819,45 @@ def view_card(slug):
         p_req = 'p1'
     p = user[p_req]
     ag = {
-        "name": p.get('name'),
-        "role": translated_value(p, lang, 'role'),
-        "company": p.get('company'),
-        "bio": translated_value(p, lang, 'bio'),
-        "photo_url": p.get('foto'),
-        "logo_url": p.get('logo'),
-        "personal_url": p.get('personal_foto'),
-        "slug": slug,
-        "piva": p.get('piva'),
-        "pec": p.get('pec'),
-        "cod_sdi": p.get('cod_sdi'),
-        "office_phone": p.get('office_phone'),
-        "address": p.get('address'),
-        "fx_rotate_logo": p.get('fx_rotate_logo'),
-        "fx_rotate_agent": p.get('fx_rotate_agent'),
-        "fx_interaction": p.get('fx_interaction'),
-        "fx_back": p.get('fx_back_content'),
-        "photo_pos_x": p.get('pos_x', 0),
-        "photo_pos_y": p.get('pos_y', 0),
-        "photo_zoom": p.get('zoom', 1.0),
-        "trans": p.get('trans', {})
+        'name': p.get('name'),
+        'role': translated_value(p, lang, 'role'),
+        'company': p.get('company'),
+        'bio': translated_value(p, lang, 'bio'),
+        'photo_url': p.get('foto'),
+        'logo_url': p.get('logo'),
+        'personal_url': p.get('personal_foto'),
+        'slug': slug,
+        'piva': p.get('piva'),
+        'pec': p.get('pec'),
+        'cod_sdi': p.get('cod_sdi'),
+        'office_phone': p.get('office_phone'),
+        'address': p.get('address'),
+        'fx_rotate_logo': p.get('fx_rotate_logo'),
+        'fx_rotate_agent': p.get('fx_rotate_agent'),
+        'fx_interaction': p.get('fx_interaction'),
+        'fx_back': p.get('fx_back_content'),
+        'photo_pos_x': p.get('pos_x', 0),
+        'photo_pos_y': p.get('pos_y', 0),
+        'photo_zoom': p.get('zoom', 1.0),
+        'trans': p.get('trans', {})
     }
     return render_template('card.html', lang=lang, ui=ui, ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
-@app.route('/master', methods=['GET', 'POST'])
-def master_login():
-    if session.get('is_master'):
-        clienti = load_db()
-        dirty = False
-        for c in clienti:
-            if repair_user(c):
-                dirty = True
-        if dirty:
-            save_db(clienti)
-        return render_template('master_dashboard.html', clienti=clienti, files=[])
-    if request.method == 'POST' and request.form.get('username') == "admin" and request.form.get('password') == "Peppone16@":
-        session['is_master'] = True
-        return redirect(url_for('master_login'))
-    return render_template('master_login.html')
 
-@app.route('/master/add', methods=['POST'])
-def master_add():
-    if not session.get('is_master'):
-        return redirect(url_for('master_login'))
+@app.route('/<slug>')
+def legacy_card_redirect(slug):
+    reserved = {'area', 'master', 'uploads', 'static', 'favicon.ico', 'reset-tutto', 'vcf', 'card'}
+    if slug in reserved:
+        return redirect(url_for('home'))
     clienti = load_db()
-    slug = (request.form.get('slug') or '').strip().lower()
-    admin_email = (request.form.get('admin_email') or '').strip()
-    admin_whatsapp = normalize_phone(request.form.get('admin_whatsapp') or '')
-    if not slug or not admin_email or not admin_whatsapp:
-        flash("Errore: Tutti i campi (Slug, Email, WhatsApp) sono obbligatori.", "error")
-        return redirect(url_for('master_login'))
-    if any(c.get('slug') == slug for c in clienti):
-        flash(f"Errore: Lo slug '{slug}' è già in uso. Scegline un altro.", "error")
-        return redirect(url_for('master_login'))
-    password = make_random_password(12)
-    new_id = max([c['id'] for c in clienti], default=0) + 1
-    new_client = {
-        "id": new_id,"slug": slug,"username": slug,"password": password,"must_change_password": True,
-        "reset_token": "","reset_expires": 0,"nome": "",
-        "admin_contact": {"email": admin_email, "whatsapp": admin_whatsapp},
-        "p1": {"active": True},"p2": {"active": False},"p3": {"active": False},"default_profile": "p1"
-    }
-    repair_user(new_client)
-    clienti.append(new_client)
-    save_db(clienti)
-    flash(f"Card '{slug}' creata con successo!", "success")
-    return redirect(url_for('master_login'))
+    user = next((c for c in clienti if c.get('slug') == slug), None)
+    if user:
+        p = request.args.get('p', '')
+        if p:
+            return redirect(url_for('view_card', slug=slug, p=p), code=301)
+        return redirect(url_for('view_card', slug=slug), code=301)
+    return "<h1>Card non trovata</h1>", 404
+
 
 @app.route('/master/delete/<int:id>')
 def master_delete(id):
@@ -845,16 +867,19 @@ def master_delete(id):
     flash("Card eliminata.", "success")
     return redirect(url_for('master_login'))
 
+
 @app.route('/master/impersonate/<int:id>')
 def master_impersonate(id):
     session['logged_in'] = True
     session['user_id'] = id
     return redirect(url_for('area'))
 
+
 @app.route('/master/logout')
 def master_logout():
     session.pop('is_master', None)
     return redirect(url_for('master_login'))
+
 
 @app.route('/area/logout')
 def logout():
@@ -864,13 +889,16 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico')
+
 
 @app.route('/reset-tutto')
 def reset_db_emergency():
@@ -881,6 +909,7 @@ def reset_db_emergency():
         except Exception:
             pass
     return "DB PULITO"
+
 
 if __name__ == '__main__':
     app.run(debug=True)
