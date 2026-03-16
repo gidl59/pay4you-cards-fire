@@ -8,9 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body data-theme="auto">
-
   <div class="card-wrap">
-
     {% if ag.logo_url %}
       <div class="top-left-logo {% if ag.fx_rotate_logo=='on' %}spin-cw{% endif %}">
         <img src="{{ ag.logo_url }}" alt="logo">
@@ -28,8 +26,7 @@
       <div class="flipper">
         <div class="front">
           {% if ag.photo_url %}
-            <img src="{{ ag.photo_url }}" class="avatar-img"
-                 style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
+            <img src="{{ ag.photo_url }}" class="avatar-img" style="--ox:{{ ag.photo_pos_x }}%; --oy:{{ ag.photo_pos_y }}%; --z:{{ ag.photo_zoom }};">
           {% else %}
             <div class="avatar-img" style="background:#555;"></div>
           {% endif %}
@@ -100,25 +97,17 @@
       {% if ag.pec %}
         <div class="d-row"><span class="d-icon">⚖️</span> <a href="mailto:{{ag.pec}}" class="d-link">{{ag.pec}}</a></div>
       {% endif %}
-
       {% for w_str in websites %}
         {% for w in w_str.split(',') %}
           {% if w.strip() %}
             {% set full_w = w.strip() if w.strip().startswith('http') else 'https://' ~ w.strip() %}
-            <div class="d-row">
-                <span class="d-icon">🌐</span> <a href="{{ full_w }}" target="_blank" class="d-link">{{ w.strip() }}</a>
-            </div>
+            <div class="d-row"><span class="d-icon">🌐</span> <a href="{{ full_w }}" target="_blank" class="d-link">{{ w.strip() }}</a></div>
           {% endif %}
         {% endfor %}
       {% endfor %}
-
       {% if ag.address %}
-        <div class="d-row">
-          <span class="d-icon">📍</span>
-          <a href="https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}" target="_blank" class="d-link">{{ ag.address }}</a>
-        </div>
+        <div class="d-row"><span class="d-icon">📍</span> <a href="https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}" target="_blank" class="d-link">{{ ag.address }}</a></div>
       {% endif %}
-
       <div class="fiscal-row">
         {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
         {% if ag.cod_sdi %}<span>SDI: {{ag.cod_sdi}}</span>{% endif %}
@@ -174,18 +163,10 @@
     <div id="shareModal" class="modal-overlay">
       <div id="mediaBox"></div>
       <div class="modal-actions">
-        <a id="waLink" href="#" target="_blank" class="act-btn bg-wa" title="WhatsApp">
-          <i class="fab fa-whatsapp"></i>
-        </a>
-        <a id="mailAppLink" href="#" class="act-btn bg-appmail" title="Email App">
-          <i class="fas fa-paper-plane"></i>
-        </a>
-        <a id="gmailLink" href="#" target="_blank" class="act-btn bg-gmail" title="Gmail">
-          <i class="fas fa-envelope"></i>
-        </a>
-        <div onclick="closeModal()" class="act-btn bg-cl" title="Chiudi">
-          <i class="fas fa-times"></i>
-        </div>
+        <a id="waLink" href="#" target="_blank" class="act-btn bg-wa" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a id="mailAppLink" href="#" class="act-btn bg-appmail" title="Email App"><i class="fas fa-paper-plane"></i></a>
+        <a id="gmailLink" href="#" target="_blank" class="act-btn bg-gmail" title="Gmail"><i class="fas fa-envelope"></i></a>
+        <div onclick="closeModal()" class="act-btn bg-cl" title="Chiudi"><i class="fas fa-times"></i></div>
       </div>
     </div>
 
@@ -193,7 +174,6 @@
       <div onclick="closeWeb()" class="btn-back-card">🔙 CHIUDI E TORNA ALLA CARD</div>
       <iframe id="webFrame" class="web-frame"></iframe>
     </div>
-
   </div>
 
   <script>
@@ -201,13 +181,9 @@
       if (document.getElementById('modalColorFix')) return;
       const st = document.createElement('style');
       st.id = 'modalColorFix';
-      st.textContent = `
-        .bg-appmail{ background:#1d6fd8 !important; color:#ffffff !important; }
-        .bg-gmail{ background:#d93025 !important; color:#ffffff !important; }
-      `;
+      st.textContent = `.bg-appmail{ background:#1d6fd8 !important; color:#ffffff !important; }.bg-gmail{ background:#d93025 !important; color:#ffffff !important; }`;
       document.head.appendChild(st);
     }
-
     function getPrimaryRecipient() {
       const rawEmails = {{ emails|tojson|safe }};
       if (Array.isArray(rawEmails)) {
@@ -224,20 +200,8 @@
       if (pec && String(pec).trim()) return String(pec).trim();
       return "";
     }
-
-    function buildGmailLink(to, subject, body){
-      return "https://mail.google.com/mail/?view=cm&fs=1"
-        + "&to=" + encodeURIComponent(to || "")
-        + "&su=" + encodeURIComponent(subject || "")
-        + "&body=" + encodeURIComponent(body || "");
-    }
-
-    function buildMailtoLink(to, subject, body){
-      return "mailto:" + encodeURIComponent(to || "")
-        + "?subject=" + encodeURIComponent(subject || "")
-        + "&body=" + encodeURIComponent(body || "");
-    }
-
+    function buildGmailLink(to, subject, body){ return "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to || "") + "&su=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""); }
+    function buildMailtoLink(to, subject, body){ return "mailto:" + encodeURIComponent(to || "") + "?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""); }
     function buildEmailText(kind, link){
       const name = {{ ag.name|default('', true)|tojson|safe }};
       const role = {{ ag.role|default('', true)|tojson|safe }};
@@ -252,7 +216,6 @@
       let body = intro + "\n\n" + (name ? "Nome: " + name + "\n" : "") + (role ? "Ruolo: " + role + "\n" : "") + (company ? "Azienda: " + company + "\n" : "") + "\nLink contenuto:\n" + link + "\n\nCard:\n" + cardLink;
       return { subject: header, body: body };
     }
-
     function openShare(type, url) {
       ensureModalColors();
       const box = document.getElementById('mediaBox');
@@ -268,23 +231,10 @@
       else if(type === 'qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(fullUrl) + '" style="background:white; padding:14px; border-radius:18px;">';
       document.getElementById('shareModal').style.display = 'flex';
     }
-
-    function closeModal(){
-      document.getElementById('shareModal').style.display='none';
-      document.getElementById('mediaBox').innerHTML="";
-    }
-    function openSite(url){
-      document.getElementById('webFrame').src=url;
-      document.getElementById('webModal').style.display='flex';
-    }
-    function closeWeb(){
-      document.getElementById('webModal').style.display='none';
-      document.getElementById('webFrame').src="";
-    }
-    function setT(t){
-      if(t === 'auto') document.body.removeAttribute('data-theme');
-      else document.body.setAttribute('data-theme', t);
-    }
+    function closeModal(){ document.getElementById('shareModal').style.display='none'; document.getElementById('mediaBox').innerHTML=""; }
+    function openSite(url){ document.getElementById('webFrame').src=url; document.getElementById('webModal').style.display='flex'; }
+    function closeWeb(){ document.getElementById('webModal').style.display='none'; document.getElementById('webFrame').src=""; }
+    function setT(t){ if(t === 'auto') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme', t); }
     ensureModalColors();
   </script>
 </body>
