@@ -55,14 +55,13 @@
 
     <div class="actions-row">
       <a href="/vcf/{{ ag.slug }}?p={{ profile }}" class="btn-save" download>
-        <i class="fas fa-user-plus"></i> SALVA CONTATTO
+        <i class="fas fa-user-plus"></i> {{ ui.save_contact }}
       </a>
       <div class="btn-qr" onclick="openShare('qr', '')">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ request.url }}" alt="qr">
       </div>
     </div>
 
-    {% if socials %}
     <div class="social-grid">
       {% for s in socials %}
       <a href="{{ s.url }}" target="_blank" class="soc-btn
@@ -71,7 +70,6 @@
       </a>
       {% endfor %}
     </div>
-    {% endif %}
 
     <div class="switcher-bar">
       <div class="sw-left">
@@ -80,14 +78,14 @@
         {% if p3_enabled and profile!='p3' %}<a href="?p=p3" class="circle-p p3-btn">P3</a>{% endif %}
       </div>
       <div class="sw-right">
-        <span onclick="setT('light')" class="theme-btn t-light">CHIARO</span>
-        <span onclick="setT('dark')" class="theme-btn t-dark">SCURO</span>
-        <span onclick="setT('auto')" class="theme-btn t-auto">AUTO</span>
+        <span onclick="setT('light')" class="theme-btn t-light">{{ ui.light }}</span>
+        <span onclick="setT('dark')" class="theme-btn t-dark">{{ ui.dark }}</span>
+        <span onclick="setT('auto')" class="theme-btn t-auto">{{ ui.auto }}</span>
       </div>
     </div>
 
     <div class="scene-box">
-      <div class="scene-label">CONTATTI</div>
+      <div class="scene-label">{{ ui.contacts }}</div>
       {% for m in mobiles %}
         <div class="d-row"><span class="d-icon">📱</span> <a href="tel:{{m}}" class="d-link">{{m}}</a></div>
       {% endfor %}
@@ -114,16 +112,12 @@
         {% endfor %}
       {% endfor %}
 
-     {% if ag.address %}
-  {% for addr in ag.address.splitlines() %}
-      {% if addr.strip() %}
-      <div class="d-row">
+      {% if ag.address %}
+        <div class="d-row">
           <span class="d-icon">📍</span>
-          <a href="https://www.google.com/maps/search/?api=1&query={{ addr.strip()|urlencode }}" target="_blank" class="d-link">{{ addr.strip() }}</a>
-      </div>
+          <a href="https://www.google.com/maps/search/?api=1&query={{ ag.address|urlencode }}" target="_blank" class="d-link">{{ ag.address }}</a>
+        </div>
       {% endif %}
-  {% endfor %}
-{% endif %}
 
       <div class="fiscal-row">
         {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
@@ -133,7 +127,7 @@
 
     {% if p_data.gallery_img %}
     <div class="scene-box">
-      <div class="scene-label">FOTO</div>
+      <div class="scene-label">{{ ui.photos }}</div>
       <div class="gal-grid-5">
         {% for img in p_data.gallery_img %}
           <img src="{{ img }}" class="thumb" onclick="openShare('img', '{{ img }}')">
@@ -144,7 +138,7 @@
 
     {% if p_data.gallery_vid %}
     <div class="scene-box">
-      <div class="scene-label">VIDEO</div>
+      <div class="scene-label">{{ ui.videos }}</div>
       <div class="gal-grid-5">
         {% for vid in p_data.gallery_vid %}
           <div class="vid-box" onclick="openShare('vid', '{{ vid }}')">
@@ -158,7 +152,7 @@
 
     {% if p_data.gallery_pdf %}
     <div class="scene-box">
-      <div class="scene-label">DOCUMENTI</div>
+      <div class="scene-label">{{ ui.documents }}</div>
       <div class="pdf-grid">
         {% for pdf in p_data.gallery_pdf %}
           <div class="pdf-item" onclick="openShare('pdf', '{{ pdf.path }}')">
@@ -249,63 +243,29 @@
       const role = {{ ag.role|default('', true)|tojson|safe }};
       const company = {{ ag.company|default('', true)|tojson|safe }};
       const cardLink = window.location.href;
-
       let header = "Pay4You - Condivisione";
       let intro = "Ciao!";
-
-      if (kind === 'qr') {
-        header = "Pay4You - QR Code / Link Card";
-        intro = "Ti invio il QR Code / link della mia Card digitale Pay4You.";
-      } else if (kind === 'img') {
-        header = "Pay4You - Condivisione Foto";
-        intro = "Ti invio una foto dalla mia Card digitale Pay4You.";
-      } else if (kind === 'vid') {
-        header = "Pay4You - Condivisione Video";
-        intro = "Ti invio un video dalla mia Card digitale Pay4You.";
-      } else if (kind === 'pdf') {
-        header = "Pay4You - Condivisione PDF";
-        intro = "Ti invio un PDF dalla mia Card digitale Pay4You.";
-      }
-
-      let body =
-        intro + "\n\n" +
-        (name ? "Nome: " + name + "\n" : "") +
-        (role ? "Ruolo: " + role + "\n" : "") +
-        (company ? "Azienda: " + company + "\n" : "") +
-        "\nLink contenuto:\n" + link + "\n\n" +
-        "Card:\n" + cardLink;
-
+      if (kind === 'qr') { header = "Pay4You - QR Code / Link Card"; intro = "Ti invio il QR Code / link della mia Card digitale Pay4You."; }
+      else if (kind === 'img') { header = "Pay4You - Condivisione Foto"; intro = "Ti invio una foto dalla mia Card digitale Pay4You."; }
+      else if (kind === 'vid') { header = "Pay4You - Condivisione Video"; intro = "Ti invio un video dalla mia Card digitale Pay4You."; }
+      else if (kind === 'pdf') { header = "Pay4You - Condivisione PDF"; intro = "Ti invio un PDF dalla mia Card digitale Pay4You."; }
+      let body = intro + "\n\n" + (name ? "Nome: " + name + "\n" : "") + (role ? "Ruolo: " + role + "\n" : "") + (company ? "Azienda: " + company + "\n" : "") + "\nLink contenuto:\n" + link + "\n\nCard:\n" + cardLink;
       return { subject: header, body: body };
     }
 
     function openShare(type, url) {
       ensureModalColors();
-
       const box = document.getElementById('mediaBox');
       const fullUrl = (type === 'qr') ? window.location.href : (window.location.origin + url);
       const recipient = getPrimaryRecipient();
-
-      document.getElementById('waLink').href =
-        "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
-
+      document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent("Pay4You:\n" + fullUrl);
       const mail = buildEmailText(type, fullUrl);
-
-      document.getElementById('mailAppLink').href =
-        buildMailtoLink(recipient, mail.subject, mail.body);
-
-      document.getElementById('gmailLink').href =
-        buildGmailLink(recipient, mail.subject, mail.body);
-
-      if(type === 'img') {
-        box.innerHTML = '<img src="' + url + '" class="modal-content">';
-      } else if(type === 'vid') {
-        box.innerHTML = '<video src="' + url + '" controls autoplay class="modal-content"></video>';
-      } else if(type === 'pdf') {
-        box.innerHTML = '<iframe src="' + url + '" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
-      } else if(type === 'qr') {
-        box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(fullUrl) + '" style="background:white; padding:14px; border-radius:18px;">';
-      }
-
+      document.getElementById('mailAppLink').href = buildMailtoLink(recipient, mail.subject, mail.body);
+      document.getElementById('gmailLink').href = buildGmailLink(recipient, mail.subject, mail.body);
+      if(type === 'img') box.innerHTML = '<img src="' + url + '" class="modal-content">';
+      else if(type === 'vid') box.innerHTML = '<video src="' + url + '" controls autoplay class="modal-content"></video>';
+      else if(type === 'pdf') box.innerHTML = '<iframe src="' + url + '" class="modal-content" style="height:65vh; width:340px; background:white;"></iframe>';
+      else if(type === 'qr') box.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(fullUrl) + '" style="background:white; padding:14px; border-radius:18px;">';
       document.getElementById('shareModal').style.display = 'flex';
     }
 
@@ -313,22 +273,18 @@
       document.getElementById('shareModal').style.display='none';
       document.getElementById('mediaBox').innerHTML="";
     }
-
     function openSite(url){
       document.getElementById('webFrame').src=url;
       document.getElementById('webModal').style.display='flex';
     }
-
     function closeWeb(){
       document.getElementById('webModal').style.display='none';
       document.getElementById('webFrame').src="";
     }
-
     function setT(t){
       if(t === 'auto') document.body.removeAttribute('data-theme');
       else document.body.setAttribute('data-theme', t);
     }
-
     ensureModalColors();
   </script>
 </body>
