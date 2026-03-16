@@ -16,24 +16,16 @@
 <body>
     <img src="{{ user.p1.foto if user.p1.foto else 'https://via.placeholder.com/150' }}" class="avatar">
     <h1>Ciao, sono {{ user.nome }}</h1>
-    <p>{{ ui.choose }}</p>
-
-    {% if user.p1.active %}
-    <a href="/card/{{ slug }}?p=p1" class="btn-choice">
-        {{ user.p1.role if user.p1.role else 'Profilo Principale' }}
-    </a>
-    {% endif %}
-
-    {% if user.p2.active %}
-    <a href="/card/{{ slug }}?p=p2" class="btn-choice">
-        {{ user.p2.role if user.p2.role else 'Profilo Secondario' }}
-    </a>
-    {% endif %}
-
-    {% if user.p3.active %}
-    <a href="/card/{{ slug }}?p=p3" class="btn-choice">
-        {{ user.p3.role if user.p3.role else 'Profilo Extra' }}
-    </a>
-    {% endif %}
+    <p>
+      {% if lang == 'en' %}Choose how you want to connect:
+      {% elif lang == 'fr' %}Choisissez comment vous connecter :
+      {% elif lang == 'es' %}Elige cómo quieres conectarte:
+      {% elif lang == 'de' %}Wählen Sie, wie Sie sich verbinden möchten:
+      {% else %}Seleziona come vuoi connetterti:
+      {% endif %}
+    </p>
+    {% if user.p1.active %}<a href="/card/{{ slug }}?p=p1" class="btn-choice">{{ user.p1.role if user.p1.role else 'Profilo Principale' }}</a>{% endif %}
+    {% if user.p2.active %}<a href="/card/{{ slug }}?p=p2" class="btn-choice">{{ user.p2.role if user.p2.role else 'Profilo Secondario' }}</a>{% endif %}
+    {% if user.p3.active %}<a href="/card/{{ slug }}?p=p3" class="btn-choice">{{ user.p3.role if user.p3.role else 'Profilo Extra' }}</a>{% endif %}
 </body>
 </html>
