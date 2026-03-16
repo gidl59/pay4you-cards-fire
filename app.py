@@ -74,6 +74,8 @@ BRAND_PHONE = os.getenv("BRAND_PHONE", "+39 0541 1646895").strip()
 BRAND_WHATSAPP_URL = os.getenv("BRAND_WHATSAPP_URL", "https://wa.me/393508725353").strip()
 BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "https://www.pay4you.store/logo-pay4you.png").strip()
 
+SOCIAL_LABELS = ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']
+
 
 def load_db():
     if not os.path.exists(DB_FILE):
@@ -789,11 +791,11 @@ def edit_profile(p_id):
         p['address'] = request.form.get('address', '')
 
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
-        p['emails'] = [x for x in [request.form.get('email1')] if x]
-        p['websites'] = [x for x in [request.form.get('website')] if x]
+        p['emails'] = [x.strip() for x in (request.form.get('email1') or '').split(',') if x.strip()]
+        p['websites'] = [x.strip() for x in (request.form.get('website') or '').split(',') if x.strip()]
 
         socials = []
-        for soc in ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']:
+        for soc in SOCIAL_LABELS:
             url = (request.form.get(soc.lower()) or '').strip()
             if url:
                 socials.append({'label': soc, 'url': url})
@@ -942,37 +944,62 @@ def normalize_web_url(url: str) -> str:
     return "https://" + url
 
 
-def get_local_file_bytes(path: str):
-    path = str(path or "").strip()
-    if not path.startswith('/uploads/'):
+def local_upload_path(url_or_path: str) -> str:
+    p = str(url_or_path or "").strip()
+    if not p:
+        return ""
+    parsed = urlparse(p).path
+    if parsed.startswith('/uploads/'):
+        filename = parsed.split('/uploads/', 1)[1]
+        fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.isfile(fp):
+            return fp
+    return ""
+
+
+def read_photo_for_vcard(photo_value: str):
+    fp = local_upload_path(photo_value)
+    if not fp:
         return None, None
-    filename = path.split('/uploads/', 1)[1]
-    fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.isfile(fp):
-        return None, None
-    ext = get_file_ext(fp)
-    mime = 'image/jpeg'
-    if ext == 'png':
-        mime = 'image/png'
-    elif ext == 'webp':
-        mime = 'image/webp'
-    elif ext in ('jpg', 'jpeg'):
-        mime = 'image/jpeg'
     try:
+        ext = get_file_ext(fp)
+        img_type = 'JPEG'
+        if ext == 'png':
+            img_type = 'PNG'
+        elif ext == 'webp':
+            img_type = 'JPEG'
+        elif ext in ('jpg', 'jpeg'):
+            img_type = 'JPEG'
+
         with open(fp, 'rb') as f:
-            return f.read(), mime
+            raw = f.read()
+
+        if ext == 'webp' and Image is not None:
+            img = Image.open(BytesIO(raw)).convert('RGB')
+            bio = BytesIO()
+            img.save(bio, format='JPEG', quality=92)
+            raw = bio.getvalue()
+            img_type = 'JPEG'
+
+        return img_type, base64.b64encode(raw).decode('ascii')
     except Exception:
         return None, None
 
 
-def fold_vcf_line(line: str, limit: int = 75):
+def fold_vcard_line(line: str, limit: int = 75):
     if len(line) <= limit:
         return [line]
     out = []
-    while len(line) > limit:
-        out.append(line[:limit])
-        line = ' ' + line[limit:]
-    out.append(line)
+    start = 0
+    first = True
+    while start < len(line):
+        chunk = line[start:start + (limit if first else limit - 1)]
+        if first:
+            out.append(chunk)
+            first = False
+        else:
+            out.append(' ' + chunk)
+        start += len(chunk)
     return out
 
 
@@ -1010,9 +1037,13 @@ def download_vcf(slug):
     mobiles = [str(x).strip() for x in (p.get("mobiles") or []) if str(x).strip()]
     emails = [str(x).strip() for x in (p.get("emails") or []) if str(x).strip()]
     websites = [normalize_web_url(x) for x in (p.get("websites") or []) if str(x).strip()]
-    socials = [normalize_web_url((s or {}).get("url", "")) for s in (p.get("socials") or []) if normalize_web_url((s or {}).get("url", ""))]
+    socials = []
+    for s in (p.get("socials") or []):
+        label = str((s or {}).get("label", "")).strip()
+        surl = normalize_web_url((s or {}).get("url", ""))
+        if label and surl:
+            socials.append({"label": label, "url": surl})
 
-    local_photo_path = p.get("foto") or ""
     card_url = f"{CARD_BASE_URL}/card/{slug}?p={p_req}"
 
     notes = []
@@ -1035,16 +1066,10 @@ def download_vcf(slug):
     if role:
         vcf_lines.append(f"TITLE:{vcf_escape(role)}")
 
-    photo_bytes, photo_mime = get_local_file_bytes(local_photo_path)
-    if photo_bytes:
-        ext = "JPEG"
-        if photo_mime == 'image/png':
-            ext = "PNG"
-        elif photo_mime == 'image/webp':
-            ext = "WEBP"
-        b64 = base64.b64encode(photo_bytes).decode('ascii')
-        for ln in fold_vcf_line(f"PHOTO;ENCODING=b;TYPE={ext}:{b64}"):
-            vcf_lines.append(ln)
+    photo_type, photo_b64 = read_photo_for_vcard(p.get("foto") or "")
+    if photo_type and photo_b64:
+        photo_line = f"PHOTO;ENCODING=b;TYPE={photo_type}:{photo_b64}"
+        vcf_lines.extend(fold_vcard_line(photo_line))
 
     for m in mobiles:
         nm = normalize_phone(m)
@@ -1060,15 +1085,22 @@ def download_vcf(slug):
         vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(e)}")
 
     if pec:
-        vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
+        vcf_lines.append(f"itemPEC.EMAIL:{vcf_escape(pec)}")
+        vcf_lines.append("itemPEC.X-ABLabel:PEC")
 
-    for w in websites:
-        vcf_lines.append(f"URL:{vcf_escape(w)}")
+    if websites:
+        for idx, w in enumerate(websites, start=1):
+            tag = f"itemWEB{idx}"
+            vcf_lines.append(f"{tag}.URL:{vcf_escape(w)}")
+            vcf_lines.append(f"{tag}.X-ABLabel:Sito web")
 
-    for s in socials:
-        vcf_lines.append(f"URL:{vcf_escape(s)}")
+    for idx, s in enumerate(socials, start=1):
+        tag = f"itemSOC{idx}"
+        vcf_lines.append(f"{tag}.URL:{vcf_escape(s['url'])}")
+        vcf_lines.append(f"{tag}.X-ABLabel:{vcf_escape(s['label'])}")
 
-    vcf_lines.append(f"URL:{vcf_escape(card_url)}")
+    vcf_lines.append(f"itemCARD.URL:{vcf_escape(card_url)}")
+    vcf_lines.append("itemCARD.X-ABLabel:Card Digitale Pay4You")
 
     if address:
         vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
