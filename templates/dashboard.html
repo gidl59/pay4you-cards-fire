@@ -10,19 +10,17 @@
       .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:15px; gap:12px; flex-wrap:wrap; }
       .dash-title { color:#00ffc8; margin:0; font-size:24px; text-transform:uppercase; letter-spacing:1px; }
       .head-actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-      .btn-logout, .btn-pass {
-        text-decoration:none; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s;
-      }
+      .btn-logout, .btn-pass, .btn-guide { text-decoration:none; padding:8px 20px; border-radius:30px; font-weight:bold; transition:0.3s; }
       .btn-logout { color:#ff4444; border:1px solid #ff4444; }
       .btn-logout:hover { background:#330000; }
       .btn-pass { color:#00ffc8; border:1px solid #00ffc8; }
       .btn-pass:hover { background:#032b25; }
-
+      .btn-guide { color:#111; background:#f5b301; border:1px solid #d79b00; }
+      .btn-guide:hover { background:#ffca38; border-color:#ffca38; color:#111; }
       .flashes { list-style:none; padding:0; margin:0 0 20px 0; }
       .flash { padding:14px 16px; border-radius:12px; margin-bottom:10px; font-weight:800; }
       .flash.success { background:rgba(0,255,200,0.14); border:1px solid rgba(0,255,200,0.45); color:#b8fff0; }
       .flash.error { background:rgba(255,80,80,0.14); border:1px solid rgba(255,80,80,0.45); color:#ffc4c4; }
-
       .top-control-panel { display:flex; flex-wrap:wrap; gap:30px; background:#111; border:1px solid #333; border-radius:15px; padding:20px; margin-bottom:40px; align-items:center; }
       .qr-area { text-align:center; min-width:150px; border-right:1px solid #333; padding-right:30px; }
       .qr-area img { width:120px; height:120px; border-radius:10px; background:white; padding:5px; }
@@ -40,7 +38,6 @@
       .btn-opener.active span { color:#00ffc8; }
       .btn-opener.active small { color:#fff; }
       .btn-opener.disabled { opacity:0.3; pointer-events:none; border-color:#222; }
-
       .profile-list { display:flex; flex-direction:column; gap:20px; }
       .profile-row { background:#111; border:1px solid #333; border-radius:15px; padding:20px; position:relative; transition:0.3s; display:grid; grid-template-columns:220px minmax(0, 1fr) 160px; gap:20px; align-items:center; }
       .profile-row.active { border-left:5px solid #00ffc8; }
@@ -51,13 +48,14 @@
       .pr-title { font-size:20px; font-weight:bold; color:white; margin:0; }
       .pr-status { font-size:11px; padding:4px 8px; border-radius:999px; font-weight:bold; text-transform:uppercase; background:#333; color:#aaa; display:inline-block; margin-top:5px; border:1px solid #444; }
       .st-on { color:#00ffc8; border:1px solid #00ffc8; background:rgba(0,255,200,.08); }
-      .pr-media-col { display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:15px; min-width:0; align-items:stretch; }
+      .pr-media-col { display:grid; grid-template-columns:repeat(3, minmax(220px, 1fr)); gap:15px; min-width:0; align-items:stretch; }
       .media-box { background:linear-gradient(180deg, #151515 0%, #0d0d0d 100%); border:1px solid #333; border-radius:14px; padding:12px; min-height:140px; display:flex; flex-direction:column; overflow:hidden; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); min-width:0; }
       .mb-title { font-size:11px; color:#00ffc8; text-transform:uppercase; font-weight:900; margin-bottom:10px; border-bottom:1px solid #222; padding-bottom:6px; letter-spacing:.04em; }
-      .mb-content-img, .mb-content-vid { display:flex; gap:8px; overflow-x:auto; min-height:72px; align-items:center; padding-bottom:4px; }
-      .mb-thumb { width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid #444; flex-shrink:0; background:#000; }
-      .mb-pdf-list { font-size:11px; color:#ccc; display:flex; flex-direction:column; gap:8px; min-width:0; }
-      .mb-pdf-item { display:flex; align-items:center; gap:8px; background:#171717; border:1px solid #2d2d2d; border-radius:8px; padding:8px; min-width:0; }
+      .mb-content-img, .mb-content-vid { display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:8px; min-height:72px; align-items:start; }
+      .mb-thumb { width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid #444; background:#000; display:block; cursor:pointer; }
+      .mb-pdf-list { font-size:11px; color:#ccc; display:flex; flex-direction:column; gap:8px; min-width:0; max-height:260px; overflow:auto; }
+      .mb-pdf-item { display:flex; align-items:center; gap:8px; background:#171717; border:1px solid #2d2d2d; border-radius:8px; padding:8px; min-width:0; text-decoration:none; color:#ccc; }
+      .mb-pdf-item:hover { border-color:#00ffc8; color:#fff; }
       .mb-pdf-item span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; min-width:0; }
       .mb-empty { font-size:11px; color:#666; font-style:italic; margin:auto; text-align:center; }
       .pr-actions-col { width:160px; display:flex; flex-direction:column; gap:10px; justify-content:center; padding-left:10px; border-left:1px solid #333; }
@@ -72,22 +70,14 @@
       .btn-preview { background:#f5b301; color:#111; border:1px solid #d79b00; }
       .btn-preview:hover { background:#ffca38; border-color:#ffca38; color:#111; }
       .pr-note { margin-top:8px; font-size:11px; color:#888; line-height:1.35; text-align:center; }
-
-      @media (max-width: 900px) {
-        .top-control-panel { flex-direction:column; text-align:center; }
-        .qr-area { border-right:none; border-bottom:1px solid #333; padding-right:0; padding-bottom:20px; width:100%; }
-        .opener-buttons { justify-content:center; }
-        .profile-row { grid-template-columns:1fr; }
-        .pr-info-col, .pr-actions-col { width:100%; border:none; padding:0; text-align:center; }
-        .pr-header { justify-content:center; }
-        .pr-media-col { grid-template-columns:1fr; }
-      }
+      @media (max-width: 900px) { .top-control-panel { flex-direction:column; text-align:center; } .qr-area { border-right:none; border-bottom:1px solid #333; padding-right:0; padding-bottom:20px; width:100%; } .opener-buttons { justify-content:center; } .profile-row { grid-template-columns:1fr; } .pr-info-col, .pr-actions-col { width:100%; border:none; padding:0; text-align:center; } .pr-header { justify-content:center; } .pr-media-col { grid-template-columns:1fr; } .mb-content-img, .mb-content-vid { grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); } .mb-thumb { width:64px; height:64px; margin:0 auto; } }
     </style>
 </head>
 <body>
   <div class="dash-header">
     <h1 class="dash-title">Ciao, {{ user.nome if user.nome else user.slug }}</h1>
     <div class="head-actions">
+      <a href="/static/guida-promo-card.pdf" target="_blank" class="btn-guide">ISTRUZIONI</a>
       <a href="/area/change-password" class="btn-pass">CAMBIA PASSWORD</a>
       <a href="/area/logout" class="btn-logout">ESCI</a>
     </div>
@@ -111,31 +101,12 @@
 
     <div class="opener-area">
       <h3 class="opener-title">IMPOSTAZIONE APERTURA CARD</h3>
-      <p class="opener-desc">
-        Scegli cosa deve aprirsi quando il cliente scansiona il QR o apre il link:
-        profilo diretto P1/P2/P3 oppure menu di scelta.
-      </p>
-
+      <p class="opener-desc">Scegli cosa deve aprirsi quando il cliente scansiona il QR o apre il link: profilo diretto P1/P2/P3 oppure menu di scelta.</p>
       <div class="opener-buttons">
-        <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}">
-          <span>P1</span>
-          <small>DIRETTO</small>
-        </a>
-
-        <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}">
-          <span>P2</span>
-          <small>DIRETTO</small>
-        </a>
-
-        <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}">
-          <span>P3</span>
-          <small>DIRETTO</small>
-        </a>
-
-        <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;">
-          <span style="font-size:24px;"><i class="fas fa-list"></i></span>
-          <small>MENU SCELTA</small>
-        </a>
+        <a href="/area/set_default/p1" class="btn-opener {% if user.default_profile == 'p1' %}active{% endif %} {% if not user.p1.active %}disabled{% endif %}"><span>P1</span><small>DIRETTO</small></a>
+        <a href="/area/set_default/p2" class="btn-opener {% if user.default_profile == 'p2' %}active{% endif %} {% if not user.p2.active %}disabled{% endif %}"><span>P2</span><small>DIRETTO</small></a>
+        <a href="/area/set_default/p3" class="btn-opener {% if user.default_profile == 'p3' %}active{% endif %} {% if not user.p3.active %}disabled{% endif %}"><span>P3</span><small>DIRETTO</small></a>
+        <a href="/area/set_default/menu" class="btn-opener {% if user.default_profile == 'menu' %}active{% endif %}" style="width:120px;"><span style="font-size:24px;"><i class="fas fa-list"></i></span><small>MENU SCELTA</small></a>
       </div>
     </div>
   </div>
@@ -145,90 +116,22 @@
       {% set p_key = 'p' + pid %}
       {% set p_data = user[p_key] %}
       {% set is_active = p_data.active %}
-
       <div class="profile-row {% if is_active %}active{% else %}inactive{% endif %}">
         <div class="pr-info-col">
           <div class="pr-header">
-            {% if p_data.foto %}
-              <img src="{{ p_data.foto }}" class="pr-avatar">
-            {% else %}
-              <div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;">
-                <i class="fas fa-user"></i>
-              </div>
-            {% endif %}
-            <div>
-              <h3 class="pr-title">Profilo P{{ pid }}</h3>
-              <span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span>
-            </div>
+            {% if p_data.foto %}<img src="{{ p_data.foto }}" class="pr-avatar">{% else %}<div class="pr-avatar" style="display:flex; justify-content:center; align-items:center; color:#555;"><i class="fas fa-user"></i></div>{% endif %}
+            <div><h3 class="pr-title">Profilo P{{ pid }}</h3><span class="pr-status {% if is_active %}st-on{% endif %}">{{ "ATTIVO" if is_active else "SPENTO" }}</span></div>
           </div>
-
-          <div style="font-size:12px; color:#aaa;">
-            <div>{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</div>
-            <div>{{ p_data.company if p_data.company else 'Azienda non impostata' }}</div>
-          </div>
+          <div style="font-size:12px; color:#aaa;"><div>{{ p_data.role if p_data.role else 'Ruolo non impostato' }}</div><div>{{ p_data.company if p_data.company else 'Azienda non impostata' }}</div></div>
         </div>
-
         <div class="pr-media-col">
-          <div class="media-box">
-            <div class="mb-title">📸 Foto ({{ p_data.gallery_img|length }})</div>
-            <div class="mb-content-img">
-              {% if p_data.gallery_img|length == 0 %}
-                <div class="mb-empty">Nessuna foto caricata</div>
-              {% else %}
-                {% for img in p_data.gallery_img[:4] %}
-                  <img src="{{ img }}" class="mb-thumb">
-                {% endfor %}
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="media-box">
-            <div class="mb-title">🎬 Video ({{ p_data.gallery_vid|length }})</div>
-            <div class="mb-content-vid">
-              {% if p_data.gallery_vid|length == 0 %}
-                <div class="mb-empty">Nessun video caricato</div>
-              {% else %}
-                {% for vid in p_data.gallery_vid[:3] %}
-                  <video src="{{ vid }}#t=1.0" class="mb-thumb" muted playsinline preload="metadata" style="background:#000;"></video>
-                {% endfor %}
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="media-box">
-            <div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div>
-            <div class="mb-pdf-list">
-              {% if p_data.gallery_pdf|length == 0 %}
-                <div class="mb-empty">Nessun PDF caricato</div>
-              {% else %}
-                {% for pdf in p_data.gallery_pdf[:2] %}
-                  <div class="mb-pdf-item">
-                    <i class="fas fa-file-pdf" style="color:#ff4444;"></i>
-                    <span>{{ pdf.name }}</span>
-                  </div>
-                {% endfor %}
-                {% if p_data.gallery_pdf|length > 2 %}
-                  <div style="font-size:10px; color:#666;">…e altri file</div>
-                {% endif %}
-              {% endif %}
-            </div>
-          </div>
+          <div class="media-box"><div class="mb-title">📸 Foto ({{ p_data.gallery_img|length }})</div><div class="mb-content-img">{% if p_data.gallery_img|length == 0 %}<div class="mb-empty">Nessuna foto caricata</div>{% else %}{% for img in p_data.gallery_img %}<a href="{{ img }}" target="_blank" title="Apri foto"><img src="{{ img }}" class="mb-thumb"></a>{% endfor %}{% endif %}</div></div>
+          <div class="media-box"><div class="mb-title">🎬 Video ({{ p_data.gallery_vid|length }})</div><div class="mb-content-vid">{% if p_data.gallery_vid|length == 0 %}<div class="mb-empty">Nessun video caricato</div>{% else %}{% for vid in p_data.gallery_vid %}<a href="{{ vid }}" target="_blank" title="Apri video"><video src="{{ vid }}#t=1.0" class="mb-thumb" muted playsinline preload="metadata" style="background:#000;"></video></a>{% endfor %}{% endif %}</div></div>
+          <div class="media-box"><div class="mb-title">📄 PDF ({{ p_data.gallery_pdf|length }})</div><div class="mb-pdf-list">{% if p_data.gallery_pdf|length == 0 %}<div class="mb-empty">Nessun PDF caricato</div>{% else %}{% for pdf in p_data.gallery_pdf %}<a href="{{ pdf.path }}" target="_blank" class="mb-pdf-item" title="Apri PDF"><i class="fas fa-file-pdf" style="color:#ff4444;"></i><span>{{ pdf.name }}</span></a>{% endfor %}{% endif %}</div></div>
         </div>
-
         <div class="pr-actions-col">
           <a href="/area/edit/{{ pid }}" class="btn btn-edit">✏️ MODIFICA</a>
-
-          {% if pid == '1' %}
-            <div class="btn btn-lock">SEMPRE ATTIVO</div>
-            <div class="pr-note">Il profilo P1 è principale e non può essere disattivato.</div>
-          {% else %}
-            {% if is_active %}
-              <a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>
-            {% else %}
-              <a href="/area/activate/{{ pid }}" class="btn btn-on">ATTIVA</a>
-            {% endif %}
-          {% endif %}
-
+          {% if pid == '1' %}<div class="btn btn-lock">SEMPRE ATTIVO</div><div class="pr-note">Il profilo P1 è principale e non può essere disattivato.</div>{% else %}{% if is_active %}<a href="/area/deactivate/{{ pid }}" class="btn btn-power" onclick="return confirm('Disattivare questo profilo?')">DISATTIVA</a>{% else %}<a href="/area/activate/{{ pid }}" class="btn btn-on">ATTIVA</a>{% endif %}{% endif %}
           <a href="/card/{{ user.slug }}?p=p{{ pid }}" target="_blank" class="btn btn-preview">ANTEPRIMA</a>
         </div>
       </div>
