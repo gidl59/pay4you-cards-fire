@@ -38,15 +38,15 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 80 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
 
 MAX_GALLERY_IMG = 30
 MAX_GALLERY_VID = 10
 MAX_GALLERY_PDF = 12
 
-MAX_IMAGE_MB = 4
-MAX_VIDEO_MB = 20
-MAX_PDF_MB = 8
+MAX_IMAGE_MB = 8
+MAX_VIDEO_MB = 40
+MAX_PDF_MB = 16
 
 ALLOWED_IMAGE_EXT = {'jpg', 'jpeg', 'png', 'webp'}
 ALLOWED_VIDEO_EXT = {'mp4', 'mov', 'webm', 'm4v'}
@@ -942,11 +942,38 @@ def normalize_web_url(url: str) -> str:
     return "https://" + url
 
 
-def build_maps_url(address: str) -> str:
-    address = str(address or "").strip()
-    if not address:
-        return ""
-    return "https://www.google.com/maps/search/?api=1&query=" + urlencode({"q": address})[2:]
+def get_local_file_bytes(path: str):
+    path = str(path or "").strip()
+    if not path.startswith('/uploads/'):
+        return None, None
+    filename = path.split('/uploads/', 1)[1]
+    fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.isfile(fp):
+        return None, None
+    ext = get_file_ext(fp)
+    mime = 'image/jpeg'
+    if ext == 'png':
+        mime = 'image/png'
+    elif ext == 'webp':
+        mime = 'image/webp'
+    elif ext in ('jpg', 'jpeg'):
+        mime = 'image/jpeg'
+    try:
+        with open(fp, 'rb') as f:
+            return f.read(), mime
+    except Exception:
+        return None, None
+
+
+def fold_vcf_line(line: str, limit: int = 75):
+    if len(line) <= limit:
+        return [line]
+    out = []
+    while len(line) > limit:
+        out.append(line[:limit])
+        line = ' ' + line[limit:]
+    out.append(line)
+    return out
 
 
 @app.route('/vcf/<slug>')
@@ -974,7 +1001,6 @@ def download_vcf(slug):
     full_name = (p.get("name") or user.get("nome") or slug).strip()
     role = (p.get("role") or "").strip()
     company = (p.get("company") or "").strip()
-    bio = (p.get("bio") or "").strip()
     office_phone = (p.get("office_phone") or "").strip()
     address = (p.get("address") or "").strip()
     pec = (p.get("pec") or "").strip()
@@ -986,41 +1012,16 @@ def download_vcf(slug):
     websites = [normalize_web_url(x) for x in (p.get("websites") or []) if str(x).strip()]
     socials = [normalize_web_url((s or {}).get("url", "")) for s in (p.get("socials") or []) if normalize_web_url((s or {}).get("url", ""))]
 
-    photo_url = absolute_url(p.get("foto") or "")
+    local_photo_path = p.get("foto") or ""
     card_url = f"{CARD_BASE_URL}/card/{slug}?p={p_req}"
-    maps_url = build_maps_url(address)
-
-    gallery_img = [absolute_url(x) for x in (p.get("gallery_img") or []) if absolute_url(x)]
-    gallery_vid = [absolute_url(x) for x in (p.get("gallery_vid") or []) if absolute_url(x)]
-    gallery_pdf = [absolute_url((x or {}).get("path", "")) for x in (p.get("gallery_pdf") or []) if absolute_url((x or {}).get("path", ""))]
 
     notes = []
-    if bio:
-        notes.append("Bio: " + bio)
     if piva:
         notes.append("P.IVA: " + piva)
     if cod_sdi:
         notes.append("SDI: " + cod_sdi)
     if pec:
         notes.append("PEC: " + pec)
-    notes.append("Card Digitale Pay4You: " + card_url)
-    if maps_url:
-        notes.append("Google Maps: " + maps_url)
-
-    if gallery_img:
-        notes.append("Foto galleria:")
-        for x in gallery_img[:30]:
-            notes.append("- " + x)
-
-    if gallery_vid:
-        notes.append("Video galleria:")
-        for x in gallery_vid[:10]:
-            notes.append("- " + x)
-
-    if gallery_pdf:
-        notes.append("PDF galleria:")
-        for x in gallery_pdf[:12]:
-            notes.append("- " + x)
 
     vcf_lines = [
         "BEGIN:VCARD",
@@ -1033,8 +1034,17 @@ def download_vcf(slug):
         vcf_lines.append(f"ORG:{vcf_escape(company)}")
     if role:
         vcf_lines.append(f"TITLE:{vcf_escape(role)}")
-    if photo_url:
-        vcf_lines.append(f"PHOTO;VALUE=URI:{vcf_escape(photo_url)}")
+
+    photo_bytes, photo_mime = get_local_file_bytes(local_photo_path)
+    if photo_bytes:
+        ext = "JPEG"
+        if photo_mime == 'image/png':
+            ext = "PNG"
+        elif photo_mime == 'image/webp':
+            ext = "WEBP"
+        b64 = base64.b64encode(photo_bytes).decode('ascii')
+        for ln in fold_vcf_line(f"PHOTO;ENCODING=b;TYPE={ext}:{b64}"):
+            vcf_lines.append(ln)
 
     for m in mobiles:
         nm = normalize_phone(m)
@@ -1047,23 +1057,21 @@ def download_vcf(slug):
             vcf_lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(no)}")
 
     for e in emails:
-        vcf_lines.append(f"EMAIL;TYPE=INTERNET,WORK:{vcf_escape(e)}")
+        vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(e)}")
 
     if pec:
         vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
 
     for w in websites:
-        vcf_lines.append(f"URL;TYPE=WORK:{vcf_escape(w)}")
+        vcf_lines.append(f"URL:{vcf_escape(w)}")
 
     for s in socials:
-        vcf_lines.append(f"URL;TYPE=SOCIAL:{vcf_escape(s)}")
+        vcf_lines.append(f"URL:{vcf_escape(s)}")
 
-    vcf_lines.append(f"URL;TYPE=CARD:{vcf_escape(card_url)}")
+    vcf_lines.append(f"URL:{vcf_escape(card_url)}")
 
     if address:
         vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
-    if maps_url:
-        vcf_lines.append(f"URL;TYPE=MAP:{vcf_escape(maps_url)}")
 
     if notes:
         vcf_lines.append(f"NOTE:{vcf_escape(chr(10).join(notes))}")
