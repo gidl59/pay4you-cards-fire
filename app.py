@@ -321,13 +321,6 @@ def make_reset_token(length=32):
 
 
 def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, zoom: float):
-    """
-    Salva la foto già croppata come la vedi nel pannello.
-    Fix principale:
-    - niente doppio messaggio password in login
-    - niente bande nere sopra/sotto nella foto finale
-    - mantiene il crop del frontend
-    """
     if not file_storage or not file_storage.filename:
         return None
 
@@ -344,8 +337,6 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
 
     w, h = img.size
     viewport = 160.0
-
-    # uguale al frontend: object-fit cover
     base_scale = max(viewport / w, viewport / h)
     zoom = max(0.5, min(3.0, float(zoom or 1.0)))
     final_scale = base_scale * zoom
@@ -353,7 +344,6 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
     crop_w = viewport / final_scale
     crop_h = viewport / final_scale
 
-    # pos_x / pos_y arrivano come translate percentuale del box frontend
     shift_x = (float(pos_x or 0) / 100.0) * crop_w
     shift_y = (float(pos_y or 0) / 100.0) * crop_h
 
@@ -375,7 +365,6 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
         int(round(bottom))
     ))
 
-    # quadrato finale pulito, senza riempimenti neri
     cropped = ImageOps.fit(
         cropped,
         (800, 800),
@@ -925,6 +914,168 @@ def edit_profile(p_id):
         return redirect(url_for('area'))
 
     return render_template('edit_card.html', p=user[p_key], p_id=p_id)
+
+
+def vcf_escape(value: str) -> str:
+    s = str(value or "")
+    s = s.replace("\\", "\\\\")
+    s = s.replace("\n", "\\n").replace("\r", "")
+    s = s.replace(";", r"\;").replace(",", r"\,")
+    return s.strip()
+
+
+def absolute_url(path: str) -> str:
+    path = str(path or "").strip()
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return f"{CARD_BASE_URL}{path}"
+
+
+def normalize_web_url(url: str) -> str:
+    url = str(url or "").strip()
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return "https://" + url
+
+
+def build_maps_url(address: str) -> str:
+    address = str(address or "").strip()
+    if not address:
+        return ""
+    return "https://www.google.com/maps/search/?api=1&query=" + urlencode({"q": address})[2:]
+
+
+@app.route('/vcf/<slug>')
+def download_vcf(slug):
+    clienti = load_db()
+    user = next((c for c in clienti if c.get('slug') == slug), None)
+    if not user:
+        return "Contatto non trovato", 404
+
+    if repair_user(user):
+        save_db(clienti)
+
+    p_req = (request.args.get('p') or "").strip().lower()
+    if p_req not in ("p1", "p2", "p3"):
+        p_req = user.get("default_profile", "p1")
+
+    if p_req == "menu":
+        p_req = "p1"
+
+    if not user.get(p_req, {}).get("active"):
+        p_req = "p1"
+
+    p = user.get(p_req, {}) or {}
+
+    full_name = (p.get("name") or user.get("nome") or slug).strip()
+    role = (p.get("role") or "").strip()
+    company = (p.get("company") or "").strip()
+    bio = (p.get("bio") or "").strip()
+    office_phone = (p.get("office_phone") or "").strip()
+    address = (p.get("address") or "").strip()
+    pec = (p.get("pec") or "").strip()
+    piva = (p.get("piva") or "").strip()
+    cod_sdi = (p.get("cod_sdi") or "").strip()
+
+    mobiles = [str(x).strip() for x in (p.get("mobiles") or []) if str(x).strip()]
+    emails = [str(x).strip() for x in (p.get("emails") or []) if str(x).strip()]
+    websites = [normalize_web_url(x) for x in (p.get("websites") or []) if str(x).strip()]
+    socials = [normalize_web_url((s or {}).get("url", "")) for s in (p.get("socials") or []) if normalize_web_url((s or {}).get("url", ""))]
+
+    photo_url = absolute_url(p.get("foto") or "")
+    card_url = f"{CARD_BASE_URL}/card/{slug}?p={p_req}"
+    maps_url = build_maps_url(address)
+
+    gallery_img = [absolute_url(x) for x in (p.get("gallery_img") or []) if absolute_url(x)]
+    gallery_vid = [absolute_url(x) for x in (p.get("gallery_vid") or []) if absolute_url(x)]
+    gallery_pdf = [absolute_url((x or {}).get("path", "")) for x in (p.get("gallery_pdf") or []) if absolute_url((x or {}).get("path", ""))]
+
+    notes = []
+    if bio:
+        notes.append("Bio: " + bio)
+    if piva:
+        notes.append("P.IVA: " + piva)
+    if cod_sdi:
+        notes.append("SDI: " + cod_sdi)
+    if pec:
+        notes.append("PEC: " + pec)
+    notes.append("Card Digitale Pay4You: " + card_url)
+    if maps_url:
+        notes.append("Google Maps: " + maps_url)
+
+    if gallery_img:
+        notes.append("Foto galleria:")
+        for x in gallery_img[:30]:
+            notes.append("- " + x)
+
+    if gallery_vid:
+        notes.append("Video galleria:")
+        for x in gallery_vid[:10]:
+            notes.append("- " + x)
+
+    if gallery_pdf:
+        notes.append("PDF galleria:")
+        for x in gallery_pdf[:12]:
+            notes.append("- " + x)
+
+    vcf_lines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        f"N:{vcf_escape(full_name)};;;;",
+        f"FN:{vcf_escape(full_name)}",
+    ]
+
+    if company:
+        vcf_lines.append(f"ORG:{vcf_escape(company)}")
+    if role:
+        vcf_lines.append(f"TITLE:{vcf_escape(role)}")
+    if photo_url:
+        vcf_lines.append(f"PHOTO;VALUE=URI:{vcf_escape(photo_url)}")
+
+    for m in mobiles:
+        nm = normalize_phone(m)
+        if nm:
+            vcf_lines.append(f"TEL;TYPE=CELL:{vcf_escape(nm)}")
+
+    if office_phone:
+        no = normalize_phone(office_phone)
+        if no:
+            vcf_lines.append(f"TEL;TYPE=WORK,VOICE:{vcf_escape(no)}")
+
+    for e in emails:
+        vcf_lines.append(f"EMAIL;TYPE=INTERNET,WORK:{vcf_escape(e)}")
+
+    if pec:
+        vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
+
+    for w in websites:
+        vcf_lines.append(f"URL;TYPE=WORK:{vcf_escape(w)}")
+
+    for s in socials:
+        vcf_lines.append(f"URL;TYPE=SOCIAL:{vcf_escape(s)}")
+
+    vcf_lines.append(f"URL;TYPE=CARD:{vcf_escape(card_url)}")
+
+    if address:
+        vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
+    if maps_url:
+        vcf_lines.append(f"URL;TYPE=MAP:{vcf_escape(maps_url)}")
+
+    if notes:
+        vcf_lines.append(f"NOTE:{vcf_escape(chr(10).join(notes))}")
+
+    vcf_lines.append("END:VCARD")
+    vcf_content = "\r\n".join(vcf_lines) + "\r\n"
+
+    filename = f"{slug}-{p_req}.vcf"
+    resp = make_response(vcf_content)
+    resp.headers["Content-Type"] = "text/vcard; charset=utf-8"
+    resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
 
 
 @app.route('/master', methods=['GET', 'POST'])
