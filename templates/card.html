@@ -114,15 +114,16 @@
         {% endfor %}
       {% endfor %}
 
-      {% if ag.address %}
-        {% for addr in ag.address.split(',') %}
-            {% if addr.strip() %}
-            <div class="d-row">
-                <span class="d-icon">📍</span> <a href="https://www.google.com/maps/search/?api=1&query={{ addr.strip() }}" target="_blank" class="d-link">{{ addr.strip() }}</a>
-            </div>
-            {% endif %}
-        {% endfor %}
+     {% if ag.address %}
+  {% for addr in ag.address.splitlines() %}
+      {% if addr.strip() %}
+      <div class="d-row">
+          <span class="d-icon">📍</span>
+          <a href="https://www.google.com/maps/search/?api=1&query={{ addr.strip()|urlencode }}" target="_blank" class="d-link">{{ addr.strip() }}</a>
+      </div>
       {% endif %}
+  {% endfor %}
+{% endif %}
 
       <div class="fiscal-row">
         {% if ag.piva %}<span>P.IVA: {{ag.piva}}</span>{% endif %}
