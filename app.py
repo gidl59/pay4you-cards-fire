@@ -38,7 +38,7 @@ DB_FILE = os.path.join(BASE_DIR, 'clients.json')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200 MB
 
 MAX_GALLERY_IMG = 30
 MAX_GALLERY_VID = 10
@@ -73,8 +73,6 @@ BRAND_EMAIL = os.getenv("BRAND_EMAIL", "info@pay4you.store").strip()
 BRAND_PHONE = os.getenv("BRAND_PHONE", "+39 0541 1646895").strip()
 BRAND_WHATSAPP_URL = os.getenv("BRAND_WHATSAPP_URL", "https://wa.me/393508725353").strip()
 BRAND_LOGO_URL = os.getenv("BRAND_LOGO_URL", "https://www.pay4you.store/logo-pay4you.png").strip()
-
-SOCIAL_LABELS = ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']
 
 
 def load_db():
@@ -791,11 +789,11 @@ def edit_profile(p_id):
         p['address'] = request.form.get('address', '')
 
         p['mobiles'] = [x for x in [request.form.get('mobile1'), request.form.get('mobile2')] if x]
-        p['emails'] = [x.strip() for x in (request.form.get('email1') or '').split(',') if x.strip()]
-        p['websites'] = [x.strip() for x in (request.form.get('website') or '').split(',') if x.strip()]
+        p['emails'] = [x for x in [request.form.get('email1')] if x]
+        p['websites'] = [x for x in [request.form.get('website')] if x]
 
         socials = []
-        for soc in SOCIAL_LABELS:
+        for soc in ['Facebook', 'Instagram', 'Linkedin', 'TikTok', 'Spotify', 'Telegram', 'YouTube']:
             url = (request.form.get(soc.lower()) or '').strip()
             if url:
                 socials.append({'label': soc, 'url': url})
@@ -944,63 +942,53 @@ def normalize_web_url(url: str) -> str:
     return "https://" + url
 
 
-def local_upload_path(url_or_path: str) -> str:
-    p = str(url_or_path or "").strip()
-    if not p:
-        return ""
-    parsed = urlparse(p).path
-    if parsed.startswith('/uploads/'):
-        filename = parsed.split('/uploads/', 1)[1]
-        fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if os.path.isfile(fp):
-            return fp
-    return ""
+def encode_photo_for_vcf(photo_path: str):
+    abs_url = absolute_url(photo_path)
+    local_path = None
+    if photo_path and str(photo_path).startswith('/uploads/'):
+        filename = str(photo_path).split('/uploads/', 1)[1]
+        local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
+    data = None
+    ext = 'JPEG'
 
-def read_photo_for_vcard(photo_value: str):
-    fp = local_upload_path(photo_value)
-    if not fp:
-        return None, None
     try:
-        ext = get_file_ext(fp)
-        img_type = 'JPEG'
-        if ext == 'png':
-            img_type = 'PNG'
-        elif ext == 'webp':
-            img_type = 'JPEG'
-        elif ext in ('jpg', 'jpeg'):
-            img_type = 'JPEG'
-
-        with open(fp, 'rb') as f:
-            raw = f.read()
-
-        if ext == 'webp' and Image is not None:
-            img = Image.open(BytesIO(raw)).convert('RGB')
-            bio = BytesIO()
-            img.save(bio, format='JPEG', quality=92)
-            raw = bio.getvalue()
-            img_type = 'JPEG'
-
-        return img_type, base64.b64encode(raw).decode('ascii')
+        if local_path and os.path.isfile(local_path):
+            with open(local_path, 'rb') as f:
+                data = f.read()
+            suffix = os.path.splitext(local_path)[1].lower()
+            if suffix == '.png':
+                ext = 'PNG'
+            elif suffix == '.webp':
+                ext = 'JPEG'
+            else:
+                ext = 'JPEG'
+        elif abs_url:
+            with urlopen(abs_url, timeout=20) as resp:
+                data = resp.read()
+            lower = abs_url.lower()
+            if lower.endswith('.png'):
+                ext = 'PNG'
+            else:
+                ext = 'JPEG'
     except Exception:
-        return None, None
+        return None
 
+    if not data:
+        return None
 
-def fold_vcard_line(line: str, limit: int = 75):
-    if len(line) <= limit:
-        return [line]
-    out = []
-    start = 0
-    first = True
-    while start < len(line):
-        chunk = line[start:start + (limit if first else limit - 1)]
-        if first:
-            out.append(chunk)
-            first = False
-        else:
-            out.append(' ' + chunk)
-        start += len(chunk)
-    return out
+    if Image is not None:
+        try:
+            img = Image.open(BytesIO(data)).convert('RGB')
+            bio = BytesIO()
+            img.save(bio, format='JPEG', quality=90)
+            data = bio.getvalue()
+            ext = 'JPEG'
+        except Exception:
+            pass
+
+    b64 = base64.b64encode(data).decode('ascii')
+    return ext, b64
 
 
 @app.route('/vcf/<slug>')
@@ -1039,11 +1027,12 @@ def download_vcf(slug):
     websites = [normalize_web_url(x) for x in (p.get("websites") or []) if str(x).strip()]
     socials = []
     for s in (p.get("socials") or []):
-        label = str((s or {}).get("label", "")).strip()
-        surl = normalize_web_url((s or {}).get("url", ""))
-        if label and surl:
-            socials.append({"label": label, "url": surl})
+        label = str((s or {}).get('label', '')).strip()
+        url = normalize_web_url((s or {}).get('url', ''))
+        if label and url:
+            socials.append({'label': label, 'url': url})
 
+    photo_data = encode_photo_for_vcf(p.get("foto") or "")
     card_url = f"{CARD_BASE_URL}/card/{slug}?p={p_req}"
 
     notes = []
@@ -1066,10 +1055,9 @@ def download_vcf(slug):
     if role:
         vcf_lines.append(f"TITLE:{vcf_escape(role)}")
 
-    photo_type, photo_b64 = read_photo_for_vcard(p.get("foto") or "")
-    if photo_type and photo_b64:
-        photo_line = f"PHOTO;ENCODING=b;TYPE={photo_type}:{photo_b64}"
-        vcf_lines.extend(fold_vcard_line(photo_line))
+    if photo_data:
+        photo_ext, photo_b64 = photo_data
+        vcf_lines.append(f"PHOTO;ENCODING=b;TYPE={photo_ext}:{photo_b64}")
 
     for m in mobiles:
         nm = normalize_phone(m)
@@ -1085,22 +1073,19 @@ def download_vcf(slug):
         vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(e)}")
 
     if pec:
-        vcf_lines.append(f"itemPEC.EMAIL:{vcf_escape(pec)}")
-        vcf_lines.append("itemPEC.X-ABLabel:PEC")
+        vcf_lines.append(f"EMAIL;TYPE=INTERNET:{vcf_escape(pec)}")
 
-    if websites:
-        for idx, w in enumerate(websites, start=1):
-            tag = f"itemWEB{idx}"
-            vcf_lines.append(f"{tag}.URL:{vcf_escape(w)}")
-            vcf_lines.append(f"{tag}.X-ABLabel:Sito web")
+    for w in websites:
+        vcf_lines.append(f"URL:{vcf_escape(w)}")
 
-    for idx, s in enumerate(socials, start=1):
-        tag = f"itemSOC{idx}"
-        vcf_lines.append(f"{tag}.URL:{vcf_escape(s['url'])}")
-        vcf_lines.append(f"{tag}.X-ABLabel:{vcf_escape(s['label'])}")
+    idx = 1
+    for s in socials:
+        vcf_lines.append(f"item{idx}.URL:{vcf_escape(s['url'])}")
+        vcf_lines.append(f"item{idx}.X-ABLabel:{vcf_escape(s['label'])}")
+        idx += 1
 
-    vcf_lines.append(f"itemCARD.URL:{vcf_escape(card_url)}")
-    vcf_lines.append("itemCARD.X-ABLabel:Card Digitale Pay4You")
+    vcf_lines.append(f"item{idx}.URL:{vcf_escape(card_url)}")
+    vcf_lines.append(f"item{idx}.X-ABLabel:{vcf_escape('Card Digitale Pay4You')}")
 
     if address:
         vcf_lines.append(f"ADR;TYPE=WORK:;;{vcf_escape(address)};;;;")
@@ -1116,6 +1101,27 @@ def download_vcf(slug):
     resp.headers["Content-Type"] = "text/vcard; charset=utf-8"
     resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
+
+
+@app.route('/<slug>')
+def legacy_card_redirect(slug):
+    reserved = {
+        'area', 'master', 'uploads', 'favicon.ico',
+        'reset-tutto', 'card', 'vcf', 'static'
+    }
+    if slug in reserved:
+        return "Pagina non trovata", 404
+
+    clienti = load_db()
+    user = next((c for c in clienti if c.get('slug') == slug), None)
+    if not user:
+        return "Card non trovata", 404
+
+    p_req = (request.args.get('p') or '').strip()
+    if p_req:
+        return redirect(url_for('view_card', slug=slug, p=p_req), code=301)
+
+    return redirect(url_for('view_card', slug=slug), code=301)
 
 
 @app.route('/master', methods=['GET', 'POST'])
