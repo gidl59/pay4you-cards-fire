@@ -337,7 +337,9 @@
         <div><label>Tel. Ufficio</label><input type="text" name="office_phone" value="{{ p.office_phone }}"></div>
         <div class="full-width"><label>Email (virgola)</label><input type="text" name="email1" value="{{ p.emails|join(',') }}"></div>
         <div class="full-width"><label>Siti Web (virgola)</label><input type="text" name="website" value="{{ p.websites|join(',') }}"></div>
-        <div class="full-width"><label>Indirizzo (Google Maps)</label><input type="text" name="address" value="{{ p.address }}"></div>
+        <label>Indirizzo (Google Maps)</label>
+<textarea name="address" rows="3" placeholder="Inserisci un indirizzo per riga">{{ p.address }}</textarea>
+<div class="hint">Se hai più indirizzi, scrivine uno per riga. Non usare la virgola come separatore.</div>
       </div>
     </div>
 
