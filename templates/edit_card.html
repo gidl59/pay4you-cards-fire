@@ -143,8 +143,6 @@
     details summary { cursor:pointer; user-select:none; outline:none; font-weight:bold; margin-bottom:10px; }
     .hint { color:#777; font-size:12px; margin-top:5px; }
 
-    /* GALLERIA FILE IN VERTICALE */
-    .edit-box .media-sections,
     .media-sections {
       display:flex !important;
       flex-direction:column !important;
@@ -152,7 +150,6 @@
       width:100% !important;
     }
 
-    .edit-box .media-panel,
     .media-panel {
       display:block !important;
       width:100% !important;
@@ -345,6 +342,23 @@
     </div>
 
     <div class="edit-box">
+      <h3 class="box-title">🌐 Social</h3>
+      <div class="form-grid">
+        {% set social_map = {} %}
+        {% for s in p.socials %}
+          {% set _ = social_map.update({(s.label|lower): s.url}) %}
+        {% endfor %}
+        <div><label>Facebook</label><input type="text" name="facebook" value="{{ social_map.get('facebook','') }}"></div>
+        <div><label>Instagram</label><input type="text" name="instagram" value="{{ social_map.get('instagram','') }}"></div>
+        <div><label>LinkedIn</label><input type="text" name="linkedin" value="{{ social_map.get('linkedin','') }}"></div>
+        <div><label>TikTok</label><input type="text" name="tiktok" value="{{ social_map.get('tiktok','') }}"></div>
+        <div><label>Spotify</label><input type="text" name="spotify" value="{{ social_map.get('spotify','') }}"></div>
+        <div><label>Telegram</label><input type="text" name="telegram" value="{{ social_map.get('telegram','') }}"></div>
+        <div class="full-width"><label>YouTube</label><input type="text" name="youtube" value="{{ social_map.get('youtube','') }}"></div>
+      </div>
+    </div>
+
+    <div class="edit-box">
       <h3 class="box-title">📸 Immagine e Animazione</h3>
       <div class="form-grid">
         <div class="crop-area">
@@ -419,17 +433,16 @@
 
       <div class="media-sections">
 
-        <!-- FOTO -->
         <div class="media-panel" id="panel-img">
           <div class="media-top">
             <div class="media-head-left">
               <h4>📸 Foto</h4>
               <div class="media-help">
-                Carica qui solo immagini della galleria. Verranno mostrate come anteprime fotografiche.
+                Massimo 30 foto. Peso massimo per file: 8 MB.
               </div>
             </div>
             <div class="media-head-right">
-              <div class="media-counter">{{ p.gallery_img|length }} foto caricate</div>
+              <div class="media-counter">{{ p.gallery_img|length }} / 30 foto</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_img|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('img')">
                 <i class="fas fa-trash"></i> Cancella tutte le foto
               </button>
@@ -453,17 +466,16 @@
           <div class="empty-box panel-hidden" id="empty-img-hidden">Nessuna foto caricata</div>
         </div>
 
-        <!-- VIDEO -->
         <div class="media-panel" id="panel-vid">
           <div class="media-top">
             <div class="media-head-left">
               <h4>🎬 Video</h4>
               <div class="media-help">
-                Carica qui solo video. Ogni file verrà mostrato con anteprima video separata.
+                Massimo 10 video. Peso massimo per file: 40 MB.
               </div>
             </div>
             <div class="media-head-right">
-              <div class="media-counter">{{ p.gallery_vid|length }} video caricati</div>
+              <div class="media-counter">{{ p.gallery_vid|length }} / 10 video</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_vid|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('vid')">
                 <i class="fas fa-trash"></i> Cancella tutti i video
               </button>
@@ -487,17 +499,16 @@
           <div class="empty-box panel-hidden" id="empty-vid-hidden">Nessun video caricato</div>
         </div>
 
-        <!-- PDF -->
         <div class="media-panel" id="panel-pdf">
           <div class="media-top">
             <div class="media-head-left">
               <h4>📄 PDF</h4>
               <div class="media-help">
-                Carica qui solo file PDF. Verranno mostrati con elenco e nome file.
+                Massimo 12 PDF. Peso massimo per file: 16 MB.
               </div>
             </div>
             <div class="media-head-right">
-              <div class="media-counter">{{ p.gallery_pdf|length }} PDF caricati</div>
+              <div class="media-counter">{{ p.gallery_pdf|length }} / 12 PDF</div>
               <button type="button" class="btn-danger-mini" {% if p.gallery_pdf|length == 0 %}disabled{% endif %} onclick="deleteAllMedia('pdf')">
                 <i class="fas fa-trash"></i> Cancella tutti i PDF
               </button>
