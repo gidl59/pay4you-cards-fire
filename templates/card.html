@@ -62,6 +62,7 @@
       </div>
     </div>
 
+    {% if socials %}
     <div class="social-grid">
       {% for s in socials %}
       <a href="{{ s.url }}" target="_blank" class="soc-btn
@@ -70,6 +71,7 @@
       </a>
       {% endfor %}
     </div>
+    {% endif %}
 
     <div class="switcher-bar">
       <div class="sw-left">
