@@ -27,7 +27,6 @@ app = Flask(__name__)
 app.jinja_env.add_extension('jinja2.ext.do')
 app.secret_key = "pay4you_final_fix_v8"
 
-# ===== CONFIG =====
 if os.path.exists('/var/data'):
     BASE_DIR = '/var/data'
 else:
@@ -98,14 +97,11 @@ def replace_uploaded_file_from_bytes(content: bytes, original_filename: str, pre
     ext = get_file_ext(original_filename)
     if ext not in (ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT | ALLOWED_PDF_EXT):
         ext = fallback_ext
-
     safe_prefix = secure_filename(prefix)
     filename = secure_filename(f"{safe_prefix}.{ext}")
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
     with open(path, 'wb') as f:
         f.write(content)
-
     return f"/uploads/{filename}"
 
 
@@ -144,7 +140,6 @@ def normalize_phone(phone: str) -> str:
         return ""
     phone = phone.replace("whatsapp:", "", 1)
     phone = phone.replace(" ", "").replace("-", "").replace("/", "").replace(".", "")
-
     cleaned = []
     for i, ch in enumerate(phone):
         if ch.isdigit():
@@ -152,16 +147,14 @@ def normalize_phone(phone: str) -> str:
         elif ch == '+' and i == 0:
             cleaned.append(ch)
     phone = "".join(cleaned)
-
     if not phone:
         return ""
     if phone.startswith("00"):
         phone = "+" + phone[2:]
     if phone.startswith("39") and not phone.startswith("+39"):
         phone = "+" + phone
-    if not phone.startswith("+"):
-        if len(phone) >= 9:
-            phone = "+39" + phone
+    if not phone.startswith("+") and len(phone) >= 9:
+        phone = "+39" + phone
     return phone
 
 
@@ -235,7 +228,6 @@ def repair_user(user):
         if 'whatsapp' not in user['admin_contact']:
             user['admin_contact']['whatsapp'] = ''
             dirty = True
-
     for pid in ['p1', 'p2', 'p3']:
         if pid not in user:
             user[pid] = {'active': False}
@@ -298,7 +290,6 @@ def save_cropped_agent_photo(file_storage, prefix: str, pos_x: int, pos_y: int, 
         raise ValueError(err)
     if Image is None:
         return save_file(file_storage, f"{prefix}_foto")
-
     file_storage.stream.seek(0)
     img = Image.open(file_storage.stream)
     img = ImageOps.exif_transpose(img).convert('RGB')
@@ -425,7 +416,6 @@ def login():
         if user and user.get('must_change_password'):
             return redirect(url_for('change_password'))
         return redirect(url_for('area'))
-
     error = None
     if request.method == 'POST':
         u = (request.form.get('username') or '').strip()
@@ -758,11 +748,7 @@ def download_vcf(slug):
         notes.append('PDF galleria:')
         for x in gallery_pdf[:12]:
             notes.append('- ' + x)
-    vcf_lines = [
-        'BEGIN:VCARD', 'VERSION:3.0',
-        f"N:{vcf_escape(full_name)};;;;",
-        f"FN:{vcf_escape(full_name)}",
-    ]
+    vcf_lines = ['BEGIN:VCARD', 'VERSION:3.0', f"N:{vcf_escape(full_name)};;;;", f"FN:{vcf_escape(full_name)}"]
     if company:
         vcf_lines.append(f"ORG:{vcf_escape(company)}")
     if role:
@@ -844,6 +830,63 @@ def view_card(slug):
     return render_template('card.html', lang=lang, ui=ui, ag=ag, mobiles=p.get('mobiles', []), emails=p.get('emails', []), websites=p.get('websites', []), socials=p.get('socials', []), p_data=p, profile=p_req, p2_enabled=user['p2']['active'], p3_enabled=user['p3']['active'])
 
 
+@app.route('/master', methods=['GET', 'POST'])
+def master_login():
+    if session.get('is_master'):
+        clienti = load_db()
+        dirty = False
+        for c in clienti:
+            if repair_user(c):
+                dirty = True
+        if dirty:
+            save_db(clienti)
+        return render_template('master_dashboard.html', clienti=clienti, files=[])
+
+    if request.method == 'POST' and request.form.get('username') == 'admin' and request.form.get('password') == 'Peppone16@':
+        session['is_master'] = True
+        return redirect(url_for('master_login'))
+
+    return render_template('master_login.html')
+
+
+@app.route('/master/add', methods=['POST'])
+def master_add():
+    if not session.get('is_master'):
+        return redirect(url_for('master_login'))
+    clienti = load_db()
+    slug = (request.form.get('slug') or '').strip().lower()
+    admin_email = (request.form.get('admin_email') or '').strip()
+    admin_whatsapp = normalize_phone(request.form.get('admin_whatsapp') or '')
+    if not slug or not admin_email or not admin_whatsapp:
+        flash('Errore: Tutti i campi (Slug, Email, WhatsApp) sono obbligatori.', 'error')
+        return redirect(url_for('master_login'))
+    if any(c.get('slug') == slug for c in clienti):
+        flash(f"Errore: Lo slug '{slug}' è già in uso. Scegline un altro.", 'error')
+        return redirect(url_for('master_login'))
+    password = make_random_password(12)
+    new_id = max([c['id'] for c in clienti], default=0) + 1
+    new_client = {
+        'id': new_id,
+        'slug': slug,
+        'username': slug,
+        'password': password,
+        'must_change_password': True,
+        'reset_token': '',
+        'reset_expires': 0,
+        'nome': '',
+        'admin_contact': {'email': admin_email, 'whatsapp': admin_whatsapp},
+        'p1': {'active': True},
+        'p2': {'active': False},
+        'p3': {'active': False},
+        'default_profile': 'p1'
+    }
+    repair_user(new_client)
+    clienti.append(new_client)
+    save_db(clienti)
+    flash(f"Card '{slug}' creata con successo!", 'success')
+    return redirect(url_for('master_login'))
+
+
 @app.route('/<slug>')
 def legacy_card_redirect(slug):
     reserved = {'area', 'master', 'uploads', 'static', 'favicon.ico', 'reset-tutto', 'vcf', 'card'}
@@ -856,7 +899,7 @@ def legacy_card_redirect(slug):
         if p:
             return redirect(url_for('view_card', slug=slug, p=p), code=301)
         return redirect(url_for('view_card', slug=slug), code=301)
-    return "<h1>Card non trovata</h1>", 404
+    return '<h1>Card non trovata</h1>', 404
 
 
 @app.route('/master/delete/<int:id>')
@@ -864,7 +907,7 @@ def master_delete(id):
     if not session.get('is_master'):
         return redirect(url_for('master_login'))
     save_db([c for c in load_db() if c.get('id') != id])
-    flash("Card eliminata.", "success")
+    flash('Card eliminata.', 'success')
     return redirect(url_for('master_login'))
 
 
@@ -905,10 +948,10 @@ def reset_db_emergency():
     if os.path.exists(DB_FILE):
         try:
             os.remove(DB_FILE)
-            return "DB CANCELLATO"
+            return 'DB CANCELLATO'
         except Exception:
             pass
-    return "DB PULITO"
+    return 'DB PULITO'
 
 
 if __name__ == '__main__':
